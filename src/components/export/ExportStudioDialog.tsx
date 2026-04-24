@@ -2233,6 +2233,15 @@ export function ExportStudioDialog({
     });
   }, [layoutWidth, open]);
 
+  const activeFormat = useMemo(
+    () => formats.find((formatOption) => formatOption.id === selectedFormat) ?? formats[0],
+    [formats, selectedFormat],
+  );
+
+  const previewFormat = activeFormat?.previewMode === "png" ? "png" : "pdf";
+  const canPreview = !!activeFormat?.previewMode;
+  const currentPaperSize = paperSize;
+
   useEffect(() => {
     if (!open) return;
 
@@ -2275,15 +2284,6 @@ export function ExportStudioDialog({
     panelScrollMemoryRef.current[activePanel] = panelScrollRef.current?.scrollTop ?? 0;
     setActivePanel(nextPanel);
   }, [activePanel]);
-
-  const activeFormat = useMemo(
-    () => formats.find((formatOption) => formatOption.id === selectedFormat) ?? formats[0],
-    [formats, selectedFormat],
-  );
-
-  const previewFormat = activeFormat?.previewMode === "png" ? "png" : "pdf";
-  const canPreview = !!activeFormat?.previewMode;
-  const currentPaperSize = paperSize;
   const autoPreviewZoom = useMemo(() => {
     if (!isCompactLayout || previewViewportWidth <= 0 || previewContentWidth <= 0) return 100;
     const paddedViewportWidth = Math.max(previewViewportWidth - 24, 120);
