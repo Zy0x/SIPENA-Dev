@@ -27,8 +27,14 @@ export const ATTENDANCE_SHELL_MM = {
   legendRow: 7,
   /** Header row inside an info block (Keterangan / Catatan). */
   infoBlockHeader: 5,
+  /** Vertical gap after each info block. */
+  infoBlockGap: 2,
   /** Single text line height inside an info block. */
   infoLine: 4,
+  /** Extra lead-in before continuation Keterangan cards so page 2+ aligns visually. */
+  continuationSummaryLeadIn: 4,
+  /** Minimum gap between summary cards and signature block. */
+  signatureGap: 2,
   /** Reserved height for the signature block. */
   signatureBlock: 34,
 } as const;

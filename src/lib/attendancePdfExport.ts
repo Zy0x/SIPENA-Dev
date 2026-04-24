@@ -327,7 +327,7 @@ function resolveInfoItemToneColor(item: string | AttendancePrintInfoItem): [numb
   if (typeof item === "string") return COLORS.muted;
   if (item.tone === "national") return [185, 28, 28];
   if (item.tone === "custom") return [180, 83, 9];
-  if (item.tone === "event") return [29, 78, 216];
+  if (item.tone === "event") return [124, 58, 237];
   return COLORS.muted;
 }
 
@@ -411,7 +411,7 @@ function drawInfoBlock(
     });
   }
 
-  return y + blockHeight + 2;
+  return y + blockHeight + SHELL_MM.infoBlockGap;
 }
 
 function drawSummary(
@@ -459,6 +459,8 @@ function drawSummary(
     });
 
     nextY = legendY + 4.1;
+  } else if (summaryContent.keteranganItems.length > 0 || summaryContent.notesItems.length > 0) {
+    nextY += SHELL_MM.continuationSummaryLeadIn;
   }
   if (summaryContent.keteranganItems.length > 0) {
     nextY = drawInfoBlock(doc, summaryContent.keteranganTitle ?? "Keterangan", summaryContent.keteranganItems, x, nextY, contentWidth, summaryContent.keteranganFontPt, "#0369a1", "#f0f9ff");
@@ -474,7 +476,7 @@ function drawSummary(
     addSignatureBlockPDF(
       doc,
       signature,
-      nextY + 1,
+      nextY + SHELL_MM.signatureGap,
       plan.signaturePlacement
         ? {
             xMm: plan.signaturePlacement.xMm,

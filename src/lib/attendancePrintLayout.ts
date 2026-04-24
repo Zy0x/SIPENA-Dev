@@ -367,7 +367,10 @@ function buildInfoBlockMeasurement(items: AttendanceInfoLike[], widthMm: number,
     } else {
       contentHeightMm = itemHeightsMm.slice(0, count).reduce((sum, value) => sum + value, 0);
     }
-    return SHELL_HEIGHT_MM.infoBlockHeader + contentHeightMm + INFO_BLOCK_BOTTOM_PADDING_MM;
+    return SHELL_HEIGHT_MM.infoBlockHeader
+      + contentHeightMm
+      + INFO_BLOCK_BOTTOM_PADDING_MM
+      + SHELL_HEIGHT_MM.infoBlockGap;
   };
 
   return {
@@ -1061,7 +1064,8 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     remainingKeterangan: AttendancePrintInfoItem[],
     remainingNotes: string[],
   ): AttendancePrintPageSummaryContent => {
-    let usedMm = SHELL_HEIGHT_MM.summaryGap + (showLegend ? legendHeightMm : 0);
+    let usedMm = SHELL_HEIGHT_MM.summaryGap
+      + (showLegend ? legendHeightMm : SHELL_HEIGHT_MM.continuationSummaryLeadIn);
     let keteranganItems: AttendancePrintInfoItem[] = [];
     let notesItems: string[] = [];
 
@@ -1181,7 +1185,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const lastPage = pages[pages.length - 1];
   const provisionalSignatureZoneTopMm = (lastPage?.kind === "table" ? tableEndYMm : continuationSummaryStartYMm)
     + summaryInfoHeightMm
-    + (includeSignature ? 1 : 0);
+    + (includeSignature ? SHELL_HEIGHT_MM.signatureGap : 0);
   const provisionalSignatureZoneHeightMm = includeSignature
     ? Math.max(0, printableBottomMm - provisionalSignatureZoneTopMm)
     : 0;
