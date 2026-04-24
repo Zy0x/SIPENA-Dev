@@ -193,7 +193,15 @@ function InstallBanner({ onInstall, onDismiss, isIOS, isDesktop, hasNativePrompt
 }
 
 // ─── Update Banner ────────────────────────────────────────────────────────────
-function UpdateBanner({ onUpdate, onDismiss }: { onUpdate: () => void; onDismiss: () => void }) {
+function UpdateBanner({
+  onUpdate,
+  onDismiss,
+  isUpdating,
+}: {
+  onUpdate: () => void;
+  onDismiss: () => void;
+  isUpdating: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (ref.current) gsap.fromTo(ref.current, { opacity: 0, y: -60 }, { opacity: 1, y: 0, duration: 0.4, ease: 'back.out(1.4)' });
@@ -208,22 +216,36 @@ function UpdateBanner({ onUpdate, onDismiss }: { onUpdate: () => void; onDismiss
         className="bg-card border border-border rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3"
         style={{ pointerEvents: 'auto' }}
       >
-        <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
-          <RefreshCw className="w-4 h-4 text-blue-500" />
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isUpdating ? 'bg-primary/15' : 'bg-blue-500/15'}`}>
+          <RefreshCw className={`w-4 h-4 ${isUpdating ? 'text-primary animate-spin' : 'text-blue-500'}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-foreground">Pembaruan tersedia</p>
-          <p className="text-[10px] text-muted-foreground">Versi terbaru SIPENA siap digunakan</p>
+          <p className="text-xs font-semibold text-foreground">
+            {isUpdating ? 'Memperbarui aplikasi...' : 'Pembaruan tersedia'}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {isUpdating ? 'Mohon tunggu, versi terbaru sedang diterapkan' : 'Versi terbaru SIPENA siap digunakan'}
+          </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onUpdate(); }}
-            className="px-2.5 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-all"
+            disabled={isUpdating}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              isUpdating
+                ? 'bg-primary/80 text-primary-foreground cursor-wait'
+                : 'bg-primary text-primary-foreground hover:opacity-90'
+            }`}
             style={{ pointerEvents: 'auto' }}
           >
-            Update
+            {isUpdating ? 'Memperbarui...' : 'Update'}
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onDismiss(); }} className="p-1 hover:bg-muted rounded-lg" style={{ pointerEvents: 'auto' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+            disabled={isUpdating}
+            className={`p-1 rounded-lg ${isUpdating ? 'opacity-40 cursor-not-allowed' : 'hover:bg-muted'}`}
+            style={{ pointerEvents: 'auto' }}
+          >
             <X className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>
@@ -249,6 +271,7 @@ export default function PWAManager() {
   const [showIOSGuide,    setShowIOSGuide]    = useState(false);
   const [showDesktopInfo, setShowDesktopInfo] = useState(false);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const dismissedRef = useRef(false);
 
   const triggerUpdate = useCallback(() => {
@@ -315,16 +338,26 @@ export default function PWAManager() {
     return () => clearInterval(interval);
   }, [triggerUpdate]);
 
-  const handleUpdate = useCallback(() => {
+  const handleUpdate = useCallback(async () => {
+    if (isUpdating) return;
     dismissedRef.current = true;
-    setShowUpdateBanner(false);
-    pwa.applyUpdate();
-  }, [pwa]);
+    setShowUpdateBanner(true);
+    setIsUpdating(true);
+    try {
+      await pwa.applyUpdate();
+    } catch (error) {
+      console.warn('[PWA] applyUpdate failed:', error);
+      dismissedRef.current = false;
+      setIsUpdating(false);
+      setShowUpdateBanner(true);
+    }
+  }, [isUpdating, pwa]);
 
   const handleDismissUpdate = useCallback(() => {
+    if (isUpdating) return;
     dismissedRef.current = true;
     setShowUpdateBanner(false);
-  }, []);
+  }, [isUpdating]);
 
   const handleInstall = useCallback(() => {
     if (pwa.isIOS) {
@@ -354,6 +387,7 @@ export default function PWAManager() {
         <UpdateBanner
           onUpdate={handleUpdate}
           onDismiss={handleDismissUpdate}
+          isUpdating={isUpdating}
         />
       )}
 
