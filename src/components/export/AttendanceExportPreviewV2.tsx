@@ -3,9 +3,9 @@
  *
  * After the WYSIWYG refactor (v2.3.92), this component no longer computes
  * its own layout. It builds the layout plan via `buildAttendancePrintLayoutPlan`
- * and delegates rendering to `AttendancePrintDocument` so that:
+ * and delegates rendering to the PDF canvas preview so that:
  *
- *   preview ≡ print ≡ raster capture (PDF/PNG)
+ *   preview ≡ exported PDF ≡ exported PNG
  *
  * Existing callers (Attendance.tsx) keep the same props.
  */
@@ -19,7 +19,6 @@ import {
   type AttendancePrintDataset,
 } from "@/lib/attendancePrintLayout";
 import type { AttendanceHolidayInputItem } from "@/lib/attendanceHolidayGrouping";
-import { AttendancePrintDocument } from "@/components/export/AttendancePrintDocument";
 import type { AttendanceExportTrace } from "@/lib/attendanceExportDebug";
 import { AttendancePdfCanvasPreview } from "@/components/export/AttendancePdfCanvasPreview";
 import { buildAttendancePdfDocument } from "@/lib/attendancePdfExport";
@@ -114,10 +113,10 @@ function toPrintDataset(data: AttendanceExportPreviewDataV2): AttendancePrintDat
 }
 
 export function AttendanceExportPreviewV2({
-  previewFormat,
+  previewFormat: _previewFormat,
   draft,
   setDraft,
-  previewDate,
+  previewDate: _previewDate,
   includeSignature,
   data,
   paperSize,
@@ -144,15 +143,13 @@ export function AttendanceExportPreviewV2({
   );
 
   const pdfBuild = useMemo(() => (
-    previewFormat === "pdf"
-      ? buildAttendancePdfDocument({
-          data: printDataset,
-          plan,
-          signature: draft,
-          includeSignature,
-        })
-      : null
-  ), [draft, includeSignature, plan, previewFormat, printDataset]);
+    buildAttendancePdfDocument({
+      data: printDataset,
+      plan,
+      signature: draft,
+      includeSignature,
+    })
+  ), [draft, includeSignature, plan, printDataset]);
 
   useEffect(() => {
     if (!debugEnabled || !onTrace) return;
@@ -235,27 +232,13 @@ export function AttendanceExportPreviewV2({
     });
   }, [autoFitOnePage, debugEnabled, includeSignature, onTrace, paperSize, pdfBuild, plan, printDataset]);
 
-  if (previewFormat === "pdf") {
-    return (
-      <AttendancePdfCanvasPreview
-        data={printDataset}
-        plan={plan}
-        signature={draft}
-        setSignature={setDraft}
-        includeSignature={includeSignature}
-      />
-    );
-  }
-
   return (
-    <AttendancePrintDocument
+    <AttendancePdfCanvasPreview
       data={printDataset}
       plan={plan}
       signature={draft}
       setSignature={setDraft}
       includeSignature={includeSignature}
-      previewDate={previewDate}
-      mode="preview"
     />
   );
 }
