@@ -724,6 +724,7 @@ function headerRowHeightMm(headerFontPt: number, dayHeaderFontPt: number, dayDat
 export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutArgs): AttendancePrintLayoutPlan {
   const { data, paperSize, includeSignature, signature = null, forceSinglePage, signatureOffsetYMm = 0 } = args;
   const documentStyle = resolveDocumentStyle(args.documentStyle);
+  const useFullPage = paperSize === "full-page";
   const visibleSet = buildVisibleColumnSet(data, args.visibleColumnKeys);
   const signatureMetrics = includeSignature ? estimateSignatureBlockMetrics(signature) : null;
 
@@ -754,7 +755,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     requiredContentWidthMm: minRequiredWidthMm,
   });
 
-  const paper: AttendancePrintPaper = {
+  let paper: AttendancePrintPaper = {
     key: paperSize,
     pageWidthMm: resolvedPaper.pageWidthMm,
     pageHeightMm: resolvedPaper.pageHeightMm,
@@ -875,7 +876,9 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     }
   }
 
-  const reservedLastPageMm = selectedSinglePageFontPt
+  const reservedLastPageMm = useFullPage
+    ? reservedShellMm + signatureReserveMm
+    : selectedSinglePageFontPt
     ? reservedShellMm + selectedSinglePageSummaryInfoHeightMm + signatureReserveMm
     : minimalSummaryReserveMm;
 
@@ -901,7 +904,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     reservedHeightMm: reservedLastPageMm,
     forceSinglePage,
   });
-  const shouldForceSinglePage = forceSinglePage && singlePageFits;
+  const shouldForceSinglePage = !useFullPage && forceSinglePage && singlePageFits;
   const plannerWarnings: string[] = [];
 
   const tableHeaderHeightMm = table.headerRowHeightMm * 2;
@@ -910,11 +913,11 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     Math.max(10, paper.contentHeightMm - reservedShellMm - SHELL_HEIGHT_MM.continuationNote - tableHeaderHeightMm - TABLE_BOTTOM_SAFETY_MM);
   const bodyRowsTotalHeightMm = rowHeightsMm.reduce((sum, height) => sum + height, 0);
   const tablePlannedTotalHeightMm = tableHeaderHeightMm + bodyRowsTotalHeightMm + (summaryRowHeightMm * 2);
-  const overflowRisk = tableRightSlackMm > TABLE_SLACK_TOLERANCE_MM || !singlePageFits;
+  const overflowRisk = tableRightSlackMm > TABLE_SLACK_TOLERANCE_MM || (!useFullPage && !singlePageFits);
   if (tableRightSlackMm > TABLE_SLACK_TOLERANCE_MM) {
     plannerWarnings.push(`Lebar tabel belum sinkron penuh dengan frame cetak. Slack kanan tersisa ${tableRightSlackMm.toFixed(2)}mm.`);
   }
-  if (forceSinglePage && !singlePageFits) {
+  if (forceSinglePage && !singlePageFits && !useFullPage) {
     plannerWarnings.push("Mode satu halaman tidak muat penuh, planner beralih ke multi-page terencana.");
   }
   const tableStartYMm = paper.marginTopMm + SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.metaBar + SHELL_HEIGHT_MM.contentPaddingY;
@@ -930,7 +933,31 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     });
   };
 
-  if (shouldForceSinglePage) {
+  if (useFullPage) {
+    pushTablePage({
+      key: "p-0",
+      pageNumber: 1,
+      rowStart: 0,
+      rowEnd: rows.length,
+      rowHeightsMm,
+      tableStartYMm,
+      tableMaxBottomMm: Number.MAX_SAFE_INTEGER,
+      plannedBodyHeightMm: bodyRowsTotalHeightMm,
+      plannedSummaryHeightMm: summaryRowHeightMm * 2,
+      plannedFooterReserveMm: SHELL_HEIGHT_MM.footerBar,
+      plannedHeaderReserveMm: SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.metaBar + SHELL_HEIGHT_MM.contentPaddingY + tableHeaderHeightMm,
+      pageContentHeightMm: paper.contentHeightMm,
+      availableBodyHeightMm: bodyRowsTotalHeightMm,
+      hasDocumentHeader: true,
+      hasTableHeader: true,
+      hasContinuationNote: false,
+      showSummary: true,
+      hasSummaryRows: true,
+      drawSignatureHere: false,
+      isSignatureOnlyPage: false,
+      isLastPage: true,
+    });
+  } else if (shouldForceSinglePage) {
     const plannedBodyHeightMm = bodyRowsTotalHeightMm;
     pushTablePage({
       key: "p-0",
@@ -1050,12 +1077,14 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const lastTablePage = pages[lastTablePageIndex];
   const lastPageRowsHeightMm = lastTablePage ? lastTablePage.rowHeightsMm.reduce((sum, height) => sum + height, 0) : 0;
   const tableEndYMm = tableStartYMm + (table.headerRowHeightMm * 2) + lastPageRowsHeightMm + (lastTablePage?.hasSummaryRows ? summaryRowHeightMm * 2 : 0);
-  const printableBottomMm = paper.pageHeightMm - paper.marginBottomMm - SHELL_HEIGHT_MM.footerBar - SHELL_HEIGHT_MM.footerClearance;
+  let printableBottomMm = paper.pageHeightMm - paper.marginBottomMm - SHELL_HEIGHT_MM.footerBar - SHELL_HEIGHT_MM.footerClearance;
 
   const continuationSummaryStartYMm = paper.marginTopMm + Math.max(0, SHELL_HEIGHT_MM.topBanner - 2);
   const firstSummaryAvailableMm = Math.max(0, printableBottomMm - tableEndYMm);
   const continuationSummaryAvailableMm = Math.max(0, printableBottomMm - continuationSummaryStartYMm);
-  const chosenKeteranganFontPt = selectedSinglePageFontPt ?? minKeteranganBaseFontPt;
+  const chosenKeteranganFontPt = useFullPage
+    ? documentStyle.metaFontSize
+    : selectedSinglePageFontPt ?? minKeteranganBaseFontPt;
   const totalKeteranganHeightMm = measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt);
 
   const buildSummaryPageContent = (
@@ -1108,19 +1137,43 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const remainingKeterangan = [...summary.keterangan];
   const remainingNotes = [...summary.notes];
   const summaryPageContents: AttendancePrintPageSummaryContent[] = [];
-  let summaryGuard = 0;
-  while ((summaryPageContents.length === 0 || remainingKeterangan.length > 0 || remainingNotes.length > 0) && summaryGuard < 100) {
-    const isFirst = summaryPageContents.length === 0;
-    summaryPageContents.push(buildSummaryPageContent(
-      isFirst ? firstSummaryAvailableMm : continuationSummaryAvailableMm,
-      isFirst,
-      remainingKeterangan,
-      remainingNotes,
-    ));
-    summaryGuard += 1;
-  }
-  if (summaryGuard >= 100) {
-    plannerWarnings.push("Pagination Keterangan mencapai batas pengaman loop.");
+  if (useFullPage) {
+    summaryPageContents.push({
+      mode: "table-tail",
+      showLegend: true,
+      legendHeightMm,
+      keteranganTitle: summary.keterangan.length > 0 ? "Keterangan" : null,
+      keteranganItems: [...summary.keterangan],
+      keteranganFontPt: chosenKeteranganFontPt,
+      keteranganHeightMm: measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt),
+      notesTitle: summary.notes.length > 0 ? "Catatan Siswa" : null,
+      notesItems: [...summary.notes],
+      notesFontPt: notesBaseFontPt,
+      notesHeightMm: measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt),
+      contentHeightMm:
+        SHELL_HEIGHT_MM.summaryGap
+        + legendHeightMm
+        + measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt)
+        + measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt),
+      reservedSignatureHeightMm: signatureReserveMm,
+    });
+    remainingKeterangan.length = 0;
+    remainingNotes.length = 0;
+  } else {
+    let summaryGuard = 0;
+    while ((summaryPageContents.length === 0 || remainingKeterangan.length > 0 || remainingNotes.length > 0) && summaryGuard < 100) {
+      const isFirst = summaryPageContents.length === 0;
+      summaryPageContents.push(buildSummaryPageContent(
+        isFirst ? firstSummaryAvailableMm : continuationSummaryAvailableMm,
+        isFirst,
+        remainingKeterangan,
+        remainingNotes,
+      ));
+      summaryGuard += 1;
+    }
+    if (summaryGuard >= 100) {
+      plannerWarnings.push("Pagination Keterangan mencapai batas pengaman loop.");
+    }
   }
 
   if (summaryPageContents.length === 0) {
@@ -1174,13 +1227,48 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     });
   }
 
+  let summaryInfoHeightMm = summaryPageContents[summaryPageContents.length - 1]?.contentHeightMm ?? 0;
+
+  if (useFullPage) {
+    const resolvedFullPage = resolveReportPaperSize("full-page", {
+      orientation: "landscape",
+      requiredContentWidthMm: paper.pageWidthMm,
+      requiredContentHeightMm:
+        tableEndYMm
+        + summaryInfoHeightMm
+        + (includeSignature && signatureMetrics ? SHELL_HEIGHT_MM.signatureGap + signatureMetrics.heightMm + 3 : 0)
+        + paper.marginBottomMm
+        + SHELL_HEIGHT_MM.footerBar
+        + SHELL_HEIGHT_MM.footerClearance,
+    });
+    paper = {
+      ...paper,
+      pageWidthMm: resolvedFullPage.pageWidthMm,
+      pageHeightMm: resolvedFullPage.pageHeightMm,
+      contentWidthMm: resolvedFullPage.pageWidthMm - paper.marginLeftMm - paper.marginRightMm,
+      contentHeightMm: resolvedFullPage.pageHeightMm - paper.marginTopMm - paper.marginBottomMm,
+    };
+    printableBottomMm = paper.pageHeightMm - paper.marginBottomMm - SHELL_HEIGHT_MM.footerBar - SHELL_HEIGHT_MM.footerClearance;
+    const fullPageBottomMm = printableBottomMm - TABLE_BOTTOM_SAFETY_MM;
+    const fullPageAvailableBodyMm = Math.max(
+      bodyRowsTotalHeightMm,
+      paper.contentHeightMm - reservedShellMm - tableHeaderHeightMm - (summaryRowHeightMm * 2) - TABLE_BOTTOM_SAFETY_MM,
+    );
+    pages[0] = {
+      ...pages[0],
+      tableMaxBottomMm: fullPageBottomMm,
+      pageContentHeightMm: paper.contentHeightMm,
+      availableBodyHeightMm: fullPageAvailableBodyMm,
+      isLastPage: true,
+    };
+  }
+
   pages.forEach((page, index) => {
     page.pageNumber = index + 1;
     page.isLastPage = index === pages.length - 1;
   });
 
   const keteranganHeightMm = totalKeteranganHeightMm;
-  const summaryInfoHeightMm = summaryPageContents[summaryPageContents.length - 1]?.contentHeightMm ?? 0;
   const lastPage = pages[pages.length - 1];
   const provisionalSignatureZoneTopMm = (lastPage?.kind === "table" ? tableEndYMm : continuationSummaryStartYMm)
     + summaryInfoHeightMm
@@ -1214,6 +1302,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     && signatureMetrics
     && lastPage
     && !shouldForceSinglePage
+    && !useFullPage
     && (
       wantsManualPageMoveToNewPage
       || provisionalSignatureZoneHeightMm < minimumViableSignatureZoneMm
@@ -1415,7 +1504,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     fit: {
       mode,
       appliedScale: 1,
-      forceSinglePage: shouldForceSinglePage,
+      forceSinglePage: shouldForceSinglePage || useFullPage,
     },
     totals,
     debug: {

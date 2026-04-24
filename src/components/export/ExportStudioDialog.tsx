@@ -190,8 +190,9 @@ const PAPER_SIZE_OPTIONS: Array<{
   description: string;
 }> = [
   { id: "a4", label: "A4", description: "Ukuran standar dokumen cetak." },
-  { id: "f4", label: "F4", description: "8,5 x 13 in, lebih lega untuk tabel lebar." },
-  { id: "auto", label: "Auto", description: "Menyesuaikan lebar kertas dengan tabel secara dinamis." },
+  { id: "f4", label: "F4", description: "8,5 x 13 in, lebih panjang untuk tabel lebar." },
+  { id: "auto", label: "Auto", description: "Tetap memakai A4, lalu layout menyesuaikan isi secara otomatis." },
+  { id: "full-page", label: "Full Page", description: "Ukuran halaman mengikuti seluruh isi dari header sampai footer." },
 ];
 
 function getFormatToneClasses(id: string) {
@@ -2384,7 +2385,7 @@ export function ExportStudioDialog({
                         <div>
                           <p className="text-[11px] font-semibold text-foreground">Ukuran kertas</p>
                           <p className="mt-1 text-[10px] text-muted-foreground">
-                            Berlaku untuk preview dan hasil ekspor PDF/PNG. Mode Auto akan mengikuti kebutuhan lebar tabel secara lebih fleksibel.
+                            Berlaku untuk preview dan hasil ekspor PDF/PNG. Auto memakai basis A4 yang menyesuaikan layout, sedangkan Full Page membuat ukuran halaman mengikuti isi dokumen.
                           </p>
                         </div>
                         <Tooltip>
@@ -2394,12 +2395,12 @@ export function ExportStudioDialog({
                             </button>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-64 text-[11px]">
-                            A4 cocok untuk dokumen umum, F4 memberi ruang tambahan, dan Auto membantu tabel lebar tetap lebih nyaman dibaca.
+                            A4 cocok untuk dokumen umum, F4 memakai ukuran 8,5 x 13 in, Auto menjaga basis A4, dan Full Page membiarkan ukuran halaman mengikuti konten.
                           </TooltipContent>
                         </Tooltip>
                       </div>
 
-                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         {PAPER_SIZE_OPTIONS.map((option) => {
                           const active = currentPaperSize === option.id;
                           return (

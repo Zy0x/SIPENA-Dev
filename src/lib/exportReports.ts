@@ -76,6 +76,7 @@ export function exportToPDF(config: ExportConfig): void {
   const paper = resolveReportPaperSize(config.paperSize, {
     orientation: "landscape",
     requiredContentWidthMm: layoutPlan.metrics.pageWidthMm,
+    requiredContentHeightMm: layoutPlan.metrics.pageHeightMm,
   });
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: paper.pdfFormat });
   const pageWidth = doc.internal.pageSize.getWidth();

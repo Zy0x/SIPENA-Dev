@@ -30,8 +30,9 @@ export { PX_PER_MM } from "@/lib/exportEngine/sharedMetrics";
 // ─── Paper definitions (mm) ────────────────────────────────────────────────
 const PAPER: Record<ReportPaperSize, { w: number; h: number }> = {
   a4: { w: 297, h: 210 },   // landscape A4
-  f4: { w: 330, h: 215 },   // landscape F4
-  auto: { w: 0, h: 210 },   // width computed dynamically
+  f4: { w: 330.2, h: 215.9 }, // landscape F4 (8.5 x 13 in)
+  auto: { w: 297, h: 210 },   // adaptive layout on A4
+  "full-page": { w: 0, h: 0 }, // dynamic width and height
 };
 
 const MARGIN = { top: 10, right: 8, bottom: 10, left: 8 } as const;
@@ -401,8 +402,8 @@ export function buildAttendancePrintLayoutPlan(opts: BuildOptions): AttendancePr
     const tableHeaderTotalMm = headerRowHeightMm * HEADER_ROWS;
 
     // ── 5. Compute available page content height ──────────────────────────
-    const pageH = basePaper.h;
-    const contentH = pageH - marginV - FOOTER_HEIGHT_MM;
+    const basePageH = basePaper.h || 210;
+    const contentH = basePageH - marginV - FOOTER_HEIGHT_MM;
 
     // Overhead on first page (banner + meta bar + table headers)
     const firstPageOverhead = BANNER_HEIGHT_MM + META_BAR_HEIGHT_MM + tableHeaderTotalMm;
@@ -460,12 +461,22 @@ export function buildAttendancePrintLayoutPlan(opts: BuildOptions): AttendancePr
 
     // Compute page width
     let pageW = basePaper.w > 0 ? basePaper.w : 297;
+    let pageH = basePaper.h > 0 ? basePaper.h : 210;
 
-    if (paperSize === "auto") {
-      // Auto: compute minimum width needed, with a sane cap at 500mm
+    if (paperSize === "full-page") {
       const minDayWidth = Math.max(4, headerFontPt * 0.35 + 1);
-      const autoW = MARGIN.left + MARGIN.right + fixedWidthMm + dayCount * minDayWidth;
-      pageW = Math.min(500, Math.max(297, autoW));
+      pageW = Math.max(297, MARGIN.left + MARGIN.right + fixedWidthMm + dayCount * minDayWidth);
+      pageH = Math.max(
+        210,
+        MARGIN.top
+        + BANNER_HEIGHT_MM
+        + META_BAR_HEIGHT_MM
+        + tableHeaderTotalMm
+        + rows.length * bodyRowHeightMm
+        + summaryHeight
+        + FOOTER_HEIGHT_MM
+        + MARGIN.bottom,
+      );
     }
 
     const availableForDays = pageW - marginH - fixedWidthMm;

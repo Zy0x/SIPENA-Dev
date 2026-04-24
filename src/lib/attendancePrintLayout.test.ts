@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolveReportPaperSize } from "@/lib/reportExportLayoutV2";
 import { computeAttendanceColumnLayout } from "@/lib/attendanceExport";
 import { buildAttendancePdfDocument } from "@/lib/attendancePdfExport";
 import { clampSignaturePlacementMm, convertPreviewDeltaPxToMm, resolveManualSignaturePercents } from "@/lib/attendancePdfPreview";
@@ -110,6 +111,79 @@ describe("attendance print layout", () => {
     expect(plan.rowHeightsMm[0]).toBeGreaterThan(plan.rowHeightsMm[1]);
     expect(plan.pages[0]?.rowEnd).toBeGreaterThan(0);
     expect(plan.summaryRows.percentageByKey.H).toBe("91,7%");
+  });
+
+  it("uses exact A4, F4, auto A4, and dynamic full-page paper sizes", () => {
+    const a4 = resolveReportPaperSize("a4", { orientation: "landscape" });
+    const f4 = resolveReportPaperSize("f4", { orientation: "landscape" });
+    const auto = resolveReportPaperSize("auto", { orientation: "landscape", requiredContentWidthMm: 420 });
+    const fullPage = resolveReportPaperSize("full-page", {
+      orientation: "landscape",
+      requiredContentWidthMm: 420,
+      requiredContentHeightMm: 360,
+    });
+
+    expect(a4.pageWidthMm).toBe(297);
+    expect(a4.pageHeightMm).toBe(210);
+    expect(f4.pageWidthMm).toBeCloseTo(330.2, 1);
+    expect(f4.pageHeightMm).toBeCloseTo(215.9, 1);
+    expect(auto.pageWidthMm).toBe(297);
+    expect(auto.pageHeightMm).toBe(210);
+    expect(fullPage.pageWidthMm).toBe(420);
+    expect(fullPage.pageHeightMm).toBe(360);
+  });
+
+  it("builds a single dynamic page in full-page mode", () => {
+    const plan = buildAttendancePrintLayoutPlan({
+      data: createDataset({
+        rows: Array.from({ length: 42 }, (_, index) => ({
+          id: `s-${index + 1}`,
+          number: index + 1,
+          name: `Siswa ${index + 1} Dengan Nama Yang Cukup Panjang Untuk Menguji Tinggi Halaman Dinamis`,
+          nisn: `1234567890${String(index).padStart(5, "0")}`,
+          cells: Array.from({ length: 30 }, (_, dayIndex) => ({
+            value: dayIndex % 6 === 0 ? "S" : "H",
+            isHoliday: false,
+            hasEvent: false,
+          })),
+          totals: { H: 20, S: 4, I: 0, A: 0, D: 0, total: 4 },
+        })),
+        holidayItems: createHolidayItems(10, 12),
+        eventItems: createHolidayItems(6, 10),
+        notes: ["Catatan pertama yang cukup panjang untuk menguji tinggi konten halaman penuh."],
+      }),
+      paperSize: "full-page",
+      includeSignature: true,
+      signature: {
+        city: "Bandung",
+        signers: [{ id: "1", name: "Guru", title: "Guru Mata Pelajaran", nip: "", school_name: "" }],
+        useCustomDate: false,
+        customDate: null,
+        fontSize: 10,
+        showSignatureLine: true,
+        signatureLineWidth: 50,
+        signatureSpacing: 20,
+        signatureAlignment: "right",
+        signatureOffsetX: 0,
+        signatureOffsetY: 0,
+        placementMode: "adaptive",
+        signaturePreset: "bottom-right",
+        manualXPercent: null,
+        manualYPercent: null,
+        snapToGrid: true,
+        gridSizeMm: 5,
+        lockSignaturePosition: false,
+        showDebugGuides: false,
+        signaturePageIndex: null,
+      },
+      forceSinglePage: false,
+    });
+
+    expect(plan.pages).toHaveLength(1);
+    expect(plan.pages[0]?.kind).toBe("table");
+    expect(plan.pages[0]?.drawSignatureHere).toBe(true);
+    expect(plan.summaryLayout.continuationPageCount).toBe(0);
+    expect(plan.paper.pageHeightMm).toBeGreaterThan(210);
   });
 
   it("keeps short keterangan on the table page without continuation", () => {

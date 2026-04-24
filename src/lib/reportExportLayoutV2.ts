@@ -165,9 +165,11 @@ export function resolveReportPaperSize(
   options?: {
     orientation?: "landscape" | "portrait";
     requiredContentWidthMm?: number;
+    requiredContentHeightMm?: number;
   },
 ): ResolvedReportPaper {
   const orientation = options?.orientation ?? "landscape";
+  const basePreset = PAPER_PRESETS.a4[orientation];
 
   if (paperSize === "a4") {
     const preset = PAPER_PRESETS.a4[orientation];
@@ -179,29 +181,34 @@ export function resolveReportPaperSize(
     return { key: "f4", label: PAPER_PRESETS.f4.label, ...preset, pdfFormat: [preset.pageWidthMm, preset.pageHeightMm] };
   }
 
-  const base = PAPER_PRESETS.a4[orientation];
-  const fallback = PAPER_PRESETS.f4[orientation];
+  if (paperSize === "auto") {
+    return {
+      key: "auto",
+      label: "Auto (A4 Adaptif)",
+      ...basePreset,
+      pdfFormat: [basePreset.pageWidthMm, basePreset.pageHeightMm],
+    };
+  }
+
+  const maxWidthMm = orientation === "landscape" ? 1200 : 900;
+  const maxHeightMm = orientation === "landscape" ? 1600 : 2000;
   const targetWidth = clamp(
-    Math.round(Math.max(base.pageWidthMm, options?.requiredContentWidthMm ?? base.pageWidthMm) * 10) / 10,
-    base.pageWidthMm,
-    orientation === "landscape" ? 420 : 297,
+    Math.round(Math.max(basePreset.pageWidthMm, options?.requiredContentWidthMm ?? basePreset.pageWidthMm) * 10) / 10,
+    basePreset.pageWidthMm,
+    maxWidthMm,
   );
-  const pageHeightMm = orientation === "landscape"
-    ? targetWidth > fallback.pageWidthMm
-      ? 230
-      : targetWidth > base.pageWidthMm
-        ? fallback.pageHeightMm
-        : base.pageHeightMm
-    : targetWidth > base.pageWidthMm
-      ? fallback.pageHeightMm
-      : base.pageHeightMm;
+  const targetHeight = clamp(
+    Math.round(Math.max(basePreset.pageHeightMm, options?.requiredContentHeightMm ?? basePreset.pageHeightMm) * 10) / 10,
+    basePreset.pageHeightMm,
+    maxHeightMm,
+  );
 
   return {
-    key: "auto",
-    label: "Auto",
+    key: "full-page",
+    label: "Full Page",
     pageWidthMm: targetWidth,
-    pageHeightMm,
-    pdfFormat: [targetWidth, pageHeightMm],
+    pageHeightMm: targetHeight,
+    pdfFormat: [targetWidth, targetHeight],
   };
 }
 
@@ -683,7 +690,7 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
   let documentStyle = resolveDocumentStyle(config.documentStyle);
   
   // Auto-fit one page: iteratively shrink font until all rows + signature fit on 1 page
-  if (config.autoFitOnePage && config.data.length > 0) {
+  if (config.autoFitOnePage && config.data.length > 0 && config.paperSize !== "full-page") {
     documentStyle = autoFitOnePageStyle(config, documentStyle);
   }
   
@@ -692,12 +699,99 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
     orientation: "landscape",
     requiredContentWidthMm: initialWidths.reduce((sum, width) => sum + width, 0) + BASE_LAYOUT_METRICS.marginLeftMm + BASE_LAYOUT_METRICS.marginRightMm,
   });
-  const metrics = createLayoutMetrics(paper.pageWidthMm, paper.pageHeightMm);
+  let metrics = createLayoutMetrics(paper.pageWidthMm, paper.pageHeightMm);
   const { segments, allWidths } = buildSegments(config, documentStyle, metrics);
   const signatureMetrics = config.includeSignature ? estimateSignatureBlockMetrics(config.signature) : null;
   const signatureReserve = signatureMetrics ? signatureMetrics.heightMm + metrics.signatureGapMm : 0;
   const warnings: string[] = [];
-  const pages: ReportLayoutPageV2[] = [];
+  let pages: ReportLayoutPageV2[] = [];
+
+  if (config.paperSize === "full-page") {
+    const headerHeight = getHeaderHeightMm(documentStyle, config.headerGroups.length);
+    const bodyHeight = getBodyHeightMm(documentStyle);
+    const estimatedTableHeightMm = headerHeight + config.data.length * bodyHeight;
+    const estimatedTableEndY = metrics.firstPageTableStartY + estimatedTableHeightMm;
+    const resolvedFullPagePaper = resolveReportPaperSize("full-page", {
+      orientation: "landscape",
+      requiredContentWidthMm: allWidths.reduce((sum, width) => sum + width, 0) + metrics.marginLeftMm + metrics.marginRightMm,
+      requiredContentHeightMm: estimatedTableEndY + signatureReserve + metrics.marginBottomMm + metrics.footerHeightMm,
+    });
+    metrics = createLayoutMetrics(resolvedFullPagePaper.pageWidthMm, resolvedFullPagePaper.pageHeightMm);
+    pages = [{
+      index: 0,
+      number: 1,
+      pageType: "table",
+      segmentIndex: 0,
+      segmentNumber: 1,
+      totalSegments: 1,
+      tableStartY: metrics.firstPageTableStartY,
+      rows: [...config.data],
+      columns: config.columns,
+      headerGroups: config.headerGroups,
+      columnWidthsMm: allWidths,
+      bodyStartIndex: 0,
+      bodyEndIndex: Math.max(0, config.data.length - 1),
+      isLastPage: true,
+      isFirstPageOverall: true,
+      isFirstPageInSegment: true,
+      estimatedTableHeightMm,
+      estimatedTableEndY,
+    }];
+
+    let signaturePlacement: SignaturePlacement | null = null;
+    if (config.includeSignature && config.signature && signatureMetrics) {
+      signaturePlacement = resolveSignaturePlacementFromBounds({
+        pageIndex: 0,
+        signature: config.signature,
+        signatureMetrics,
+        pageWidthMm: metrics.pageWidthMm,
+        pageHeightMm: metrics.pageHeightMm,
+        marginLeftMm: metrics.marginLeftMm,
+        marginRightMm: metrics.marginRightMm,
+        marginTopMm: metrics.marginTopMm,
+        marginBottomMm: metrics.marginBottomMm,
+        footerHeightMm: metrics.footerHeightMm,
+        safeZoneTopMm: estimatedTableEndY + metrics.signatureGapMm,
+      });
+      if (signaturePlacement.isClamped) {
+        warnings.push("Posisi tanda tangan disesuaikan agar tetap berada di area halaman yang bisa dicetak.");
+      }
+      if (signaturePlacement.isOutsideSafeZone) {
+        warnings.push("Tanda tangan berada di luar safe zone. Posisi tetap diizinkan, tetapi area ini tidak lagi dijamin aman dari benturan layout.");
+      }
+    }
+
+    const widthWarnings = config.columns
+      .map((column) => {
+        const currentWidth = getColumnWidthMmV2(column, documentStyle);
+        const naturalWidth = getNaturalColumnWidthMmV2(column, documentStyle);
+        if (currentWidth < naturalWidth * 0.72) {
+          return `Kolom ${column.label} dipersempit cukup jauh. Beberapa data mungkin akan terpotong atau membungkus lebih rapat.`;
+        }
+        return null;
+      })
+      .filter((warning): warning is string => !!warning);
+    warnings.push(...widthWarnings.slice(0, 3));
+
+    const defaultHeaderHeight = clamp(5.4 + (documentStyle.tableHeaderFontSize - 10) * 0.7, 5.4, 12);
+    const defaultBodyHeight = clamp(5.2 + (documentStyle.tableBodyFontSize - 10) * 0.9, 5.2, 9.5);
+    if (typeof documentStyle.tableSizing.headerRowHeightMm === "number" && documentStyle.tableSizing.headerRowHeightMm < defaultHeaderHeight * 0.9) {
+      warnings.push("Tinggi baris header cukup rapat. Header yang panjang bisa membungkus lebih padat.");
+    }
+    if (typeof documentStyle.tableSizing.bodyRowHeightMm === "number" && documentStyle.tableSizing.bodyRowHeightMm < defaultBodyHeight * 0.9) {
+      warnings.push("Tinggi baris data cukup rapat. Beberapa nilai atau nama mungkin terlihat lebih padat.");
+    }
+
+    return {
+      metrics,
+      documentStyle,
+      pageLabel: `${resolvedFullPagePaper.label} Landscape`,
+      pages,
+      columnWidthsMm: allWidths,
+      warnings,
+      signaturePlacement,
+    };
+  }
 
   if (segments.length > 1) {
     warnings.push(`Data tugas sangat banyak, jadi tabel dibagi menjadi ${segments.length} bagian kolom agar font tetap terbaca dan tidak terpotong.`);

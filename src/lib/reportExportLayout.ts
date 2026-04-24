@@ -1,6 +1,6 @@
 import type { SignatureData } from "./exportSignature";
 
-export type ReportPaperSize = "a4" | "f4" | "auto";
+export type ReportPaperSize = "a4" | "f4" | "auto" | "full-page";
 export type ReportColumnAlignment = "left" | "center" | "right";
 export type ReportTableSizingMode = "autofit-window" | "autofit-content" | "fixed";
 
