@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       target_repo_name:
-        description: 'Nama repo di Organization (contoh: web-dev-v2)'
+        description: 'Nama repo di Organization'
         required: true
       target_branch:
         description: 'Branch di Organization'
         required: true
         default: 'main'
       sync_mode:
-        description: 'Pilih mode sinkronisasi'
+        description: 'Mode sinkronisasi'
         required: true
         default: 'whitelist'
         type: choice
@@ -35,9 +35,8 @@ jobs:
         uses: actions/checkout@v5
         with:
           path: main-project
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. Load config (AUTO mode)
+      # 2. Load config AUTO
       - name: Load config (auto)
         if: github.event_name == 'repository_dispatch'
         run: |
@@ -49,13 +48,15 @@ jobs:
           fi
 
           echo "📄 Membaca config..."
+          cat "$CONFIG_FILE"
+
           source "$CONFIG_FILE"
 
           echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
           echo "SYNC_MODE=$SYNC_MODE" >> $GITHUB_ENV
 
-      # 3. Load input (MANUAL mode)
+      # 3. Load manual input
       - name: Load manual input
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -63,15 +64,17 @@ jobs:
           echo "TARGET_BRANCH=${{ github.event.inputs.target_branch }}" >> $GITHUB_ENV
           echo "SYNC_MODE=${{ github.event.inputs.sync_mode }}" >> $GITHUB_ENV
 
-      # 4. Debug (opsional tapi penting)
+      # 4. Debug config
       - name: Debug config
         run: |
+          echo "===== CONFIG ====="
           echo "Repo   : $TARGET_REPO"
           echo "Branch : $TARGET_BRANCH"
           echo "Mode   : $SYNC_MODE"
+          echo "=================="
 
       # 5. Checkout repo organization
-      - name: Checkout Repo Organization (Sumber)
+      - name: Checkout Repo Organization
         uses: actions/checkout@v5
         with:
           repository: Web-Modder/${{ env.TARGET_REPO }}
@@ -79,13 +82,17 @@ jobs:
           path: org-source
           ref: ${{ env.TARGET_BRANCH }}
 
-      # 6. Sinkronisasi
-      - name: Sinkronisasi dari Organization → Proyek Utama
+      # 6. Debug isi repo source
+      - name: Debug source files
+        run: |
+          echo "===== ORG SOURCE ====="
+          ls -la org-source
+          echo "======================"
+
+      # 7. Sync
+      - name: Sinkronisasi
         run: |
           cd main-project
-
-          echo "🔄 Mode: ${SYNC_MODE}"
-          echo "📥 Sync dari Web-Modder/${TARGET_REPO}"
 
           declare -a WHITELIST_PATHS=(
             "shared/"
@@ -108,13 +115,7 @@ jobs:
           if [[ "$SYNC_MODE" == "whitelist" ]]; then
             echo "📋 WHITELIST mode"
             for path in "${WHITELIST_PATHS[@]}"; do
-              if [[ "$path" == */ ]]; then
-                rsync -a --checksum "../org-source/$path" "$path"
-              else
-                mkdir -p "$(dirname "$path")"
-                rsync -a --checksum "../org-source/$path" "$path"
-              fi
-              echo " ✓ $path"
+              rsync -a --checksum "../org-source/$path" "$path"
             done
           else
             echo "🚫 BLACKLIST mode"
@@ -126,7 +127,7 @@ jobs:
             rsync -a --checksum "${EXCLUDE_ARGS[@]}" ../org-source/ .
           fi
 
-      # 7. Commit & push
+      # 8. Commit & push
       - name: Commit & Push
         run: |
           cd main-project
@@ -139,7 +140,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "✅ Tidak ada perubahan"
           else
-            git commit -m "chore: sync from Web-Modder/${TARGET_REPO} (${SYNC_MODE})"
-            git push origin HEAD
+            git commit -m "chore: auto sync (${TARGET_REPO})"
+            git push
             echo "🚀 Sync berhasil"
           fi
