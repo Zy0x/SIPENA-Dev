@@ -63,7 +63,7 @@ import { createDefaultReportDocumentStyle, getNaturalColumnWidthMmV2, resolveRep
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import { computeAttendanceColumnLayout } from "@/lib/attendanceExport";
 import { buildAttendancePrintLayoutPlan, type AttendancePrintDataset } from "@/lib/attendancePrintLayout";
-import { exportAttendancePdf } from "@/lib/attendancePdfExport";
+import { buildAttendancePdfDocument, exportAttendancePdf } from "@/lib/attendancePdfExport";
 import {
   collectTraceMismatches,
   downloadAttendanceExportTrace,
@@ -75,6 +75,28 @@ import {
   type AttendancePngRuntimeTrace,
 } from "@/lib/attendanceExportDebug";
 type AttendanceStatus = AttendanceStatusValue | null;
+
+function sanitizeFileNamePart(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_");
+}
+
+function downloadBlobFile(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function isAttendancePngFormat(formatId: string) {
+  return formatId === "png-hd" || formatId === "png-4k";
+}
 
 const SIPENA_FULL = "SIPENA — Sistem Informasi Penilaian Akademik";
 
@@ -558,7 +580,7 @@ export default function Attendance() {
   }, [lastAttendanceExportTrace]);
 
   const autoDownloadAttendanceTrace = useCallback((trace: AttendanceExportTrace, exportFileName: string) => {
-    const traceFileName = exportFileName.replace(/\.(pdf|png)$/i, ".trace.json");
+    const traceFileName = exportFileName.replace(/\.(pdf|png|zip)$/i, ".trace.json");
     const downloadedTraceFile = downloadAttendanceExportTrace({
       ...trace,
       downloads: [
@@ -621,6 +643,16 @@ export default function Attendance() {
       />
     );
   }, [attendancePreviewData, normalizeAttendanceSignatureConfig, signatureConfig]);
+
+  const handleAttendanceExportFormatChange = useCallback((value: string) => {
+    const nextFormat = value as typeof attendanceExportFormat;
+    const wasPngFormat = isAttendancePngFormat(attendanceExportFormat);
+    const willBePngFormat = isAttendancePngFormat(nextFormat);
+    setAttendanceExportFormat(nextFormat);
+    if (willBePngFormat && !wasPngFormat && paperSize !== "full-page") {
+      setPaperSize("full-page");
+    }
+  }, [attendanceExportFormat, paperSize]);
 
   const attendanceColumnTypographyOptions = useMemo<ExportColumnTypographyOption[]>(() => {
     const staticColumns = [
@@ -2114,14 +2146,13 @@ export default function Attendance() {
     const exportAutoFitOnePage = autoFitOverride ?? autoFitOnePage;
     const exportPaperSize = paperSizeOverride ?? paperSize;
     const exportVisibleColumnKeys = visibleColumnKeysOverride ?? selectedAttendanceColumnKeys;
-    const fileName = `Presensi_${selectedClass.name}_${quality.toUpperCase()}.png`;
-    await showLoader(fileName);
-
-    const { default: html2canvasLib } = await import("html2canvas");
-    const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position:absolute;left:-99999px;top:0;background:#f8fafc;padding:24px;width:max-content;";
-    wrapper.innerHTML = renderAttendanceExportElement(exportSignature, shouldIncludeSignature, exportStyle, exportAutoFitOnePage, exportPaperSize, exportVisibleColumnKeys, "png");
-    document.body.appendChild(wrapper);
+    const baseFileName = [
+      "Presensi",
+      sanitizeFileNamePart(selectedClass.name),
+      sanitizeFileNamePart(format(currentMonth, "MMMM_yyyy", { locale: idLocale })),
+      quality === "4k" ? "PNG_4K" : "PNG_HD",
+    ].join("_");
+    await showLoader(`${baseFileName}.png`);
 
     try {
       const plan = buildAttendancePrintLayoutPlan({
@@ -2134,20 +2165,58 @@ export default function Attendance() {
         forceSinglePage: exportAutoFitOnePage,
         signatureOffsetYMm: exportSignature?.signatureOffsetY ?? 0,
       });
-      const canvas = await html2canvasLib(wrapper, {
-        backgroundColor: "#f8fafc",
-        scale: quality === "4k" ? 4 : 2,
-        useCORS: true,
-        logging: false,
-        width: wrapper.scrollWidth,
-        height: wrapper.scrollHeight,
+      const builtPdf = buildAttendancePdfDocument({
+        data: attendancePrintDataset,
+        plan,
+        signature: exportSignature,
+        includeSignature: shouldIncludeSignature,
       });
+      const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
+      const pdf = await getDocument({ data: builtPdf.arrayBuffer() }).promise;
+      const rasterScale = quality === "4k" ? 4 : 2;
+      const renderedPages: Array<{ canvas: HTMLCanvasElement; fileName: string; dataUrl: string }> = [];
 
-      const link = document.createElement("a");
-      const qualityLabel = quality === "4k" ? "_4K" : "_HD";
-      link.download = `Presensi_${selectedClass.name}_${format(currentMonth, "MMMM_yyyy", { locale: idLocale })}${qualityLabel}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: rasterScale });
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        if (!context) {
+          throw new Error("Canvas context PNG tidak tersedia.");
+        }
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
+        renderedPages.push({
+          canvas,
+          fileName: pdf.numPages === 1
+            ? `${baseFileName}.png`
+            : `${baseFileName}_hal-${String(pageNumber).padStart(2, "0")}.png`,
+          dataUrl: canvas.toDataURL("image/png"),
+        });
+      }
+      await pdf.destroy();
+
+      let downloadedFileName = renderedPages[0]?.fileName ?? `${baseFileName}.png`;
+      const downloadKind: "png" | "zip" = renderedPages.length > 1 ? "zip" : "png";
+
+      if (renderedPages.length === 1) {
+        const link = document.createElement("a");
+        link.download = downloadedFileName;
+        link.href = renderedPages[0].dataUrl;
+        link.click();
+      } else {
+        const { default: JSZip } = await import("jszip");
+        const archive = new JSZip();
+        renderedPages.forEach((page) => {
+          archive.file(page.fileName, page.dataUrl.split(",")[1], { base64: true });
+        });
+        downloadedFileName = `${baseFileName}_${exportPaperSize.toUpperCase()}_${renderedPages.length}hal.zip`;
+        const zipBlob = await archive.generateAsync({ type: "blob" });
+        downloadBlobFile(zipBlob, downloadedFileName);
+      }
+
       if (attendanceDebugEnabled) {
         const traceBase = buildAttendanceTraceBase({
           plan,
@@ -2158,34 +2227,40 @@ export default function Attendance() {
         });
         const pngRuntime: AttendancePngRuntimeTrace = {
           format: quality === "4k" ? "png-4k" : "png-hd",
-          scale: quality === "4k" ? 4 : 2,
+          scale: rasterScale,
           renderedPageCount: plan.pages.length,
-          wrapperWidthPx: wrapper.scrollWidth,
-          wrapperHeightPx: wrapper.scrollHeight,
-          canvasWidthPx: canvas.width,
-          canvasHeightPx: canvas.height,
+          wrapperWidthPx: Math.max(...renderedPages.map((page) => page.canvas.width)),
+          wrapperHeightPx: renderedPages.reduce((sum, page) => sum + page.canvas.height, 0),
+          canvasWidthPx: Math.max(...renderedPages.map((page) => page.canvas.width)),
+          canvasHeightPx: Math.max(...renderedPages.map((page) => page.canvas.height)),
+          pageImageNames: renderedPages.map((page) => page.fileName),
+          archiveFileName: downloadKind === "zip" ? downloadedFileName : null,
         };
         const finalTrace = commitAttendanceTrace({
           ...traceBase,
           pngRuntime: [pngRuntime],
           downloads: [
             {
-              kind: "png",
-              fileName: link.download,
+              kind: downloadKind,
+              fileName: downloadedFileName,
               timestamp: new Date().toISOString(),
             },
           ],
         });
-        autoDownloadAttendanceTrace(finalTrace, link.download);
+        autoDownloadAttendanceTrace(finalTrace, downloadedFileName);
       }
-      showSuccess("Berhasil", `File PNG ${quality === "4k" ? "4K Ultra HD" : "HD"} berhasil diunduh`);
+
+      showSuccess(
+        "Berhasil",
+        renderedPages.length > 1
+          ? `${renderedPages.length} halaman PNG ${quality === "4k" ? "4K Ultra HD" : "HD"} berhasil diarsipkan ke ZIP`
+          : `File PNG ${quality === "4k" ? "4K Ultra HD" : "HD"} berhasil diunduh`,
+      );
       setShowExportDialog(false);
     } catch (error) {
       showWarning("Gagal", "Tidak dapat mengekspor PNG presensi.");
-    } finally {
-      document.body.removeChild(wrapper);
     }
-  }, [selectedAttendanceColumnKeys, selectedClass, signatureConfig, includeSignature, documentStyle, autoFitOnePage, paperSize, currentMonth, showLoader, renderAttendanceExportElement, attendancePrintDataset, attendanceDebugEnabled, buildAttendanceTraceBase, commitAttendanceTrace, autoDownloadAttendanceTrace, showSuccess, showWarning]);
+  }, [selectedAttendanceColumnKeys, selectedClass, includeSignature, documentStyle, autoFitOnePage, paperSize, currentMonth, showLoader, attendancePrintDataset, attendanceDebugEnabled, buildAttendanceTraceBase, commitAttendanceTrace, autoDownloadAttendanceTrace, showSuccess, showWarning, attendanceDefaultSignatureConfig]);
 
   const handleExportPDFVector = useCallback(async (
     signatureOverride?: typeof signatureConfig,
@@ -2427,7 +2502,7 @@ export default function Attendance() {
                     triggerClassName="h-9 px-3 text-xs"
                     formats={ATTENDANCE_EXPORT_FORMATS}
                     selectedFormat={attendanceExportFormat}
-                    onFormatChange={(value) => setAttendanceExportFormat(value as typeof attendanceExportFormat)}
+                    onFormatChange={handleAttendanceExportFormatChange}
                     onExport={async ({ formatId, includeSignature: nextIncludeSignature, signatureConfig: nextSignatureConfig, paperSize: nextPaperSize, documentStyle: nextDocumentStyle, autoFitOnePage: nextAutoFitOnePage }) => {
                       if (formatId === "excel") {
                         await handleExportExcel(nextSignatureConfig, nextIncludeSignature, selectedAttendanceColumnKeys);
@@ -2514,7 +2589,7 @@ export default function Attendance() {
                     triggerClassName="h-9 px-2.5 text-xs"
                     formats={ATTENDANCE_EXPORT_FORMATS}
                     selectedFormat={attendanceExportFormat}
-                    onFormatChange={(value) => setAttendanceExportFormat(value as typeof attendanceExportFormat)}
+                    onFormatChange={handleAttendanceExportFormatChange}
                     onExport={async ({ formatId, includeSignature: nextIncludeSignature, signatureConfig: nextSignatureConfig, paperSize: nextPaperSize, documentStyle: nextDocumentStyle, autoFitOnePage: nextAutoFitOnePage }) => {
                       if (formatId === "excel") {
                         await handleExportExcel(nextSignatureConfig, nextIncludeSignature, selectedAttendanceColumnKeys);
@@ -3369,7 +3444,7 @@ export default function Attendance() {
 
               {/* PNG HD */}
               <button
-                onClick={() => handleExportPNG("hd")}
+                onClick={() => handleExportPNGV2("hd", attendanceDefaultSignatureConfig, includeSignature, documentStyle, autoFitOnePage, "full-page", selectedAttendanceColumnKeys)}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border hover:bg-muted/50 active:bg-muted/70 transition-colors text-left touch-manipulation min-h-[60px]"
               >
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -3385,7 +3460,7 @@ export default function Attendance() {
 
               {/* PNG 4K */}
               <button
-                onClick={() => handleExportPNG("4k")}
+                onClick={() => handleExportPNGV2("4k", attendanceDefaultSignatureConfig, includeSignature, documentStyle, autoFitOnePage, "full-page", selectedAttendanceColumnKeys)}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl border border-primary/30 hover:bg-primary/5 active:bg-primary/10 transition-colors text-left touch-manipulation min-h-[60px]"
               >
                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">

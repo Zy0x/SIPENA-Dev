@@ -107,6 +107,8 @@ export interface AttendancePngRuntimeTrace {
   wrapperHeightPx: number;
   canvasWidthPx: number;
   canvasHeightPx: number;
+  pageImageNames?: string[];
+  archiveFileName?: string | null;
 }
 
 export interface AttendanceTraceLogEntry {
@@ -152,7 +154,7 @@ export interface AttendanceExportTrace {
   pdfRuntime: AttendancePdfRuntimeTrace[];
   pngRuntime: AttendancePngRuntimeTrace[];
   downloads: Array<{
-    kind: "pdf" | "png" | "trace-json";
+    kind: "pdf" | "png" | "zip" | "trace-json";
     fileName: string;
     timestamp: string;
   }>;
