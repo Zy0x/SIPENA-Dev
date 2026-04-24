@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -13,6 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Upload, Loader2, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { useStudents } from "@/hooks/useStudents";
 import { useEnhancedToast } from "@/contexts/ToastContext";
+import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
+import {
+  ResponsiveDataPreview,
+  StudioActionFooter,
+  StudioInfoCollapsible,
+  StudioStepHeader,
+} from "@/components/studio/ResponsiveStudio";
 
 interface ImportStudentsDialogProps {
   classId: string;
@@ -31,8 +37,11 @@ export default function ImportStudentsDialog({
   const [preview, setPreview] = useState<{ name: string; nisn: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const layoutViewportRef = useRef<HTMLDivElement>(null);
   const { createStudentsBatch } = useStudents(classId);
   const { toast } = useEnhancedToast();
+  const viewport = useStudioViewportProfile(layoutViewportRef, open);
+  const currentStep = preview.length > 0 ? "preview" : "upload";
 
   const parseCSV = (content: string) => {
     const lines = content.trim().split("\n");
@@ -138,108 +147,132 @@ export default function ImportStudentsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100vw-0.75rem)] max-w-2xl h-[min(100dvh-0.75rem,44rem)] overflow-hidden rounded-[24px] p-0 gap-0">
+        <DialogHeader className="border-b border-border px-4 pt-4 pb-3 sm:px-5">
           <DialogTitle>Import Siswa ke {className}</DialogTitle>
           <DialogDescription>
             Upload file CSV atau Excel dengan kolom Nama dan NISN
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          {/* File Input */}
-          <div className="grid gap-2">
-            <Label>File CSV/Excel</Label>
-            <div
-              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={handleFileChange}
-                className="hidden"
+        <div ref={layoutViewportRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+            <div className="space-y-4">
+              <StudioStepHeader
+                steps={[
+                  { id: "upload", label: "Upload File" },
+                  { id: "preview", label: "Periksa Data" },
+                ]}
+                currentStep={currentStep}
               />
-              <FileSpreadsheet className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              {file ? (
-                <p className="text-sm text-foreground font-medium">{file.name}</p>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Klik untuk pilih file atau drag & drop
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Format: CSV, XLS, XLSX
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
 
-          {/* Error */}
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Preview */}
-          {preview.length > 0 && (
-            <div className="grid gap-2">
-              <Label>Preview ({preview.length} data pertama)</Label>
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium">Nama</th>
-                      <th className="px-3 py-2 text-left font-medium">NISN</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.map((student, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="px-3 py-2">{student.name}</td>
-                        <td className="px-3 py-2">{student.nisn}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid gap-2">
+                <Label>File CSV/Excel</Label>
+                <div
+                  className="rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-muted/20 p-5 text-center transition-colors hover:border-primary/50"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                  {file ? (
+                    <>
+                      <p className="text-sm font-medium text-foreground">{file.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">File siap diperiksa sebelum diimpor.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">Klik untuk pilih file atau drag & drop</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Format: CSV, XLS, XLSX</p>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Format Help */}
-          <div className="p-3 rounded-lg bg-muted/50">
-            <p className="text-xs text-muted-foreground">
-              <strong>Format file:</strong> Baris pertama bisa berisi header (Nama, NISN).
-              Setiap baris berikutnya berisi data siswa dengan format: Nama, NISN
-            </p>
+              {error ? (
+                <div className="flex items-start gap-2 rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p className="text-sm">{error}</p>
+                </div>
+              ) : null}
+
+              {preview.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Preview Data</Label>
+                    <span className="rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[10px] text-muted-foreground">
+                      {preview.length} data pertama
+                    </span>
+                  </div>
+                  <ResponsiveDataPreview
+                    rows={preview}
+                    profile={viewport.profile}
+                    getRowKey={(student, index) => `${student.nisn}-${index}`}
+                    columns={[
+                      {
+                        id: "name",
+                        label: "Nama",
+                        primary: true,
+                        render: (student) => student.name,
+                      },
+                      {
+                        id: "nisn",
+                        label: "NISN",
+                        render: (student) => student.nisn,
+                      },
+                    ]}
+                    detailLabel="Lihat tabel siswa"
+                  />
+                </div>
+              ) : null}
+
+              <StudioInfoCollapsible
+                title="Panduan format"
+                description="Buka panduan bila Anda ingin memastikan struktur CSV atau Excel sudah sesuai."
+                defaultOpen={!file}
+              >
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Baris pertama bisa berisi header `Nama` dan `NISN`. Setiap baris berikutnya berisi data siswa
+                  dengan format `Nama, NISN`.
+                </p>
+              </StudioInfoCollapsible>
+            </div>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            Batal
-          </Button>
-          <Button
-            onClick={handleImport}
-            disabled={!file || preview.length === 0 || createStudentsBatch.isPending}
-          >
-            {createStudentsBatch.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Mengimport...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4 mr-2" />
-                Import Siswa
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+        <StudioActionFooter
+          sticky
+          helperText="Pastikan preview sudah benar. Footer tetap terlihat agar aksi utama tidak hilang di mobile."
+          actions={(
+            <>
+              <Button type="button" variant="outline" onClick={handleClose} className="h-11 w-full text-xs sm:h-9 sm:w-auto">
+                Batal
+              </Button>
+              <Button
+                onClick={handleImport}
+                disabled={!file || preview.length === 0 || createStudentsBatch.isPending}
+                className="h-11 w-full text-xs sm:h-9 sm:w-auto"
+              >
+                {createStudentsBatch.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Mengimport...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import Siswa
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+        />
       </DialogContent>
     </Dialog>
   );

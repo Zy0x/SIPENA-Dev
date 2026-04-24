@@ -1,20 +1,18 @@
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  Upload, Loader2, CalendarDays, AlertCircle, CheckCircle2, Download,
-} from "lucide-react";
+import { Upload, Loader2, CalendarDays, AlertCircle, CheckCircle2, Download } from "lucide-react";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { supabaseExternal as supabase } from "@/lib/supabase-external";
 import * as XLSX from "xlsx";
+import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
+import {
+  ResponsiveDataPreview,
+  StudioActionFooter,
+  StudioInfoCollapsible,
+  StudioStepHeader,
+} from "@/components/studio/ResponsiveStudio";
 
 interface ImportAttendanceDialogProps {
   open: boolean;
@@ -36,8 +34,12 @@ interface ParsedAttendanceRow {
 const VALID_STATUSES = ["H", "I", "S", "A", "D"];
 
 export default function ImportAttendanceDialog({
-  open, onOpenChange, classId, className,
-  students, onImportComplete,
+  open,
+  onOpenChange,
+  classId,
+  className,
+  students,
+  onImportComplete,
 }: ImportAttendanceDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedAttendanceRow[]>([]);
@@ -45,7 +47,9 @@ export default function ImportAttendanceDialog({
   const [importResult, setImportResult] = useState({ success: 0, failed: 0 });
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const layoutViewportRef = useRef<HTMLDivElement>(null);
   const { success: showSuccess } = useEnhancedToast();
+  const viewport = useStudioViewportProfile(layoutViewportRef, open);
 
   const resetState = useCallback(() => {
     setFile(null);
@@ -57,18 +61,16 @@ export default function ImportAttendanceDialog({
 
   const parseExcelDate = (val: any): string | null => {
     if (!val) return null;
-    // If it's a number (Excel serial date)
     if (typeof val === "number") {
       const date = XLSX.SSF.parse_date_code(val);
       if (date) {
         return `${date.y}-${String(date.m).padStart(2, "0")}-${String(date.d).padStart(2, "0")}`;
       }
     }
-    // If it's a string, try to parse
+
     const str = String(val).trim();
-    // Try yyyy-mm-dd
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-    // Try dd/mm/yyyy or dd-mm-yyyy
+
     const match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
     if (match) return `${match[3]}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`;
     return null;
@@ -93,9 +95,11 @@ export default function ImportAttendanceDialog({
           return;
         }
 
-        const headerRow = (json[0] as string[]).map(h => String(h || "").trim().toLowerCase());
-        
-        let nameCol = 0, dateCol = -1, statusCol = -1;
+        const headerRow = (json[0] as string[]).map((h) => String(h || "").trim().toLowerCase());
+
+        let nameCol = 0;
+        let dateCol = -1;
+        let statusCol = -1;
         headerRow.forEach((h, i) => {
           if (h.includes("nama") || h === "name" || h === "siswa") nameCol = i;
           if (h.includes("tanggal") || h === "date" || h.includes("tgl")) dateCol = i;
@@ -119,10 +123,10 @@ export default function ImportAttendanceDialog({
           const rawStatus = String(row[statusCol] || "").trim().toUpperCase();
           const status = VALID_STATUSES.includes(rawStatus) ? rawStatus : "";
 
-          const matched = students.find(s =>
-            s.name.toLowerCase() === studentName.toLowerCase() ||
-            s.name.toLowerCase().includes(studentName.toLowerCase()) ||
-            studentName.toLowerCase().includes(s.name.toLowerCase())
+          const matched = students.find((student) =>
+            student.name.toLowerCase() === studentName.toLowerCase()
+            || student.name.toLowerCase().includes(studentName.toLowerCase())
+            || studentName.toLowerCase().includes(student.name.toLowerCase()),
           );
 
           rows.push({
@@ -140,19 +144,24 @@ export default function ImportAttendanceDialog({
         setError("Gagal membaca file. Pastikan format Excel (.xlsx/.csv) valid.");
       }
     };
+
     reader.readAsArrayBuffer(f);
     if (e.target) e.target.value = "";
   }, [students]);
 
-  const validCount = parsedRows.filter(r => r.valid).length;
-  const invalidCount = parsedRows.filter(r => !r.valid).length;
+  const validCount = parsedRows.filter((row) => row.valid).length;
+  const invalidCount = parsedRows.filter((row) => !row.valid).length;
 
   const handleImport = useCallback(async () => {
     setStep("importing");
-    let success = 0, failed = 0;
+    let success = 0;
+    let failed = 0;
 
     for (const row of parsedRows) {
-      if (!row.valid || !row.matchedStudentId) { failed++; continue; }
+      if (!row.valid || !row.matchedStudentId) {
+        failed++;
+        continue;
+      }
 
       try {
         const { error: upsertError } = await (supabase as any)
@@ -181,150 +190,178 @@ export default function ImportAttendanceDialog({
       showSuccess("Import berhasil", `${success} data presensi berhasil diimpor`);
       onImportComplete?.();
     }
-  }, [parsedRows, classId, showSuccess, onImportComplete]);
+  }, [classId, onImportComplete, parsedRows, showSuccess]);
 
   const handleDownloadTemplate = useCallback(() => {
     const headers = ["Nama Siswa", "Tanggal", "Status"];
-    const sampleData = students.slice(0, 3).map(s => [s.name, "2026-03-04", "H"]);
+    const sampleData = students.slice(0, 3).map((student) => [student.name, "2026-03-04", "H"]);
     if (sampleData.length === 0) sampleData.push(["Contoh Nama", "2026-03-04", "H"]);
+
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Presensi");
     ws["!cols"] = [{ wch: 25 }, { wch: 15 }, { wch: 10 }];
     XLSX.writeFile(wb, `Template_Presensi_${className}.xlsx`);
-  }, [students, className]);
+  }, [className, students]);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) resetState(); onOpenChange(v); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={(value) => { if (!value) resetState(); onOpenChange(value); }}>
+      <DialogContent className="w-[calc(100vw-0.75rem)] max-w-3xl h-[min(100dvh-0.75rem,46rem)] overflow-hidden rounded-[24px] p-0 gap-0">
+        <DialogHeader className="border-b border-border px-4 pt-4 pb-3 sm:px-5">
           <DialogTitle className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-primary" />
+            <CalendarDays className="h-5 w-5 text-primary" />
             Import Presensi dari Excel
           </DialogTitle>
           <DialogDescription>{className}</DialogDescription>
         </DialogHeader>
 
-        {step === "upload" && (
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-3 p-4 rounded-xl border border-dashed border-border bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}>
-              <Upload className="w-8 h-8 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Pilih file Excel (.xlsx, .csv)</p>
-                <p className="text-xs text-muted-foreground">Kolom: Nama Siswa, Tanggal, Status (H/I/S/A/D)</p>
-              </div>
-            </div>
-            <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileSelect} />
+        <div ref={layoutViewportRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+            <div className="space-y-4">
+              <StudioStepHeader
+                steps={[
+                  { id: "upload", label: "Upload File" },
+                  { id: "preview", label: "Periksa Data" },
+                  { id: "importing", label: "Import" },
+                  { id: "done", label: "Selesai" },
+                ]}
+                currentStep={step}
+              />
 
-            {error && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-            )}
+              {step === "upload" ? (
+                <>
+                  <div
+                    className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-4 transition-colors hover:bg-muted/40"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Pilih file Excel (.xlsx, .csv)</p>
+                      <p className="text-xs text-muted-foreground">Kolom: Nama Siswa, Tanggal, Status (H/I/S/A/D)</p>
+                    </div>
+                  </div>
+                  <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileSelect} />
 
-            <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadTemplate}>
-              <Download className="w-3.5 h-3.5" /> Download Template
-            </Button>
+                  {error ? (
+                    <div className="flex items-start gap-2 rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  ) : null}
 
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p className="font-semibold">Panduan:</p>
-              <ul className="list-disc pl-4 space-y-0.5">
-                <li>Kolom wajib: Nama Siswa, Tanggal, Status</li>
-                <li>Format tanggal: YYYY-MM-DD atau DD/MM/YYYY</li>
-                <li>Status valid: H (Hadir), I (Izin), S (Sakit), A (Alpha), D (Dispensasi)</li>
-                <li>Data duplikat akan ditimpa (upsert)</li>
-              </ul>
+                  <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={handleDownloadTemplate}>
+                    <Download className="h-3.5 w-3.5" /> Download Template
+                  </Button>
+
+                  <StudioInfoCollapsible
+                    title="Panduan format presensi"
+                    description="Buka panduan bila Anda ingin memastikan struktur file sudah tepat."
+                    defaultOpen
+                  >
+                    <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                      <li>Kolom wajib: Nama Siswa, Tanggal, Status.</li>
+                      <li>Format tanggal: YYYY-MM-DD atau DD/MM/YYYY.</li>
+                      <li>Status valid: H, I, S, A, D.</li>
+                      <li>Data duplikat akan ditimpa dengan mode upsert.</li>
+                    </ul>
+                  </StudioInfoCollapsible>
+                </>
+              ) : null}
+
+              {step === "preview" ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="gap-1 text-xs">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" /> {validCount} valid
+                    </Badge>
+                    {invalidCount > 0 ? (
+                      <Badge variant="destructive" className="gap-1 text-xs">
+                        <AlertCircle className="h-3 w-3" /> {invalidCount} invalid
+                      </Badge>
+                    ) : null}
+                  </div>
+
+                  <ResponsiveDataPreview
+                    rows={parsedRows}
+                    profile={viewport.profile}
+                    getRowKey={(row, index) => `${row.studentName}-${row.date}-${index}`}
+                    detailLabel="Lihat tabel presensi"
+                    columns={[
+                      { id: "name", label: "Nama", primary: true, render: (row) => row.studentName },
+                      { id: "date", label: "Tanggal", render: (row) => row.date || "—" },
+                      {
+                        id: "status",
+                        label: "Status",
+                        render: (row) => (
+                          <Badge variant={row.status ? "outline" : "destructive"} className="text-[10px]">
+                            {row.status || "?"}
+                          </Badge>
+                        ),
+                      },
+                      {
+                        id: "validation",
+                        label: "Validasi",
+                        render: (row) => (
+                          <span className={row.valid ? "text-emerald-600" : "text-destructive"}>
+                            {row.valid ? "Valid" : "Perlu diperiksa"}
+                          </span>
+                        ),
+                      },
+                    ]}
+                  />
+                </>
+              ) : null}
+
+              {step === "importing" ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Mengimpor presensi...</p>
+                </div>
+              ) : null}
+
+              {step === "done" ? (
+                <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+                  <CheckCircle2 className="h-12 w-12 text-green-500" />
+                  <div>
+                    <p className="text-lg font-semibold">Import Selesai</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {importResult.success} data berhasil, {importResult.failed} gagal
+                    </p>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
-        )}
+        </div>
 
-        {step === "preview" && (
-          <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className="text-xs gap-1">
-                <CheckCircle2 className="w-3 h-3 text-green-500" /> {validCount} valid
-              </Badge>
-              {invalidCount > 0 && (
-                <Badge variant="destructive" className="text-xs gap-1">
-                  <AlertCircle className="w-3 h-3" /> {invalidCount} invalid
-                </Badge>
-              )}
-            </div>
-
-            <ScrollArea className="flex-1 border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-8">#</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-center w-16">✓</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsedRows.map((row, i) => (
-                    <TableRow key={i} className={!row.valid ? "bg-destructive/5" : ""}>
-                      <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
-                      <TableCell className="text-sm">{row.studentName}</TableCell>
-                      <TableCell className="text-xs">{row.date || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant={row.status ? "outline" : "destructive"} className="text-[10px]">
-                          {row.status || "?"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {row.valid ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
-                        ) : (
-                          <AlertCircle className="w-4 h-4 text-destructive mx-auto" />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </div>
-        )}
-
-        {step === "importing" && (
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Mengimpor presensi...</p>
-          </div>
-        )}
-
-        {step === "done" && (
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <CheckCircle2 className="w-12 h-12 text-green-500" />
-            <div className="text-center">
-              <p className="text-lg font-semibold">Import Selesai</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {importResult.success} data berhasil, {importResult.failed} gagal
-              </p>
-            </div>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2">
-          {step === "upload" && (
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Tutup</Button>
-          )}
-          {step === "preview" && (
+        <StudioActionFooter
+          sticky
+          helperText="Area aksi tetap terlihat agar langkah upload, cek, dan import tetap nyaman di mobile dan tablet."
+          actions={(
             <>
-              <Button variant="outline" onClick={() => { setStep("upload"); setParsedRows([]); }}>Kembali</Button>
-              <Button onClick={handleImport} disabled={validCount === 0} className="gap-2">
-                <Upload className="w-4 h-4" /> Import {validCount} Data
-              </Button>
+              {step === "upload" ? (
+                <Button variant="outline" onClick={() => onOpenChange(false)} className="h-11 w-full text-xs sm:h-9 sm:w-auto">
+                  Tutup
+                </Button>
+              ) : null}
+              {step === "preview" ? (
+                <>
+                  <Button variant="outline" onClick={() => { setStep("upload"); setParsedRows([]); }} className="h-11 w-full text-xs sm:h-9 sm:w-auto">
+                    Kembali
+                  </Button>
+                  <Button onClick={handleImport} disabled={validCount === 0} className="h-11 w-full gap-2 text-xs sm:h-9 sm:w-auto">
+                    <Upload className="h-4 w-4" /> Import {validCount} Data
+                  </Button>
+                </>
+              ) : null}
+              {step === "done" ? (
+                <Button onClick={() => { resetState(); onOpenChange(false); }} className="h-11 w-full text-xs sm:h-9 sm:w-auto">
+                  Selesai
+                </Button>
+              ) : null}
             </>
           )}
-          {step === "done" && (
-            <Button onClick={() => { resetState(); onOpenChange(false); }}>Selesai</Button>
-          )}
-        </DialogFooter>
+        />
       </DialogContent>
     </Dialog>
   );

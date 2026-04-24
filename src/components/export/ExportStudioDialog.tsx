@@ -56,7 +56,7 @@ function RepeatButton({ onTrigger, children, ...rest }: RepeatButtonProps) {
     </Button>
   );
 }
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -70,6 +70,14 @@ import { cn } from "@/lib/utils";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { exportElementToPng } from "@/lib/exportEngine/pngEngine";
 import { PX_PER_MM } from "@/lib/exportEngine/sharedMetrics";
+import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
+import {
+  StudioActionFooter,
+  StudioPreviewToggle,
+  StudioSectionTabs,
+  type StudioOverlayState,
+  type StudioSectionDescriptor,
+} from "@/components/studio/ResponsiveStudio";
 import {
   type SignatureSettingsConfig,
   type SignatureSigner,
@@ -2149,10 +2157,10 @@ export function ExportStudioDialog({
   const [previewZoom, setPreviewZoom] = useState(100);
   const [draft, setDraft] = useState<SignatureSettingsConfig>(createDefaultSignatureConfig());
   const [experimentalWindowOpen, setExperimentalWindowOpen] = useState(false);
-  const [layoutWidth, setLayoutWidth] = useState<number>(typeof window === "undefined" ? 1280 : window.innerWidth);
   const [liveEditMode, setLiveEditMode] = useState(false);
   const [highlightTarget, setHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
   const [activeMobileSection, setActiveMobileSection] = useState<"panel" | "preview">("panel");
+  const [mobileOverlayState, setMobileOverlayState] = useState<StudioOverlayState>("expanded");
   const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
   const previewCaptureRef = useRef<HTMLDivElement>(null);
@@ -2161,33 +2169,12 @@ export function ExportStudioDialog({
   const hasOpenedRef = useRef(false);
   const [previewViewportWidth, setPreviewViewportWidth] = useState(0);
   const [previewContentWidth, setPreviewContentWidth] = useState(0);
-
-  useEffect(() => {
-    const node = layoutViewportRef.current;
-    const updateWidth = () => {
-      const nextWidth = node?.clientWidth || window.innerWidth;
-      setLayoutWidth(nextWidth);
-    };
-
-    updateWidth();
-
-    if (typeof ResizeObserver === "undefined" || !node) {
-      window.addEventListener("resize", updateWidth);
-      return () => window.removeEventListener("resize", updateWidth);
-    }
-
-    const observer = new ResizeObserver(() => updateWidth());
-    observer.observe(node);
-    window.addEventListener("resize", updateWidth);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateWidth);
-    };
-  }, [open]);
-
+  const viewport = useStudioViewportProfile(layoutViewportRef, open);
+  const layoutWidth = viewport.layoutWidth;
+  const viewportHeight = viewport.viewportHeight;
   const isMobileLayout = layoutWidth < 1024;
-  const isCompactLayout = layoutWidth < 880;
-  const isNarrowLayout = layoutWidth < 640;
+  const isCompactLayout = layoutWidth < 880 || viewport.isPhone;
+  const isNarrowLayout = layoutWidth < 640 || viewport.isCompactPhone;
 
   useEffect(() => {
     if (!open && signatureConfig) {
@@ -2200,6 +2187,7 @@ export function ExportStudioDialog({
       setDraft(signatureConfig ? { ...createDefaultSignatureConfig(), ...signatureConfig } : createDefaultSignatureConfig());
       setActivePanel("format");
       setActiveMobileSection("panel");
+      setMobileOverlayState("expanded");
       setLiveEditMode(false);
       setHighlightTarget(null);
       hasOpenedRef.current = true;
@@ -2234,6 +2222,21 @@ export function ExportStudioDialog({
       return prev;
     });
   }, [layoutWidth, open]);
+
+  useEffect(() => {
+    if (!open || !isMobileLayout) return;
+    if (activeMobileSection === "preview") {
+      setMobileOverlayState("hidden-temporary");
+      return;
+    }
+
+    if (activePanel === "style" || activePanel === "position" || activePanel === "signers") {
+      setMobileOverlayState((prev) => (prev === "hidden-temporary" ? "minimized" : prev === "expanded" ? "minimized" : prev));
+      return;
+    }
+
+    setMobileOverlayState((prev) => (prev === "hidden-temporary" ? "expanded" : prev));
+  }, [activeMobileSection, activePanel, isMobileLayout, open]);
 
   const activeFormat = useMemo(
     () => formats.find((formatOption) => formatOption.id === selectedFormat) ?? formats[0],
@@ -2307,6 +2310,23 @@ export function ExportStudioDialog({
     () => getRecommendedPaperCopy(activeFormat?.id ?? ""),
     [activeFormat?.id],
   );
+  const mobileSections = useMemo<StudioSectionDescriptor<"panel" | "preview">[]>(
+    () => [
+      { id: "panel", label: "Panel Studio", icon: ScanSearch, priority: "primary", mobileVisibility: "visible" },
+      { id: "preview", label: "Live Preview", icon: Eye, priority: "primary", mobileVisibility: "visible", supportsPreviewSync: true },
+    ],
+    [],
+  );
+  const panelSections = useMemo<StudioSectionDescriptor<typeof activePanel>[]>(
+    () => ([
+      { id: "format", label: "Format", icon: Download, priority: "primary", mobileVisibility: "visible", desktopVisibility: "visible" },
+      ...(columnOptions ? [{ id: "columns" as const, label: "Kolom", icon: Columns3, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" }] : []),
+      { id: "signers", label: "Penanda", icon: PenTool, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" },
+      { id: "style", label: "Style", icon: Sparkles, priority: "primary", mobileVisibility: "visible", desktopVisibility: "visible" },
+      { id: "position", label: "Posisi", icon: Move, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" },
+    ]),
+    [columnOptions],
+  );
   const previewDate = draft.useCustomDate && draft.customDate
     ? formatSignatureDisplayDate(draft.customDate)
     : formatSignatureDisplayDate();
@@ -2354,6 +2374,13 @@ export function ExportStudioDialog({
       showError("Ekspor gagal", error?.message || "Terjadi kesalahan saat mengekspor file.");
     }
   }, [autoFitOnePage, currentPaperSize, documentStyle, downloadPreviewPng, draft, includeSignature, onExport, saveCurrentSignature, selectedFormat, showError, supportsSignature]);
+  const showMobilePreviewOverlay =
+    isMobileLayout &&
+    activeMobileSection === "panel" &&
+    canPreview &&
+    mobileOverlayState !== "hidden-temporary";
+  const mobileOverlayBottom = isNarrowLayout ? 96 : 108;
+  const mobilePreviewMaxHeight = Math.max(180, Math.min(viewportHeight * 0.26, 240));
 
   return (
     <>
@@ -2376,27 +2403,11 @@ export function ExportStudioDialog({
 
           {isMobileLayout ? (
             <div className="border-b border-border px-3 py-2">
-              <div className="grid grid-cols-2 gap-1 rounded-2xl border border-border bg-muted/30 p-1">
-                <Button
-                  type="button"
-                  variant={activeMobileSection === "panel" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-9 rounded-xl text-[11px]"
-                  onClick={() => setActiveMobileSection("panel")}
-                >
-                  Panel Studio
-                </Button>
-                <Button
-                  type="button"
-                  variant={activeMobileSection === "preview" ? "default" : "ghost"}
-                  size="sm"
-                  className="h-9 rounded-xl text-[11px]"
-                  onClick={() => setActiveMobileSection("preview")}
-                  disabled={!canPreview}
-                >
-                  Live Preview
-                </Button>
-              </div>
+              <StudioPreviewToggle
+                active={activeMobileSection}
+                onChange={setActiveMobileSection}
+                canPreview={canPreview}
+              />
             </div>
           ) : null}
 
@@ -2467,42 +2478,44 @@ export function ExportStudioDialog({
                     <p className="text-[10px] text-muted-foreground">Buka panel yang ingin Anda atur.</p>
                   </div>
                   <div className={cn("-mx-1 px-1 pb-1", isMobileLayout ? "overflow-hidden" : "overflow-x-auto")}>
-                    <div
-                      className={cn(
-                        isMobileLayout ? "grid gap-2" : "grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap",
-                      )}
-                      style={isMobileLayout ? { gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr))" } : undefined}
-                    >
-                      {([
-                        { key: "format", label: "Format", icon: Download, enabled: true },
-                        ...(columnOptions ? [{ key: "columns" as const, label: "Kolom", icon: Columns3, enabled: true }] : []),
-                        { key: "signers", label: "Penanda", icon: PenTool, enabled: supportsSignature && includeSignature },
-                        { key: "style", label: "Style", icon: Sparkles, enabled: true },
-                        { key: "position", label: "Posisi", icon: Move, enabled: supportsSignature && includeSignature },
-                      ] as const).map(({ key, label, icon: Icon, enabled }) => (
-                        <Button
-                          key={key}
-                          type="button"
-                          variant={activePanel === key ? "default" : "outline"}
-                          size="sm"
-                          className={cn(
-                            "h-9 min-w-fit shrink-0 rounded-full px-3 justify-start gap-1.5 text-[10px] sm:text-xs",
-                            isMobileLayout && "w-full min-w-0 px-3 justify-center",
-                            !enabled && "opacity-50",
-                          )}
-                          onClick={() => enabled && switchPanel(key as typeof activePanel)}
-                          disabled={!enabled}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                          {label}
-                        </Button>
-                      ))}
-                    </div>
+                    {isMobileLayout ? (
+                      <StudioSectionTabs
+                        sections={panelSections}
+                        active={activePanel}
+                        onChange={(next) => {
+                          if ((next === "signers" || next === "position") && (!supportsSignature || !includeSignature)) return;
+                          switchPanel(next);
+                        }}
+                      />
+                    ) : (
+                      <div className="grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap">
+                        {panelSections.map(({ id, label, icon: Icon }) => {
+                          const enabled = !((id === "signers" || id === "position") && (!supportsSignature || !includeSignature));
+                          return (
+                            <Button
+                              key={id}
+                              type="button"
+                              variant={activePanel === id ? "default" : "outline"}
+                              size="sm"
+                              className={cn(
+                                "h-9 min-w-fit shrink-0 rounded-full px-3 justify-start gap-1.5 text-[10px] sm:text-xs",
+                                !enabled && "opacity-50",
+                              )}
+                              onClick={() => enabled && switchPanel(id)}
+                              disabled={!enabled}
+                            >
+                              {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+                              {label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div ref={panelScrollRef} className={cn("flex-1 overflow-y-auto px-3 sm:px-4 space-y-3", isMobileLayout ? "py-3 pb-24" : "py-3 sm:py-4")}>
+              <div ref={panelScrollRef} className={cn("flex-1 overflow-y-auto px-3 sm:px-4 space-y-3", isMobileLayout ? "py-3 pb-44" : "py-3 sm:py-4")}>
                 {activePanel === "format" ? (
                   <>
                     <div className="rounded-xl border border-border bg-background/80 p-3">
@@ -2696,6 +2709,125 @@ export function ExportStudioDialog({
               </div>
             </div>
 
+            {showMobilePreviewOverlay ? (
+              <div
+                className="pointer-events-none absolute inset-x-3 z-20 lg:hidden"
+                style={{ bottom: `${mobileOverlayBottom}px` }}
+              >
+                <div className="ml-auto w-full max-w-[15.5rem] rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90">
+                  <div className="pointer-events-auto flex items-start justify-between gap-2 px-1 pb-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <Eye className="h-3.5 w-3.5 text-primary" />
+                        <p className="text-[10px] font-semibold text-foreground">Preview Live</p>
+                      </div>
+                      <p className="mt-1 text-[9px] leading-relaxed text-muted-foreground">
+                        {activeFormat?.label || "Format"} • {recommendedPaperOption?.label || currentPaperSize}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full"
+                        onClick={() => setMobileOverlayState((prev) => (prev === "expanded" ? "minimized" : "expanded"))}
+                      >
+                        {mobileOverlayState === "expanded" ? (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full"
+                        onClick={() => setMobileOverlayState("hidden-temporary")}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {mobileOverlayState === "expanded" ? (
+                    <>
+                      <div className="pointer-events-none overflow-hidden rounded-[18px] border border-border bg-muted/30 p-1">
+                        <div
+                          className="origin-top overflow-hidden rounded-[14px] bg-white"
+                          style={{ maxHeight: `${mobilePreviewMaxHeight}px` }}
+                        >
+                          <div
+                            style={{
+                              transform: "scale(0.22)",
+                              transformOrigin: "top left",
+                              width: previewContentWidth > 0 ? `${previewContentWidth}px` : undefined,
+                              height: previewContentWidth > 0 ? `${Math.max(180, mobilePreviewMaxHeight / 0.22)}px` : undefined,
+                            }}
+                          >
+                            {renderPreview ? renderPreview({
+                              previewFormat,
+                              draft,
+                              setDraft,
+                              previewDate,
+                              includeSignature: supportsSignature ? includeSignature : false,
+                              paperSize: currentPaperSize,
+                              documentStyle,
+                              autoFitOnePage,
+                              liveEditMode: false,
+                              highlightTarget,
+                              onHighlightTargetChange: setHighlightTarget,
+                            }) : (
+                              <GenericSignaturePreview
+                                draft={draft}
+                                setDraft={setDraft}
+                                previewDate={previewDate}
+                                includeSignature={supportsSignature ? includeSignature : false}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pointer-events-auto mt-2 grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 rounded-xl text-[10px]"
+                          onClick={() => setActiveMobileSection("preview")}
+                        >
+                          Perbesar
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-9 rounded-xl text-[10px]"
+                          onClick={() => setActiveMobileSection("preview")}
+                        >
+                          Buka Preview
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="pointer-events-auto flex items-center justify-between gap-2 rounded-2xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-[10px] text-muted-foreground">
+                      <span className="line-clamp-2">Preview diciutkan agar panel tetap lega saat Anda mengatur alat.</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 rounded-full px-2 text-[10px]"
+                        onClick={() => setActiveMobileSection("preview")}
+                      >
+                        Lihat
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
             <div className={cn(
               "flex flex-col bg-background min-h-0",
               isMobileLayout
@@ -2831,36 +2963,37 @@ export function ExportStudioDialog({
             </div>
           </div>
 
-          <DialogFooter className={cn("border-t border-border px-3 sm:px-4 py-3", isMobileLayout && "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85")}>
-            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-[10px] text-muted-foreground">
-              {supportsSignature && includeSignature
+          <StudioActionFooter
+            sticky={isMobileLayout}
+            helperText={
+              supportsSignature && includeSignature
                 ? "Simpan pengaturan bila ingin menjadikannya default untuk ekspor berikutnya."
-                : "Anda tetap bisa mengekspor tanpa penanda tangan."}
-            </div>
-            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-9 text-xs w-full sm:w-auto">
-                Tutup
-              </Button>
-              {supportsSignature ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSave}
-                  disabled={isSaving || isLoading || !includeSignature}
-                  className="h-9 gap-1.5 text-xs w-full sm:w-auto"
-                >
-                  <Save className="h-3.5 w-3.5" />
-                  Simpan Tanda Tangan
+                : "Anda tetap bisa mengekspor tanpa penanda tangan."
+            }
+            actions={(
+              <>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-11 text-xs w-full sm:h-9 sm:w-auto">
+                  Tutup
                 </Button>
-              ) : null}
-              <Button type="button" onClick={handleExport} disabled={!activeFormat || isLoading || isSaving} className="h-9 gap-1.5 text-xs w-full sm:w-auto">
-                <Download className="h-3.5 w-3.5" />
-                Ekspor {activeFormat?.label || ""}
-              </Button>
-            </div>
-            </div>
-          </DialogFooter>
+                {supportsSignature ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSave}
+                    disabled={isSaving || isLoading || !includeSignature}
+                    className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                    Simpan Tanda Tangan
+                  </Button>
+                ) : null}
+                <Button type="button" onClick={handleExport} disabled={!activeFormat || isLoading || isSaving} className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto">
+                  <Download className="h-3.5 w-3.5" />
+                  Ekspor {activeFormat?.label || ""}
+                </Button>
+              </>
+            )}
+          />
         </DialogContent>
       </Dialog>
     </>

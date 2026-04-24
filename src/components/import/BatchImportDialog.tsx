@@ -1,9 +1,8 @@
-import { useState, useCallback, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Upload, Download, FileSpreadsheet, CheckCircle2, AlertTriangle,
@@ -14,6 +13,11 @@ import { supabaseExternal as supabase } from "@/lib/supabase-external";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import * as XLSX from "xlsx";
+import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
+import {
+  StudioInfoCollapsible,
+  StudioStepHeader,
+} from "@/components/studio/ResponsiveStudio";
 
 interface BatchImportDialogProps {
   open: boolean;
@@ -43,6 +47,8 @@ export default function BatchImportDialog({ open, onOpenChange }: BatchImportDia
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, label: "" });
   const [importResult, setImportResult] = useState<{ success: number; errors: string[] }>({ success: 0, errors: [] });
+  const layoutViewportRef = useRef<HTMLDivElement>(null);
+  const viewport = useStudioViewportProfile(layoutViewportRef, open);
 
   const handleDownloadTemplate = useCallback(() => {
     const wb = XLSX.utils.book_new();
@@ -449,17 +455,37 @@ export default function BatchImportDialog({ open, onOpenChange }: BatchImportDia
     setExpandedSheet(null);
     setImportResult({ success: 0, errors: [] });
   }, []);
+  const activeSheetDetail = useMemo(
+    () => sheets.find((sheet) => sheet.name === expandedSheet) ?? null,
+    [expandedSheet, sheets],
+  );
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!importing) { onOpenChange(v); if (!v) resetDialog(); } }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100vw-0.75rem)] max-w-4xl h-[min(100dvh-0.75rem,50rem)] overflow-hidden rounded-[24px] p-0 gap-0">
+        <DialogHeader className="border-b border-border px-4 pt-4 pb-3 sm:px-5">
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-primary" />
             Import Batch — Ekosistem Data Akademik
             <Badge variant="outline" className="text-[10px]">Multi-Sheet</Badge>
           </DialogTitle>
+          <DialogDescription>
+            Kelola upload, validasi, dan impor seluruh struktur akademik dari satu file Excel.
+          </DialogDescription>
         </DialogHeader>
+
+        <div ref={layoutViewportRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+            <div className="space-y-4">
+              <StudioStepHeader
+                steps={[
+                  { id: "upload", label: "Upload File" },
+                  { id: "preview", label: "Validasi Sheet" },
+                  { id: "importing", label: "Import" },
+                  { id: "done", label: "Selesai" },
+                ]}
+                currentStep={step}
+              />
 
         {/* Step: Upload */}
         {step === "upload" && (
@@ -490,12 +516,18 @@ export default function BatchImportDialog({ open, onOpenChange }: BatchImportDia
               </label>
             </div>
 
-            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
-              <p className="text-xs font-medium flex items-center gap-1.5"><Info className="w-3 h-3" /> Struktur Sheet yang Diharapkan:</p>
-              {SHEET_NAMES.slice(1).map((name, i) => (
-                <p key={name} className="text-xs text-muted-foreground pl-4">Sheet {i + 2}: {name}</p>
-              ))}
-            </div>
+            <StudioInfoCollapsible
+              title="Struktur sheet yang diharapkan"
+              description="Panduan ini penting karena batch import sensitif terhadap nama sheet dan kolom."
+              defaultOpen
+            >
+              <div className="space-y-1">
+                <p className="text-xs font-medium flex items-center gap-1.5"><Info className="w-3 h-3" /> Struktur Sheet yang Diharapkan:</p>
+                {SHEET_NAMES.slice(1).map((name, i) => (
+                  <p key={name} className="text-xs text-muted-foreground pl-4">Sheet {i + 2}: {name}</p>
+                ))}
+              </div>
+            </StudioInfoCollapsible>
           </div>
         )}
 
@@ -582,6 +614,18 @@ export default function BatchImportDialog({ open, onOpenChange }: BatchImportDia
               </div>
             </ScrollArea>
 
+            {viewport.isPhone && activeSheetDetail ? (
+              <StudioInfoCollapsible
+                title={`Fokus sheet: ${activeSheetDetail.name}`}
+                description="Mode mobile menyorot detail sheet aktif agar daftar panjang tidak terasa berat."
+                defaultOpen
+              >
+                <p className="text-xs text-muted-foreground">
+                  {activeSheetDetail.rows.length} baris, {activeSheetDetail.errors.length} error, {activeSheetDetail.warnings.length} warning.
+                </p>
+              </StudioInfoCollapsible>
+            ) : null}
+
             <Separator />
             <div className="flex items-center justify-between">
               <Button variant="outline" size="sm" onClick={resetDialog}>Batal</Button>
@@ -642,6 +686,9 @@ export default function BatchImportDialog({ open, onOpenChange }: BatchImportDia
             </div>
           </div>
         )}
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
