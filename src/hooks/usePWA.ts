@@ -43,6 +43,74 @@ function getNotifPermission(): NotificationPermission {
   return Notification.permission;
 }
 
+const SW_UPDATE_TIMEOUT_MS = 8000;
+
+function waitForWaitingServiceWorker(
+  registration: ServiceWorkerRegistration,
+  timeoutMs = SW_UPDATE_TIMEOUT_MS,
+): Promise<ServiceWorker | null> {
+  if (registration.waiting) return Promise.resolve(registration.waiting);
+
+  return new Promise((resolve) => {
+    const cleanups: Array<() => void> = [];
+
+    const finish = (worker: ServiceWorker | null) => {
+      cleanups.forEach((cleanup) => cleanup());
+      resolve(worker);
+    };
+
+    const timer = window.setTimeout(() => {
+      finish(registration.waiting ?? null);
+    }, timeoutMs);
+    cleanups.push(() => window.clearTimeout(timer));
+
+    const watchWorker = (worker: ServiceWorker | null) => {
+      if (!worker) return;
+
+      const onStateChange = () => {
+        if (worker.state === 'installed') {
+          finish(registration.waiting ?? worker);
+        } else if (worker.state === 'redundant') {
+          finish(null);
+        }
+      };
+
+      worker.addEventListener('statechange', onStateChange);
+      cleanups.push(() => worker.removeEventListener('statechange', onStateChange));
+    };
+
+    const onUpdateFound = () => {
+      watchWorker(registration.installing);
+    };
+
+    registration.addEventListener('updatefound', onUpdateFound);
+    cleanups.push(() => registration.removeEventListener('updatefound', onUpdateFound));
+
+    watchWorker(registration.installing);
+  });
+}
+
+async function activateWaitingServiceWorker(waitingWorker: ServiceWorker): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const onControllerChange = () => {
+      window.clearTimeout(timer);
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+      resolve();
+    };
+
+    const timer = window.setTimeout(() => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+      resolve();
+    }, SW_UPDATE_TIMEOUT_MS);
+
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange, { once: true });
+
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  });
+
+  window.location.reload();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function usePWA() {
@@ -229,6 +297,30 @@ export function usePWA() {
   }, []);
 
   const applyUpdate = useCallback(async () => {
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const waitingWorker = reg?.waiting ?? null;
+        if (waitingWorker) {
+          await activateWaitingServiceWorker(waitingWorker);
+          return;
+        }
+
+        if (reg) {
+          const waitingWorkerPromise = waitForWaitingServiceWorker(reg);
+          await reg.update();
+
+          const nextWaitingWorker = await waitingWorkerPromise;
+          if (nextWaitingWorker) {
+            await activateWaitingServiceWorker(nextWaitingWorker);
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn("[PWA] manual update flow failed, using fallback:", error);
+      }
+    }
+
     const updateServiceWorker = (window as any).__sipenaPwaUpdate;
     if (typeof updateServiceWorker === "function") {
       try {
@@ -239,21 +331,6 @@ export function usePWA() {
       }
     }
 
-    // Fallback: send SKIP_WAITING to the waiting SW then reload.
-    if ('serviceWorker' in navigator) {
-      try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg?.waiting) {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          // Wait for controller to change before reloading
-          await new Promise<void>((resolve) => {
-            const onChange = () => { resolve(); navigator.serviceWorker.removeEventListener('controllerchange', onChange); };
-            navigator.serviceWorker.addEventListener('controllerchange', onChange);
-            setTimeout(resolve, 2000); // safety timeout
-          });
-        }
-      } catch { /* ignore */ }
-    }
     window.location.reload();
   }, []);
 
