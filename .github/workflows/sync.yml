@@ -1,0 +1,107 @@
+name: Sync from Organization Web Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo_name:
+        description: 'Nama repo di Organization (contoh: web-dev-v2)'
+        required: true
+      target_branch:
+        description: 'Branch di Organization'
+        required: true
+        default: 'main'
+      sync_mode:
+        description: 'Pilih mode sinkronisasi'
+        required: true
+        default: 'whitelist'
+        type: choice
+        options:
+          - whitelist
+          - blacklist
+
+# ←←← TAMBAHKAN BARIS INI
+permissions:
+  contents: write
+# ←←← SAMPAI SINI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      SYNC_MODE: ${{ github.event.inputs.sync_mode }}
+
+    steps:
+      - name: Checkout Proyek Utama (Target - yang akan diubah)
+        uses: actions/checkout@v5
+        with:
+          path: main-project
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout Repo Organization (Sumber)
+        uses: actions/checkout@v5
+        with:
+          repository: Web-Modder/${{ github.event.inputs.target_repo_name }}
+          token: ${{ secrets.SYNC_PROJECT_WEB_PAT }}
+          path: org-source
+          ref: ${{ github.event.inputs.target_branch }}
+
+      - name: Sinkronisasi dari Organization → Proyek Utama
+        run: |
+          echo "🔄 Mode yang dipilih: ${SYNC_MODE}"
+          echo "📥 Mengambil perubahan dari Organization ke Proyek Utama"
+
+          declare -a WHITELIST_PATHS=(
+            "shared/" 
+          )
+
+          declare -a BLACKLIST_PATHS=(
+            ".github/" 
+            ".lovable/" 
+            "supabase/" 
+            "docs/" 
+            "bun.lock"
+            "bun.lockb"
+            ".env"
+            "/*.md"
+            "node_modules/" 
+            "secrets.env" 
+            "logs/" 
+          )
+
+          if [[ "$SYNC_MODE" == "whitelist" ]]; then
+            echo "📋 Mode WHITELIST: Hanya menyalin path yang diizinkan..."
+            for path in "${WHITELIST_PATHS[@]}"; do
+              if [[ "$path" == */ ]]; then
+                rsync -a --checksum "org-source/$path" "main-project/$path"
+              else
+                mkdir -p "main-project/$(dirname "$path")"
+                rsync -a --checksum "org-source/$path" "main-project/$path"
+              fi
+              echo " ✓ Disinkronkan: $path"
+            done
+          else
+            echo "🚫 Mode BLACKLIST: Menyalin SEMUA kecuali yang di-blacklist..."
+            EXCLUDE_ARGS=(--exclude='.git')
+            for p in "${BLACKLIST_PATHS[@]}"; do
+              EXCLUDE_ARGS+=(--exclude "$p")
+            done
+            rsync -a --checksum "${EXCLUDE_ARGS[@]}" org-source/ main-project/
+            echo " ✓ Semua file disinkronkan (kecuali blacklist)"
+          fi
+
+      - name: Commit & Push ke Proyek Utama
+        run: |
+          cd main-project
+         
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+         
+          git add -A
+         
+          if git diff --cached --quiet; then
+            echo "✅ Tidak ada perubahan. Sinkronisasi dilewati."
+          else
+            git commit -m "chore: sync files from Organization (${{ github.event.inputs.target_repo_name }} - ${SYNC_MODE} mode)"
+            git push origin HEAD
+            echo "🚀 Berhasil di-push ke Proyek Utama!"
+          fi
