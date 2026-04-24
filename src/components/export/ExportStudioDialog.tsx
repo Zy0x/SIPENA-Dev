@@ -2417,8 +2417,8 @@ export function ExportStudioDialog({
                           </p>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {recommendedPaperOption ? (
-                              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-primary">
-                                Recommended: {recommendedPaperOption.label}
+                              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[9px] font-semibold text-primary">
+                                Rekomendasi: {recommendedPaperOption.label}
                               </span>
                             ) : null}
                             <span className="text-[10px] text-muted-foreground">
@@ -2438,7 +2438,10 @@ export function ExportStudioDialog({
                         </Tooltip>
                       </div>
 
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      <div
+                        className="mt-3 grid gap-2"
+                        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10.75rem), 1fr))" }}
+                      >
                         {PAPER_SIZE_OPTIONS.map((option) => {
                           const active = currentPaperSize === option.id;
                           const recommended = recommendedPaperSize === option.id;
@@ -2448,7 +2451,7 @@ export function ExportStudioDialog({
                               type="button"
                               onClick={() => onPaperSizeChange?.(option.id)}
                               className={cn(
-                                "rounded-xl border p-3 text-left transition-all",
+                                "min-w-0 rounded-xl border p-3 text-left transition-all",
                                 active
                                   ? "border-primary bg-primary/5 shadow-sm"
                                   : recommended
@@ -2457,17 +2460,17 @@ export function ExportStudioDialog({
                               )}
                             >
                               <div className="flex flex-col items-start gap-2">
-                                <p className="text-xs font-semibold text-foreground">{option.label}</p>
+                                <p className="text-xs font-semibold leading-tight text-foreground">{option.label}</p>
                                 {recommended || active ? (
                                   <div className="flex flex-wrap items-center gap-1.5">
                                     {recommended ? (
                                       <span className={cn(
-                                        "inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] sm:text-[9px]",
+                                        "inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold sm:text-[9px]",
                                         active
                                           ? "border-primary/35 bg-primary/[0.12] text-primary"
                                           : "border-primary/25 bg-primary/[0.08] text-primary",
                                       )}>
-                                        Recommended
+                                        Rekomendasi
                                       </span>
                                     ) : null}
                                     {active ? (
