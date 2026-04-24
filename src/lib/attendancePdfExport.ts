@@ -331,6 +331,11 @@ function resolveInfoItemToneColor(item: string | AttendancePrintInfoItem): [numb
   return COLORS.muted;
 }
 
+function resolveInfoItemTextColor(item: string | AttendancePrintInfoItem): [number, number, number] {
+  if (typeof item === "string") return COLORS.muted;
+  return [51, 65, 85];
+}
+
 function drawInfoBlock(
   doc: jsPDF,
   title: string,
@@ -345,11 +350,18 @@ function drawInfoBlock(
   if (items.length === 0) return y;
 
   const useTwoCols = items.length > 2;
-  const colWidthMm = useTwoCols ? (widthMm - 10) / 2 : widthMm - 4;
+  const paddingX = SHELL_MM.infoBlockPaddingX;
+  const markerWidth = SHELL_MM.infoBlockMarkerWidth;
+  const markerGap = 1.6;
+  const textInsetMm = markerWidth + markerGap;
+  const colGap = SHELL_MM.infoBlockColumnGap;
+  const colWidthMm = useTwoCols
+    ? Math.max(34, ((widthMm - (paddingX * 2) - colGap) / 2) - textInsetMm)
+    : Math.max(34, widthMm - (paddingX * 2) - textInsetMm);
   const wrappedItems = items.map((item) => ({ item, lines: doc.splitTextToSize(typeof item === "string" ? item : item.text, colWidthMm) }));
-  const contentFontPt = Math.max(5.6, fontSizePt - 1.1);
+  const contentFontPt = Math.max(6, fontSizePt - 0.75);
   const contentLineHeight = 3.15;
-  const titleFontPt = Math.max(6, fontSizePt - 0.35);
+  const titleFontPt = Math.max(6.6, fontSizePt + 0.1);
 
   // Calculate block height based on visual rows (paired in 2-col mode)
   let blockHeight: number;
@@ -360,12 +372,19 @@ function drawInfoBlock(
       const leftLines = Math.max(1, wrappedItems[i]?.lines.length ?? 0);
       const rightLines = i + 1 < wrappedItems.length ? Math.max(1, wrappedItems[i + 1]?.lines.length ?? 0) : 0;
       totalRowHeightMm += Math.max(leftLines, rightLines) * contentLineHeight;
+      if (i + 2 < wrappedItems.length) {
+        totalRowHeightMm += SHELL_MM.infoBlockItemGap;
+      }
     }
-    blockHeight = SHELL_MM.infoBlockHeader + totalRowHeightMm + 1.5;
+    blockHeight = SHELL_MM.infoBlockHeader + totalRowHeightMm + SHELL_MM.infoBlockPaddingBottom;
   } else {
     blockHeight = SHELL_MM.infoBlockHeader
-      + wrappedItems.reduce((sum, entry) => sum + Math.max(1, entry.lines.length) * contentLineHeight, 0)
-      + 1.5;
+      + wrappedItems.reduce((sum, entry, index) => (
+        sum
+        + Math.max(1, entry.lines.length) * contentLineHeight
+        + (index < wrappedItems.length - 1 ? SHELL_MM.infoBlockItemGap : 0)
+      ), 0)
+      + SHELL_MM.infoBlockPaddingBottom;
   }
 
   const hexToRgb = (hex: string): [number, number, number] => [
@@ -373,41 +392,80 @@ function drawInfoBlock(
     Number.parseInt(hex.slice(3, 5), 16),
     Number.parseInt(hex.slice(5, 7), 16),
   ];
+  const blendRgb = (base: [number, number, number], overlay: [number, number, number], ratio: number): [number, number, number] => [
+    Math.round(base[0] * (1 - ratio) + overlay[0] * ratio),
+    Math.round(base[1] * (1 - ratio) + overlay[1] * ratio),
+    Math.round(base[2] * (1 - ratio) + overlay[2] * ratio),
+  ];
+  const accentRgb = hexToRgb(accentColor);
+  const accentBgRgb = hexToRgb(accentBg);
+  const titleChipRgb = blendRgb(accentRgb, [255, 255, 255], 0.82);
+  const dividerRgb = blendRgb(COLORS.border, [255, 255, 255], 0.25);
+  const cardRadius = 2.2;
 
-  doc.setFillColor(...hexToRgb(accentBg));
+  doc.setFillColor(...accentBgRgb);
   doc.setDrawColor(...COLORS.border);
-  doc.roundedRect(x, y, widthMm, blockHeight, 1.5, 1.5, "FD");
+  doc.roundedRect(x, y, widthMm, blockHeight, cardRadius, cardRadius, "FD");
+  doc.setFillColor(...accentRgb);
+  doc.roundedRect(x + 1, y + 1, 1.2, blockHeight - 2, 0.6, 0.6, "F");
+  doc.setFillColor(...titleChipRgb);
+  doc.roundedRect(x + paddingX, y + 1.5, Math.min(Math.max(28, doc.getTextWidth(title) + 9), widthMm - (paddingX * 2)), 4.8, 1.5, 1.5, "F");
 
-  let cursorY = y + 4;
-  doc.setTextColor(...hexToRgb(accentColor));
+  let cursorY = y + 4.8;
+  doc.setTextColor(...accentRgb);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(titleFontPt);
-  doc.text(title, x + 2, cursorY);
-  cursorY += 3.1;
+  doc.text(title, x + paddingX + 2, cursorY);
+  cursorY += 3.8;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(contentFontPt);
   doc.setTextColor(...COLORS.muted);
 
   if (useTwoCols) {
-    const col2X = x + 2 + colWidthMm + 6;
+    const col1MarkerX = x + paddingX;
+    const col1TextX = col1MarkerX + textInsetMm;
+    const col2MarkerX = x + paddingX + textInsetMm + colWidthMm + colGap;
+    const col2TextX = col2MarkerX + textInsetMm;
+    const dividerX = x + (widthMm / 2);
+    doc.setDrawColor(...dividerRgb);
+    doc.setLineWidth(0.2);
+    doc.line(dividerX, y + 8.4, dividerX, y + blockHeight - 2.2);
+
     for (let i = 0; i < wrappedItems.length; i += 2) {
       const left = wrappedItems[i];
       const right = i + 1 < wrappedItems.length ? wrappedItems[i + 1] : null;
       const rowLines = Math.max(left.lines.length, right ? right.lines.length : 0);
-      doc.setTextColor(...resolveInfoItemToneColor(left.item));
-      doc.text(left.lines, x + 2, cursorY);
+      const leftTone = resolveInfoItemToneColor(left.item);
+      doc.setFillColor(...leftTone);
+      doc.roundedRect(col1MarkerX, cursorY - 2.7, markerWidth, Math.max(3.2, left.lines.length * contentLineHeight - 0.2), 0.5, 0.5, "F");
+      doc.setTextColor(...resolveInfoItemTextColor(left.item));
+      doc.text(left.lines, col1TextX, cursorY);
       if (right) {
-        doc.setTextColor(...resolveInfoItemToneColor(right.item));
-        doc.text(right.lines, col2X, cursorY);
+        const rightTone = resolveInfoItemToneColor(right.item);
+        doc.setFillColor(...rightTone);
+        doc.roundedRect(col2MarkerX, cursorY - 2.7, markerWidth, Math.max(3.2, right.lines.length * contentLineHeight - 0.2), 0.5, 0.5, "F");
+        doc.setTextColor(...resolveInfoItemTextColor(right.item));
+        doc.text(right.lines, col2TextX, cursorY);
       }
       cursorY += rowLines * contentLineHeight;
+      if (i + 2 < wrappedItems.length) {
+        cursorY += SHELL_MM.infoBlockItemGap;
+      }
     }
   } else {
-    wrappedItems.forEach(({ item, lines }) => {
-      doc.setTextColor(...resolveInfoItemToneColor(item));
-      doc.text(lines, x + 2, cursorY);
+    const markerX = x + paddingX;
+    const textX = markerX + textInsetMm;
+    wrappedItems.forEach(({ item, lines }, index) => {
+      const tone = resolveInfoItemToneColor(item);
+      doc.setFillColor(...tone);
+      doc.roundedRect(markerX, cursorY - 2.7, markerWidth, Math.max(3.2, lines.length * contentLineHeight - 0.2), 0.5, 0.5, "F");
+      doc.setTextColor(...resolveInfoItemTextColor(item));
+      doc.text(lines, textX, cursorY);
       cursorY += Math.max(1, lines.length) * contentLineHeight;
+      if (index < wrappedItems.length - 1) {
+        cursorY += SHELL_MM.infoBlockItemGap;
+      }
     });
   }
 
