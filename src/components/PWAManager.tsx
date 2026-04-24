@@ -18,7 +18,6 @@ import { usePWA } from '@/hooks/usePWA';
 const VERSION_URL = "/version.json";
 // Poll every 90s in background; also triggered on focus/visibility/online
 const POLL_INTERVAL_MS = 90_000;
-let _seenVersion: string | null = null;
 
 async function fetchCurrentVersion(): Promise<string | null> {
   try {
@@ -271,13 +270,10 @@ export default function PWAManager() {
       const v = await fetchCurrentVersion();
       if (cancelled || dismissedRef.current || !v) return;
 
-      if (_seenVersion === null) {
-        // First load — record current version, don't show update
-        _seenVersion = v;
-        return;
-      }
-      if (v !== _seenVersion) {
-        // Version changed since app loaded → show update banner
+      if (v !== __APP_BUILD_VERSION__) {
+        // Compare against the version embedded in the currently running bundle.
+        // This catches "old app shell + new server deploy" immediately,
+        // even on the first poll, without requiring a manual refresh first.
         triggerUpdate();
       }
     };

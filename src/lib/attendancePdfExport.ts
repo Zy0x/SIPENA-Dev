@@ -459,8 +459,6 @@ function drawSummary(
     });
 
     nextY = legendY + 4.1;
-  } else if (summaryContent.keteranganItems.length > 0 || summaryContent.notesItems.length > 0) {
-    nextY += SHELL_MM.continuationSummaryLeadIn;
   }
   if (summaryContent.keteranganItems.length > 0) {
     nextY = drawInfoBlock(doc, summaryContent.keteranganTitle ?? "Keterangan", summaryContent.keteranganItems, x, nextY, contentWidth, summaryContent.keteranganFontPt, "#0369a1", "#f0f9ff");
@@ -853,7 +851,7 @@ export function buildAttendancePdfDocument(args: {
         plan,
         page,
         page.kind === "summary-continuation"
-          ? (plan.paper.marginTopMm + SHELL_MM.topBanner + SHELL_MM.contentPaddingY)
+          ? (plan.paper.marginTopMm + Math.max(0, SHELL_MM.topBanner - 2))
           : plan.summaryLayout.tableEndYMm,
         signature,
         includeSignature,

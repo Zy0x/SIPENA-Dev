@@ -31,8 +31,6 @@ export const ATTENDANCE_SHELL_MM = {
   infoBlockGap: 2,
   /** Single text line height inside an info block. */
   infoLine: 4,
-  /** Extra lead-in before continuation Keterangan cards so page 2+ aligns visually. */
-  continuationSummaryLeadIn: 4,
   /** Minimum gap between summary cards and signature block. */
   signatureGap: 2,
   /** Reserved height for the signature block. */

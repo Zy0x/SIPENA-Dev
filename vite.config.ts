@@ -7,6 +7,11 @@ import { mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { createHash } from "crypto";
 
+const buildVersion = createHash("sha256")
+  .update(`${Date.now()}-${Math.random()}`)
+  .digest("hex")
+  .slice(0, 12);
+
 /**
  * Generates /version.json into the build output.
  * The app polls this endpoint to detect new deployments reliably
@@ -18,11 +23,7 @@ function versionJsonPlugin(): Plugin {
     apply: "build",
     closeBundle() {
       mkdirSync(resolve(__dirname, "dist"), { recursive: true });
-      const hash = createHash("sha256")
-        .update(String(Date.now()))
-        .digest("hex")
-        .slice(0, 12);
-      const payload = JSON.stringify({ version: hash, builtAt: new Date().toISOString() });
+      const payload = JSON.stringify({ version: buildVersion, builtAt: new Date().toISOString() });
       writeFileSync(resolve(__dirname, "dist/version.json"), payload, "utf-8");
     },
   };
@@ -32,6 +33,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+  },
+  define: {
+    __APP_BUILD_VERSION__: JSON.stringify(buildVersion),
   },
   plugins: [
     react(),

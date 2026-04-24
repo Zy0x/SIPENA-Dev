@@ -1052,7 +1052,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const tableEndYMm = tableStartYMm + (table.headerRowHeightMm * 2) + lastPageRowsHeightMm + (lastTablePage?.hasSummaryRows ? summaryRowHeightMm * 2 : 0);
   const printableBottomMm = paper.pageHeightMm - paper.marginBottomMm - SHELL_HEIGHT_MM.footerBar - SHELL_HEIGHT_MM.footerClearance;
 
-  const continuationSummaryStartYMm = paper.marginTopMm + SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.contentPaddingY;
+  const continuationSummaryStartYMm = paper.marginTopMm + Math.max(0, SHELL_HEIGHT_MM.topBanner - 2);
   const firstSummaryAvailableMm = Math.max(0, printableBottomMm - tableEndYMm);
   const continuationSummaryAvailableMm = Math.max(0, printableBottomMm - continuationSummaryStartYMm);
   const chosenKeteranganFontPt = selectedSinglePageFontPt ?? minKeteranganBaseFontPt;
@@ -1064,8 +1064,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     remainingKeterangan: AttendancePrintInfoItem[],
     remainingNotes: string[],
   ): AttendancePrintPageSummaryContent => {
-    let usedMm = SHELL_HEIGHT_MM.summaryGap
-      + (showLegend ? legendHeightMm : SHELL_HEIGHT_MM.continuationSummaryLeadIn);
+    let usedMm = SHELL_HEIGHT_MM.summaryGap + (showLegend ? legendHeightMm : 0);
     let keteranganItems: AttendancePrintInfoItem[] = [];
     let notesItems: string[] = [];
 
