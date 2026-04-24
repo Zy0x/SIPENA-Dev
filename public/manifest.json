@@ -1,0 +1,68 @@
+{
+  "name": "SIPENA - Sistem Informasi Penilaian Akademik",
+  "short_name": "SIPENA",
+  "description": "Sistem Informasi Penilaian Akademik untuk Guru Indonesia",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "orientation": "natural",
+  "lang": "id",
+  "id": "/",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": [],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Lihat ringkasan nilai",
+      "icons": [{"src": "/favicon.ico", "sizes": "96x96"}]
+    },
+    {
+      "name": "Input Nilai",
+      "short_name": "Nilai",
+      "url": "/grades",
+      "description": "Input nilai siswa",
+      "icons": [{"src": "/favicon.ico", "sizes": "96x96"}]
+    }
+  ]
+}
