@@ -1,0 +1,145 @@
+name: Sync from Organization Web Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo_name:
+        description: 'Nama repo di Organization (contoh: web-dev-v2)'
+        required: true
+      target_branch:
+        description: 'Branch di Organization'
+        required: true
+        default: 'main'
+      sync_mode:
+        description: 'Pilih mode sinkronisasi'
+        required: true
+        default: 'whitelist'
+        type: choice
+        options:
+          - whitelist
+          - blacklist
+
+  repository_dispatch:
+    types: [sync-from-org]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repo utama
+      - name: Checkout Proyek Utama
+        uses: actions/checkout@v5
+        with:
+          path: main-project
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Load config (AUTO mode)
+      - name: Load config (auto)
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          CONFIG_FILE="main-project/SIPENA-Dev/sync"
+
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "❌ Config tidak ditemukan: $CONFIG_FILE"
+            exit 1
+          fi
+
+          echo "📄 Membaca config..."
+          source "$CONFIG_FILE"
+
+          echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
+          echo "SYNC_MODE=$SYNC_MODE" >> $GITHUB_ENV
+
+      # 3. Load input (MANUAL mode)
+      - name: Load manual input
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "TARGET_REPO=${{ github.event.inputs.target_repo_name }}" >> $GITHUB_ENV
+          echo "TARGET_BRANCH=${{ github.event.inputs.target_branch }}" >> $GITHUB_ENV
+          echo "SYNC_MODE=${{ github.event.inputs.sync_mode }}" >> $GITHUB_ENV
+
+      # 4. Debug (opsional tapi penting)
+      - name: Debug config
+        run: |
+          echo "Repo   : $TARGET_REPO"
+          echo "Branch : $TARGET_BRANCH"
+          echo "Mode   : $SYNC_MODE"
+
+      # 5. Checkout repo organization
+      - name: Checkout Repo Organization (Sumber)
+        uses: actions/checkout@v5
+        with:
+          repository: Web-Modder/${{ env.TARGET_REPO }}
+          token: ${{ secrets.SYNC_PROJECT_WEB_PAT }}
+          path: org-source
+          ref: ${{ env.TARGET_BRANCH }}
+
+      # 6. Sinkronisasi
+      - name: Sinkronisasi dari Organization → Proyek Utama
+        run: |
+          cd main-project
+
+          echo "🔄 Mode: ${SYNC_MODE}"
+          echo "📥 Sync dari Web-Modder/${TARGET_REPO}"
+
+          declare -a WHITELIST_PATHS=(
+            "shared/"
+          )
+
+          declare -a BLACKLIST_PATHS=(
+            ".github/"
+            ".lovable/"
+            "supabase/"
+            "docs/"
+            "bun.lock"
+            "bun.lockb"
+            ".env"
+            "/*.md"
+            "node_modules/"
+            "secrets.env"
+            "logs/"
+          )
+
+          if [[ "$SYNC_MODE" == "whitelist" ]]; then
+            echo "📋 WHITELIST mode"
+            for path in "${WHITELIST_PATHS[@]}"; do
+              if [[ "$path" == */ ]]; then
+                rsync -a --checksum "../org-source/$path" "$path"
+              else
+                mkdir -p "$(dirname "$path")"
+                rsync -a --checksum "../org-source/$path" "$path"
+              fi
+              echo " ✓ $path"
+            done
+          else
+            echo "🚫 BLACKLIST mode"
+            EXCLUDE_ARGS=(--exclude='.git')
+            for p in "${BLACKLIST_PATHS[@]}"; do
+              EXCLUDE_ARGS+=(--exclude "$p")
+            done
+
+            rsync -a --checksum "${EXCLUDE_ARGS[@]}" ../org-source/ .
+          fi
+
+      # 7. Commit & push
+      - name: Commit & Push
+        run: |
+          cd main-project
+
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "✅ Tidak ada perubahan"
+          else
+            git commit -m "chore: sync from Web-Modder/${TARGET_REPO} (${SYNC_MODE})"
+            git push origin HEAD
+            echo "🚀 Sync berhasil"
+          fi
