@@ -30,24 +30,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repo utama
+      # 1. Checkout repo utama (SIPENA-Dev)
       - name: Checkout Proyek Utama
         uses: actions/checkout@v5
         with:
           path: main-project
 
-      # 2. Load config AUTO
+      # 2. Load config (AUTO)
       - name: Load config (auto)
         if: github.event_name == 'repository_dispatch'
         run: |
-          CONFIG_FILE="main-project/SIPENA-Dev/sync"
+          CONFIG_FILE="main-project/sync"
 
           if [ ! -f "$CONFIG_FILE" ]; then
             echo "❌ Config tidak ditemukan: $CONFIG_FILE"
             exit 1
           fi
 
-          echo "📄 Membaca config..."
+          echo "📄 Isi config:"
           cat "$CONFIG_FILE"
 
           source "$CONFIG_FILE"
@@ -83,13 +83,13 @@ jobs:
           ref: ${{ env.TARGET_BRANCH }}
 
       # 6. Debug isi repo source
-      - name: Debug source files
+      - name: Debug source
         run: |
           echo "===== ORG SOURCE ====="
           ls -la org-source
           echo "======================"
 
-      # 7. Sync
+      # 7. Sinkronisasi
       - name: Sinkronisasi
         run: |
           cd main-project
