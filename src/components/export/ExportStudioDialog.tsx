@@ -2152,6 +2152,7 @@ export function ExportStudioDialog({
   const [layoutWidth, setLayoutWidth] = useState<number>(typeof window === "undefined" ? 1280 : window.innerWidth);
   const [liveEditMode, setLiveEditMode] = useState(false);
   const [highlightTarget, setHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
+  const [activeMobileSection, setActiveMobileSection] = useState<"panel" | "preview">("panel");
   const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
   const previewCaptureRef = useRef<HTMLDivElement>(null);
@@ -2198,6 +2199,7 @@ export function ExportStudioDialog({
     if (open && !hasOpenedRef.current) {
       setDraft(signatureConfig ? { ...createDefaultSignatureConfig(), ...signatureConfig } : createDefaultSignatureConfig());
       setActivePanel("format");
+      setActiveMobileSection("panel");
       setLiveEditMode(false);
       setHighlightTarget(null);
       hasOpenedRef.current = true;
@@ -2372,6 +2374,32 @@ export function ExportStudioDialog({
             </DialogDescription>
           </DialogHeader>
 
+          {isMobileLayout ? (
+            <div className="border-b border-border px-3 py-2">
+              <div className="grid grid-cols-2 gap-1 rounded-2xl border border-border bg-muted/30 p-1">
+                <Button
+                  type="button"
+                  variant={activeMobileSection === "panel" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-9 rounded-xl text-[11px]"
+                  onClick={() => setActiveMobileSection("panel")}
+                >
+                  Panel Studio
+                </Button>
+                <Button
+                  type="button"
+                  variant={activeMobileSection === "preview" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-9 rounded-xl text-[11px]"
+                  onClick={() => setActiveMobileSection("preview")}
+                  disabled={!canPreview}
+                >
+                  Live Preview
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
           <div
             ref={layoutViewportRef}
             className={cn(
@@ -2392,7 +2420,12 @@ export function ExportStudioDialog({
 
             <div className={cn(
               "border-border bg-muted/20 min-h-0 flex flex-col",
-              isMobileLayout ? "order-2 border-t flex-1 overflow-hidden" : "order-2 border-t lg:order-1 lg:border-t-0 lg:border-r",
+              isMobileLayout
+                ? cn(
+                    "order-1 flex-1 overflow-hidden",
+                    activeMobileSection === "panel" ? "flex" : "hidden",
+                  )
+                : "order-2 border-t lg:order-1 lg:border-t-0 lg:border-r",
             )}>
               <div className={cn("px-3 sm:px-4 border-b border-border/70", isMobileLayout ? "pt-2.5 pb-2.5 space-y-2" : "pt-3 sm:pt-4 pb-3 space-y-3")}>
                 <div className={cn("rounded-xl border border-border bg-background", isMobileLayout ? "p-2.5" : "p-3")}>
@@ -2665,7 +2698,12 @@ export function ExportStudioDialog({
 
             <div className={cn(
               "flex flex-col bg-background min-h-0",
-              isMobileLayout ? "order-1 border-b shrink-0" : "order-1 min-h-[18rem] lg:order-2",
+              isMobileLayout
+                ? cn(
+                    "order-1 flex-1 overflow-hidden",
+                    activeMobileSection === "preview" ? "flex" : "hidden",
+                  )
+                : "order-1 min-h-[18rem] lg:order-2",
             )}>
               <div className={cn(
                 "flex flex-col gap-3 border-b border-border px-3 sm:px-4",
