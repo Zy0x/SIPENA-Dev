@@ -2456,24 +2456,26 @@ export function ExportStudioDialog({
                                     : "border-border bg-background hover:border-primary/40",
                               )}
                             >
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex min-w-0 items-center gap-1.5">
-                                  <p className="text-xs font-semibold text-foreground">{option.label}</p>
-                                  {recommended ? (
-                                    <span className={cn(
-                                      "rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]",
-                                      active
-                                        ? "border-primary/35 bg-primary/[0.12] text-primary"
-                                        : "border-primary/25 bg-primary/[0.08] text-primary",
-                                    )}>
-                                      Recommended
-                                    </span>
-                                  ) : null}
-                                </div>
-                                {active ? (
-                                  <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">
-                                    Aktif
-                                  </span>
+                              <div className="flex flex-col items-start gap-2">
+                                <p className="text-xs font-semibold text-foreground">{option.label}</p>
+                                {recommended || active ? (
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {recommended ? (
+                                      <span className={cn(
+                                        "inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] sm:text-[9px]",
+                                        active
+                                          ? "border-primary/35 bg-primary/[0.12] text-primary"
+                                          : "border-primary/25 bg-primary/[0.08] text-primary",
+                                      )}>
+                                        Recommended
+                                      </span>
+                                    ) : null}
+                                    {active ? (
+                                      <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[8px] font-semibold text-primary sm:text-[9px]">
+                                        Aktif
+                                      </span>
+                                    ) : null}
+                                  </div>
                                 ) : null}
                               </div>
                               <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{option.description}</p>
