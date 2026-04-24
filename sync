@@ -1,1 +1,8 @@
-tessipena3-f7e2575d
+# Repo source dari organization
+TARGET_REPO=tessipena3-f7e2575d
+
+# Branch source
+TARGET_BRANCH=main
+
+# Mode sync: whitelist / blacklist
+SYNC_MODE=blacklist
