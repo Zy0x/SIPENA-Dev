@@ -26,19 +26,9 @@ export const ATTENDANCE_SHELL_MM = {
   /** Legend strip row height. */
   legendRow: 7,
   /** Header row inside an info block (Keterangan / Catatan). */
-  infoBlockHeader: 6.8,
+  infoBlockHeader: 5,
   /** Vertical gap after each info block. */
-  infoBlockGap: 2.4,
-  /** Horizontal padding inside an info block. */
-  infoBlockPaddingX: 3,
-  /** Bottom padding inside an info block. */
-  infoBlockPaddingBottom: 2.2,
-  /** Gap between two content columns inside an info block. */
-  infoBlockColumnGap: 8,
-  /** Vertical gap between content rows/items. */
-  infoBlockItemGap: 0.8,
-  /** Width of the colored tone marker beside each item. */
-  infoBlockMarkerWidth: 1.1,
+  infoBlockGap: 2,
   /** Single text line height inside an info block. */
   infoLine: 4,
   /** Minimum gap between summary cards and signature block. */

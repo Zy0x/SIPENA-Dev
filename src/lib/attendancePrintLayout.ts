@@ -275,7 +275,7 @@ const TABLE_SLACK_TOLERANCE_MM = ATTENDANCE_LAYOUT_TOLERANCE_MM.tableSlack;
 const TABLE_BOTTOM_SAFETY_MM = ATTENDANCE_LAYOUT_TOLERANCE_MM.tableBottomSafety;
 const AUTOTABLE_ROW_OVERHEAD_MM = ATTENDANCE_LAYOUT_TOLERANCE_MM.autotableRowOverhead;
 const INFO_BLOCK_LINE_HEIGHT_MM = 3.15;
-const INFO_BLOCK_BOTTOM_PADDING_MM = SHELL_HEIGHT_MM.infoBlockPaddingBottom;
+const INFO_BLOCK_BOTTOM_PADDING_MM = 1.5;
 const KETERANGAN_MIN_CONTENT_FONT_PT = 8;
 const KETERANGAN_FONT_STEP_PT = 0.25;
 
@@ -343,19 +343,13 @@ function estimateInfoBlockHeightMm(items: AttendanceInfoLike[], maxItems: number
 }
 
 function resolveInfoContentFontPt(baseFontPt: number) {
-  return Math.max(6, baseFontPt - 0.75);
+  return Math.max(5.6, baseFontPt - 1.1);
 }
 
 function buildInfoBlockMeasurement(items: AttendanceInfoLike[], widthMm: number, baseFontPt: number) {
   const contentFontPt = resolveInfoContentFontPt(baseFontPt);
   const useTwoCols = items.length > 2;
-  const textInsetMm = SHELL_HEIGHT_MM.infoBlockMarkerWidth + 1.6;
-  const effectiveWidthMm = useTwoCols
-    ? Math.max(
-        34,
-        ((widthMm - (SHELL_HEIGHT_MM.infoBlockPaddingX * 2) - SHELL_HEIGHT_MM.infoBlockColumnGap) / 2) - textInsetMm,
-      )
-    : Math.max(34, widthMm - (SHELL_HEIGHT_MM.infoBlockPaddingX * 2) - textInsetMm);
+  const effectiveWidthMm = useTwoCols ? Math.max(40, (widthMm - 12) / 2) : widthMm;
   const itemHeightsMm = items.map((item) => {
     const lineCount = estimateWrappedLineCount(getAttendanceInfoText(item), contentFontPt, effectiveWidthMm);
     return lineCount * INFO_BLOCK_LINE_HEIGHT_MM;
@@ -369,16 +363,9 @@ function buildInfoBlockMeasurement(items: AttendanceInfoLike[], widthMm: number,
         const leftHeight = itemHeightsMm[index] ?? INFO_BLOCK_LINE_HEIGHT_MM;
         const rightHeight = itemHeightsMm[index + 1] ?? 0;
         contentHeightMm += Math.max(leftHeight, rightHeight);
-        if (index + 2 < count) {
-          contentHeightMm += SHELL_HEIGHT_MM.infoBlockItemGap;
-        }
       }
     } else {
-      contentHeightMm = itemHeightsMm.slice(0, count).reduce((sum, value, index) => (
-        sum
-        + value
-        + (index < count - 1 ? SHELL_HEIGHT_MM.infoBlockItemGap : 0)
-      ), 0);
+      contentHeightMm = itemHeightsMm.slice(0, count).reduce((sum, value) => sum + value, 0);
     }
     return SHELL_HEIGHT_MM.infoBlockHeader
       + contentHeightMm
