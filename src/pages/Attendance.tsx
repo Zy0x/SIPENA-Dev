@@ -98,6 +98,10 @@ function isAttendancePngFormat(formatId: string) {
   return formatId === "png-hd" || formatId === "png-4k";
 }
 
+function getAttendancePngTargetWidthPx(quality: "hd" | "4k") {
+  return quality === "4k" ? 3840 : 1920;
+}
+
 const SIPENA_FULL = "SIPENA — Sistem Informasi Penilaian Akademik";
 
 // ── Status config with FIXED colors for readability ──
@@ -2174,11 +2178,15 @@ export default function Attendance() {
       const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist/legacy/build/pdf.mjs");
       GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
       const pdf = await getDocument({ data: builtPdf.arrayBuffer() }).promise;
-      const rasterScale = quality === "4k" ? 4 : 2;
       const renderedPages: Array<{ canvas: HTMLCanvasElement; fileName: string; dataUrl: string }> = [];
+      let resolvedRasterScale = 0;
+      const targetWidthPx = getAttendancePngTargetWidthPx(quality);
 
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         const page = await pdf.getPage(pageNumber);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const rasterScale = Math.max(targetWidthPx / Math.max(baseViewport.width, 1), quality === "4k" ? 4 : 2);
+        resolvedRasterScale = Math.max(resolvedRasterScale, rasterScale);
         const viewport = page.getViewport({ scale: rasterScale });
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
@@ -2227,7 +2235,7 @@ export default function Attendance() {
         });
         const pngRuntime: AttendancePngRuntimeTrace = {
           format: quality === "4k" ? "png-4k" : "png-hd",
-          scale: rasterScale,
+          scale: resolvedRasterScale,
           renderedPageCount: plan.pages.length,
           wrapperWidthPx: Math.max(...renderedPages.map((page) => page.canvas.width)),
           wrapperHeightPx: renderedPages.reduce((sum, page) => sum + page.canvas.height, 0),

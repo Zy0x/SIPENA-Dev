@@ -195,6 +195,22 @@ const PAPER_SIZE_OPTIONS: Array<{
   { id: "full-page", label: "Full Page", description: "Ukuran halaman mengikuti seluruh isi dari header sampai footer." },
 ];
 
+function getRecommendedPaperSize(formatId: string): ReportPaperSize | null {
+  if (formatId === "pdf") return "a4";
+  if (formatId === "png-hd" || formatId === "png-4k") return "full-page";
+  return null;
+}
+
+function getRecommendedPaperCopy(formatId: string) {
+  if (formatId === "pdf") {
+    return "A4 paling stabil untuk PDF karena proporsi cetak dan pagination-nya paling konsisten.";
+  }
+  if (formatId === "png-hd" || formatId === "png-4k") {
+    return "Full Page paling akurat untuk PNG karena seluruh header sampai footer diraster dari halaman final tanpa memaksa potongan kertas.";
+  }
+  return "Pilih ukuran kertas sesuai kebutuhan dokumen dan target hasil ekspor.";
+}
+
 function getFormatToneClasses(id: string) {
   if (id === "pdf") return "border-red-200 bg-red-50/70 text-red-700";
   if (id === "excel") return "border-emerald-200 bg-emerald-50/70 text-emerald-700";
@@ -2170,6 +2186,18 @@ export function ExportStudioDialog({
   const previewFormat = activeFormat?.previewMode === "png" ? "png" : "pdf";
   const canPreview = !!activeFormat?.previewMode;
   const currentPaperSize = paperSize;
+  const recommendedPaperSize = useMemo(
+    () => getRecommendedPaperSize(activeFormat?.id ?? ""),
+    [activeFormat?.id],
+  );
+  const recommendedPaperOption = useMemo(
+    () => PAPER_SIZE_OPTIONS.find((option) => option.id === recommendedPaperSize) ?? null,
+    [recommendedPaperSize],
+  );
+  const recommendedPaperCopy = useMemo(
+    () => getRecommendedPaperCopy(activeFormat?.id ?? ""),
+    [activeFormat?.id],
+  );
   const previewDate = draft.useCustomDate && draft.customDate
     ? formatSignatureDisplayDate(draft.customDate)
     : formatSignatureDisplayDate();
@@ -2387,6 +2415,16 @@ export function ExportStudioDialog({
                           <p className="mt-1 text-[10px] text-muted-foreground">
                             Berlaku untuk preview dan hasil ekspor PDF/PNG. Auto memakai basis A4 yang menyesuaikan layout, sedangkan Full Page membuat ukuran halaman mengikuti isi dokumen.
                           </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {recommendedPaperOption ? (
+                              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-primary">
+                                Recommended: {recommendedPaperOption.label}
+                              </span>
+                            ) : null}
+                            <span className="text-[10px] text-muted-foreground">
+                              {recommendedPaperCopy}
+                            </span>
+                          </div>
                         </div>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -2403,6 +2441,7 @@ export function ExportStudioDialog({
                       <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         {PAPER_SIZE_OPTIONS.map((option) => {
                           const active = currentPaperSize === option.id;
+                          const recommended = recommendedPaperSize === option.id;
                           return (
                             <button
                               key={option.id}
@@ -2410,11 +2449,27 @@ export function ExportStudioDialog({
                               onClick={() => onPaperSizeChange?.(option.id)}
                               className={cn(
                                 "rounded-xl border p-3 text-left transition-all",
-                                active ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background hover:border-primary/40",
+                                active
+                                  ? "border-primary bg-primary/5 shadow-sm"
+                                  : recommended
+                                    ? "border-primary/30 bg-primary/[0.03] hover:border-primary/50"
+                                    : "border-border bg-background hover:border-primary/40",
                               )}
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs font-semibold text-foreground">{option.label}</p>
+                                <div className="flex min-w-0 items-center gap-1.5">
+                                  <p className="text-xs font-semibold text-foreground">{option.label}</p>
+                                  {recommended ? (
+                                    <span className={cn(
+                                      "rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]",
+                                      active
+                                        ? "border-primary/35 bg-primary/[0.12] text-primary"
+                                        : "border-primary/25 bg-primary/[0.08] text-primary",
+                                    )}>
+                                      Recommended
+                                    </span>
+                                  ) : null}
+                                </div>
                                 {active ? (
                                   <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">
                                     Aktif
@@ -2422,6 +2477,13 @@ export function ExportStudioDialog({
                                 ) : null}
                               </div>
                               <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{option.description}</p>
+                              {recommended ? (
+                                <p className="mt-2 text-[10px] font-medium text-primary/90">
+                                  {activeFormat?.id === "pdf"
+                                    ? "Paling disarankan untuk ekspor PDF."
+                                    : "Paling disarankan untuk ekspor PNG."}
+                                </p>
+                              ) : null}
                             </button>
                           );
                         })}
