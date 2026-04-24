@@ -892,6 +892,24 @@ function tdStyle(
   };
 }
 
+function splitInfoBlockTitle(title: string) {
+  const match = title.match(/^(.*?)\s*\((.+)\)$/);
+  if (!match) return { main: title, suffix: null as string | null };
+  return {
+    main: match[1]?.trim() || title,
+    suffix: match[2]?.trim() || null,
+  };
+}
+
+function splitInfoBlockText(text: string) {
+  const match = text.match(/^\s*(.+?)\s+[—-]\s+(.+?)\s*$/);
+  if (!match) return { lead: null as string | null, body: text };
+  return {
+    lead: match[1]?.trim() || null,
+    body: match[2]?.trim() || text,
+  };
+}
+
 // ─── Info block ────────────────────────────────────────────────────────────
 /**
  * Two-column grid layout so items wrap side-by-side.
@@ -914,6 +932,7 @@ function InfoBlock({
 }) {
   const visibleItems = items;
   const useTwoCols = visibleItems.length > 2;
+  const titleParts = splitInfoBlockTitle(title);
   const titleFont = Math.max(fontSize - 0.35, fontSize * 0.92);
   const contentFont = Math.max(fontSize - 1.1, fontSize * 0.84);
   return (
@@ -923,35 +942,71 @@ function InfoBlock({
       border: `1px solid ${COLORS.border}`,
       breakInside: "avoid", pageBreakInside: "avoid",
     }}>
-      <strong style={{
-        display: "block",
-        color: accentColor,
-        fontSize: titleFont,
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: mm(0.8),
+        flexWrap: "wrap",
         marginBottom: mm(0.9),
         lineHeight: 1.05,
-      }}>{title}</strong>
+      }}>
+        <strong style={{
+          display: "block",
+          color: accentColor,
+          fontSize: titleFont,
+        }}>{titleParts.main}</strong>
+        {titleParts.suffix ? (
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            padding: `${mm(0.1)}px ${mm(0.9)}px`,
+            borderRadius: 999,
+            border: `1px solid ${COLORS.border}`,
+            background: "rgba(255,255,255,0.7)",
+            color: COLORS.muted,
+            fontSize: Math.max(contentFont - 0.2, contentFont * 0.92),
+            fontWeight: 700,
+          }}>
+            {titleParts.suffix}
+          </span>
+        ) : null}
+      </div>
       <div style={{
         display: "grid",
         gridTemplateColumns: useTwoCols ? "1fr 1fr" : "1fr",
         gap: `${mm(0.3)}px ${mm(3)}px`,
       }}>
-        {visibleItems.map((item, i) => (
-          <div key={`${title}-${i}`} style={{
-            fontSize: contentFont,
-            color: typeof item === "string"
-              ? COLORS.muted
-              : item.tone === "national"
-                ? "#b91c1c"
-                : item.tone === "custom"
-                  ? "#b45309"
-                  : item.tone === "event"
-                    ? "#1d4ed8"
-                    : COLORS.muted,
-            whiteSpace: "normal",
-            overflowWrap: "anywhere",
-            lineHeight: 1.1,
-          }}>{typeof item === "string" ? item : item.text}</div>
-        ))}
+        {visibleItems.map((item, i) => {
+          const itemColor = typeof item === "string"
+            ? COLORS.muted
+            : item.tone === "national"
+              ? "#b91c1c"
+              : item.tone === "custom"
+                ? "#b45309"
+                : item.tone === "event"
+                  ? "#1d4ed8"
+                  : COLORS.muted;
+          const parsed = splitInfoBlockText(typeof item === "string" ? item : item.text);
+          return (
+            <div key={`${title}-${i}`} style={{
+              fontSize: contentFont,
+              color: COLORS.muted,
+              whiteSpace: "normal",
+              overflowWrap: "anywhere",
+              lineHeight: 1.1,
+            }}>
+              {parsed.lead ? (
+                <>
+                  <span style={{ color: itemColor, fontWeight: 700 }}>{parsed.lead}</span>
+                  <span style={{ color: itemColor, fontWeight: 700 }}> — </span>
+                  <span>{parsed.body}</span>
+                </>
+              ) : (
+                <span style={{ color: itemColor }}>{parsed.body}</span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
