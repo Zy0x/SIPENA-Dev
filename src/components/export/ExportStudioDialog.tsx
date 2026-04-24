@@ -475,7 +475,7 @@ function SignerPanel({
         />
       </div>
 
-      <div className="flex items-center justify-between rounded-lg border border-border p-2">
+      <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Label className="text-[11px]">Tanggal custom</Label>
           <p className="text-[9px] text-muted-foreground">Aktifkan bila tanggal dokumen tidak ingin mengikuti hari ini.</p>
@@ -1109,7 +1109,10 @@ function ExperimentalTypographyWindow({
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px]">Mode kolom</Label>
-                        <div className="grid grid-cols-2 gap-1">
+                        <div
+                          className="grid gap-1"
+                          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+                        >
                           {([
                             { key: "inherit", label: "Ikuti Tabel" },
                             { key: "autofit-content", label: "Autofit Konten" },
@@ -1179,7 +1182,10 @@ function LegacyStylePanel({
               <Label className="text-[11px] font-semibold">Preset</Label>
               <p className="text-[9px] text-muted-foreground">Pilih titik awal yang paling nyaman, lalu sesuaikan lagi bila perlu.</p>
             </div>
-            <div className="grid grid-cols-2 gap-1">
+            <div
+              className="grid gap-1"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+            >
               {([
                 { label: "1 Halaman", title: 14, meta: 9, header: 10, body: 10, desc: "Utamakan 1 halaman tabel", autoFit: true },
                 { label: "1 Kolom Penuh", title: 12, meta: 8, header: 8, body: 7, desc: "Titik awal agar semua kolom muat", autoFit: false },
@@ -1217,7 +1223,7 @@ function LegacyStylePanel({
           </div>
 
           {showAutoFitPreset ? (
-            <div className="flex items-center justify-between rounded-lg border border-border p-2">
+            <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <Label className="text-[11px]">Optimalkan 1 halaman</Label>
                 <p className="text-[9px] text-muted-foreground">Sistem akan berusaha menjaga tabel tetap padat tanpa mengorbankan keterbacaan terlalu jauh.</p>
@@ -1297,7 +1303,7 @@ function LegacyStylePanel({
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border p-2">
+              <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <Label className="text-[11px]">Aktifkan mode eksperimen</Label>
                   <p className="text-[9px] text-muted-foreground">Saat aktif, font tiap kolom bisa disetel sendiri. Saat nonaktif, semua kolom kembali mengikuti tipografi global.</p>
@@ -1509,7 +1515,7 @@ function LegacyStylePanel({
           </div>
           <SliderWithButtons value={draft.fontSize} min={1} max={40} step={0.25} buttonStep={1} disabled={supportsSignature && !includeSignature} onValueChange={(value) => setDraft((prev) => ({ ...prev, fontSize: Number(value.toFixed(2)) }))} />
         </div>
-        <div className="flex items-center justify-between rounded-lg border border-border p-2">
+        <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Label className="text-[11px]">Garis tanda tangan</Label>
             <p className="text-[9px] text-muted-foreground">Nonaktifkan bila ingin nama penanda tangan tampil tanpa garis.</p>
@@ -1574,7 +1580,10 @@ function PositionPanel({
 
       <div className="space-y-1.5">
         <Label className="text-[11px] font-semibold">Posisi awal</Label>
-        <div className="grid grid-cols-2 gap-1">
+        <div
+          className="grid gap-1"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+        >
           {([
             { key: "bottom-left", label: "Bawah kiri" },
             { key: "bottom-center", label: "Bawah tengah" },
@@ -1873,7 +1882,10 @@ function StylePanel({
               <Label className="text-[11px] font-semibold">Preset</Label>
               <p className="text-[9px] text-muted-foreground">Pilih titik awal yang paling nyaman, lalu sesuaikan lagi bila perlu.</p>
             </div>
-            <div className="grid grid-cols-2 gap-1">
+            <div
+              className="grid gap-1"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+            >
               {([
                 { label: "1 Halaman", title: 14, meta: 9, header: 10, body: 10, desc: "Utamakan 1 halaman tabel", autoFit: true },
                 { label: "1 Kolom Penuh", title: 12, meta: 8, header: 8, body: 7, desc: "Titik awal agar semua kolom muat", autoFit: false },
@@ -1921,7 +1933,7 @@ function StylePanel({
           </div>
 
           {showAutoFitPreset ? (
-            <div className="flex items-center justify-between rounded-lg border border-border p-2">
+            <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <Label className="text-[11px]">Optimalkan 1 halaman</Label>
                 <p className="text-[9px] text-muted-foreground">Sistem akan berusaha menjaga tabel tetap padat tanpa mengorbankan keterbacaan terlalu jauh.</p>
@@ -1992,7 +2004,7 @@ function StylePanel({
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border p-2">
+              <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <Label className="text-[11px]">Aktifkan mode eksperimen</Label>
                   <p className="text-[9px] text-muted-foreground">
@@ -2005,7 +2017,10 @@ function StylePanel({
                 />
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div
+                className="grid gap-2"
+                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 12rem), 1fr))" }}
+              >
                 <div className="rounded-lg border border-dashed border-border bg-background/50 p-3 text-[10px] text-muted-foreground">
                   {documentStyle.experimentalColumnTypographyEnabled
                     ? `Mode aktif untuk ${Object.keys(documentStyle.columnFontOverrides || {}).length || columnTypographyOptions.length} kolom.`
@@ -2048,7 +2063,7 @@ function StylePanel({
           </div>
           <SliderWithButtons value={draft.fontSize} min={1} max={40} step={0.25} buttonStep={1} disabled={supportsSignature && !includeSignature} onValueChange={(value) => setDraft((prev) => ({ ...prev, fontSize: Number(value.toFixed(2)) }))} />
         </div>
-        <div className="flex items-center justify-between rounded-lg border border-border p-2">
+        <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Label className="text-[11px]">Garis tanda tangan</Label>
             <p className="text-[9px] text-muted-foreground">Nonaktifkan bila ingin nama penanda tangan tampil tanpa garis.</p>
@@ -2113,23 +2128,41 @@ export function ExportStudioDialog({
   const [previewZoom, setPreviewZoom] = useState(100);
   const [draft, setDraft] = useState<SignatureSettingsConfig>(createDefaultSignatureConfig());
   const [experimentalWindowOpen, setExperimentalWindowOpen] = useState(false);
-  const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [layoutWidth, setLayoutWidth] = useState<number>(typeof window === "undefined" ? 1280 : window.innerWidth);
   const [liveEditMode, setLiveEditMode] = useState(false);
   const [highlightTarget, setHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
+  const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewCaptureRef = useRef<HTMLDivElement>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
   const hasOpenedRef = useRef(false);
 
   useEffect(() => {
-    const updateViewportMode = () => {
-      setIsMobileLayout(window.innerWidth < 1024);
+    const node = layoutViewportRef.current;
+    const updateWidth = () => {
+      const nextWidth = node?.clientWidth || window.innerWidth;
+      setLayoutWidth(nextWidth);
     };
 
-    updateViewportMode();
-    window.addEventListener("resize", updateViewportMode);
-    return () => window.removeEventListener("resize", updateViewportMode);
-  }, []);
+    updateWidth();
+
+    if (typeof ResizeObserver === "undefined" || !node) {
+      window.addEventListener("resize", updateWidth);
+      return () => window.removeEventListener("resize", updateWidth);
+    }
+
+    const observer = new ResizeObserver(() => updateWidth());
+    observer.observe(node);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, [open]);
+
+  const isMobileLayout = layoutWidth < 1024;
+  const isCompactLayout = layoutWidth < 880;
+  const isNarrowLayout = layoutWidth < 640;
 
   useEffect(() => {
     if (!open && signatureConfig) {
@@ -2165,6 +2198,16 @@ export function ExportStudioDialog({
       setActivePanel("style");
     }
   }, [columnTypographyOptions?.length, highlightTarget, liveEditMode]);
+
+  useEffect(() => {
+    if (!open) return;
+    setPreviewZoom((prev) => {
+      if (layoutWidth < 480) return Math.min(prev, 65);
+      if (layoutWidth < 640) return Math.min(prev, 75);
+      if (layoutWidth < 880) return Math.min(prev, 85);
+      return prev;
+    });
+  }, [layoutWidth, open]);
 
   useEffect(() => {
     if (!open || !panelScrollRef.current) return;
@@ -2265,10 +2308,13 @@ export function ExportStudioDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className={cn(
+          <div
+            ref={layoutViewportRef}
+            className={cn(
             "relative flex-1 min-h-0",
             isMobileLayout ? "flex flex-col overflow-hidden" : "flex flex-col lg:grid lg:grid-cols-[minmax(320px,360px)_minmax(0,1fr)]",
-          )}>
+          )}
+          >
             <ExperimentalTypographyWindow
               open={experimentalWindowOpen}
               onOpenChange={setExperimentalWindowOpen}
@@ -2324,9 +2370,12 @@ export function ExportStudioDialog({
                     <p className="text-[10px] text-muted-foreground">Buka panel yang ingin Anda atur.</p>
                   </div>
                   <div className={cn("-mx-1 px-1 pb-1", isMobileLayout ? "overflow-hidden" : "overflow-x-auto")}>
-                    <div className={cn(
-                      isMobileLayout ? "flex min-w-max gap-2 overflow-x-auto snap-x snap-mandatory pb-1" : "grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap",
-                    )}>
+                    <div
+                      className={cn(
+                        isMobileLayout ? "grid gap-2" : "grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap",
+                      )}
+                      style={isMobileLayout ? { gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr))" } : undefined}
+                    >
                       {([
                         { key: "format", label: "Format", icon: Download, enabled: true },
                         ...(columnOptions ? [{ key: "columns" as const, label: "Kolom", icon: Columns3, enabled: true }] : []),
@@ -2341,7 +2390,7 @@ export function ExportStudioDialog({
                           size="sm"
                           className={cn(
                             "h-9 min-w-fit shrink-0 rounded-full px-3 justify-start gap-1.5 text-[10px] sm:text-xs",
-                            isMobileLayout && "snap-start whitespace-nowrap px-3 justify-center",
+                            isMobileLayout && "w-full min-w-0 px-3 justify-center",
                             !enabled && "opacity-50",
                           )}
                           onClick={() => enabled && switchPanel(key as typeof activePanel)}
@@ -2554,7 +2603,10 @@ export function ExportStudioDialog({
               "flex flex-col bg-background min-h-0",
               isMobileLayout ? "order-1 border-b shrink-0" : "order-1 min-h-[18rem] lg:order-2",
             )}>
-              <div className={cn("flex flex-col gap-3 border-b border-border px-3 sm:px-4 xl:flex-row xl:items-center xl:justify-between", isMobileLayout ? "py-2.5" : "py-3")}>
+              <div className={cn(
+                "flex flex-col gap-3 border-b border-border px-3 sm:px-4",
+                isMobileLayout ? "py-2.5" : "py-3 xl:flex-row xl:items-center xl:justify-between",
+              )}>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Eye className="h-4 w-4 text-primary" />
@@ -2568,31 +2620,48 @@ export function ExportStudioDialog({
                   </p>
                 </div>
 
-                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                <div className={cn(
+                  "flex w-full gap-2",
+                  isCompactLayout ? "flex-col" : "flex-wrap items-center sm:w-auto sm:justify-end",
+                )}>
                   {canPreview ? (
                     <Button
                       type="button"
                       variant={liveEditMode ? "default" : "outline"}
                       size="sm"
-                      className="order-3 h-8 rounded-full px-3 text-[10px] sm:order-1"
+                      className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-1")}
                       onClick={() => setLiveEditMode((prev) => !prev)}
                     >
                       {liveEditMode ? "Edit Langsung Aktif" : "Edit di Preview"}
                     </Button>
                   ) : null}
                   {highlightTarget ? (
-                    <div className="order-3 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-medium text-primary sm:order-1">
+                    <div className={cn(
+                      "rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-medium text-primary",
+                      isCompactLayout ? "w-full text-center" : "order-3 sm:order-1",
+                    )}>
                       {highlightTarget.label || (highlightTarget.kind === "column" ? highlightTarget.key : highlightTarget.kind)}
                     </div>
                   ) : null}
-                  <div className="order-2 rounded-full border border-border bg-muted/30 px-3 py-1 text-[10px] text-muted-foreground sm:order-1">
-                    Zoom tetap stabil saat panel diubah
-                  </div>
-                  <div className="order-1 flex items-center gap-1 rounded-full border border-border bg-background p-1 sm:order-2">
+                  {!isNarrowLayout ? (
+                    <div className={cn(
+                      "rounded-full border border-border bg-muted/30 px-3 py-1 text-[10px] text-muted-foreground",
+                      isCompactLayout ? "w-full text-center" : "order-2 sm:order-1",
+                    )}>
+                      Zoom tetap stabil saat panel diubah
+                    </div>
+                  ) : null}
+                  <div className={cn(
+                    "flex items-center gap-1 rounded-full border border-border bg-background p-1",
+                    isCompactLayout ? "w-full justify-between" : "order-1 sm:order-2",
+                  )}>
                     <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev - 10, 25, 200))}>
                       <ZoomOut className="h-3.5 w-3.5" />
                     </Button>
-                    <div className="flex h-8 min-w-16 items-center justify-center rounded-full border border-border px-2 text-[11px] font-medium text-foreground">
+                    <div className={cn(
+                      "flex h-8 items-center justify-center rounded-full border border-border px-2 text-[11px] font-medium text-foreground",
+                      isCompactLayout ? "flex-1 min-w-0" : "min-w-16",
+                    )}>
                       {previewZoom}%
                     </div>
                     <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(100)}>
@@ -2605,7 +2674,10 @@ export function ExportStudioDialog({
                 </div>
               </div>
 
-              <div className={cn("flex-1 overflow-auto bg-muted/30", isMobileLayout ? "max-h-[38dvh] px-2 py-2" : "px-2 sm:px-4 py-2 sm:py-4")}>
+              <div className={cn(
+                "flex-1 overflow-auto bg-muted/30",
+                isMobileLayout ? "max-h-[min(46dvh,28rem)] px-2 py-2" : "px-2 sm:px-4 py-2 sm:py-4",
+              )}>
                 {canPreview ? (
                   <div className="flex min-h-full flex-col items-center gap-3">
                     <div className="flex w-full items-start justify-center">
