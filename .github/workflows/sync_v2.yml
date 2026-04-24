@@ -1,4 +1,4 @@
-name: Sync from Organization Web Project
+name: Sync from Organization Web Project v2
 
 on:
   workflow_dispatch:
