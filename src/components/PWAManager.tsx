@@ -16,8 +16,9 @@ import { usePWA } from '@/hooks/usePWA';
 
 // ─── Version polling ───────────────────────────────────────────────────────────
 const VERSION_URL = "/version.json";
-// Poll every 90s in background; also triggered on focus/visibility/online
-const POLL_INTERVAL_MS = 90_000;
+// Poll every 45s in background; also triggered on focus/visibility/pageshow/online
+const POLL_INTERVAL_MS = 45_000;
+const RESUME_RECHECK_DELAY_MS = 1800;
 
 async function fetchCurrentVersion(): Promise<string | null> {
   try {
@@ -31,6 +32,11 @@ async function fetchCurrentVersion(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function scheduleFollowUpCheck(check: () => void) {
+  const timer = window.setTimeout(() => check(), RESUME_RECHECK_DELAY_MS);
+  return () => window.clearTimeout(timer);
 }
 
 // ─── iOS Guide ────────────────────────────────────────────────────────────────
@@ -287,6 +293,7 @@ export default function PWAManager() {
   // regular tabs, non-PWA contexts, and browsers with aggressive SW caching.
   useEffect(() => {
     let cancelled = false;
+    let clearResumeRetry: (() => void) | null = null;
 
     const check = async () => {
       if (cancelled || dismissedRef.current) return;
@@ -304,26 +311,38 @@ export default function PWAManager() {
     check();
     const interval = setInterval(check, POLL_INTERVAL_MS);
 
-    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
-    const onOnline  = () => check();
-    const onFocus   = () => check();
+    const runResumeChecks = () => {
+      check();
+      clearResumeRetry?.();
+      clearResumeRetry = scheduleFollowUpCheck(check);
+    };
+
+    const onVisible = () => { if (document.visibilityState === 'visible') runResumeChecks(); };
+    const onOnline  = () => runResumeChecks();
+    const onFocus   = () => runResumeChecks();
+    const onPageShow = () => runResumeChecks();
 
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('online', onOnline);
     window.addEventListener('focus', onFocus);
+    window.addEventListener('pageshow', onPageShow);
 
     return () => {
       cancelled = true;
+      clearResumeRetry?.();
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('online', onOnline);
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('pageshow', onPageShow);
     };
   }, [triggerUpdate]);
 
   // Fallback: also check SW registration directly (belt-and-suspenders)
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
+
+    let clearResumeRetry: (() => void) | null = null;
 
     const checkSW = async () => {
       if (dismissedRef.current) return;
@@ -334,8 +353,31 @@ export default function PWAManager() {
       } catch { /* ignore */ }
     };
 
+    checkSW();
     const interval = setInterval(checkSW, 120_000); // every 2 min (light)
-    return () => clearInterval(interval);
+    const runResumeChecks = () => {
+      checkSW();
+      clearResumeRetry?.();
+      clearResumeRetry = scheduleFollowUpCheck(checkSW);
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') runResumeChecks(); };
+    const onFocus = () => runResumeChecks();
+    const onOnline = () => runResumeChecks();
+    const onPageShow = () => runResumeChecks();
+
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('pageshow', onPageShow);
+
+    return () => {
+      clearResumeRetry?.();
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   }, [triggerUpdate]);
 
   const handleUpdate = useCallback(async () => {

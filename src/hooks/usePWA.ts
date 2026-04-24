@@ -238,6 +238,10 @@ export function usePWA() {
     navigator.serviceWorker.ready.then(reg => {
       setSwRegistered(true);
 
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        setNeedsUpdate(true);
+      }
+
       const mc = new MessageChannel();
       mc.port1.onmessage = e => {
         if (e.data?.version) setSwVersion(e.data.version);

@@ -56,16 +56,21 @@ const initializePWA = () => {
     onRegisteredSW(_swUrl, registration) {
       if (!registration) return;
       registration.update().catch(() => undefined);
-      // Aggressive update polling: every 30s + on tab focus + on online event.
+      // Aggressive update polling: every 45s + on tab focus/pageshow + on online event.
       // This ensures the update banner appears quickly even when the browser
       // is heavily cached, eliminating the need for incognito mode.
       const poll = () => registration.update().catch(() => undefined);
-      setInterval(poll, 60_000);
+      const pollWithRetry = () => {
+        poll();
+        window.setTimeout(poll, 1800);
+      };
+      setInterval(poll, 45_000);
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") poll();
+        if (document.visibilityState === "visible") pollWithRetry();
       });
-      window.addEventListener("online", poll);
-      window.addEventListener("focus", poll);
+      window.addEventListener("online", pollWithRetry);
+      window.addEventListener("focus", pollWithRetry);
+      window.addEventListener("pageshow", pollWithRetry);
     },
     onRegisterError(error) {
       console.log("[PWA] Service Worker registration failed:", error);

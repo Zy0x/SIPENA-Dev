@@ -839,10 +839,16 @@ function ExperimentalTypographyWindow({
                 <HintInfo label="General layout" description="Autofit konten mempertahankan ukuran natural kolom. Autofit window menyesuaikan tabel ke ruang halaman. Fixed membuat ukuran tabel lebih stabil untuk diatur manual." />
               </div>
 
-              <div className="mt-3 grid gap-3 xl:grid-cols-2">
+              <div
+                className="mt-3 grid gap-3"
+                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 16rem), 1fr))" }}
+              >
                 <div className="space-y-1.5">
                   <Label className="text-[10px]">Mode lebar tabel</Label>
-                  <div className="grid grid-cols-3 gap-1">
+                  <div
+                    className="grid gap-1"
+                    style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 6.75rem), 1fr))" }}
+                  >
                     {([
                       { key: "autofit-window", label: "Autofit Window" },
                       { key: "autofit-content", label: "Autofit Konten" },
@@ -1018,7 +1024,10 @@ function ExperimentalTypographyWindow({
 
                   {activeTab === "typography" ? (
                     <>
-                      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                      <div
+                        className="mt-3 grid gap-3"
+                        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))" }}
+                      >
                         <div className="space-y-1.5">
                           <div className="flex items-center justify-between gap-2">
                             <Label className="text-[10px]">Header ({headerValue.toFixed(2)}pt)</Label>
@@ -1067,10 +1076,16 @@ function ExperimentalTypographyWindow({
                           />
                         </div>
                       </div>
-                      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                      <div
+                        className="mt-3 grid gap-3"
+                        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))" }}
+                      >
                         <div className="space-y-1.5">
                           <Label className="text-[10px]">Alignment header</Label>
-                          <div className="grid grid-cols-3 gap-1">
+                          <div
+                            className="grid gap-1"
+                            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 5rem), 1fr))" }}
+                          >
                             {([
                               { key: "left", label: "Kiri" },
                               { key: "center", label: "Tengah" },
@@ -1084,7 +1099,10 @@ function ExperimentalTypographyWindow({
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-[10px]">Alignment isi</Label>
-                          <div className="grid grid-cols-3 gap-1">
+                          <div
+                            className="grid gap-1"
+                            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 5rem), 1fr))" }}
+                          >
                             {([
                               { key: "left", label: "Kiri" },
                               { key: "center", label: "Tengah" },
@@ -1099,7 +1117,10 @@ function ExperimentalTypographyWindow({
                       </div>
                     </>
                   ) : (
-                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                    <div
+                      className="mt-3 grid gap-3"
+                      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 14rem), 1fr))" }}
+                    >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
                           <Label className="text-[10px]">Lebar kolom ({widthValue.toFixed(2)}mm)</Label>
@@ -2132,10 +2153,13 @@ export function ExportStudioDialog({
   const [liveEditMode, setLiveEditMode] = useState(false);
   const [highlightTarget, setHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
   const layoutViewportRef = useRef<HTMLDivElement>(null);
+  const previewViewportRef = useRef<HTMLDivElement>(null);
   const previewCaptureRef = useRef<HTMLDivElement>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
   const hasOpenedRef = useRef(false);
+  const [previewViewportWidth, setPreviewViewportWidth] = useState(0);
+  const [previewContentWidth, setPreviewContentWidth] = useState(0);
 
   useEffect(() => {
     const node = layoutViewportRef.current;
@@ -2210,6 +2234,37 @@ export function ExportStudioDialog({
   }, [layoutWidth, open]);
 
   useEffect(() => {
+    if (!open) return;
+
+    const updatePreviewMetrics = () => {
+      const viewportWidth = previewViewportRef.current?.clientWidth ?? 0;
+      const contentWidth = previewCaptureRef.current?.scrollWidth ?? 0;
+      setPreviewViewportWidth(viewportWidth);
+      setPreviewContentWidth(contentWidth);
+    };
+
+    updatePreviewMetrics();
+
+    const viewportNode = previewViewportRef.current;
+    const contentNode = previewCaptureRef.current;
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updatePreviewMetrics);
+      return () => window.removeEventListener("resize", updatePreviewMetrics);
+    }
+
+    const observer = new ResizeObserver(() => updatePreviewMetrics());
+    if (viewportNode) observer.observe(viewportNode);
+    if (contentNode) observer.observe(contentNode);
+    window.addEventListener("resize", updatePreviewMetrics);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updatePreviewMetrics);
+    };
+  }, [activePanel, canPreview, currentPaperSize, open, previewFormat]);
+
+  useEffect(() => {
     if (!open || !panelScrollRef.current) return;
     requestAnimationFrame(() => {
       panelScrollRef.current?.scrollTo({ top: panelScrollMemoryRef.current[activePanel] ?? 0 });
@@ -2229,6 +2284,15 @@ export function ExportStudioDialog({
   const previewFormat = activeFormat?.previewMode === "png" ? "png" : "pdf";
   const canPreview = !!activeFormat?.previewMode;
   const currentPaperSize = paperSize;
+  const autoPreviewZoom = useMemo(() => {
+    if (!isCompactLayout || previewViewportWidth <= 0 || previewContentWidth <= 0) return 100;
+    const paddedViewportWidth = Math.max(previewViewportWidth - 24, 120);
+    return clamp(Math.floor((paddedViewportWidth / previewContentWidth) * 100), 38, 100);
+  }, [isCompactLayout, previewContentWidth, previewViewportWidth]);
+  const effectivePreviewZoom = isCompactLayout
+    ? Math.min(previewZoom, autoPreviewZoom)
+    : previewZoom;
+  const previewZoomMax = isCompactLayout ? autoPreviewZoom : 200;
   const recommendedPaperSize = useMemo(
     () => getRecommendedPaperSize(activeFormat?.id ?? ""),
     [activeFormat?.id],
@@ -2655,19 +2719,19 @@ export function ExportStudioDialog({
                     "flex items-center gap-1 rounded-full border border-border bg-background p-1",
                     isCompactLayout ? "w-full justify-between" : "order-1 sm:order-2",
                   )}>
-                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev - 10, 25, 200))}>
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev - 10, 25, previewZoomMax))}>
                       <ZoomOut className="h-3.5 w-3.5" />
                     </Button>
                     <div className={cn(
                       "flex h-8 items-center justify-center rounded-full border border-border px-2 text-[11px] font-medium text-foreground",
                       isCompactLayout ? "flex-1 min-w-0" : "min-w-16",
                     )}>
-                      {previewZoom}%
+                      {effectivePreviewZoom}%
                     </div>
-                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(100)}>
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
                       <Maximize2 className="h-3.5 w-3.5" />
                     </Button>
-                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, 200))}>
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, previewZoomMax))}>
                       <ZoomIn className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -2677,7 +2741,7 @@ export function ExportStudioDialog({
               <div className={cn(
                 "flex-1 overflow-auto bg-muted/30",
                 isMobileLayout ? "max-h-[min(46dvh,28rem)] px-2 py-2" : "px-2 sm:px-4 py-2 sm:py-4",
-              )}>
+              )} ref={previewViewportRef}>
                 {canPreview ? (
                   <div className="flex min-h-full flex-col items-center gap-3">
                     <div className="flex w-full items-start justify-center">
@@ -2685,7 +2749,7 @@ export function ExportStudioDialog({
                         ref={previewCaptureRef}
                         className="origin-top"
                         style={{
-                          transform: `scale(${previewZoom / 100})`,
+                          transform: `scale(${effectivePreviewZoom / 100})`,
                           transformOrigin: "top center",
                           width: "fit-content",
                         }}
