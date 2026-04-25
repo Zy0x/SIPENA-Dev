@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject, type SetStateAction } from "react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import type { LucideIcon } from "lucide-react";
@@ -589,6 +589,11 @@ function ExperimentalTypographyWindow({
   isMobile,
   highlightTarget,
   onHighlightTargetChange,
+  canPreview = false,
+  previewLabel = "Format",
+  previewMeta,
+  noPreviewMessage = "Preview belum tersedia untuk format ini.",
+  renderPreview,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
@@ -598,11 +603,21 @@ function ExperimentalTypographyWindow({
   isMobile: boolean;
   highlightTarget?: ExportPreviewHighlightTarget | null;
   onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  canPreview?: boolean;
+  previewLabel?: string;
+  previewMeta?: string;
+  noPreviewMessage?: string;
+  renderPreview?: (captureRef?: RefObject<HTMLDivElement>) => ReactNode;
 }) {
   const [windowRect, setWindowRect] = useState({ x: 48, y: 48, width: 520, height: 620 });
   const [activeTab, setActiveTab] = useState<"typography" | "layout">("typography");
+  const [mobileSurface, setMobileSurface] = useState<"controls" | "preview">("controls");
+  const [mobilePreviewState, setMobilePreviewState] = useState<"expanded" | "minimized" | "hidden-temporary">("expanded");
+  const [mobilePreviewZoom, setMobilePreviewZoom] = useState(28);
   const dragState = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const mobilePreviewCaptureRef = useRef<HTMLDivElement>(null);
+  const mobilePreviewFullscreenCaptureRef = useRef<HTMLDivElement>(null);
   const scrollMemoryRef = useRef<Record<string, number>>({ typography: 0, layout: 0 });
 
   useEffect(() => {
@@ -656,6 +671,18 @@ function ExperimentalTypographyWindow({
       bodyRef.current?.scrollTo({ top: scrollMemoryRef.current[activeTab] ?? 0 });
     });
   }, [activeTab, open]);
+
+  useEffect(() => {
+    if (!open || !isMobile) return;
+    setMobileSurface("controls");
+    setMobilePreviewState("expanded");
+    setMobilePreviewZoom(28);
+  }, [isMobile, open]);
+
+  useEffect(() => {
+    if (!open || !isMobile || !highlightTarget) return;
+    setMobilePreviewState((prev) => (prev === "hidden-temporary" ? "minimized" : prev));
+  }, [highlightTarget, isMobile, open]);
 
   if (!open || !documentStyle || !onDocumentStyleChange || !columnTypographyOptions?.length) {
     return null;
@@ -755,13 +782,150 @@ function ExperimentalTypographyWindow({
   const experimentalActive = documentStyle.experimentalColumnTypographyEnabled || documentStyle.experimentalColumnLayoutEnabled;
   const headerRowHeight = documentStyle.tableSizing.headerRowHeightMm ?? clamp(5.6 + (documentStyle.tableHeaderFontSize - 10) * 0.7, 3, 30);
   const bodyRowHeight = documentStyle.tableSizing.bodyRowHeightMm ?? clamp(5.2 + (documentStyle.tableBodyFontSize - 10) * 0.9, 3, 30);
+  const mobilePreviewTargetLabel = highlightTarget?.label || (highlightTarget?.kind === "column" ? highlightTarget.key : null);
+
+  const renderExperimentalPreview = (captureRef?: RefObject<HTMLDivElement>) => {
+    if (canPreview && renderPreview) {
+      return (
+        <div
+          className="origin-top-left"
+          style={{
+            transform: `scale(${mobilePreviewZoom / 100})`,
+            transformOrigin: "top left",
+            width: "fit-content",
+          }}
+        >
+          {renderPreview(captureRef)}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex h-full min-h-[120px] items-center justify-center rounded-2xl border border-dashed border-border bg-background/80 p-4 text-center text-[10px] leading-relaxed text-muted-foreground">
+        {noPreviewMessage}
+      </div>
+    );
+  };
+
+  const renderMobilePreviewOverlay = () => {
+    if (!isMobile || mobileSurface === "preview") return null;
+
+    if (mobilePreviewState === "hidden-temporary") {
+      return (
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="pointer-events-auto h-9 rounded-full border-primary/20 bg-background/95 px-3 text-[10px] shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90"
+              onClick={() => setMobilePreviewState("minimized")}
+            >
+              <Eye className="mr-1.5 h-3.5 w-3.5 text-primary" />
+              Tampilkan Preview
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20">
+        <div className="pointer-events-auto overflow-hidden rounded-[20px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90">
+          <div className="flex items-start justify-between gap-2 px-1 pb-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5 text-primary" />
+                <p className="text-[10px] font-semibold text-foreground">Live Preview</p>
+              </div>
+              <p className="mt-1 text-[9px] leading-relaxed text-muted-foreground">
+                {previewLabel}{previewMeta ? ` • ${previewMeta}` : ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                onClick={() => setMobilePreviewState((prev) => (prev === "expanded" ? "minimized" : "expanded"))}
+              >
+                {mobilePreviewState === "expanded" ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                onClick={() => setMobilePreviewState("hidden-temporary")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+
+          {mobilePreviewTargetLabel ? (
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">
+                Target: {mobilePreviewTargetLabel}
+              </span>
+            </div>
+          ) : null}
+
+          {mobilePreviewState === "expanded" ? (
+            <>
+              <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1">
+                <Button type="button" variant="outline" size="icon" className="h-7 w-7 rounded-full" onClick={() => setMobilePreviewZoom((prev) => clamp(prev - 10, 15, 160))}>
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </Button>
+                <div className="flex min-w-0 flex-1 items-center justify-center rounded-full border border-border px-2 text-[10px] font-medium text-foreground">
+                  {mobilePreviewZoom}%
+                </div>
+                <Button type="button" variant="outline" size="icon" className="h-7 w-7 rounded-full" onClick={() => setMobilePreviewZoom(28)}>
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" variant="outline" size="icon" className="h-7 w-7 rounded-full" onClick={() => setMobilePreviewZoom((prev) => clamp(prev + 10, 15, 160))}>
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="mt-2 overflow-auto rounded-[18px] border border-border bg-muted/30 p-1" style={{ height: "180px" }}>
+                <div className="flex min-h-full items-start justify-start">
+                  {renderExperimentalPreview(mobilePreviewCaptureRef)}
+                </div>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Button type="button" variant="outline" size="sm" className="h-9 rounded-xl text-[10px]" onClick={() => setMobilePreviewState("minimized")}>
+                  Ciutkan
+                </Button>
+                <Button type="button" size="sm" className="h-9 rounded-xl text-[10px]" onClick={() => setMobileSurface("preview")}>
+                  Buka Preview
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-between gap-2 rounded-2xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-[10px] text-muted-foreground">
+              <span className="line-clamp-2">Preview tetap aktif agar perubahan layout dan alignment langsung terlihat.</span>
+              <div className="flex items-center gap-1.5">
+                <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[10px]" onClick={() => setMobilePreviewState("expanded")}>
+                  Lihat
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[10px]" onClick={() => setMobileSurface("preview")}>
+                  Preview
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[70]">
       <div className="absolute inset-0 bg-slate-950/5" onClick={() => onOpenChange(false)} />
       <div
         className={cn(
-          "pointer-events-auto fixed flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
+          "pointer-events-auto fixed relative flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
           isMobile ? "inset-2" : "min-w-[420px] min-h-[440px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] resize both",
         )}
         style={{ ...windowStyle, overscrollBehavior: "contain" }}
@@ -844,7 +1008,74 @@ function ExperimentalTypographyWindow({
           ))}
         </div>
 
-        <div ref={bodyRef} className="flex-1 overflow-y-auto px-3 py-3 pb-4">
+        {isMobile ? (
+          <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/20 px-3 py-2">
+            {mobileSurface === "preview" ? (
+              <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-[10px]" onClick={() => setMobileSurface("controls")}>
+                <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+                Kembali ke Panel
+              </Button>
+            ) : (
+              <div className="h-8" />
+            )}
+            <Button type="button" variant={mobileSurface === "preview" ? "default" : "outline"} size="sm" className="h-8 rounded-full px-3 text-[10px]" onClick={() => setMobileSurface((prev) => (prev === "preview" ? "controls" : "preview"))}>
+              <Eye className="mr-1.5 h-3.5 w-3.5" />
+              {mobileSurface === "preview" ? "Kembali Edit" : "Preview Penuh"}
+            </Button>
+          </div>
+        ) : null}
+
+        {isMobile && mobileSurface === "preview" ? (
+          <div className="flex min-h-0 flex-1 flex-col bg-background">
+            <div className="border-b border-border px-3 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <Eye className="h-3.5 w-3.5 text-primary" />
+                    <p className="text-[11px] font-semibold text-foreground">Live Preview Eksperimen</p>
+                  </div>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {previewLabel}{previewMeta ? ` • ${previewMeta}` : ""}
+                  </p>
+                </div>
+                {mobilePreviewTargetLabel ? (
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">
+                    {mobilePreviewTargetLabel}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-3 flex items-center gap-1 rounded-full border border-border bg-background p-1">
+                <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setMobilePreviewZoom((prev) => clamp(prev - 10, 15, 180))}>
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </Button>
+                <div className="flex min-w-0 flex-1 items-center justify-center rounded-full border border-border px-2 text-[11px] font-medium text-foreground">
+                  {mobilePreviewZoom}%
+                </div>
+                <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setMobilePreviewZoom(48)}>
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setMobilePreviewZoom((prev) => clamp(prev + 10, 15, 180))}>
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto bg-muted/30 px-2 py-2">
+              {canPreview && renderPreview ? (
+                <div className="flex min-h-full items-start justify-center">
+                  {renderExperimentalPreview(mobilePreviewFullscreenCaptureRef)}
+                </div>
+              ) : (
+                <div className="flex h-full min-h-[320px] items-center justify-center">
+                  <div className="max-w-sm rounded-2xl border border-dashed border-border bg-background p-5 text-center">
+                    <p className="text-sm font-semibold text-foreground">Preview belum ditampilkan</p>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{noPreviewMessage}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+        <div ref={bodyRef} className={cn("flex-1 overflow-y-auto px-3 py-3", isMobile ? "pb-64" : "pb-4")}>
           <div className="mb-3 rounded-xl border border-border bg-muted/30 p-3 text-[10px] text-muted-foreground">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1184,6 +1415,8 @@ function ExperimentalTypographyWindow({
             })}
           </div>
         </div>
+        )}
+        {renderMobilePreviewOverlay()}
       </div>
     </div>
   );
@@ -3285,6 +3518,11 @@ export function ExportStudioDialog({
                   isMobile
                   highlightTarget={highlightTarget}
                   onHighlightTargetChange={setHighlightTarget}
+                  canPreview={canPreview}
+                  previewLabel={activeFormat?.label || "Format"}
+                  previewMeta={currentPaperLabel}
+                  noPreviewMessage={noPreviewMessage}
+                  renderPreview={renderPreviewContent}
                 />
 
                 <div className="border-b border-border bg-muted/20 px-3 py-3 sm:px-4">
@@ -3454,6 +3692,11 @@ export function ExportStudioDialog({
               isMobile={isMobileLayout}
               highlightTarget={highlightTarget}
               onHighlightTargetChange={setHighlightTarget}
+              canPreview={canPreview}
+              previewLabel={activeFormat?.label || "Format"}
+              previewMeta={currentPaperLabel}
+              noPreviewMessage={noPreviewMessage}
+              renderPreview={renderPreviewContent}
             />
 
             <div className={cn(
