@@ -303,6 +303,11 @@ function getVisibleSigners(signers: SignatureSigner[]) {
   return active.length > 0 ? active : signers.slice(0, 1);
 }
 
+function isCoarsePointerDevice() {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+}
+
 function HintInfo({
   label,
   description,
@@ -618,7 +623,7 @@ function SignerPanel({
         tone="amber"
         badge={includeSignature ? "Dipakai saat ekspor" : "Disiapkan"}
         action={(
-          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[10px]" onClick={onOpenSignatureStyle}>
+          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[10px]" onClick={onOpenSignatureStyle} title="Buka panel Style Signature agar garis, alignment, font, dan posisi signature bisa diatur dari satu tempat.">
             <Sparkles className="mr-1.5 h-3.5 w-3.5" />
             Buka Style Signature
           </Button>
@@ -672,7 +677,7 @@ function SignerPanel({
         tone="indigo"
         badge={`${signerCount} aktif`}
         action={(
-          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[10px]" onClick={addSigner} disabled={draft.signers.length >= 4}>
+          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[10px]" onClick={addSigner} disabled={draft.signers.length >= 4} title="Tambah satu identitas signature baru. Maksimal 4 signer.">
             <Plus className="mr-1 h-3 w-3" />
             Tambah
           </Button>
@@ -687,13 +692,13 @@ function SignerPanel({
                   Signature #{index + 1}
                 </p>
                 <div className="flex items-center gap-0.5">
-                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveSigner(index, "up")} disabled={index === 0}>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveSigner(index, "up")} disabled={index === 0} title={`Geser Signature #${index + 1} ke atas.`}>
                     <ArrowUp className="h-3 w-3" />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveSigner(index, "down")} disabled={index === draft.signers.length - 1}>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveSigner(index, "down")} disabled={index === draft.signers.length - 1} title={`Geser Signature #${index + 1} ke bawah.`}>
                     <ArrowDown className="h-3 w-3" />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeSigner(index)} disabled={draft.signers.length <= 1}>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeSigner(index)} disabled={draft.signers.length <= 1} title={`Hapus Signature #${index + 1} dari daftar identitas.`}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -1843,6 +1848,7 @@ function PositionPanel({
                   variant={draft.signaturePreset === preset.key ? "default" : "outline"}
                   size="sm"
                   className="h-8 text-[10px]"
+                  title={`Tempatkan anchor awal signature ke area ${preset.label.toLowerCase()}.`}
                   onClick={() => setDraft((prev) => ({ ...prev, signaturePreset: preset.key }))}
                 >
                   {preset.label}
@@ -1864,6 +1870,7 @@ function PositionPanel({
                   variant={draft.signatureAlignment === key ? "default" : "outline"}
                   size="sm"
                   className="flex-1 h-8 gap-1 text-[10px]"
+                  title={`Atur perataan blok signature ke sisi ${label.toLowerCase()}.`}
                   onClick={() => setDraft((prev) => ({ ...prev, signatureAlignment: key }))}
                 >
                   <Icon className="h-3 w-3" />
@@ -2140,7 +2147,7 @@ function StylePanel({
     { label: "1 Halaman", title: 14, meta: 9, header: 10, body: 10, desc: "Utamakan 1 halaman tabel", autoFit: true, layoutPreset: "one-page" as const },
     { label: "1 Kolom Penuh", title: 12, meta: 8, header: 8, body: 7, desc: "Titik awal agar semua kolom muat", autoFit: false, layoutPreset: "single-column-full" as const },
     { label: "Kompak", title: 14, meta: 9, header: 9, body: 8, desc: "Ringkas", autoFit: false, layoutPreset: "compact" as const },
-    { label: "Standar", title: 16, meta: 10, header: 12, body: 11, desc: "Seimbang", autoFit: false, layoutPreset: "standard" as const },
+    { label: "Standar", title: 17, meta: 10, header: 12, body: 11, desc: "Seimbang", autoFit: false, layoutPreset: "standard" as const },
     { label: "Besar", title: 20, meta: 12, header: 14, body: 13, desc: "Paling mudah dibaca", autoFit: false, layoutPreset: "large" as const },
   ] as const;
 
@@ -2176,6 +2183,7 @@ function StylePanel({
                   variant={isPresetActive(preset) ? "default" : "outline"}
                   size="sm"
                   className="h-auto flex-col items-start rounded-xl py-2 text-[10px]"
+                  title={`Gunakan preset style ${preset.label}. ${preset.desc}`}
                   onClick={() => {
                     onDocumentStyleChange((prev) => ({
                       ...prev,
@@ -2383,6 +2391,7 @@ export function ExportStudioDialog({
   const mobileOverlayCardRef = useRef<HTMLDivElement>(null);
   const mobileOverlayInteractionRef = useRef<MobileOverlayInteraction | null>(null);
   const desktopPanelResizeRef = useRef<DesktopPanelResizeState | null>(null);
+  const mobileSetupSectionRefs = useRef<Partial<Record<MobileSetupSection, HTMLDivElement | null>>>({});
   const previousExperimentalOpenRef = useRef(false);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
@@ -2660,10 +2669,33 @@ export function ExportStudioDialog({
     });
   }, [activePanel, isPhoneWizard, open]);
 
+  useEffect(() => {
+    if (!open || mobileStep !== "setup" || !mobileSetupSection) return;
+    const sectionNode = mobileSetupSectionRefs.current[mobileSetupSection];
+    if (!sectionNode) return;
+    requestAnimationFrame(() => {
+      sectionNode.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }, [mobileSetupSection, mobileStep, open]);
+
   const switchPanel = useCallback((nextPanel: typeof activePanel) => {
     panelScrollMemoryRef.current[activePanel] = panelScrollRef.current?.scrollTop ?? 0;
     setActivePanel(nextPanel);
   }, [activePanel]);
+  const openSignatureStyleWorkspace = useCallback(() => {
+    switchPanel("signatureStyle");
+    setActiveMobileSection("panel");
+    setMobileStep("setup");
+    setMobileSetupSection("signatureStyle");
+  }, [switchPanel]);
+  const handleMobilePointerUpCapture = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isCoarsePointerDevice()) return;
+    const target = event.target as HTMLElement | null;
+    const button = target?.closest("button");
+    if (button instanceof HTMLButtonElement) {
+      requestAnimationFrame(() => button.blur());
+    }
+  }, []);
   const autoPreviewZoom = useMemo(() => {
     if (!isCompactLayout || previewViewportWidth <= 0 || previewContentWidth <= 0) return 100;
     const paddedViewportWidth = Math.max(previewViewportWidth - 24, 120);
@@ -2703,36 +2735,36 @@ export function ExportStudioDialog({
     format: {
       shell: "border-sky-200/80 bg-sky-50/30",
       card: "border-sky-200/80 bg-sky-50/45",
-      activeTab: "border-sky-300 bg-sky-600 text-white hover:bg-sky-600",
-      idleTab: "border-sky-200/80 hover:border-sky-300 hover:bg-sky-50/60",
+      activeTab: "border-sky-300 bg-sky-600 text-white hover:bg-sky-600 hover:text-white dark:bg-sky-500 dark:hover:bg-sky-500 dark:text-slate-950 dark:hover:text-slate-950",
+      idleTab: "border-sky-200/80 text-sky-700 hover:border-sky-300 hover:bg-sky-50/60 hover:text-sky-800 dark:border-sky-900/70 dark:text-sky-200 dark:hover:border-sky-700 dark:hover:bg-sky-950/40 dark:hover:text-sky-100",
       badge: "border-sky-200/80 bg-sky-100/80 text-sky-700",
     },
     columns: {
       shell: "border-emerald-200/80 bg-emerald-50/30",
       card: "border-emerald-200/80 bg-emerald-50/45",
-      activeTab: "border-emerald-300 bg-emerald-600 text-white hover:bg-emerald-600",
-      idleTab: "border-emerald-200/80 hover:border-emerald-300 hover:bg-emerald-50/60",
+      activeTab: "border-emerald-300 bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white dark:bg-emerald-500 dark:hover:bg-emerald-500 dark:text-slate-950 dark:hover:text-slate-950",
+      idleTab: "border-emerald-200/80 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-800 dark:border-emerald-900/70 dark:text-emerald-200 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-100",
       badge: "border-emerald-200/80 bg-emerald-100/80 text-emerald-700",
     },
     signature: {
       shell: "border-amber-200/80 bg-amber-50/30",
       card: "border-amber-200/80 bg-amber-50/45",
-      activeTab: "border-amber-300 bg-amber-500 text-white hover:bg-amber-500",
-      idleTab: "border-amber-200/80 hover:border-amber-300 hover:bg-amber-50/60",
+      activeTab: "border-amber-300 bg-amber-500 text-white hover:bg-amber-500 hover:text-white dark:bg-amber-400 dark:hover:bg-amber-400 dark:text-slate-950 dark:hover:text-slate-950",
+      idleTab: "border-amber-200/80 text-amber-700 hover:border-amber-300 hover:bg-amber-50/60 hover:text-amber-800 dark:border-amber-900/70 dark:text-amber-200 dark:hover:border-amber-700 dark:hover:bg-amber-950/40 dark:hover:text-amber-100",
       badge: "border-amber-200/80 bg-amber-100/80 text-amber-700",
     },
     style: {
       shell: "border-rose-200/80 bg-rose-50/30",
       card: "border-rose-200/80 bg-rose-50/45",
-      activeTab: "border-rose-300 bg-rose-600 text-white hover:bg-rose-600",
-      idleTab: "border-rose-200/80 hover:border-rose-300 hover:bg-rose-50/60",
+      activeTab: "border-rose-300 bg-rose-600 text-white hover:bg-rose-600 hover:text-white dark:bg-rose-500 dark:hover:bg-rose-500 dark:text-slate-950 dark:hover:text-slate-950",
+      idleTab: "border-rose-200/80 text-rose-700 hover:border-rose-300 hover:bg-rose-50/60 hover:text-rose-800 dark:border-rose-900/70 dark:text-rose-200 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:hover:text-rose-100",
       badge: "border-rose-200/80 bg-rose-100/80 text-rose-700",
     },
     signatureStyle: {
       shell: "border-indigo-200/80 bg-indigo-50/30",
       card: "border-indigo-200/80 bg-indigo-50/45",
-      activeTab: "border-indigo-300 bg-indigo-600 text-white hover:bg-indigo-600",
-      idleTab: "border-indigo-200/80 hover:border-indigo-300 hover:bg-indigo-50/60",
+      activeTab: "border-indigo-300 bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white dark:bg-indigo-500 dark:hover:bg-indigo-500 dark:text-slate-950 dark:hover:text-slate-950",
+      idleTab: "border-indigo-200/80 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-800 dark:border-indigo-900/70 dark:text-indigo-200 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-100",
       badge: "border-indigo-200/80 bg-indigo-100/80 text-indigo-700",
     },
   } satisfies Record<ActivePanel, {
@@ -2898,6 +2930,7 @@ export function ExportStudioDialog({
           size="sm"
           className={cn("h-8 rounded-lg px-3 text-[10px] sm:text-xs", compact && "w-full")}
           onClick={handleRestoreDefaultMode}
+          title="Kembalikan seluruh studio ke mode default bawaan web, tanpa mengubah ukuran kertas dan identitas signature."
         >
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
           {defaultModeLabel}
@@ -2909,6 +2942,7 @@ export function ExportStudioDialog({
         size="sm"
         className={cn("h-8 rounded-lg px-3 text-[10px] sm:text-xs", compact && "w-full")}
         onClick={() => setResetLayoutConfirmOpen(true)}
+        title="Rapikan ulang layout studio ke susunan awal panel, preview, overlay, dan ukuran panel."
       >
         <ScanSearch className="mr-1.5 h-3.5 w-3.5" />
         Reset Tata Letak
@@ -2938,6 +2972,7 @@ export function ExportStudioDialog({
                 active ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background hover:border-primary/40",
               )}
               onClick={() => onFormatChange(formatOption.id)}
+              title={`Pilih format ${formatOption.label}. ${formatOption.description}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
@@ -3002,6 +3037,7 @@ export function ExportStudioDialog({
                       ? "border-primary/30 bg-primary/[0.03] hover:border-primary/50"
                   : "border-border bg-background hover:border-primary/40",
                 )}
+                title={`Pilih ukuran ${option.label}. ${option.description}${recommended ? " Rekomendasi untuk format aktif." : ""}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-xs font-semibold leading-tight text-foreground">{option.label}</p>
@@ -3040,7 +3076,7 @@ export function ExportStudioDialog({
       draft={draft}
       setDraft={setDraft}
       includeSignature={includeSignature}
-      onOpenSignatureStyle={() => switchPanel("signatureStyle")}
+      onOpenSignatureStyle={openSignatureStyleWorkspace}
     />
   ) : (
     <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
@@ -3139,7 +3175,12 @@ export function ExportStudioDialog({
     const SectionIcon = tone.icon;
 
     return (
-      <div className={cn("overflow-hidden rounded-2xl border shadow-sm transition-colors", tone.card, disabled && "opacity-80 saturate-75")}>
+      <div
+        ref={(node) => {
+          mobileSetupSectionRefs.current[id] = node;
+        }}
+        className={cn("overflow-hidden rounded-2xl border shadow-sm transition-colors", tone.card, disabled && "opacity-80 saturate-75")}
+      >
         <button
           type="button"
           className={cn(
@@ -3148,6 +3189,7 @@ export function ExportStudioDialog({
             openSection && "shadow-[inset_0_-1px_0_rgba(255,255,255,0.35)]",
           )}
           onClick={() => !disabled && setMobileSetupSection((prev) => (prev === id ? null : id))}
+          title={disabled ? `${title} tidak tersedia untuk template ini.` : `${openSection ? "Tutup" : "Buka"} kategori ${title}. ${description}`}
         >
           <div className="flex min-w-0 items-start gap-3">
             <div className={cn("mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border shadow-sm", tone.iconWrap)}>
@@ -3604,7 +3646,7 @@ export function ExportStudioDialog({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent ref={dialogContentRef} className="w-[calc(100vw-0.5rem)] sm:w-[calc(100vw-0.75rem)] max-w-[96rem] h-[calc(100dvh-0.5rem)] sm:h-[min(94dvh,58rem)] overflow-hidden rounded-[22px] sm:rounded-[28px] flex flex-col p-0 gap-0">
+        <DialogContent ref={dialogContentRef} onPointerUpCapture={handleMobilePointerUpCapture} className="w-[calc(100vw-0.5rem)] sm:w-[calc(100vw-0.75rem)] max-w-[96rem] h-[calc(100dvh-0.5rem)] sm:h-[min(94dvh,58rem)] overflow-hidden rounded-[22px] sm:rounded-[28px] flex flex-col p-0 gap-0">
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-border">
             <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Download className="h-4 w-4 text-primary" />
@@ -3905,6 +3947,7 @@ export function ExportStudioDialog({
                               )}
                               onClick={() => enabled && switchPanel(id)}
                               disabled={!enabled}
+                              title={enabled ? `Buka tab ${label} di panel alat studio.` : `Tab ${label} tidak tersedia untuk template ini.`}
                             >
                               {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
                               {label}
@@ -4199,6 +4242,7 @@ export function ExportStudioDialog({
                       size="sm"
                       className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-1")}
                       onClick={handleResetSignaturePosition}
+                      title="Kembalikan blok signature ke posisi default di layout preview."
                     >
                       <RotateCcw className="mr-1 h-3.5 w-3.5" />
                       Reset Posisi Signature
@@ -4211,6 +4255,7 @@ export function ExportStudioDialog({
                       size="sm"
                       className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-2")}
                       onClick={() => setLiveEditMode((prev) => !prev)}
+                      title={liveEditMode ? "Matikan mode edit langsung di preview." : "Aktifkan mode edit langsung agar perubahan dan highlight bisa dicek langsung di preview."}
                     >
                       {liveEditMode ? "Edit Langsung Aktif" : "Edit di Preview"}
                     </Button>
@@ -4235,7 +4280,7 @@ export function ExportStudioDialog({
                     "flex items-center gap-1 rounded-full border border-border bg-background p-1",
                     isCompactLayout ? "w-full justify-between" : "order-1 sm:order-2",
                   )}>
-                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev - 10, 25, previewZoomMax))}>
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev - 10, 25, previewZoomMax))} title="Perkecil zoom live preview 10 persen.">
                       <ZoomOut className="h-3.5 w-3.5" />
                     </Button>
                       <div className={cn(
@@ -4244,10 +4289,10 @@ export function ExportStudioDialog({
                       )}>
                         {effectivePreviewZoom}%
                     </div>
-                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, previewZoomMax))}>
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, previewZoomMax))} title="Perbesar zoom live preview 10 persen.">
                       <ZoomIn className="h-3.5 w-3.5" />
                     </Button>
-                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)} title="Kembalikan zoom preview ke posisi fit atau 100 persen.">
                       <Maximize2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
