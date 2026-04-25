@@ -124,8 +124,8 @@ export function StudioActionFooter({
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-[10px] leading-relaxed text-muted-foreground">{helperText}</div>
-        <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">{actions}</div>
+        <div className="max-w-2xl text-[11px] leading-relaxed text-muted-foreground sm:text-xs">{helperText}</div>
+        <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">{actions}</div>
       </div>
     </div>
   );

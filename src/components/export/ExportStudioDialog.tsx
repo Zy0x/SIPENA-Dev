@@ -257,15 +257,15 @@ function clamp(value: number, min: number, max: number) {
 const MOBILE_OVERLAY_DEFAULT_FRAME = {
   left: 12,
   top: 120,
-  width: 300,
-  height: 236,
+  width: 312,
+  height: 252,
 };
 
 const EXPERIMENTAL_WINDOW_DEFAULT_RECT = {
-  x: 48,
-  y: 48,
-  width: 520,
-  height: 620,
+  x: 32,
+  y: 32,
+  width: 460,
+  height: 560,
 };
 const DESKTOP_STUDIO_PANEL_MIN_WIDTH = 380;
 const DESKTOP_STUDIO_PANEL_MAX_WIDTH = 640;
@@ -934,13 +934,13 @@ function ExperimentalTypographyWindow({
       <div
         className={cn(
           "pointer-events-auto fixed flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
-          isMobile ? "inset-2" : "min-w-[420px] min-h-[440px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] resize both",
+          isMobile ? "inset-2" : "min-w-[320px] min-h-[420px] max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] resize both",
         )}
         style={{ ...windowStyle, overscrollBehavior: "contain" }}
       >
         <div
           className={cn(
-            "flex items-center justify-between gap-3 border-b border-border px-3 py-2",
+            "flex flex-wrap items-start justify-between gap-2 border-b border-border px-3 py-2.5",
             isMobile ? "bg-gradient-to-r from-slate-950 to-slate-900 text-white" : "bg-muted/60",
             !isMobile && "cursor-grab",
           )}
@@ -953,12 +953,12 @@ function ExperimentalTypographyWindow({
             };
           }}
         >
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
               <Sparkles className={cn("h-4 w-4", isMobile ? "text-sky-200" : "text-primary")} />
-              <p className={cn("text-sm font-semibold", isMobile ? "text-white" : "text-foreground")}>Studio Eksperimental</p>
+              <p className={cn("text-sm font-semibold sm:text-[15px]", isMobile ? "text-white" : "text-foreground")}>Studio Eksperimental</p>
             </div>
-            <p className={cn("mt-0.5 text-[10px]", isMobile ? "text-slate-200" : "text-muted-foreground")}>
+            <p className={cn("mt-1 max-w-[34rem] text-[11px] leading-relaxed sm:text-xs", isMobile ? "text-slate-200" : "text-muted-foreground")}>
               Atur tipografi, alignment, dan ukuran tabel per kolom sambil tetap melihat preview. {isMobile ? "Di mobile tampil penuh agar tetap nyaman." : "Jendela ini bisa digeser, diperbesar, dan diletakkan lebih bebas."}
             </p>
           </div>
@@ -966,7 +966,7 @@ function ExperimentalTypographyWindow({
             type="button"
             variant="ghost"
             size="icon"
-            className={cn("h-8 w-8 rounded-full", isMobile && "text-white hover:bg-white/10 hover:text-white")}
+            className={cn("h-8 w-8 shrink-0 rounded-full", isMobile && "text-white hover:bg-white/10 hover:text-white")}
             onClick={() => onOpenChange(false)}
           >
             <X className="h-4 w-4" />
@@ -974,18 +974,18 @@ function ExperimentalTypographyWindow({
         </div>
 
         <div className={cn("flex flex-wrap items-center gap-2 border-b border-border px-3 py-2", isMobile && "bg-slate-50/90")}>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={applySuggestions}>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[11px] sm:text-xs" onClick={applySuggestions}>
               Saran Cerdas
             </Button>
             <HintInfo label="Saran Cerdas" description="Mengisi ukuran font, alignment, dan lebar awal berdasarkan data kolom yang sedang aktif. Cocok sebagai dasar sebelum penyesuaian manual." />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 px-2 text-[10px]"
+              className="h-8 rounded-full px-3 text-[11px] sm:text-xs"
               onClick={() => onDocumentStyleChange((prev) => ({
                 ...prev,
                 experimentalColumnTypographyEnabled: !experimentalActive,
@@ -996,10 +996,10 @@ function ExperimentalTypographyWindow({
             </Button>
             <HintInfo label="Aktifkan Mode" description="Saat aktif, override eksperimen langsung dipakai oleh live preview dan ekspor. Saat dimatikan, preview kembali ke pengaturan global." />
           </div>
-          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={syncWithGlobal}>
+          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[11px] sm:text-xs" onClick={syncWithGlobal}>
             Samakan Global
           </Button>
-          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={resetExperimental}>
+          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[11px] sm:text-xs" onClick={resetExperimental}>
             Reset Eksperimental
           </Button>
         </div>
@@ -1014,7 +1014,7 @@ function ExperimentalTypographyWindow({
               type="button"
               variant={activeTab === key ? "default" : "outline"}
               size="sm"
-              className="h-8 gap-1.5 rounded-full px-3 text-[10px]"
+              className="h-9 min-w-0 flex-1 gap-1.5 rounded-full px-3 text-[11px] sm:h-8 sm:flex-none sm:text-xs"
               onClick={() => {
                 scrollMemoryRef.current[activeTab] = bodyRef.current?.scrollTop ?? 0;
                 setActiveTab(key);
@@ -1027,13 +1027,13 @@ function ExperimentalTypographyWindow({
         </div>
 
         <div ref={bodyRef} className="flex-1 overflow-y-auto px-3 py-3 pb-4">
-          <div className="mb-3 rounded-xl border border-border bg-muted/30 p-3 text-[10px] text-muted-foreground">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+          <div className="mb-3 rounded-xl border border-border bg-muted/30 p-3 text-[11px] text-muted-foreground sm:text-xs">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 leading-relaxed">
                 Studio ini sinkron langsung dengan live preview. Saat Anda menyorot kolom tertentu di sini, preview akan menandai bagian yang terdampak.
               </div>
               {highlightTarget?.kind === "column" ? (
-                <div className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[9px] font-semibold text-primary">
+                <div className="max-w-full rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-semibold leading-relaxed text-primary sm:text-[11px]">
                   Target: {highlightTarget.label || highlightTarget.key}
                 </div>
               ) : null}
@@ -3851,8 +3851,8 @@ export function ExportStudioDialog({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent ref={dialogContentRef} onPointerUpCapture={handleMobilePointerUpCapture} className="w-[calc(100vw-0.5rem)] sm:w-[calc(100vw-0.75rem)] max-w-[96rem] h-[calc(100dvh-0.5rem)] sm:h-[min(94dvh,58rem)] overflow-hidden rounded-[22px] sm:rounded-[28px] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-border">
+        <DialogContent ref={dialogContentRef} onPointerUpCapture={handleMobilePointerUpCapture} className="flex h-[calc(100dvh-0.75rem)] w-[calc(100vw-0.75rem)] max-h-[calc(100dvh-0.75rem)] max-w-[96rem] flex-col gap-0 overflow-hidden rounded-[22px] p-0 sm:h-[min(94dvh,58rem)] sm:w-[calc(100vw-1.5rem)] sm:rounded-[28px]">
+          <DialogHeader className="min-w-0 px-4 pb-3 pt-4 sm:px-6 sm:pt-5 border-b border-border">
             <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Download className="h-4 w-4 text-primary" />
               {title}
@@ -3862,7 +3862,7 @@ export function ExportStudioDialog({
             </DialogDescription>
             <div className="mt-3 flex flex-wrap gap-2">
               {studioSummaryChips.map((chip) => (
-                <span key={chip.text} className={cn("inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", chip.tone)}>
+                <span key={chip.text} className={cn("inline-flex max-w-full items-center justify-center rounded-full border px-2.5 py-1 text-center text-[10px] font-semibold leading-relaxed sm:text-[11px]", chip.tone)}>
                   {chip.text}
                 </span>
               ))}
@@ -3885,7 +3885,7 @@ export function ExportStudioDialog({
                 />
 
                 <div className="border-b border-border bg-muted/20 px-3 py-3 sm:px-4">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     {mobileStep !== "format" ? (
                       <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-[11px]" onClick={goToPreviousMobileStep}>
                         <ArrowLeft className="mr-1 h-3.5 w-3.5" />
@@ -3894,7 +3894,7 @@ export function ExportStudioDialog({
                     ) : (
                       <div className="h-8" />
                     )}
-                    <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:text-[11px]">
                       Studio Mobile
                     </span>
                   </div>
@@ -3906,8 +3906,8 @@ export function ExportStudioDialog({
                   <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
                     <div className="space-y-4">
                       {supportsSignature ? (
-                        <div className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3">
-                          <div>
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+                          <div className="min-w-0">
                             <Label className="text-sm font-semibold text-foreground">Signature</Label>
                             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
                               Aktifkan bila hasil ekspor perlu blok signature otomatis.
@@ -3921,7 +3921,7 @@ export function ExportStudioDialog({
 
                       <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-[10px] text-muted-foreground">Gunakan aksi studio hanya bila perlu.</p>
+                          <p className="text-[11px] text-muted-foreground sm:text-xs">Gunakan aksi studio hanya bila perlu.</p>
                           {renderStudioUtilityActions(false)}
                         </div>
                       </div>
@@ -4118,12 +4118,12 @@ export function ExportStudioDialog({
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-[11px] font-semibold text-foreground">Alat studio</p>
                       {!isMobileLayout ? (
-                        <span className={cn("rounded-full border px-2.5 py-0.5 text-[10px] font-semibold", activeDesktopPanelTone.badge)}>
+                        <span className={cn("max-w-full rounded-full border px-2.5 py-0.5 text-[10px] font-semibold leading-relaxed sm:text-[11px]", activeDesktopPanelTone.badge)}>
                           {activePanelMeta.label}
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Buka panel yang ingin Anda atur.</p>
+                    <p className="text-[11px] text-muted-foreground sm:text-xs">Buka panel yang ingin Anda atur.</p>
                   </div>
                   <div className={cn("-mx-1 px-1 pb-1", isMobileLayout ? "overflow-hidden" : "overflow-x-auto")}>
                     {isMobileLayout ? (
@@ -4146,7 +4146,7 @@ export function ExportStudioDialog({
                               variant="outline"
                               size="sm"
                               className={cn(
-                                "h-9 min-w-fit shrink-0 rounded-full px-3 justify-start gap-1.5 text-[10px] sm:text-xs",
+                                "h-auto min-h-9 min-w-fit shrink-0 rounded-full px-3 py-2 justify-start gap-1.5 text-[10px] leading-relaxed sm:text-xs",
                                 !isMobileLayout && (activePanel === id ? activeDesktopPanelTone.activeTab : activeDesktopPanelTone.idleTab),
                                 !enabled && "opacity-50",
                               )}
@@ -4436,17 +4436,17 @@ export function ExportStudioDialog({
                   <div className="flex items-center gap-2 flex-wrap">
                     <Eye className="h-4 w-4 text-primary" />
                     <p className="text-xs font-semibold text-foreground">Live Preview</p>
-                    <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold", getFormatToneClasses(activeFormat?.id || "pdf"))}>
+                    <span className={cn("max-w-full rounded-full border px-2.5 py-1 text-[10px] font-semibold leading-relaxed sm:text-[11px]", getFormatToneClasses(activeFormat?.id || "pdf"))}>
                       {activeFormat?.label || "Format"}
                     </span>
                   </div>
-                  <p className="mt-1 text-[10px] text-muted-foreground">
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
                     Preview di bawah ini selalu mengikuti state aktif. Gunakan zoom untuk memeriksa detail sebelum ekspor.
                   </p>
                 </div>
 
                 <div className={cn(
-                  "flex w-full gap-2",
+                  "flex w-full min-w-0 gap-2",
                   isCompactLayout ? "flex-col" : "flex-wrap items-center sm:w-auto sm:justify-end",
                 )}>
                   {supportsSignature && includeSignature ? (
@@ -4454,7 +4454,7 @@ export function ExportStudioDialog({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-1")}
+                      className={cn("min-h-9 rounded-full px-3 py-1.5 text-[11px] whitespace-normal text-center leading-relaxed sm:text-xs", isCompactLayout ? "w-full" : "order-3 sm:order-1")}
                       onClick={handleResetSignaturePosition}
                       title="Kembalikan blok signature ke posisi default di layout preview."
                     >
@@ -4467,7 +4467,7 @@ export function ExportStudioDialog({
                       type="button"
                       variant={liveEditMode ? "default" : "outline"}
                       size="sm"
-                      className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-2")}
+                      className={cn("min-h-9 rounded-full px-3 py-1.5 text-[11px] whitespace-normal text-center leading-relaxed sm:text-xs", isCompactLayout ? "w-full" : "order-3 sm:order-2")}
                       onClick={() => {
                         if (liveEditMode) {
                           setLiveEditMode(false);
@@ -4484,7 +4484,7 @@ export function ExportStudioDialog({
                   ) : null}
                   {experimentalModeActive ? (
                     <div className={cn(
-                      "rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/25 dark:text-amber-200",
+                      "max-w-full rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-semibold leading-relaxed text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/25 dark:text-amber-200 sm:text-[11px]",
                       isCompactLayout ? "w-full text-center" : "order-2 sm:order-1",
                     )}>
                       Eksperimental Aktif
@@ -4492,7 +4492,7 @@ export function ExportStudioDialog({
                   ) : null}
                   {highlightTarget ? (
                     <div className={cn(
-                      "rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-medium text-primary",
+                      "max-w-full rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-medium leading-relaxed text-primary sm:text-[11px]",
                       isCompactLayout ? "w-full text-center" : "order-3 sm:order-1",
                     )}>
                       {highlightTarget.label || (highlightTarget.kind === "column" ? highlightTarget.key : highlightTarget.kind)}
@@ -4500,7 +4500,7 @@ export function ExportStudioDialog({
                   ) : null}
                   {!isNarrowLayout ? (
                     <div className={cn(
-                      "rounded-full border border-border bg-muted/30 px-3 py-1 text-[10px] text-muted-foreground",
+                      "max-w-full rounded-full border border-border bg-muted/30 px-3 py-1.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]",
                       isCompactLayout ? "w-full text-center" : "order-2 sm:order-1",
                     )}>
                       Zoom tetap stabil saat panel diubah
@@ -4531,7 +4531,7 @@ export function ExportStudioDialog({
 
               <div className={cn(
                 "flex-1 overflow-auto bg-muted/30",
-                isMobileLayout ? "max-h-[min(46dvh,28rem)] px-2 py-2" : "px-2 sm:px-4 py-2 sm:py-4",
+                isMobileLayout ? "max-h-[min(52dvh,32rem)] px-2 py-2" : "px-2 py-2 sm:px-4 sm:py-4",
               )} ref={previewViewportRef}>
                 {canPreview ? (
                   <div className="flex min-h-full flex-col items-center gap-3">
@@ -4547,7 +4547,7 @@ export function ExportStudioDialog({
                         {renderPreviewContent(previewCaptureRef)}
                       </div>
                     </div>
-                    {previewFooter ? <div className="w-full max-w-5xl">{previewFooter}</div> : null}
+                    {previewFooter ? <div className="w-full max-w-[min(100%,70rem)]">{previewFooter}</div> : null}
                   </div>
                 ) : (
                   <div className="flex h-full min-h-[420px] items-center justify-center">
@@ -4580,23 +4580,23 @@ export function ExportStudioDialog({
                 onPointerUp={handleMobileOverlayPointerUp}
                 onPointerCancel={handleMobileOverlayPointerUp}
               >
-                <div className="flex items-start justify-between gap-2 px-1 pb-2">
-                  <div className="min-w-0">
+                <div className="flex flex-wrap items-start justify-between gap-2 px-1 pb-2">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <Eye className="h-3.5 w-3.5 text-primary" />
-                      <p className="text-[10px] font-semibold text-foreground">Preview Live</p>
+                      <p className="text-[11px] font-semibold text-foreground">Preview Live</p>
                     </div>
-                    <p className="mt-1 text-[9px] leading-relaxed text-muted-foreground">
+                    <p className="mt-1 break-words text-[10px] leading-relaxed text-muted-foreground">
                       {activeFormat?.label || "Format"} • {recommendedPaperOption?.label || currentPaperSize}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                     {supportsSignature && includeSignature ? (
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 rounded-full"
+                        className="h-8 w-8 rounded-full"
                         data-overlay-interactive="true"
                         onPointerDown={(event) => event.stopPropagation()}
                         onClick={handleResetSignaturePosition}
@@ -4608,7 +4608,7 @@ export function ExportStudioDialog({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-full"
+                      className="h-8 w-8 rounded-full"
                       data-overlay-interactive="true"
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => setMobileOverlayState((prev) => (prev === "expanded" ? "minimized" : "expanded"))}
@@ -4623,7 +4623,7 @@ export function ExportStudioDialog({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-full"
+                      className="h-8 w-8 rounded-full"
                       data-overlay-interactive="true"
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => setMobileOverlayState("hidden-temporary")}
@@ -4636,25 +4636,25 @@ export function ExportStudioDialog({
                 {mobileOverlayState === "expanded" ? (
                   <>
                     <div className="pointer-events-auto flex min-h-0 flex-col gap-2">
-                      <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1" data-overlay-interactive="true">
+                      <div className="flex items-center gap-1.5 rounded-full border border-border bg-background p-1" data-overlay-interactive="true">
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 rounded-full"
+                          className="h-8 w-8 rounded-full"
                           onPointerDown={(event) => event.stopPropagation()}
                           onClick={() => setMobileOverlayZoom((prev) => clamp(prev - 10, 15, 200))}
                         >
                           <ZoomOut className="h-3.5 w-3.5" />
                         </Button>
-                        <div className="flex min-w-0 flex-1 items-center justify-center rounded-full border border-border px-2 text-[10px] font-medium text-foreground">
+                        <div className="flex min-w-0 flex-1 items-center justify-center rounded-full border border-border px-2 text-[11px] font-medium text-foreground">
                           {mobileOverlayZoom}%
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 rounded-full"
+                          className="h-8 w-8 rounded-full"
                           onPointerDown={(event) => event.stopPropagation()}
                           onClick={() => setMobileOverlayZoom(effectivePreviewZoom)}
                         >
@@ -4664,7 +4664,7 @@ export function ExportStudioDialog({
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 rounded-full"
+                          className="h-8 w-8 rounded-full"
                           onPointerDown={(event) => event.stopPropagation()}
                           onClick={() => setMobileOverlayZoom((prev) => clamp(prev + 10, 15, 200))}
                         >
@@ -4693,12 +4693,12 @@ export function ExportStudioDialog({
                       </div>
                     </div>
 
-                    <div className="pointer-events-auto mt-2 grid grid-cols-2 gap-2" data-overlay-interactive="true">
+                    <div className="pointer-events-auto mt-2 grid grid-cols-1 gap-2" data-overlay-interactive="true">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-9 rounded-xl text-[10px]"
+                        className="min-h-10 rounded-xl px-3 py-2 text-[11px] leading-relaxed"
                         onPointerDown={(event) => event.stopPropagation()}
                         onClick={() => setActiveMobileSection("preview")}
                       >
@@ -4707,7 +4707,7 @@ export function ExportStudioDialog({
                       <Button
                         type="button"
                         size="sm"
-                        className="h-9 rounded-xl text-[10px]"
+                        className="min-h-10 rounded-xl px-3 py-2 text-[11px] leading-relaxed"
                         onPointerDown={(event) => event.stopPropagation()}
                         onClick={() => setActiveMobileSection("preview")}
                       >
@@ -4724,13 +4724,13 @@ export function ExportStudioDialog({
                     </div>
                   </>
                 ) : (
-                  <div className="pointer-events-auto flex items-center justify-between gap-2 rounded-2xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-[10px] text-muted-foreground">
-                    <span className="line-clamp-2">Preview diciutkan agar panel tetap lega saat Anda mengatur alat.</span>
+                  <div className="pointer-events-auto flex flex-col items-stretch gap-2 rounded-2xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                    <span>Preview diciutkan agar panel tetap lega saat Anda mengatur alat.</span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 rounded-full px-2 text-[10px]"
+                      className="h-8 rounded-full px-3 text-[11px]"
                       data-overlay-interactive="true"
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => setActiveMobileSection("preview")}
@@ -4752,7 +4752,7 @@ export function ExportStudioDialog({
             }
             actions={(
               <>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-11 text-xs w-full sm:h-9 sm:w-auto">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-11 w-full text-xs sm:h-9 sm:min-w-[9rem] sm:w-auto sm:text-[11px]">
                   Tutup
                 </Button>
                 {supportsSignature ? (
@@ -4761,13 +4761,13 @@ export function ExportStudioDialog({
                     variant="outline"
                     onClick={handleSave}
                     disabled={isSaving || isLoading}
-                    className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto"
+                    className="h-11 w-full gap-1.5 text-xs sm:h-9 sm:min-w-[11rem] sm:w-auto sm:text-[11px]"
                   >
                     <Save className="h-3.5 w-3.5" />
                     Simpan Signature
                   </Button>
                 ) : null}
-                <Button type="button" onClick={handleExport} disabled={!activeFormat || isLoading || isSaving} className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto">
+                <Button type="button" onClick={handleExport} disabled={!activeFormat || isLoading || isSaving} className="h-11 w-full gap-1.5 text-xs sm:h-9 sm:min-w-[10rem] sm:w-auto sm:text-[11px]">
                   <Download className="h-3.5 w-3.5" />
                   Ekspor {activeFormat?.label || ""}
                 </Button>
