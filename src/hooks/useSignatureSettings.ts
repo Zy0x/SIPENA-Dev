@@ -14,6 +14,7 @@ export interface SignatureSigner {
 export type SignatureAlignment = 'left' | 'center' | 'right';
 export type SignaturePlacementMode = 'adaptive' | 'flow' | 'fixed';
 export type SignaturePreset = 'follow-content' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+export type SignatureLinePosition = 'above-name' | 'between-name-and-nip';
 
 export interface SignatureSettingsConfig {
   city: string;
@@ -22,6 +23,7 @@ export interface SignatureSettingsConfig {
   customDate: string | null;
   fontSize: number;
   showSignatureLine: boolean;
+  signatureLinePosition?: SignatureLinePosition;
   signatureLineWidth: number; // in mm for PDF
   signatureSpacing: number; // gap between signers in mm
   // Position controls
@@ -96,6 +98,7 @@ export function createDefaultSignatureConfig(): SignatureSettingsConfig {
     customDate: null,
     fontSize: 10,
     showSignatureLine: true,
+    signatureLinePosition: 'above-name',
     signatureLineWidth: 50,
     signatureSpacing: 20,
     signatureAlignment: 'right',
@@ -154,6 +157,7 @@ function normalizeConfig(input: Partial<SignatureSettingsConfig> & Partial<Signa
     customDate: (input as any).customDate ?? (input as any).custom_date ?? extendedOverrides?.customDate ?? null,
     fontSize: Math.max(1, Number((input as any).fontSize ?? (input as any).font_size ?? extendedOverrides?.fontSize ?? 10) || 10),
     showSignatureLine: (input as any).showSignatureLine ?? extendedOverrides?.showSignatureLine ?? true,
+    signatureLinePosition: ((input as any).signatureLinePosition ?? extendedOverrides?.signatureLinePosition ?? 'above-name') as SignatureLinePosition,
     signatureLineWidth: Number((input as any).signatureLineWidth ?? extendedOverrides?.signatureLineWidth ?? 50) || 50,
     signatureSpacing: Number((input as any).signatureSpacing ?? extendedOverrides?.signatureSpacing ?? 20) || 20,
     signatureAlignment: ((input as any).signatureAlignment ?? extendedOverrides?.signatureAlignment ?? 'right') as SignatureAlignment,
@@ -247,6 +251,7 @@ export function useSignatureSettings() {
         customDate: normalized.useCustomDate ? normalized.customDate : null,
         fontSize: normalized.fontSize,
         showSignatureLine: normalized.showSignatureLine,
+        signatureLinePosition: normalized.signatureLinePosition,
         signatureLineWidth: normalized.signatureLineWidth,
         signatureSpacing: normalized.signatureSpacing,
         signatureAlignment: normalized.signatureAlignment,

@@ -88,13 +88,14 @@ import {
 } from "@/components/studio/ResponsiveStudio";
 import {
   type SignatureSettingsConfig,
+  type SignatureLinePosition,
   type SignatureSigner,
   createDefaultSignatureConfig,
   createEmptySignatureSigner,
   formatSignatureDisplayDate,
   hasValidSignatureConfig,
 } from "@/hooks/useSignatureSettings";
-import type { ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
+import { createDefaultReportDocumentStyle, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import type { ExportPreviewHighlightTarget } from "@/components/export/SignaturePreviewCanvas";
 
@@ -134,6 +135,11 @@ export interface ExportColumnOption {
   label: string;
   description?: string;
   checked: boolean;
+  groupMeta?: {
+    detailTitle?: string;
+    activeSummaryLabel?: string;
+    collapsedHint?: string;
+  };
   children?: ExportColumnOption[];
 }
 
@@ -319,6 +325,70 @@ function HintInfo({
   );
 }
 
+function getSignatureLinePosition(draft: SignatureSettingsConfig): SignatureLinePosition {
+  return draft.signatureLinePosition ?? "above-name";
+}
+
+function getColumnLeafOptions(columnOptions: ExportColumnOption[]) {
+  return columnOptions.flatMap((option) => option.children?.length ? option.children : [option]);
+}
+
+function StudioSubsection({
+  title,
+  description,
+  tone = "slate",
+  badge,
+  action,
+  children,
+}: {
+  title: string;
+  description?: string;
+  tone?: "slate" | "sky" | "emerald" | "amber" | "rose" | "indigo";
+  badge?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  const toneClasses = {
+    slate: "border-slate-200/80 bg-slate-50/70",
+    sky: "border-sky-200/80 bg-sky-50/70",
+    emerald: "border-emerald-200/80 bg-emerald-50/70",
+    amber: "border-amber-200/80 bg-amber-50/70",
+    rose: "border-rose-200/80 bg-rose-50/70",
+    indigo: "border-indigo-200/80 bg-indigo-50/70",
+  } as const;
+
+  const badgeClasses = {
+    slate: "border-slate-200/80 bg-white/90 text-slate-700",
+    sky: "border-sky-200/80 bg-white/90 text-sky-700",
+    emerald: "border-emerald-200/80 bg-white/90 text-emerald-700",
+    amber: "border-amber-200/80 bg-white/90 text-amber-700",
+    rose: "border-rose-200/80 bg-white/90 text-rose-700",
+    indigo: "border-indigo-200/80 bg-white/90 text-indigo-700",
+  } as const;
+
+  return (
+    <section className={cn("rounded-2xl border p-3 shadow-[0_8px_22px_-20px_rgba(15,23,42,0.7)]", toneClasses[tone])}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[11px] font-semibold text-foreground">{title}</p>
+            {badge ? (
+              <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold", badgeClasses[tone])}>
+                {badge}
+              </span>
+            ) : null}
+          </div>
+          {description ? (
+            <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      <div className="mt-3 space-y-3">{children}</div>
+    </section>
+  );
+}
+
 function useLooseSignatureDrag(
   draft: SignatureSettingsConfig,
   setDraft: Dispatch<SetStateAction<SignatureSettingsConfig>>,
@@ -408,7 +478,7 @@ function GenericSignaturePreview({
         }}
       >
         <div>Dokumen ini memakai data, filter, dan pengaturan ekspor yang sedang aktif.</div>
-        <div>Gunakan tab Format untuk memilih PDF, PNG HD, atau PNG 4K. Tab Style mengatur tipografi, sedangkan Posisi mengatur peletakan tanda tangan secara dinamis.</div>
+        <div>Gunakan tab Format untuk memilih PDF, PNG HD, atau PNG 4K. Tab Style mengatur tipografi, sedangkan Style Signature mengatur visual dan peletakan signature secara dinamis.</div>
       </div>
       {includeSignature ? (
         <div
@@ -439,7 +509,7 @@ function GenericSignaturePreview({
             }}
           >
             <Move size={12} />
-            Preview Tanda Tangan
+            Preview Signature
           </div>
           <div style={{ textAlign: "right", color: PREVIEW_COLORS.ink, fontSize: draft.fontSize + 1, marginBottom: 8 }}>
             {draft.city || "[Kota]"}, {previewDate}
@@ -452,10 +522,19 @@ function GenericSignaturePreview({
                   <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: PREVIEW_COLORS.muted, marginTop: 2 }}>{signer.school_name}</div>
                 ) : null}
                 <div style={{ height: 54 }} />
-                {draft.showSignatureLine ? (
+                {draft.showSignatureLine && getSignatureLinePosition(draft) === "above-name" ? (
                   <div style={{ width: draft.signatureLineWidth * 2, borderBottom: `1px solid ${PREVIEW_COLORS.ink}`, margin: "0 auto 6px" }} />
                 ) : null}
-                <div style={{ fontWeight: 700 }}>{signer.name || "[Nama Penanda Tangan]"}</div>
+                      <div style={{ fontWeight: 700 }}>{signer.name || "[Nama Signer]"}</div>
+                {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" ? (
+                  <div
+                    style={{
+                      width: draft.signatureLineWidth * 2,
+                      borderBottom: `1px solid ${PREVIEW_COLORS.ink}`,
+                      margin: signer.nip ? "4px auto 0" : "6px auto 0",
+                    }}
+                  />
+                ) : null}
                 {signer.nip ? (
                   <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: PREVIEW_COLORS.muted, marginTop: 2 }}>NIP. {signer.nip}</div>
                 ) : null}
@@ -477,7 +556,7 @@ function GenericSignaturePreview({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
           <ScanSearch size={12} />
-          Safe zone tanda tangan
+          Safe zone signature
         </div>
         <div style={{ marginTop: 4 }}>
           Offset, drag-and-drop, dan kontrol presisi akan langsung memengaruhi posisi preview dan hasil ekspor.
@@ -490,9 +569,13 @@ function GenericSignaturePreview({
 function SignerPanel({
   draft,
   setDraft,
+  includeSignature,
+  onOpenSignatureStyle,
 }: {
   draft: SignatureSettingsConfig;
   setDraft: Dispatch<SetStateAction<SignatureSettingsConfig>>;
+  includeSignature: boolean;
+  onOpenSignatureStyle: () => void;
 }) {
   const signerCount = draft.signers.filter((signer) => signer.name.trim()).length;
 
@@ -529,91 +612,106 @@ function SignerPanel({
 
   return (
     <>
-      <div className="rounded-xl border border-border bg-background/50 p-3">
-        <p className="text-[11px] font-semibold text-foreground">Identitas Tanda Tangan</p>
-        <p className="mt-1 text-[10px] text-muted-foreground">Isi kota dan penanda tangan utama. Anda bisa menambah sampai 4 penanda tangan.</p>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-xs">Kota <span className="text-destructive">*</span></Label>
-        <Input
-          value={draft.city}
-          onChange={(event) => setDraft((prev) => ({ ...prev, city: event.target.value }))}
-          placeholder="Banjarmasin"
-          className="h-8 text-xs"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Label className="text-[11px]">Tanggal custom</Label>
-          <p className="text-[9px] text-muted-foreground">Aktifkan bila tanggal dokumen tidak ingin mengikuti hari ini.</p>
+      <StudioSubsection
+        title="Tanggal & Lokasi"
+        description="Tab Signature dipakai untuk identitas signature. Pengaturan visual, garis, dan posisi dipindahkan ke Style Signature."
+        tone="amber"
+        badge={includeSignature ? "Dipakai saat ekspor" : "Disiapkan"}
+        action={(
+          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[10px]" onClick={onOpenSignatureStyle}>
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            Buka Style Signature
+          </Button>
+        )}
+      >
+        <div className="space-y-1.5">
+          <Label className="text-xs">Kota <span className="text-destructive">*</span></Label>
+          <Input
+            value={draft.city}
+            onChange={(event) => setDraft((prev) => ({ ...prev, city: event.target.value }))}
+            placeholder="Banjarmasin"
+            className="h-8 text-xs"
+          />
         </div>
-        <Switch
-          checked={draft.useCustomDate}
-          onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, useCustomDate: checked, customDate: checked ? prev.customDate : null }))}
-        />
-      </div>
 
-      {draft.useCustomDate ? (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-8 text-xs", !draft.customDate && "text-muted-foreground")}>
-              <CalendarIcon className="mr-2 h-3 w-3" />
-              {draft.customDate ? format(new Date(draft.customDate), "PPP", { locale: idLocale }) : "Pilih tanggal"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={draft.customDate ? new Date(draft.customDate) : undefined}
-              onSelect={(date) => setDraft((prev) => ({ ...prev, customDate: date ? format(date, "yyyy-MM-dd") : null }))}
-              className="p-3 pointer-events-auto"
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-      ) : null}
+        <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-white/75 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Label className="text-[11px]">Tanggal custom</Label>
+            <p className="text-[9px] text-muted-foreground">Aktifkan bila tanggal dokumen tidak ingin mengikuti hari ini.</p>
+          </div>
+          <Switch
+            checked={draft.useCustomDate}
+            onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, useCustomDate: checked, customDate: checked ? prev.customDate : null }))}
+          />
+        </div>
 
-      <Separator />
+        {draft.useCustomDate ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-8 text-xs", !draft.customDate && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-3 w-3" />
+                {draft.customDate ? format(new Date(draft.customDate), "PPP", { locale: idLocale }) : "Pilih tanggal"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={draft.customDate ? new Date(draft.customDate) : undefined}
+                onSelect={(date) => setDraft((prev) => ({ ...prev, customDate: date ? format(date, "yyyy-MM-dd") : null }))}
+                className="p-3 pointer-events-auto"
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        ) : null}
+      </StudioSubsection>
 
-      <div className="flex items-center justify-between">
-        <Label className="text-xs font-semibold">Penanda tangan ({signerCount})</Label>
-        <Button type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={addSigner} disabled={draft.signers.length >= 4}>
-          <Plus className="mr-1 h-3 w-3" />
-          Tambah
-        </Button>
-      </div>
-
-      <div className="space-y-2">
-        {draft.signers.map((signer, index) => (
-          <div key={signer.id} className="rounded-lg border border-border bg-background/50 p-2 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
-                <GripVertical className="h-3 w-3" />
-                #{index + 1}
-              </p>
-              <div className="flex items-center gap-0.5">
-                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveSigner(index, "up")} disabled={index === 0}>
-                  <ArrowUp className="h-2.5 w-2.5" />
-                </Button>
-                <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => moveSigner(index, "down")} disabled={index === draft.signers.length - 1}>
-                  <ArrowDown className="h-2.5 w-2.5" />
-                </Button>
-                <Button type="button" variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => removeSigner(index)} disabled={draft.signers.length <= 1}>
-                  <Trash2 className="h-2.5 w-2.5" />
-                </Button>
+      <StudioSubsection
+        title="Identitas Signature"
+        description="Isi identitas signer yang akan dipakai di blok signature. Anda bisa menambah sampai 4 signer."
+        tone="indigo"
+        badge={`${signerCount} aktif`}
+        action={(
+          <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[10px]" onClick={addSigner} disabled={draft.signers.length >= 4}>
+            <Plus className="mr-1 h-3 w-3" />
+            Tambah
+          </Button>
+        )}
+      >
+        <div className="space-y-2">
+          {draft.signers.map((signer, index) => (
+            <div key={signer.id} className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                  <GripVertical className="h-3 w-3" />
+                  Signature #{index + 1}
+                </p>
+                <div className="flex items-center gap-0.5">
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveSigner(index, "up")} disabled={index === 0}>
+                    <ArrowUp className="h-3 w-3" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveSigner(index, "down")} disabled={index === draft.signers.length - 1}>
+                    <ArrowDown className="h-3 w-3" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeSigner(index)} disabled={draft.signers.length <= 1}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input value={signer.title} onChange={(event) => setSigner(index, "title", event.target.value)} placeholder="Jabatan" className="h-8 text-[11px]" />
+                <Input value={signer.name} onChange={(event) => setSigner(index, "name", event.target.value)} placeholder="Nama lengkap" className="h-8 text-[11px]" />
+                <Input value={signer.nip} onChange={(event) => setSigner(index, "nip", event.target.value)} placeholder="NIP (opsional)" className="h-8 text-[11px]" />
+                {index === 0 ? (
+                  <Input value={signer.school_name} onChange={(event) => setSigner(index, "school_name", event.target.value)} placeholder="Nama sekolah (opsional)" className="h-8 text-[11px]" />
+                ) : (
+                  <div className="hidden sm:block" />
+                )}
               </div>
             </div>
-            <Input value={signer.title} onChange={(event) => setSigner(index, "title", event.target.value)} placeholder="Jabatan" className="h-7 text-[11px]" />
-            <Input value={signer.name} onChange={(event) => setSigner(index, "name", event.target.value)} placeholder="Nama lengkap" className="h-7 text-[11px]" />
-            <Input value={signer.nip} onChange={(event) => setSigner(index, "nip", event.target.value)} placeholder="NIP (opsional)" className="h-7 text-[11px]" />
-            {index === 0 ? (
-              <Input value={signer.school_name} onChange={(event) => setSigner(index, "school_name", event.target.value)} placeholder="Nama sekolah (opsional)" className="h-7 text-[11px]" />
-            ) : null}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </StudioSubsection>
     </>
   );
 }
@@ -1282,7 +1380,7 @@ function LegacyStylePanel({
     <>
       <div className="rounded-xl border border-border bg-background/50 p-3">
         <p className="text-[11px] font-semibold text-foreground">Style Dokumen</p>
-        <p className="mt-1 text-[10px] text-muted-foreground">Kelompok ini mengatur preset, tipografi dokumen, dan tampilan blok tanda tangan agar lebih mudah dipahami seperti panel desain modern.</p>
+        <p className="mt-1 text-[10px] text-muted-foreground">Kelompok ini mengatur preset, tipografi dokumen, dan tampilan blok signature agar lebih mudah dipahami seperti panel desain modern.</p>
       </div>
 
       {documentStyle && onDocumentStyleChange ? (
@@ -1597,54 +1695,6 @@ function LegacyStylePanel({
         </>
       ) : null}
 
-      <Separator />
-
-      <div className={cn("space-y-2 rounded-lg border border-border p-2.5 transition-opacity", supportsSignature && !includeSignature && "opacity-45")}>
-        <div>
-          <Label className="text-[11px] font-semibold">Style Tanda Tangan</Label>
-          <p className="text-[9px] text-muted-foreground">
-            {supportsSignature && !includeSignature
-              ? "Aktifkan penanda tangan terlebih dahulu untuk mengubah style tanda tangan."
-              : "Atur ukuran teks, garis tanda tangan, dan jarak antar penanda tangan."}
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <Label className="text-[11px]">Ukuran font ({draft.fontSize.toFixed(2)}pt)</Label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="1"
-              max="40"
-              value={draft.fontSize.toFixed(2)}
-              onChange={(event) => setDraft((prev) => ({ ...prev, fontSize: parseCustomNumber(event.target.value, prev.fontSize) }))}
-              className="h-8 w-24 text-[11px]"
-              disabled={supportsSignature && !includeSignature}
-            />
-          </div>
-          <SliderWithButtons value={draft.fontSize} min={1} max={40} step={0.25} buttonStep={1} disabled={supportsSignature && !includeSignature} onValueChange={(value) => setDraft((prev) => ({ ...prev, fontSize: Number(value.toFixed(2)) }))} />
-        </div>
-        <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <Label className="text-[11px]">Garis tanda tangan</Label>
-            <p className="text-[9px] text-muted-foreground">Nonaktifkan bila ingin nama penanda tangan tampil tanpa garis.</p>
-          </div>
-          <Switch checked={draft.showSignatureLine} onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, showSignatureLine: checked }))} disabled={supportsSignature && !includeSignature} />
-        </div>
-        {draft.showSignatureLine ? (
-          <div className="space-y-1.5">
-            <Label className="text-[11px]">Lebar garis ({draft.signatureLineWidth}mm)</Label>
-            <SliderWithButtons value={draft.signatureLineWidth} min={20} max={100} step={5} disabled={supportsSignature && !includeSignature} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureLineWidth: value }))} />
-          </div>
-        ) : null}
-        {draft.signers.length > 1 ? (
-          <div className="space-y-1.5">
-            <Label className="text-[11px]">Jarak antar penanda tangan ({draft.signatureSpacing}mm)</Label>
-            <SliderWithButtons value={draft.signatureSpacing} min={5} max={80} step={5} disabled={supportsSignature && !includeSignature} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureSpacing: value }))} />
-          </div>
-        ) : null}
-      </div>
     </>
   );
 }
@@ -1672,13 +1722,19 @@ function PositionPanel({
     }));
   };
 
+  const parseCustomNumber = (value: string, fallback: number) => {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return clamp(Number(parsed.toFixed(2)), 1, 40);
+  };
+
   return (
     <>
       <div className="rounded-xl border border-border bg-background/50 p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold text-foreground">Posisi Tanda Tangan</p>
-            <p className="mt-1 text-[10px] text-muted-foreground">Seret tanda tangan langsung di preview, lalu rapikan lagi memakai offset dan kontrol presisi di bawah ini.</p>
+            <p className="text-[11px] font-semibold text-foreground">Style Signature</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Semua pengaturan visual, garis, dan posisi signature dipusatkan di panel ini. Seret langsung di live preview bila perlu.</p>
           </div>
           <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-[10px]" onClick={resetPosition}>
             <RotateCcw className="h-3 w-3" />
@@ -1687,118 +1743,215 @@ function PositionPanel({
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold">Posisi awal</Label>
-        <div
-          className="grid gap-1"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
-        >
-          {([
-            { key: "bottom-left", label: "Bawah kiri" },
-            { key: "bottom-center", label: "Bawah tengah" },
-            { key: "bottom-right", label: "Bawah kanan" },
-            { key: "follow-content", label: "Ikut konten" },
-          ] as const).map((preset) => (
-            <Button
-              key={preset.key}
-              variant={draft.signaturePreset === preset.key ? "default" : "outline"}
-              size="sm"
-              className="h-8 text-[10px]"
-              onClick={() => setDraft((prev) => ({ ...prev, signaturePreset: preset.key }))}
-            >
-              {preset.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold">Perataan blok</Label>
-        <div className="flex gap-1">
-          {([
-            { key: "left", icon: AlignLeft, label: "Kiri" },
-            { key: "center", icon: AlignCenter, label: "Tengah" },
-            { key: "right", icon: AlignRight, label: "Kanan" },
-          ] as const).map(({ key, icon: Icon, label }) => (
-            <Button
-              key={key}
-              variant={draft.signatureAlignment === key ? "default" : "outline"}
-              size="sm"
-              className="flex-1 h-8 gap-1 text-[10px]"
-              onClick={() => setDraft((prev) => ({ ...prev, signatureAlignment: key }))}
-            >
-              <Icon className="h-3 w-3" />
-              {label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-border p-2 space-y-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <Label className="text-[11px]">Kunci tata letak tanda tangan</Label>
-            <p className="text-[9px] text-muted-foreground">Cegah blok tanda tangan bergeser saat preview disentuh atau diseret.</p>
-          </div>
-          <Switch checked={draft.lockSignaturePosition} onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, lockSignaturePosition: checked }))} />
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <Label className="text-[11px]">Snap ke grid</Label>
-            <p className="text-[9px] text-muted-foreground">Membantu posisi tetap rapi pada perpindahan kecil.</p>
-          </div>
-          <Switch checked={draft.snapToGrid} onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, snapToGrid: checked }))} />
-        </div>
-        {draft.snapToGrid ? (
+      <StudioSubsection
+        title="Garis & Spasi"
+        description="Atur ukuran teks signature, posisi garis, lebar garis, dan jarak antar signer."
+        tone="amber"
+        badge={draft.showSignatureLine ? "Garis aktif" : "Tanpa garis"}
+      >
+        <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-[11px]">Ukuran grid ({draft.gridSizeMm}mm)</Label>
-            <SliderWithButtons value={draft.gridSizeMm} min={1} max={20} step={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, gridSizeMm: value }))} />
-          </div>
-        ) : null}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-[11px]">Offset horizontal ({draft.signatureOffsetX}mm)</Label>
-        <SliderWithButtons value={draft.signatureOffsetX} min={-120} max={120} step={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureOffsetX: value }))} />
-        <p className="text-[9px] text-muted-foreground">Angka negatif menggeser ke kiri, angka positif menggeser ke kanan.</p>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-[11px]">Offset vertikal ({draft.signatureOffsetY}mm)</Label>
-        <SliderWithButtons value={draft.signatureOffsetY} min={-90} max={120} step={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureOffsetY: value }))} />
-        <p className="text-[9px] text-muted-foreground">Angka negatif mengangkat posisi, angka positif menurunkannya.</p>
-      </div>
-
-      <Separator />
-
-      <div className="space-y-1.5">
-        <Label className="text-[11px] font-semibold">Kontrol presisi</Label>
-        <div className="flex flex-col items-center gap-1">
-          <RepeatButton onTrigger={() => nudgePosition("y", -1)} aria-label="Geser ke atas">
-            <ArrowUp className="h-3.5 w-3.5" />
-          </RepeatButton>
-          <div className="flex items-center gap-1">
-            <RepeatButton onTrigger={() => nudgePosition("x", -1)} aria-label="Geser ke kiri">
-              <ArrowLeft className="h-3.5 w-3.5" />
-            </RepeatButton>
-            <div className="flex h-8 w-10 items-center justify-center rounded-md border border-border">
-              <Move className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-[11px]">Ukuran font ({draft.fontSize.toFixed(2)}pt)</Label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="1"
+                max="40"
+                value={draft.fontSize.toFixed(2)}
+                onChange={(event) => setDraft((prev) => ({ ...prev, fontSize: parseCustomNumber(event.target.value, prev.fontSize) }))}
+                className="h-8 w-24 text-[11px]"
+              />
             </div>
-            <RepeatButton onTrigger={() => nudgePosition("x", 1)} aria-label="Geser ke kanan">
-              <ArrowRight className="h-3.5 w-3.5" />
-            </RepeatButton>
+            <SliderWithButtons value={draft.fontSize} min={1} max={40} step={0.25} buttonStep={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, fontSize: Number(value.toFixed(2)) }))} />
           </div>
-          <RepeatButton onTrigger={() => nudgePosition("y", 1)} aria-label="Geser ke bawah">
-            <ArrowDown className="h-3.5 w-3.5" />
-          </RepeatButton>
-          <p className="text-[9px] text-muted-foreground">Tekan & tahan untuk menggeser cepat — gerakan otomatis dipercepat setelah 1 detik.</p>
-        </div>
-      </div>
 
-      <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs" onClick={resetPosition}>
-        <RotateCcw className="h-3 w-3" />
-        Reset posisi TTD
-      </Button>
+          <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <Label className="text-[11px]">Garis signature</Label>
+              <p className="text-[9px] text-muted-foreground">Nonaktifkan bila ingin nama signer tampil tanpa garis signature.</p>
+            </div>
+            <Switch checked={draft.showSignatureLine} onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, showSignatureLine: checked }))} />
+          </div>
+
+          {draft.showSignatureLine ? (
+            <>
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">Posisi garis</Label>
+                <div className="grid gap-1 sm:grid-cols-2">
+                  {([
+                    { value: "above-name", label: "Atas Nama", description: "Garis berada di atas nama signer." },
+                    { value: "between-name-and-nip", label: "Di antara Nama & NIP", description: "Bila NIP kosong, garis tetap tampil di bawah nama." },
+                  ] as const).map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant={getSignatureLinePosition(draft) === option.value ? "default" : "outline"}
+                      className="h-auto flex-col items-start rounded-xl px-3 py-2 text-left text-[10px]"
+                      onClick={() => setDraft((prev) => ({ ...prev, signatureLinePosition: option.value }))}
+                    >
+                      <span className="font-medium">{option.label}</span>
+                      <span className="mt-1 text-[9px] opacity-75">{option.description}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">Lebar garis ({draft.signatureLineWidth}mm)</Label>
+                <SliderWithButtons value={draft.signatureLineWidth} min={20} max={100} step={5} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureLineWidth: value }))} />
+              </div>
+            </>
+          ) : null}
+
+          {draft.signers.length > 1 ? (
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">Jarak antar signer ({draft.signatureSpacing}mm)</Label>
+              <SliderWithButtons value={draft.signatureSpacing} min={5} max={80} step={5} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureSpacing: value }))} />
+            </div>
+          ) : null}
+        </div>
+      </StudioSubsection>
+
+      <StudioSubsection
+        title="Preset & Anchor"
+        description="Tentukan titik awal penempatan signature dan arah perataan blok sebelum Anda menggeser secara presisi."
+        tone="sky"
+        badge={
+          (draft.signaturePreset || "bottom-right")
+            .replace("bottom-left", "Bawah kiri")
+            .replace("bottom-center", "Bawah tengah")
+            .replace("bottom-right", "Bawah kanan")
+            .replace("follow-content", "Ikut konten")
+        }
+      >
+        <div className="rounded-xl border border-sky-200/70 bg-white/80 p-3 space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold">Posisi awal</Label>
+            <div
+              className="grid gap-1"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+            >
+              {([
+                { key: "bottom-left", label: "Bawah kiri" },
+                { key: "bottom-center", label: "Bawah tengah" },
+                { key: "bottom-right", label: "Bawah kanan" },
+                { key: "follow-content", label: "Ikut konten" },
+              ] as const).map((preset) => (
+                <Button
+                  key={preset.key}
+                  variant={draft.signaturePreset === preset.key ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 text-[10px]"
+                  onClick={() => setDraft((prev) => ({ ...prev, signaturePreset: preset.key }))}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold">Perataan blok</Label>
+            <div className="flex gap-1">
+              {([
+                { key: "left", icon: AlignLeft, label: "Kiri" },
+                { key: "center", icon: AlignCenter, label: "Tengah" },
+                { key: "right", icon: AlignRight, label: "Kanan" },
+              ] as const).map(({ key, icon: Icon, label }) => (
+                <Button
+                  key={key}
+                  variant={draft.signatureAlignment === key ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 h-8 gap-1 text-[10px]"
+                  onClick={() => setDraft((prev) => ({ ...prev, signatureAlignment: key }))}
+                >
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </StudioSubsection>
+
+      <StudioSubsection
+        title="Presisi Posisi"
+        description="Kunci, snap, offset, dan nudge manual dipusatkan di sini agar pengaturan signature tetap rapi."
+        tone="indigo"
+        badge={draft.lockSignaturePosition ? "Terkunci" : "Bebas"}
+        action={(
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-[10px]" onClick={resetPosition}>
+            <RotateCcw className="h-3 w-3" />
+            Reset posisi
+          </Button>
+        )}
+      >
+        <div className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-3">
+          <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/60 p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-[11px]">Kunci tata letak signature</Label>
+                <p className="text-[9px] text-muted-foreground">Cegah blok signature bergeser saat preview disentuh atau diseret.</p>
+              </div>
+              <Switch checked={draft.lockSignaturePosition} onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, lockSignaturePosition: checked }))} />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-[11px]">Snap ke grid</Label>
+                <p className="text-[9px] text-muted-foreground">Membantu posisi tetap rapi pada perpindahan kecil.</p>
+              </div>
+              <Switch checked={draft.snapToGrid} onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, snapToGrid: checked }))} />
+            </div>
+            {draft.snapToGrid ? (
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">Ukuran grid ({draft.gridSizeMm}mm)</Label>
+                <SliderWithButtons value={draft.gridSizeMm} min={1} max={20} step={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, gridSizeMm: value }))} />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-xl border border-indigo-200/70 bg-white/90 p-3 space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">Offset horizontal ({draft.signatureOffsetX}mm)</Label>
+              <SliderWithButtons value={draft.signatureOffsetX} min={-120} max={120} step={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureOffsetX: value }))} />
+              <p className="text-[9px] text-muted-foreground">Angka negatif menggeser ke kiri, angka positif menggeser ke kanan.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">Offset vertikal ({draft.signatureOffsetY}mm)</Label>
+              <SliderWithButtons value={draft.signatureOffsetY} min={-90} max={120} step={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureOffsetY: value }))} />
+              <p className="text-[9px] text-muted-foreground">Angka negatif mengangkat posisi, angka positif menurunkannya.</p>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="rounded-xl border border-dashed border-indigo-200/80 bg-white/70 p-3">
+            <Label className="text-[11px] font-semibold">Kontrol presisi</Label>
+            <div className="mt-3 flex flex-col items-center gap-1">
+              <RepeatButton onTrigger={() => nudgePosition("y", -1)} aria-label="Geser ke atas">
+                <ArrowUp className="h-3.5 w-3.5" />
+              </RepeatButton>
+              <div className="flex items-center gap-1">
+                <RepeatButton onTrigger={() => nudgePosition("x", -1)} aria-label="Geser ke kiri">
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                </RepeatButton>
+                <div className="flex h-8 w-10 items-center justify-center rounded-md border border-border">
+                  <Move className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <RepeatButton onTrigger={() => nudgePosition("x", 1)} aria-label="Geser ke kanan">
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </RepeatButton>
+              </div>
+              <RepeatButton onTrigger={() => nudgePosition("y", 1)} aria-label="Geser ke bawah">
+                <ArrowDown className="h-3.5 w-3.5" />
+              </RepeatButton>
+          <p className="text-[9px] text-muted-foreground">Tekan & tahan untuk menggeser cepat — gerakan otomatis dipercepat setelah 1 detik.</p>
+            </div>
+          </div>
+        </div>
+      </StudioSubsection>
     </>
   );
 }
@@ -1810,8 +1963,9 @@ function ColumnPanel({
   columnOptions: ExportColumnOption[];
   onColumnOptionChange: (key: string, checked: boolean) => void;
 }) {
-  const checkedCount = columnOptions.filter((c) => c.checked).length;
-  const allChecked = checkedCount === columnOptions.length;
+  const leafOptions = getColumnLeafOptions(columnOptions);
+  const checkedCount = leafOptions.filter((c) => c.checked).length;
+  const allChecked = leafOptions.length > 0 && checkedCount === leafOptions.length;
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const toggleAll = (checked: boolean) => {
     columnOptions.forEach((col) => onColumnOptionChange(col.key, checked));
@@ -1822,34 +1976,45 @@ function ColumnPanel({
 
   return (
     <>
-      <div className="rounded-xl border border-border bg-background/50 p-3">
-        <p className="text-[11px] font-semibold text-foreground">Kolom Ekspor</p>
-        <p className="mt-1 text-[10px] text-muted-foreground">
-          Pilih kolom data yang akan ditampilkan di file ekspor dan live preview. Perubahan langsung terlihat di preview.
-        </p>
-      </div>
+      <StudioSubsection
+        title="Ringkasan Data"
+        description="Pilih kolom data yang akan tampil di file ekspor dan live preview. Copy grup mengikuti konteks halaman yang membuka studio."
+        tone="emerald"
+        badge={`${checkedCount}/${leafOptions.length} kolom aktif`}
+        action={(
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-full px-3 text-[10px]"
+            onClick={() => toggleAll(!allChecked)}
+          >
+            {allChecked ? "Hapus Semua" : "Pilih Semua"}
+          </Button>
+        )}
+      >
+        <div className="rounded-xl border border-emerald-200/70 bg-white/80 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
+          Grup parent dipakai untuk memilih cepat. Buka detail bila ingin mengatur kolom anak satu per satu.
+        </div>
+      </StudioSubsection>
 
-      <div className="flex items-center justify-between">
-        <Label className="text-[11px] font-semibold">{checkedCount}/{columnOptions.length} kolom aktif</Label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-6 text-[10px]"
-          onClick={() => toggleAll(!allChecked)}
-        >
-          {allChecked ? "Hapus Semua" : "Pilih Semua"}
-        </Button>
-      </div>
-
-      <div className="space-y-1">
+      <div className="space-y-3">
         {columnOptions.map((col) => {
           const hasChildren = !!col.children?.length;
           const isExpanded = !!expandedGroups[col.key];
           const activeChildren = col.children?.filter((child) => child.checked).length ?? 0;
+          const detailTitle = col.groupMeta?.detailTitle ?? col.label;
+          const activeSummaryLabel = col.groupMeta?.activeSummaryLabel ?? "item aktif";
+          const collapsedHint = col.groupMeta?.collapsedHint ?? "Daftar detail disembunyikan agar panel tetap ringkas. Tekan Detail untuk membuka pengaturan per item.";
 
           return (
-          <div key={col.key} className="rounded-xl border border-border/70 bg-background/70 p-2.5 space-y-2">
+          <StudioSubsection
+            key={col.key}
+            title={col.label}
+            description={col.description}
+            tone={hasChildren ? "emerald" : "slate"}
+            badge={hasChildren ? `${activeChildren}/${col.children?.length ?? 0} ${activeSummaryLabel}` : col.checked ? "Aktif" : "Nonaktif"}
+          >
             <div className="flex items-start gap-3">
               <Checkbox
                 id={`col-${col.key}`}
@@ -1883,11 +2048,11 @@ function ColumnPanel({
             </div>
 
             {hasChildren ? (
-              <div className="ml-6 rounded-lg border border-dashed border-border bg-muted/20 p-2 space-y-2">
+              <div className="ml-6 rounded-xl border border-emerald-200/70 bg-white/75 p-3 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-[10px] font-medium text-foreground">Nilai per tugas</p>
-                    <p className="text-[9px] text-muted-foreground">{activeChildren}/{col.children?.length ?? 0} tugas aktif</p>
+                    <p className="text-[10px] font-medium text-foreground">{detailTitle}</p>
+                    <p className="text-[9px] text-muted-foreground">{activeChildren}/{col.children?.length ?? 0} {activeSummaryLabel}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button
@@ -1933,12 +2098,12 @@ function ColumnPanel({
                   </div>
                 ) : (
                   <div className="rounded-lg bg-background/70 px-2.5 py-2 text-[9px] text-muted-foreground">
-                    Daftar tugas disembunyikan agar panel tetap ringkas. Tekan <span className="font-medium text-foreground">Detail</span> untuk membuka pengaturan per tugas.
+                    {collapsedHint}
                   </div>
                 )}
               </div>
             ) : null}
-          </div>
+          </StudioSubsection>
           );
         })}
       </div>
@@ -1947,27 +2112,19 @@ function ColumnPanel({
 }
 
 function StylePanel({
-  draft,
-  setDraft,
   documentStyle,
   onDocumentStyleChange,
   autoFitOnePage,
   onAutoFitOnePageChange,
   showAutoFitPreset,
-  includeSignature,
-  supportsSignature,
   columnTypographyOptions,
   onOpenExperimentalWindow,
 }: {
-  draft: SignatureSettingsConfig;
-  setDraft: Dispatch<SetStateAction<SignatureSettingsConfig>>;
   documentStyle?: ReportDocumentStyle;
   onDocumentStyleChange?: Dispatch<SetStateAction<ReportDocumentStyle>>;
   autoFitOnePage?: boolean;
   onAutoFitOnePageChange?: (value: boolean) => void;
   showAutoFitPreset?: boolean;
-  includeSignature: boolean;
-  supportsSignature: boolean;
   columnTypographyOptions?: ExportColumnTypographyOption[];
   onOpenExperimentalWindow: () => void;
 }) {
@@ -1977,42 +2134,48 @@ function StylePanel({
     return clamp(Number(parsed.toFixed(2)), 1, 40);
   };
 
+  const defaultDocumentStyle = useMemo(() => createDefaultReportDocumentStyle(), []);
+  const presets = [
+    { label: "Default", title: defaultDocumentStyle.titleFontSize, meta: defaultDocumentStyle.metaFontSize, header: defaultDocumentStyle.tableHeaderFontSize, body: defaultDocumentStyle.tableBodyFontSize, desc: "Baseline default studio", autoFit: false, layoutPreset: "standard" as const },
+    { label: "1 Halaman", title: 14, meta: 9, header: 10, body: 10, desc: "Utamakan 1 halaman tabel", autoFit: true, layoutPreset: "one-page" as const },
+    { label: "1 Kolom Penuh", title: 12, meta: 8, header: 8, body: 7, desc: "Titik awal agar semua kolom muat", autoFit: false, layoutPreset: "single-column-full" as const },
+    { label: "Kompak", title: 14, meta: 9, header: 9, body: 8, desc: "Ringkas", autoFit: false, layoutPreset: "compact" as const },
+    { label: "Standar", title: 16, meta: 10, header: 12, body: 11, desc: "Seimbang", autoFit: false, layoutPreset: "standard" as const },
+    { label: "Besar", title: 20, meta: 12, header: 14, body: 13, desc: "Paling mudah dibaca", autoFit: false, layoutPreset: "large" as const },
+  ] as const;
+
+  const isPresetActive = useCallback((preset: (typeof presets)[number]) => {
+    if (!documentStyle) return false;
+    return (
+      documentStyle.titleFontSize === preset.title &&
+      documentStyle.metaFontSize === preset.meta &&
+      documentStyle.tableHeaderFontSize === preset.header &&
+      documentStyle.tableBodyFontSize === preset.body &&
+      (!!autoFitOnePage === preset.autoFit) &&
+      (documentStyle.layoutPreset ?? "standard") === preset.layoutPreset
+    );
+  }, [autoFitOnePage, documentStyle]);
+
   return (
     <>
-      <div className="rounded-xl border border-border bg-background/50 p-3">
-        <p className="text-[11px] font-semibold text-foreground">Style Dokumen</p>
-        <p className="mt-1 text-[10px] text-muted-foreground">Kelompok ini mengatur preset, tipografi dokumen, dan tampilan blok tanda tangan agar lebih mudah dipahami seperti panel desain modern.</p>
-      </div>
-
       {documentStyle && onDocumentStyleChange ? (
         <>
-          <div className="space-y-2 rounded-lg border border-border p-2.5">
-            <div>
-              <Label className="text-[11px] font-semibold">Preset</Label>
-              <p className="text-[9px] text-muted-foreground">Pilih titik awal yang paling nyaman, lalu sesuaikan lagi bila perlu.</p>
-            </div>
+          <StudioSubsection
+            title="Preset Dokumen"
+            description="Pilih titik awal style dokumen. Preset Default selalu mengikuti baseline style bawaan studio."
+            tone="rose"
+            badge={presets.find(isPresetActive)?.label ?? "Kustom"}
+          >
             <div
               className="grid gap-1"
               style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
             >
-              {([
-                { label: "1 Halaman", title: 14, meta: 9, header: 10, body: 10, desc: "Utamakan 1 halaman tabel", autoFit: true },
-                { label: "1 Kolom Penuh", title: 12, meta: 8, header: 8, body: 7, desc: "Titik awal agar semua kolom muat", autoFit: false },
-                { label: "Kompak", title: 14, meta: 9, header: 9, body: 8, desc: "Ringkas", autoFit: false },
-                { label: "Standar", title: 16, meta: 10, header: 12, body: 11, desc: "Seimbang", autoFit: false },
-                { label: "Besar", title: 20, meta: 12, header: 14, body: 13, desc: "Paling mudah dibaca", autoFit: false },
-              ] as const).map((preset) => (
+              {presets.map((preset) => (
                 <Button
                   key={preset.label}
-                  variant={
-                    documentStyle.titleFontSize === preset.title &&
-                    documentStyle.tableBodyFontSize === preset.body &&
-                    (!!autoFitOnePage === preset.autoFit)
-                      ? "default"
-                      : "outline"
-                  }
+                  variant={isPresetActive(preset) ? "default" : "outline"}
                   size="sm"
-                  className="h-auto flex-col items-start py-1.5 text-[10px]"
+                  className="h-auto flex-col items-start rounded-xl py-2 text-[10px]"
                   onClick={() => {
                     onDocumentStyleChange((prev) => ({
                       ...prev,
@@ -2020,16 +2183,7 @@ function StylePanel({
                       metaFontSize: preset.meta,
                       tableHeaderFontSize: preset.header,
                       tableBodyFontSize: preset.body,
-                      layoutPreset:
-                        preset.label === "1 Halaman"
-                          ? "one-page"
-                          : preset.label === "1 Kolom Penuh"
-                            ? "single-column-full"
-                            : preset.label === "Kompak"
-                              ? "compact"
-                              : preset.label === "Besar"
-                                ? "large"
-                                : "standard",
+                      layoutPreset: preset.layoutPreset,
                     }));
                     onAutoFitOnePageChange?.(preset.autoFit);
                   }}
@@ -2039,30 +2193,37 @@ function StylePanel({
                 </Button>
               ))}
             </div>
-          </div>
+          </StudioSubsection>
 
           {showAutoFitPreset ? (
-            <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <Label className="text-[11px]">Optimalkan 1 halaman</Label>
-                <p className="text-[9px] text-muted-foreground">Sistem akan berusaha menjaga tabel tetap padat tanpa mengorbankan keterbacaan terlalu jauh.</p>
+            <StudioSubsection
+              title="Layout Otomatis"
+              description="Kontrol ini terpisah dari preset agar Anda bisa mengunci style pilihan sambil tetap menyesuaikan fit halaman."
+              tone="sky"
+              badge={autoFitOnePage ? "1 halaman" : "Manual"}
+            >
+              <div className="flex flex-col gap-2 rounded-xl border border-sky-200/70 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <Label className="text-[11px]">Optimalkan 1 halaman</Label>
+                  <p className="text-[9px] text-muted-foreground">Sistem akan berusaha menjaga tabel tetap padat tanpa mengorbankan keterbacaan terlalu jauh.</p>
+                </div>
+                <Switch checked={!!autoFitOnePage} onCheckedChange={(checked) => onAutoFitOnePageChange?.(checked)} />
               </div>
-              <Switch checked={!!autoFitOnePage} onCheckedChange={(checked) => onAutoFitOnePageChange?.(checked)} />
-            </div>
+            </StudioSubsection>
           ) : null}
 
-          <div className="space-y-2 rounded-lg border border-border p-2.5">
-            <div>
-              <Label className="text-[11px] font-semibold">Tipografi</Label>
-              <p className="text-[9px] text-muted-foreground">Ukuran judul, info dokumen, header tabel, dan isi tabel akan langsung tercermin pada preview.</p>
-            </div>
+          <StudioSubsection
+            title="Tipografi Dokumen"
+            description="Ukuran judul, meta, header tabel, dan isi tabel akan langsung tercermin pada live preview."
+            tone="indigo"
+          >
             {([
               { key: "titleFontSize", label: "Judul dokumen" },
               { key: "metaFontSize", label: "Info dokumen" },
               { key: "tableHeaderFontSize", label: "Header tabel" },
               { key: "tableBodyFontSize", label: "Isi tabel" },
             ] as const).map((item) => (
-              <div key={item.key} className="space-y-1.5">
+              <div key={item.key} className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <Label className="text-[11px]">{item.label} ({documentStyle[item.key].toFixed(2)}pt)</Label>
                   <Input
@@ -2090,17 +2251,15 @@ function StylePanel({
               </div>
             ))}
             <p className="text-[9px] text-muted-foreground">Semua ukuran menerima input manual seperti di word processor, termasuk desimal hingga 2 angka di belakang koma.</p>
-          </div>
+          </StudioSubsection>
 
           {columnTypographyOptions && columnTypographyOptions.length > 0 ? (
-            <div className="space-y-2 rounded-lg border border-border p-2.5">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <Label className="text-[11px] font-semibold">Eksperimental: Font Per Kolom</Label>
-                  <p className="text-[9px] text-muted-foreground">
-                    Pengaturan detail dipindahkan ke jendela khusus agar panel utama tetap rapi dan preview tetap mudah diamati.
-                  </p>
-                </div>
+            <StudioSubsection
+              title="Eksperimen Kolom"
+              description="Mode eksperimen dipisah agar panel utama tetap bersih, tetapi live preview tetap aktif saat studio eksperimen dibuka."
+              tone="amber"
+              badge={documentStyle.experimentalColumnTypographyEnabled ? "Aktif" : "Standar"}
+              action={(
                 <Button
                   type="button"
                   variant="outline"
@@ -2111,9 +2270,9 @@ function StylePanel({
                   <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                   Buka Studio Eksperimen
                 </Button>
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
+              )}
+            >
+              <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <Label className="text-[11px]">Aktifkan mode eksperimen</Label>
                   <p className="text-[9px] text-muted-foreground">
@@ -2125,80 +2284,30 @@ function StylePanel({
                   onCheckedChange={(checked) => onDocumentStyleChange((prev) => ({ ...prev, experimentalColumnTypographyEnabled: checked }))}
                 />
               </div>
-
               <div
                 className="grid gap-2"
                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 12rem), 1fr))" }}
               >
-                <div className="rounded-lg border border-dashed border-border bg-background/50 p-3 text-[10px] text-muted-foreground">
+                <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 text-[10px] text-muted-foreground">
                   {documentStyle.experimentalColumnTypographyEnabled
                     ? `Mode aktif untuk ${Object.keys(documentStyle.columnFontOverrides || {}).length || columnTypographyOptions.length} kolom.`
                     : "Mode belum aktif. Nyalakan mode lalu buka studio eksperimen untuk mengatur kolom satu per satu."}
                 </div>
-                <div className="rounded-lg border border-dashed border-border bg-background/50 p-3 text-[10px] text-muted-foreground">
-                  Alternatif cerdas: kecilkan kolom tugas yang padat, besarkan kolom nama, lalu pantau perubahan langsung di live preview tanpa menutup studio.
+                <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 text-[10px] text-muted-foreground">
+                  Gunakan studio eksperimen untuk menyesuaikan kolom yang padat tanpa mengorbankan keterbacaan tabel utama.
                 </div>
               </div>
-            </div>
+            </StudioSubsection>
           ) : null}
         </>
       ) : null}
-
-      <Separator />
-
-      <div className={cn("space-y-2 rounded-lg border border-border p-2.5 transition-opacity", supportsSignature && !includeSignature && "opacity-45")}>
-        <div>
-          <Label className="text-[11px] font-semibold">Style Tanda Tangan</Label>
-          <p className="text-[9px] text-muted-foreground">
-            {supportsSignature && !includeSignature
-              ? "Aktifkan penanda tangan terlebih dahulu untuk mengubah style tanda tangan."
-              : "Atur ukuran teks, garis tanda tangan, dan jarak antar penanda tangan."}
-          </p>
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <Label className="text-[11px]">Ukuran font ({draft.fontSize.toFixed(2)}pt)</Label>
-            <Input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="1"
-              max="40"
-              value={draft.fontSize.toFixed(2)}
-              onChange={(event) => setDraft((prev) => ({ ...prev, fontSize: parseCustomNumber(event.target.value, prev.fontSize) }))}
-              className="h-8 w-24 text-[11px]"
-              disabled={supportsSignature && !includeSignature}
-            />
-          </div>
-          <SliderWithButtons value={draft.fontSize} min={1} max={40} step={0.25} buttonStep={1} disabled={supportsSignature && !includeSignature} onValueChange={(value) => setDraft((prev) => ({ ...prev, fontSize: Number(value.toFixed(2)) }))} />
-        </div>
-        <div className="flex flex-col gap-2 rounded-lg border border-border p-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <Label className="text-[11px]">Garis tanda tangan</Label>
-            <p className="text-[9px] text-muted-foreground">Nonaktifkan bila ingin nama penanda tangan tampil tanpa garis.</p>
-          </div>
-          <Switch checked={draft.showSignatureLine} onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, showSignatureLine: checked }))} disabled={supportsSignature && !includeSignature} />
-        </div>
-        {draft.showSignatureLine ? (
-          <div className="space-y-1.5">
-            <Label className="text-[11px]">Lebar garis ({draft.signatureLineWidth}mm)</Label>
-            <SliderWithButtons value={draft.signatureLineWidth} min={20} max={100} step={5} disabled={supportsSignature && !includeSignature} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureLineWidth: value }))} />
-          </div>
-        ) : null}
-        {draft.signers.length > 1 ? (
-          <div className="space-y-1.5">
-            <Label className="text-[11px]">Jarak antar penanda tangan ({draft.signatureSpacing}mm)</Label>
-            <SliderWithButtons value={draft.signatureSpacing} min={5} max={80} step={5} disabled={supportsSignature && !includeSignature} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureSpacing: value }))} />
-          </div>
-        ) : null}
-      </div>
     </>
   );
 }
 
 export function ExportStudioDialog({
   title = "Pusat Ekspor Dokumen",
-  description = "Pilih format, atur tanda tangan, dan lihat preview sebelum file diekspor.",
+  description = "Pilih format, atur signature, dan lihat preview sebelum file diekspor.",
   triggerLabel = "Ekspor",
   triggerIcon: TriggerIcon = Download,
   triggerClassName,
@@ -2232,11 +2341,11 @@ export function ExportStudioDialog({
   previewFooter,
   onRestoreDefaultMode,
   defaultModeLabel = "Mode Default",
-  defaultModeDescription = "Kembalikan studio ke baseline awal tanpa mengubah ukuran kertas dan identitas penanda tangan.",
+  defaultModeDescription = "Kembalikan studio ke baseline awal tanpa mengubah ukuran kertas dan identitas signature.",
 }: ExportStudioDialogProps) {
-  type ActivePanel = "format" | "columns" | "signers" | "style" | "position";
+  type ActivePanel = "format" | "columns" | "signature" | "style" | "signatureStyle";
   type MobileWizardStep = "format" | "setup" | "preview";
-  type MobileSetupSection = "document" | "data" | "signature";
+  type MobileSetupSection = "document" | "data" | "signature" | "signatureStyle";
   type MobileOverlayInteraction = {
     mode: "drag" | "resize";
     originX: number;
@@ -2379,8 +2488,8 @@ export function ExportStudioDialog({
   }, [open, resetStudioLayoutState, signatureConfig]);
 
   useEffect(() => {
-    if (!supportsSignature) return;
-    if (!includeSignature && (activePanel === "signers" || activePanel === "position")) {
+    if (supportsSignature) return;
+    if (activePanel === "signature" || activePanel === "signatureStyle") {
       setActivePanel("format");
     }
   }, [activePanel, includeSignature, supportsSignature]);
@@ -2584,9 +2693,9 @@ export function ExportStudioDialog({
     () => ([
       { id: "format", label: "Format", icon: Download, priority: "primary", mobileVisibility: "visible", desktopVisibility: "visible" },
       ...(columnOptions ? [{ id: "columns" as const, label: "Kolom", icon: Columns3, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" }] : []),
-      { id: "signers", label: "Penanda", icon: PenTool, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" },
+      { id: "signature", label: "Signature", icon: PenTool, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" },
       { id: "style", label: "Style", icon: Sparkles, priority: "primary", mobileVisibility: "visible", desktopVisibility: "visible" },
-      { id: "position", label: "Posisi", icon: Move, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" },
+      { id: "signatureStyle", label: "Style Signature", icon: Move, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" },
     ]),
     [columnOptions],
   );
@@ -2605,7 +2714,7 @@ export function ExportStudioDialog({
       idleTab: "border-emerald-200/80 hover:border-emerald-300 hover:bg-emerald-50/60",
       badge: "border-emerald-200/80 bg-emerald-100/80 text-emerald-700",
     },
-    signers: {
+    signature: {
       shell: "border-amber-200/80 bg-amber-50/30",
       card: "border-amber-200/80 bg-amber-50/45",
       activeTab: "border-amber-300 bg-amber-500 text-white hover:bg-amber-500",
@@ -2619,7 +2728,7 @@ export function ExportStudioDialog({
       idleTab: "border-rose-200/80 hover:border-rose-300 hover:bg-rose-50/60",
       badge: "border-rose-200/80 bg-rose-100/80 text-rose-700",
     },
-    position: {
+    signatureStyle: {
       shell: "border-indigo-200/80 bg-indigo-50/30",
       card: "border-indigo-200/80 bg-indigo-50/45",
       activeTab: "border-indigo-300 bg-indigo-600 text-white hover:bg-indigo-600",
@@ -2693,7 +2802,7 @@ export function ExportStudioDialog({
   const saveCurrentSignature = useCallback(async () => {
     if (!supportsSignature) return;
     if (!hasValidSignatureConfig(draft)) {
-      throw new Error("Isi kota dan minimal 1 nama penanda tangan.");
+      throw new Error("Isi kota dan minimal 1 nama signature.");
     }
     await onSaveSignature(draft);
   }, [draft, onSaveSignature, supportsSignature]);
@@ -2708,9 +2817,9 @@ export function ExportStudioDialog({
   const handleSave = useCallback(async () => {
     try {
       await saveCurrentSignature();
-      success("Pengaturan tanda tangan disimpan");
+      success("Pengaturan signature disimpan");
     } catch (error: any) {
-      showError("Gagal menyimpan", error?.message || "Terjadi kesalahan saat menyimpan tanda tangan.");
+      showError("Gagal menyimpan", error?.message || "Terjadi kesalahan saat menyimpan signature.");
     }
   }, [saveCurrentSignature, showError, success]);
 
@@ -2743,16 +2852,16 @@ export function ExportStudioDialog({
   );
   const mobileStepDescription = useMemo(() => {
     if (mobileStep === "format") {
-      return "Pilih format hasil akhir, ukuran kertas, dan kebutuhan tanda tangan sebelum lanjut mengatur detail.";
+      return "Pilih format hasil akhir, ukuran kertas, dan kebutuhan signature sebelum lanjut mengatur detail.";
     }
     if (mobileStep === "setup") {
-      return "Rapikan tampilan dokumen, kolom data, dan blok tanda tangan dari panel yang lebih fokus.";
+      return "Rapikan tampilan dokumen, kolom data, dan blok signature dari panel yang lebih fokus.";
     }
     return "Periksa hasil akhir pada layar penuh sebelum file diekspor.";
   }, [mobileStep]);
   const currentPaperLabel = currentPaperOption?.label ?? currentPaperSize;
   const canConfigureColumns = !!(columnOptions && onColumnOptionChange);
-  const canConfigureSignature = supportsSignature && includeSignature;
+  const canConfigureSignature = supportsSignature;
   const experimentalModeActive = !!documentStyle && (
     documentStyle.experimentalColumnTypographyEnabled || documentStyle.experimentalColumnLayoutEnabled
   );
@@ -2927,24 +3036,25 @@ export function ExportStudioDialog({
   );
 
   const signersPanelContent = canConfigureSignature ? (
-    <SignerPanel draft={draft} setDraft={setDraft} />
+    <SignerPanel
+      draft={draft}
+      setDraft={setDraft}
+      includeSignature={includeSignature}
+      onOpenSignatureStyle={() => switchPanel("signatureStyle")}
+    />
   ) : (
     <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
-      Aktifkan penanda tangan terlebih dahulu agar panel ini bisa dipakai.
+      Template ini tidak memakai pengaturan signature.
     </div>
   );
 
   const stylePanelContent = (
     <StylePanel
-      draft={draft}
-      setDraft={setDraft}
       documentStyle={documentStyle}
       onDocumentStyleChange={onDocumentStyleChange}
       autoFitOnePage={autoFitOnePage}
       onAutoFitOnePageChange={onAutoFitOnePageChange}
       showAutoFitPreset={showAutoFitPreset}
-      includeSignature={includeSignature}
-      supportsSignature={supportsSignature}
       columnTypographyOptions={columnTypographyOptions}
       onOpenExperimentalWindow={() => setExperimentalWindowOpen(true)}
     />
@@ -2954,7 +3064,7 @@ export function ExportStudioDialog({
     <PositionPanel draft={draft} setDraft={setDraft} />
   ) : (
     <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
-      Posisi hanya bisa diatur saat penanda tangan aktif.
+      Template ini tidak memakai pengaturan signature.
     </div>
   );
   const mobileSetupSectionTone = {
@@ -2987,6 +3097,16 @@ export function ExportStudioDialog({
       content: "border-amber-100/80 bg-white/82 dark:border-amber-900/50 dark:bg-slate-950/32",
       subCards: "[&_.rounded-lg.border]:border-amber-200/60 [&_.rounded-xl.border]:border-amber-200/60 [&_.border-dashed]:border-amber-200/60 dark:[&_.rounded-lg.border]:border-amber-900/45 dark:[&_.rounded-xl.border]:border-amber-900/45 dark:[&_.border-dashed]:border-amber-900/45",
       chevron: "text-amber-600 dark:text-amber-300",
+    },
+    signatureStyle: {
+      icon: Move,
+      card: "border-indigo-200/70 bg-indigo-50/55 dark:border-indigo-900/55 dark:bg-indigo-950/18",
+      header: "bg-indigo-50/80 hover:bg-indigo-100/70 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/40",
+      iconWrap: "border-indigo-200/80 bg-white/90 text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200",
+      badge: "border-indigo-200/80 bg-white/90 text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200",
+      content: "border-indigo-100/80 bg-white/82 dark:border-indigo-900/50 dark:bg-slate-950/32",
+      subCards: "[&_.rounded-lg.border]:border-indigo-200/60 [&_.rounded-xl.border]:border-indigo-200/60 [&_.border-dashed]:border-indigo-200/60 dark:[&_.rounded-lg.border]:border-indigo-900/45 dark:[&_.rounded-xl.border]:border-indigo-900/45 dark:[&_.border-dashed]:border-indigo-900/45",
+      chevron: "text-indigo-600 dark:text-indigo-300",
     },
   } satisfies Record<MobileSetupSection, {
     icon: LucideIcon;
@@ -3094,7 +3214,7 @@ export function ExportStudioDialog({
                     ? "border-primary/20 bg-primary/10 text-primary"
                     : "border-border bg-muted/30 text-muted-foreground",
                 )}>
-                  {includeSignature ? "TTD aktif" : "Tanpa TTD"}
+                  {includeSignature ? "Signature aktif" : "Tanpa signature"}
                 </span>
               ) : null}
             </div>
@@ -3119,7 +3239,7 @@ export function ExportStudioDialog({
               onClick={handleResetSignaturePosition}
             >
               <RotateCcw className="mr-1 h-3.5 w-3.5" />
-              Reset Posisi TTD
+              Reset Posisi Signature
             </Button>
           ) : null}
           {canPreview ? (
@@ -3541,9 +3661,9 @@ export function ExportStudioDialog({
                       {supportsSignature ? (
                         <div className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3">
                           <div>
-                            <Label className="text-sm font-semibold text-foreground">Penanda tangan</Label>
+                            <Label className="text-sm font-semibold text-foreground">Signature</Label>
                             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                              Aktifkan bila hasil ekspor perlu blok tanda tangan otomatis.
+                              Aktifkan bila hasil ekspor perlu blok signature otomatis.
                             </p>
                           </div>
                           <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
@@ -3583,31 +3703,31 @@ export function ExportStudioDialog({
                         description: canConfigureColumns
                           ? "Pilih kolom yang ingin muncul di hasil ekspor dan live preview."
                           : "Format ini tidak menyediakan pengaturan kolom.",
-                        status: canConfigureColumns ? `${columnCount ?? columnOptions?.filter((item) => item.checked).length ?? 0} kolom` : "Tidak tersedia",
+                        status: canConfigureColumns ? `${activeColumnCount} kolom` : "Tidak tersedia",
                         disabled: !canConfigureColumns,
                         children: columnsPanelContent,
                       })}
 
                       {renderPhoneSetupSection({
                         id: "signature",
-                        title: "Tanda tangan",
+                        title: "Signature",
                         description: supportsSignature
-                          ? includeSignature
-                            ? "Isi penanda tangan, lalu rapikan posisi blok tanda tangan."
-                            : "Aktifkan penanda tangan untuk membuka pengaturan ini."
-                          : "Template ini tidak memakai panel tanda tangan.",
-                        status: supportsSignature ? (includeSignature ? "Aktif" : "Nonaktif") : "Tidak tersedia",
+                          ? "Isi identitas signature dan tanggal. Style serta posisi dipusatkan di tab Style Signature."
+                          : "Template ini tidak memakai panel signature.",
+                        status: supportsSignature ? `${draft.signers.filter((item) => item.name.trim()).length} signer` : "Tidak tersedia",
                         disabled: !supportsSignature,
-                        children: canConfigureSignature ? (
-                          <div className="space-y-4">
-                            {signersPanelContent}
-                            {positionPanelContent}
-                          </div>
-                        ) : (
-                          <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
-                            Aktifkan penanda tangan terlebih dahulu agar pengaturan ini bisa dipakai.
-                          </div>
-                        ),
+                        children: signersPanelContent,
+                      })}
+
+                      {renderPhoneSetupSection({
+                        id: "signatureStyle",
+                        title: "Style Signature",
+                        description: supportsSignature
+                          ? "Kelola garis, font, alignment, dan posisi signature dari satu panel."
+                          : "Template ini tidak memakai panel signature.",
+                        status: supportsSignature ? (includeSignature ? "Dipakai saat ekspor" : "Disiapkan") : "Tidak tersedia",
+                        disabled: !supportsSignature,
+                        children: positionPanelContent,
                       })}
                     </div>
                   </div>
@@ -3622,14 +3742,14 @@ export function ExportStudioDialog({
                       ? "Format dan ukuran kertas yang dipilih akan dipakai juga oleh live preview dan file akhir."
                       : mobileStep === "setup"
                         ? "Perubahan di langkah ini langsung memengaruhi preview dan hasil ekspor."
-                        : supportsSignature && includeSignature
+                        : supportsSignature
                           ? "Simpan pengaturan bila ingin menjadikannya default untuk ekspor berikutnya."
                           : "Periksa hasil akhir lalu ekspor saat sudah siap."
                   }
                   actions={(
                     mobileStep === "preview" ? (
                       <>
-                        {supportsSignature && includeSignature ? (
+                        {supportsSignature ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -3638,7 +3758,7 @@ export function ExportStudioDialog({
                             className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto"
                           >
                             <Save className="h-3.5 w-3.5" />
-                            Simpan Tanda Tangan
+                            Simpan Signature
                           </Button>
                         ) : null}
                         <Button type="button" onClick={handleExport} disabled={!activeFormat || isLoading || isSaving} className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto">
@@ -3702,9 +3822,14 @@ export function ExportStudioDialog({
                     "order-1 flex-1 overflow-hidden",
                     activeMobileSection === "panel" ? "flex" : "hidden",
                   )
-                : cn("order-2 border-t lg:order-1 lg:border-t-0 lg:border-r", activeDesktopPanelTone.shell),
+                : cn("order-2 border-t lg:order-1 lg:border-t-0 lg:border-r shadow-[inset_-1px_0_0_rgba(148,163,184,0.12)]", activeDesktopPanelTone.shell),
             )}>
-              <div className={cn("px-3 sm:px-4 border-b border-border/70", isMobileLayout ? "pt-2.5 pb-2.5 space-y-3" : "pt-3 sm:pt-4 pb-3 space-y-3")}>
+              <div className={cn(
+                "px-3 sm:px-4 border-b border-border/70",
+                isMobileLayout
+                  ? "pt-2.5 pb-2.5 space-y-3"
+                  : "relative z-10 bg-background/92 pt-3 sm:pt-4 pb-3 space-y-3 shadow-[0_18px_28px_-24px_rgba(15,23,42,0.8)] backdrop-blur",
+              )}>
                 {(supportsSignature || onRestoreDefaultMode) ? (
                   <div className="space-y-2">
                     {supportsSignature ? (
@@ -3713,9 +3838,9 @@ export function ExportStudioDialog({
                         isMobileLayout ? "p-3" : cn("p-3.5", activeDesktopPanelTone.card),
                       )}>
                         <div>
-                          <Label className="text-xs font-semibold text-foreground">Penanda tangan</Label>
+                          <Label className="text-xs font-semibold text-foreground">Signature</Label>
                           <p className="mt-1 text-[10px] text-muted-foreground">
-                            Aktifkan bila file ekspor perlu blok tanda tangan otomatis.
+                            Aktifkan bila file ekspor perlu blok signature otomatis.
                           </p>
                         </div>
                         <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
@@ -3759,14 +3884,14 @@ export function ExportStudioDialog({
                         sections={panelSections}
                         active={activePanel}
                         onChange={(next) => {
-                          if ((next === "signers" || next === "position") && (!supportsSignature || !includeSignature)) return;
+                          if ((next === "signature" || next === "signatureStyle") && !supportsSignature) return;
                           switchPanel(next);
                         }}
                       />
                     ) : (
                       <div className="grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap">
                         {panelSections.map(({ id, label, icon: Icon }) => {
-                          const enabled = !((id === "signers" || id === "position") && (!supportsSignature || !includeSignature));
+                          const enabled = !((id === "signature" || id === "signatureStyle") && !supportsSignature);
                           return (
                             <Button
                               key={id}
@@ -3792,7 +3917,15 @@ export function ExportStudioDialog({
                 </div>
               </div>
 
-                <div ref={panelScrollRef} className={cn("flex-1 overflow-y-auto px-3 sm:px-4 space-y-3", isMobileLayout ? "py-3 pb-44" : "py-3 sm:py-4")}>
+                <div
+                  ref={panelScrollRef}
+                  className={cn(
+                    "flex-1 overflow-y-auto space-y-3",
+                    isMobileLayout
+                      ? "px-3 py-3 pb-44 sm:px-4"
+                      : "mx-3 my-3 rounded-[24px] border border-border/80 bg-background/88 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] sm:px-4 sm:py-4",
+                  )}
+                >
                 {activePanel === "format" ? (
                   <>
                     <div className={cn("rounded-xl border border-border bg-background/80 p-3", !isMobileLayout && activeDesktopPanelTone.card)}>
@@ -3820,40 +3953,24 @@ export function ExportStudioDialog({
                   <ColumnPanel columnOptions={columnOptions} onColumnOptionChange={onColumnOptionChange} />
                 ) : null}
 
-                {activePanel === "signers" ? (
-                  supportsSignature && includeSignature ? (
-                    <SignerPanel draft={draft} setDraft={setDraft} />
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
-                      Aktifkan penanda tangan terlebih dahulu agar panel ini bisa dipakai.
-                    </div>
-                  )
+                {activePanel === "signature" ? (
+                  signersPanelContent
                 ) : null}
 
                 {activePanel === "style" ? (
                   <StylePanel
-                    draft={draft}
-                    setDraft={setDraft}
                     documentStyle={documentStyle}
                     onDocumentStyleChange={onDocumentStyleChange}
                     autoFitOnePage={autoFitOnePage}
                     onAutoFitOnePageChange={onAutoFitOnePageChange}
                     showAutoFitPreset={showAutoFitPreset}
-                    includeSignature={includeSignature}
-                    supportsSignature={supportsSignature}
                     columnTypographyOptions={columnTypographyOptions}
                     onOpenExperimentalWindow={() => setExperimentalWindowOpen(true)}
                   />
                 ) : null}
 
-                {activePanel === "position" ? (
-                  supportsSignature && includeSignature ? (
-                    <PositionPanel draft={draft} setDraft={setDraft} />
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
-                      Posisi hanya bisa diatur saat penanda tangan aktif.
-                    </div>
-                  )
+                {activePanel === "signatureStyle" ? (
+                  positionPanelContent
                 ) : null}
               </div>
             </div>
@@ -4084,7 +4201,7 @@ export function ExportStudioDialog({
                       onClick={handleResetSignaturePosition}
                     >
                       <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                      Reset Posisi TTD
+                      Reset Posisi Signature
                     </Button>
                   ) : null}
                   {canPreview ? (
@@ -4354,9 +4471,9 @@ export function ExportStudioDialog({
           <StudioActionFooter
             sticky={isMobileLayout}
             helperText={
-              supportsSignature && includeSignature
+              supportsSignature
                 ? "Simpan pengaturan bila ingin menjadikannya default untuk ekspor berikutnya."
-                : "Anda tetap bisa mengekspor tanpa penanda tangan."
+                : "Anda tetap bisa mengekspor tanpa signature."
             }
             actions={(
               <>
@@ -4368,11 +4485,11 @@ export function ExportStudioDialog({
                     type="button"
                     variant="outline"
                     onClick={handleSave}
-                    disabled={isSaving || isLoading || !includeSignature}
+                    disabled={isSaving || isLoading}
                     className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto"
                   >
                     <Save className="h-3.5 w-3.5" />
-                    Simpan Tanda Tangan
+                    Simpan Signature
                   </Button>
                 ) : null}
                 <Button type="button" onClick={handleExport} disabled={!activeFormat || isLoading || isSaving} className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto">

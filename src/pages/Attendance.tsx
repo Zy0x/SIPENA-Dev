@@ -769,6 +769,11 @@ export default function Attendance() {
         label: "Kolom Hari",
         description: "Pilih tanggal mana saja yang ingin ikut tampil di preview dan file ekspor.",
         checked: dayChildren.length > 0 && dayChildren.every((child) => child.checked),
+        groupMeta: {
+          detailTitle: "Kolom presensi harian",
+          activeSummaryLabel: "hari aktif",
+          collapsedHint: "Daftar hari disembunyikan agar panel tetap ringkas. Tekan Detail untuk membuka pengaturan per hari presensi.",
+        },
         children: dayChildren,
       },
       {
@@ -776,6 +781,11 @@ export default function Attendance() {
         label: "Rekap Status",
         description: "Atur kolom ringkasan kehadiran di sisi kanan tabel.",
         checked: totalChildren.every((child) => child.checked),
+        groupMeta: {
+          detailTitle: "Kolom rekap status",
+          activeSummaryLabel: "kolom rekap aktif",
+          collapsedHint: "Detail rekap disembunyikan agar panel tetap bersih. Tekan Detail untuk membuka pengaturan per status.",
+        },
         children: totalChildren,
       },
     ];
@@ -999,6 +1009,7 @@ export default function Attendance() {
         customDate: exportSignature.customDate,
         fontSize: exportSignature.fontSize,
         showSignatureLine: exportSignature.showSignatureLine,
+        signatureLinePosition: exportSignature.signatureLinePosition,
         signatureLineWidth: exportSignature.signatureLineWidth,
         signatureSpacing: exportSignature.signatureSpacing,
       }, 3));
@@ -1473,6 +1484,7 @@ export default function Attendance() {
         customDate: exportSignature.customDate,
         fontSize: exportSignature.fontSize,
         showSignatureLine: exportSignature.showSignatureLine,
+        signatureLinePosition: exportSignature.signatureLinePosition,
         signatureLineWidth: exportSignature.signatureLineWidth,
         signatureSpacing: exportSignature.signatureSpacing,
         signatureAlignment: exportSignature.signatureAlignment,
@@ -2019,6 +2031,7 @@ export default function Attendance() {
           customDate: exportSignature.customDate,
           fontSize: exportSignature.fontSize,
           showSignatureLine: exportSignature.showSignatureLine,
+          signatureLinePosition: exportSignature.signatureLinePosition,
           signatureLineWidth: exportSignature.signatureLineWidth,
           signatureSpacing: exportSignature.signatureSpacing,
           signatureAlignment: exportSignature.signatureAlignment,
@@ -2512,7 +2525,7 @@ export default function Attendance() {
                 <div className="sm:hidden">
                   <UnifiedExportStudio
                     title="Studio Ekspor Presensi"
-                    description="Pilih format ekspor presensi dan kelola penanda tangan dari satu panel yang lebih mudah dipahami."
+                    description="Pilih format ekspor presensi dan kelola signature dari satu panel yang lebih mudah dipahami."
                     triggerLabel="Ekspor"
                     triggerClassName="h-9 px-3 text-xs"
                     formats={ATTENDANCE_EXPORT_FORMATS}
@@ -2550,7 +2563,7 @@ export default function Attendance() {
                     columnCount={selectedAttendanceColumnKeys.length}
                     columnTypographyOptions={attendanceColumnTypographyOptions}
                     onRestoreDefaultMode={resetAttendanceStudioDefaults}
-                    defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas penanda tangan."
+                    defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
                     renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
@@ -2604,7 +2617,7 @@ export default function Attendance() {
                 {hasData && (
                   <UnifiedExportStudio
                     title="Studio Ekspor Presensi"
-                    description="Pilih format ekspor presensi, aktifkan penanda tangan bila diperlukan, lalu unduh file dari satu studio."
+                    description="Pilih format ekspor presensi, aktifkan signature bila diperlukan, lalu unduh file dari satu studio."
                     triggerLabel="Ekspor"
                     triggerClassName="h-9 px-2.5 text-xs"
                     formats={ATTENDANCE_EXPORT_FORMATS}
@@ -2642,7 +2655,7 @@ export default function Attendance() {
                     columnCount={selectedAttendanceColumnKeys.length}
                     columnTypographyOptions={attendanceColumnTypographyOptions}
                     onRestoreDefaultMode={resetAttendanceStudioDefaults}
-                    defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas penanda tangan."
+                    defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
                     renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}

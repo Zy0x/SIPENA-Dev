@@ -69,6 +69,10 @@ export interface AttendancePrintDocumentProps {
   mode: AttendancePrintMode;
 }
 
+function getSignatureLinePosition(signature: SignatureSettingsConfig) {
+  return signature.signatureLinePosition ?? "above-name";
+}
+
 // ─── Drag hook ─────────────────────────────────────────────────────────────
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
@@ -590,7 +594,7 @@ export function AttendancePrintDocument({
                     boxSizing: "border-box",
                     zIndex: 2,
                   }}
-                  title={dragEnabled ? "Seret untuk memindahkan tanda tangan di dalam batas margin kertas" : undefined}
+        title={dragEnabled ? "Seret untuk memindahkan signature di dalam batas margin kertas" : undefined}
                 >
                   <div style={{ textAlign: tAlign, color: COLORS.ink, fontSize: (signature.fontSize ?? 10) + 1 }}>
                     {signature.city || "[Kota]"}, {previewDate}
@@ -611,14 +615,26 @@ export function AttendancePrintDocument({
                       >
                         <div>{signer.title || "Guru Mata Pelajaran"}</div>
                         <div style={{ height: mm(14) }} />
-                        {signature.showSignatureLine && (
+                        {signature.showSignatureLine && getSignatureLinePosition(signature) === "above-name" && (
                           <div style={{
                             width: (signature.signatureLineWidth ?? 40) * PX_PER_MM,
                             borderBottom: `1px solid ${COLORS.ink}`,
                             margin: `0 auto ${mm(1.5)}px`,
                           }} />
                         )}
-                        <div style={{ fontWeight: 700 }}>{signer.name || "[Nama Penanda Tangan]"}</div>
+                <div style={{ fontWeight: 700 }}>{signer.name || "[Nama Signer]"}</div>
+                        {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" ? (
+                          <div style={{
+                            width: (signature.signatureLineWidth ?? 40) * PX_PER_MM,
+                            borderBottom: `1px solid ${COLORS.ink}`,
+                            margin: `${signer.nip ? mm(1.2) : mm(1.5)}px auto 0`,
+                          }} />
+                        ) : null}
+                        {signer.nip ? (
+                          <div style={{ color: COLORS.muted, fontSize: Math.max(9, (signature.fontSize ?? 10) - 1), marginTop: mm(1.2) }}>
+                            NIP. {signer.nip}
+                          </div>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -661,7 +677,7 @@ export function AttendancePrintDocument({
                         cursor: "pointer",
                         boxShadow: "0 2px 8px rgba(15,23,42,0.08)",
                       }}
-                      title="Kembalikan tanda tangan ke posisi default tepat di bawah legend"
+        title="Kembalikan signature ke posisi default tepat di bawah legend"
                     >
                       Reset posisi
                     </button>

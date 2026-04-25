@@ -737,6 +737,7 @@ export default function GradeReports() {
       customDate: signatureConfig.customDate,
       fontSize: signatureConfig.fontSize,
       showSignatureLine: signatureConfig.showSignatureLine,
+      signatureLinePosition: signatureConfig.signatureLinePosition,
       signatureLineWidth: signatureConfig.signatureLineWidth,
       signatureSpacing: signatureConfig.signatureSpacing,
       signatureAlignment: signatureConfig.signatureAlignment,
@@ -837,8 +838,8 @@ export default function GradeReports() {
 
     if (includeSignature && !hasSignature) {
       toast({
-        title: "Tanda tangan belum diatur",
-        description: "Klik tombol Edit pada opsi tanda tangan lalu lengkapi datanya.",
+        title: "Signature belum diatur",
+        description: "Klik tombol Edit pada opsi signature lalu lengkapi identitasnya.",
         variant: "error",
       });
       return;
@@ -851,6 +852,7 @@ export default function GradeReports() {
       customDate: nextSignatureConfig.customDate,
       fontSize: nextSignatureConfig.fontSize,
       showSignatureLine: nextSignatureConfig.showSignatureLine,
+      signatureLinePosition: nextSignatureConfig.signatureLinePosition,
       signatureLineWidth: nextSignatureConfig.signatureLineWidth,
       signatureSpacing: nextSignatureConfig.signatureSpacing,
       signatureAlignment: nextSignatureConfig.signatureAlignment,
@@ -1148,12 +1150,12 @@ export default function GradeReports() {
                   <div>
                     <p className="text-xs font-semibold text-foreground">Studio Ekspor Laporan</p>
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Pilih format, atur kolom, style dokumen, dan penanda tangan — semuanya di satu tempat dengan live preview.
+                      Pilih format, atur kolom, style dokumen, dan signature - semuanya di satu tempat dengan live preview.
                     </p>
                   </div>
                   <UnifiedExportStudio
                     title="Studio Ekspor Laporan Nilai"
-                    description="Atur format, kolom, style dokumen, dan penanda tangan dari satu tempat agar hasil ekspor lebih jelas dan konsisten."
+                    description="Atur format, kolom, style dokumen, dan signature dari satu tempat agar hasil ekspor lebih jelas dan konsisten."
                     triggerLabel="Ekspor Laporan"
                     formats={REPORT_EXPORT_FORMATS}
                     selectedFormat={exportFormat}
@@ -1256,9 +1258,9 @@ export default function GradeReports() {
                     <p className="mt-1 text-muted-foreground">{visibleColumns.length} kolom akan ikut diekspor.</p>
                   </div>
                   <div className="rounded-xl border border-border bg-background p-3">
-                    <p className="font-semibold text-foreground">Penanda tangan</p>
+                    <p className="font-semibold text-foreground">Signature</p>
                     <p className="mt-1 text-muted-foreground">
-                      {includeSignature ? "Aktif dan bisa diatur di studio ekspor." : "Nonaktif, file akan diekspor tanpa blok tanda tangan."}
+                      {includeSignature ? "Aktif dan bisa diatur di studio ekspor." : "Nonaktif, file akan diekspor tanpa blok signature."}
                     </p>
                   </div>
                 </div>

@@ -168,7 +168,7 @@ function GenericPreview() {
     >
       <div style={{ fontSize: 15, fontWeight: 800, color: COLORS.ink }}>Preview ekspor siap WYSIWYG</div>
       <p style={{ marginTop: 8, fontSize: 12, color: COLORS.muted, lineHeight: 1.55 }}>
-        Preview akan aktif saat data laporan tersedia. Setelah aktif, ukuran kertas, pagination, safe zone, dan posisi tanda tangan akan memakai layout engine yang sama dengan proses ekspor PDF.
+      Preview akan aktif saat data laporan tersedia. Setelah aktif, ukuran kertas, pagination, safe zone, dan posisi signature akan memakai layout engine yang sama dengan proses ekspor PDF.
       </p>
     </div>
   );
@@ -264,7 +264,7 @@ function SignatureBlock({
         cursor: draft.lockSignaturePosition ? "default" : "grab",
         touchAction: "none",
       }}
-      title={draft.lockSignaturePosition ? "Posisi tanda tangan dikunci" : "Seret untuk memindahkan tanda tangan"}
+      title={draft.lockSignaturePosition ? "Posisi signature dikunci" : "Seret untuk memindahkan signature"}
     >
       <div style={{ display: "flex", justifyContent }}>
         <div style={{ width: contentWidthPx }}>
@@ -316,7 +316,7 @@ function SignatureBlock({
                   <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: COLORS.muted, marginTop: 2, lineHeight: 1.3 }}>{signer.school_name}</div>
                 ) : null}
                 <div style={{ height: spacerHeightPx }} />
-                {draft.showSignatureLine ? (
+                {draft.showSignatureLine && (draft.signatureLinePosition ?? "above-name") === "above-name" ? (
                   <div
                     style={{
                       width: signatureLineWidthPx,
@@ -325,7 +325,16 @@ function SignatureBlock({
                     }}
                   />
                 ) : null}
-                <div style={{ fontWeight: 700, lineHeight: 1.3 }}>{signer.name || "[Nama Penanda Tangan]"}</div>
+          <div style={{ fontWeight: 700, lineHeight: 1.3 }}>{signer.name || "[Nama Signer]"}</div>
+                {draft.showSignatureLine && (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? (
+                  <div
+                    style={{
+                      width: signatureLineWidthPx,
+                      borderBottom: `1px solid ${COLORS.ink}`,
+                      margin: signer.nip ? "4px auto 0" : "6px auto 0",
+                    }}
+                  />
+                ) : null}
                 {signer.nip ? (
                   <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: COLORS.muted, marginTop: 2, lineHeight: 1.3 }}>NIP. {signer.nip}</div>
                 ) : null}
@@ -594,6 +603,7 @@ export function SignaturePreviewCanvas({
         customDate: draft.customDate,
         fontSize: draft.fontSize,
         showSignatureLine: draft.showSignatureLine,
+        signatureLinePosition: draft.signatureLinePosition,
         signatureLineWidth: draft.signatureLineWidth,
         signatureSpacing: draft.signatureSpacing,
         signatureAlignment: draft.signatureAlignment,
@@ -787,7 +797,7 @@ export function SignaturePreviewCanvas({
                       {page.totalSegments > 1 ? ` • Bagian ${page.segmentNumber}/${page.totalSegments}` : ""}
                     </>
                   ) : (
-                    "Halaman tanda tangan"
+                        "Halaman signature"
                   )}
                 </span>
               </div>

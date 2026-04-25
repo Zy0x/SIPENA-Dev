@@ -220,6 +220,7 @@ export default function StudentRankings() {
     customDate: config.customDate,
     fontSize: config.fontSize,
     showSignatureLine: config.showSignatureLine,
+    signatureLinePosition: config.signatureLinePosition,
     signatureLineWidth: config.signatureLineWidth,
     signatureSpacing: config.signatureSpacing,
     signatureAlignment: config.signatureAlignment,
@@ -1061,7 +1062,7 @@ export default function StudentRankings() {
                           </div>
                           <UnifiedExportStudio
                             title={`Studio Ekspor Ranking ${subject.name}`}
-                            description="Pilih format ekspor ranking per mata pelajaran, aktifkan penanda tangan bila diperlukan, lalu ekspor dari satu panel."
+                            description="Pilih format ekspor ranking per mata pelajaran, aktifkan signature bila diperlukan, lalu ekspor dari satu panel."
                             triggerLabel="Ekspor"
                             triggerClassName="h-8 text-xs shrink-0"
                             formats={RANKING_EXPORT_FORMATS}
@@ -1187,7 +1188,7 @@ export default function StudentRankings() {
                     </div>
                     <UnifiedExportStudio
                       title="Studio Ekspor Ranking Keseluruhan"
-                      description="Pilih format ekspor ranking keseluruhan dan kelola penanda tangan dari satu panel yang sama."
+                      description="Pilih format ekspor ranking keseluruhan dan kelola signature dari satu panel yang sama."
                       triggerLabel="Ekspor"
                       triggerClassName="h-8 text-xs shrink-0"
                       formats={RANKING_EXPORT_FORMATS}
