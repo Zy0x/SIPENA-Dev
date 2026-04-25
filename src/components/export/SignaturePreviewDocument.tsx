@@ -336,13 +336,13 @@ function SignatureBlock({
                     }}
                   />
                 ) : null}
-          <div style={{ fontWeight: 700, lineHeight: (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? 1.05 : 1.3 }}>{signer.name || "[Nama Signer]"}</div>
+          <div style={{ fontWeight: 700, lineHeight: (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? 1 : 1.3, marginBottom: (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? -2 : 0 }}>{signer.name || "[Nama Signer]"}</div>
                 {draft.showSignatureLine && (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? (
                   <div
                     style={{
                       width: signatureLineWidthPx,
                       borderBottom: `1px solid ${COLORS.ink}`,
-                      margin: signer.nip ? "1px auto 0" : "2px auto 0",
+                      margin: signer.nip ? "2px auto 0" : "2px auto 0",
                     }}
                   />
                 ) : null}

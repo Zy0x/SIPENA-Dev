@@ -1818,11 +1818,11 @@ function PositionPanel({
                       key={option.value}
                       type="button"
                       variant={getSignatureLinePosition(draft) === option.value ? "default" : "outline"}
-                      className="h-auto flex-col items-start rounded-xl px-3 py-2 text-left text-[10px]"
+                      className="h-auto min-h-0 w-full flex-col items-start gap-1 whitespace-normal rounded-xl px-3 py-2 text-left text-[10px] leading-tight"
                       onClick={() => setDraft((prev) => ({ ...prev, signatureLinePosition: option.value }))}
                     >
-                      <span className="font-medium">{option.label}</span>
-                      <span className="mt-1 text-[9px] opacity-75">{option.description}</span>
+                      <span className="block w-full font-medium leading-tight">{option.label}</span>
+                      <span className="block w-full text-[9px] leading-snug opacity-75">{option.description}</span>
                     </Button>
                   ))}
                 </div>
