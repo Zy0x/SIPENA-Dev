@@ -304,6 +304,10 @@ export function AttendancePdfCanvasPreview({
     setDragState(null);
     setLiveSignaturePosition(null);
   }, []);
+  const updateHighlightTarget = useCallback((target: ExportPreviewHighlightTarget) => {
+    if (!onHighlightTargetChange || isSameHighlightTarget(highlightTarget, target)) return;
+    onHighlightTargetChange(target);
+  }, [highlightTarget, onHighlightTargetChange]);
 
   return (
     <div
@@ -372,8 +376,8 @@ export function AttendancePdfCanvasPreview({
                   pointerEvents: active || liveEditMode ? "auto" : "none",
                   cursor: liveEditMode ? "pointer" : "default",
                 }}
-                onClick={liveEditMode ? () => onHighlightTargetChange?.(hotspot.target) : undefined}
-                onMouseEnter={liveEditMode ? () => onHighlightTargetChange?.(hotspot.target) : undefined}
+                onClick={liveEditMode ? () => updateHighlightTarget(hotspot.target) : undefined}
+                onMouseEnter={liveEditMode ? () => updateHighlightTarget(hotspot.target) : undefined}
               />
             );
           })}

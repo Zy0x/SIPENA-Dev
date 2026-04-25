@@ -2357,12 +2357,12 @@ function StylePanel({
                   key={preset.id}
                   variant={isPresetActive(preset.id) ? "default" : "outline"}
                   size="sm"
-                  className="h-auto flex-col items-start rounded-xl py-2 text-[10px]"
+                  className="min-h-[5.25rem] min-w-0 items-start justify-start whitespace-normal break-words rounded-xl px-3 py-2 text-left text-[10px] leading-relaxed"
                   title={`Gunakan preset style ${preset.label}. ${preset.desc}`}
                   onClick={() => applyPreset(preset.id)}
                 >
-                  <span className="font-medium">{preset.label}</span>
-                  <span className="text-[8px] opacity-70">{preset.desc}</span>
+                  <span className="w-full whitespace-normal break-words font-medium leading-relaxed">{preset.label}</span>
+                  <span className="w-full whitespace-normal break-words text-[8px] leading-relaxed opacity-70">{preset.desc}</span>
                 </Button>
               ))}
             </div>
@@ -2644,6 +2644,10 @@ export function ExportStudioDialog({
     setDraft((prev) => createDefaultModeSignatureDraft(prev));
     resetStudioLayoutState();
   }, [onRestoreDefaultMode, resetStudioLayoutState]);
+  const openExperimentalWorkspace = useCallback(() => {
+    setLiveEditMode(true);
+    setExperimentalWindowOpen(true);
+  }, []);
 
   useEffect(() => {
     if (!open && signatureConfig) {
@@ -2673,15 +2677,25 @@ export function ExportStudioDialog({
     }
   }, [activePanel, includeSignature, supportsSignature]);
   useEffect(() => {
-    if (previousExperimentalOpenRef.current && !experimentalWindowOpen) {
-      setLiveEditMode(false);
+    if (!open) {
+      previousExperimentalOpenRef.current = experimentalWindowOpen;
+      return;
+    }
+    if (experimentalWindowOpen) {
+      if (!liveEditMode) {
+        setLiveEditMode(true);
+      }
+      previousExperimentalOpenRef.current = true;
+      return;
+    }
+    if (previousExperimentalOpenRef.current) {
       setHighlightTarget(null);
     }
-    if (experimentalWindowOpen && !liveEditMode) {
-      setLiveEditMode(true);
+    if (liveEditMode) {
+      setLiveEditMode(false);
     }
     previousExperimentalOpenRef.current = experimentalWindowOpen;
-  }, [experimentalWindowOpen, liveEditMode]);
+  }, [experimentalWindowOpen, liveEditMode, open]);
   useEffect(() => {
     if (!open || isMobileLayout) return;
 
@@ -2718,20 +2732,6 @@ export function ExportStudioDialog({
       window.removeEventListener("resize", handlePointerUp);
     };
   }, [getDesktopPanelBounds, isMobileLayout, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    if (!liveEditMode) {
-      if (experimentalWindowOpen) {
-        setExperimentalWindowOpen(false);
-      }
-      setHighlightTarget(null);
-      return;
-    }
-    if (!experimentalWindowOpen) {
-      setExperimentalWindowOpen(true);
-    }
-  }, [experimentalWindowOpen, liveEditMode, open]);
 
   useEffect(() => {
     if (!open || !liveEditMode || !highlightTarget) return;
@@ -3278,7 +3278,7 @@ export function ExportStudioDialog({
       onAutoFitOnePageChange={onAutoFitOnePageChange}
       showAutoFitPreset={showAutoFitPreset}
       columnTypographyOptions={columnTypographyOptions}
-      onOpenExperimentalWindow={() => setExperimentalWindowOpen(true)}
+      onOpenExperimentalWindow={openExperimentalWorkspace}
       stylePresetExtra={stylePanelExtra}
       presetMode={stylePresetMode}
       presetBaseline={stylePresetBaseline}
@@ -3487,8 +3487,7 @@ export function ExportStudioDialog({
                   setLiveEditMode(false);
                   setExperimentalWindowOpen(false);
                 } else {
-                  setExperimentalWindowOpen(true);
-                  setLiveEditMode(true);
+                  openExperimentalWorkspace();
                 }
               }}
             >
@@ -4214,15 +4213,7 @@ export function ExportStudioDialog({
                 ) : null}
 
                 {activePanel === "style" ? (
-                  <StylePanel
-                    documentStyle={documentStyle}
-                    onDocumentStyleChange={onDocumentStyleChange}
-                    autoFitOnePage={autoFitOnePage}
-                    onAutoFitOnePageChange={onAutoFitOnePageChange}
-                    showAutoFitPreset={showAutoFitPreset}
-                    columnTypographyOptions={columnTypographyOptions}
-                    onOpenExperimentalWindow={() => setExperimentalWindowOpen(true)}
-                  />
+                  stylePanelContent
                 ) : null}
 
                 {activePanel === "signatureStyle" ? (
@@ -4244,177 +4235,6 @@ export function ExportStudioDialog({
                   <div className="flex h-full w-[6px] items-center justify-center rounded-full bg-border/60 transition-colors group-hover:bg-primary/25">
                     <GripVertical className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
-                </div>
-              </div>
-            ) : null}
-
-            {showMobilePreviewOverlay && false ? (
-              <div
-                className="pointer-events-none absolute inset-0 z-20 lg:hidden"
-                style={{
-                  padding: "6px",
-                }}
-              >
-                <div
-                  ref={mobileOverlayCardRef}
-                  className="pointer-events-auto absolute rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
-                  style={{
-                    left: `${mobileOverlayFrame.left}px`,
-                    top: `${mobileOverlayFrame.top}px`,
-                    width: `${mobileOverlayFrame.width}px`,
-                    height: mobileOverlayState === "expanded" ? `${mobileOverlayFrame.height}px` : "auto",
-                  }}
-                  onPointerDown={handleMobileOverlayPointerDown}
-                  onPointerMove={handleMobileOverlayPointerMove}
-                  onPointerUp={handleMobileOverlayPointerUp}
-                  onPointerCancel={handleMobileOverlayPointerUp}
-                >
-                  <div
-                    className="flex items-start justify-between gap-2 px-1 pb-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <Eye className="h-3.5 w-3.5 text-primary" />
-                        <p className="text-[10px] font-semibold text-foreground">Preview Live</p>
-                      </div>
-                      <p className="mt-1 text-[9px] leading-relaxed text-muted-foreground">
-                        {activeFormat?.label || "Format"} • {recommendedPaperOption?.label || currentPaperSize}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-full"
-                        data-overlay-interactive="true"
-                        onPointerDown={(event) => event.stopPropagation()}
-                        onClick={() => setMobileOverlayState((prev) => (prev === "expanded" ? "minimized" : "expanded"))}
-                      >
-                        {mobileOverlayState === "expanded" ? (
-                          <ChevronDown className="h-3.5 w-3.5" />
-                        ) : (
-                          <ChevronUp className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-full"
-                        data-overlay-interactive="true"
-                        onPointerDown={(event) => event.stopPropagation()}
-                        onClick={() => setMobileOverlayState("hidden-temporary")}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {mobileOverlayState === "expanded" ? (
-                    <>
-                      <div className="pointer-events-auto space-y-2">
-                        <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1" data-overlay-interactive="true">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 rounded-full"
-                            onPointerDown={(event) => event.stopPropagation()}
-                            onClick={() => setMobileOverlayZoom((prev) => clamp(prev - 10, 15, 200))}
-                          >
-                            <ZoomOut className="h-3.5 w-3.5" />
-                          </Button>
-                          <div className="flex min-w-0 flex-1 items-center justify-center rounded-full border border-border px-2 text-[10px] font-medium text-foreground">
-                            {mobileOverlayZoom}%
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 rounded-full"
-                            onPointerDown={(event) => event.stopPropagation()}
-                            onClick={() => setMobileOverlayZoom(effectivePreviewZoom)}
-                          >
-                            <Maximize2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 rounded-full"
-                            onPointerDown={(event) => event.stopPropagation()}
-                            onClick={() => setMobileOverlayZoom((prev) => clamp(prev + 10, 15, 200))}
-                          >
-                            <ZoomIn className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                        <div
-                          ref={mobileOverlayViewportRef}
-                          data-overlay-interactive="true"
-                          className="overflow-auto rounded-[18px] border border-border bg-muted/30 p-1"
-                          style={{ height: `${mobilePreviewMaxHeight}px` }}
-                        >
-                          <div className="flex min-h-full items-start justify-start">
-                            <div
-                              className="origin-top-left"
-                              style={{
-                                transform: `scale(${mobileOverlayZoom / 100})`,
-                                transformOrigin: "top left",
-                                width: "fit-content",
-                              }}
-                            >
-                              {renderPreviewContent(mobileOverlayCaptureRef)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pointer-events-auto mt-2 grid grid-cols-2 gap-2" data-overlay-interactive="true">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-9 rounded-xl text-[10px]"
-                          onPointerDown={(event) => event.stopPropagation()}
-                          onClick={() => setActiveMobileSection("preview")}
-                        >
-                          Perbesar
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-9 rounded-xl text-[10px]"
-                          onPointerDown={(event) => event.stopPropagation()}
-                          onClick={() => setActiveMobileSection("preview")}
-                        >
-                          Buka Preview
-                        </Button>
-                      </div>
-                      <div
-                        data-overlay-interactive="true"
-                        className="pointer-events-auto absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm"
-                        onPointerDown={handleMobileOverlayResizePointerDown}
-                      >
-                        <Maximize2 className="h-3 w-3" />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="pointer-events-auto flex items-center justify-between gap-2 rounded-2xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-[10px] text-muted-foreground">
-                      <span className="line-clamp-2">Preview diciutkan agar panel tetap lega saat Anda mengatur alat.</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 rounded-full px-2 text-[10px]"
-                        data-overlay-interactive="true"
-                        onPointerDown={(event) => event.stopPropagation()}
-                        onClick={() => setActiveMobileSection("preview")}
-                      >
-                        Lihat
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </div>
             ) : null}
@@ -4473,8 +4293,7 @@ export function ExportStudioDialog({
                           setLiveEditMode(false);
                           setExperimentalWindowOpen(false);
                         } else {
-                          setExperimentalWindowOpen(true);
-                          setLiveEditMode(true);
+                          openExperimentalWorkspace();
                         }
                       }}
                       title={liveEditMode ? "Matikan mode edit langsung di preview." : "Aktifkan mode edit langsung agar perubahan dan highlight bisa dicek langsung di preview."}

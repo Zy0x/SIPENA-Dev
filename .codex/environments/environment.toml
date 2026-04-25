@@ -9,20 +9,56 @@ set -e
 
 echo "🚀 Setup environment..."
 
-# install dependencies
+# ========================
+# 1. SYSTEM TOOLS (WAJIB)
+# ========================
+apt-get update
+
+apt-get install -y \
+  git \
+  curl \
+  jq \
+  ripgrep \
+  fd-find
+
+# alias fd (karena di Debian namanya fdfind)
+ln -sf $(which fdfind) /usr/bin/fd || true
+
+# ========================
+# 2. NODE CHECK
+# ========================
+if ! command -v npm >/dev/null 2>&1; then
+  echo "❌ npm tidak ditemukan"
+  exit 1
+fi
+
+# ========================
+# 3. PROJECT DEPENDENCIES
+# ========================
 npm install
 
-# install dev tools
-npm install -D eslint prettier
+# dev tools (hanya jika belum ada)
+npm install -D eslint prettier || true
 
-# env setup
+# ========================
+# 4. ENV SETUP
+# ========================
 if [ ! -f .env ]; then
   cp .env.example .env || true
 fi
 
-# git config
+# ========================
+# 5. GIT CONFIG
+# ========================
 git config --global user.name "Zy0x"
 git config --global user.email "zy0x.noir@gmail.com"
+
+# ========================
+# 6. VALIDATION
+# ========================
+echo "🔍 Checking tools..."
+command -v rg >/dev/null && echo "✔ rg OK" || echo "✖ rg missing"
+command -v git >/dev/null && echo "✔ git OK"
 
 echo "✅ Setup selesai"
 '''

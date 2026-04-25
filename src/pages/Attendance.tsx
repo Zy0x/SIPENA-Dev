@@ -224,6 +224,10 @@ export default function Attendance() {
     return (saved as "5days" | "6days") || "6days";
   });
   const [includeSignature, setIncludeSignature] = useState(false);
+  const [attendanceStylePresetBaseline, setAttendanceStylePresetBaseline] = useState(() => ({
+    documentStyle: structuredClone(createDefaultReportDocumentStyle()),
+    autoFitOnePage: true,
+  }));
   const {
     signatureConfig,
     hasSignature,
@@ -669,7 +673,12 @@ export default function Attendance() {
     if (!attendanceDefaultSignatureConfig) return;
     if (selectedAttendanceColumnKeys.length === 0) return;
     if (attendanceStudioBaselineRef.current) return;
-    attendanceStudioBaselineRef.current = captureAttendanceStudioBaseline();
+    const capturedBaseline = captureAttendanceStudioBaseline();
+    attendanceStudioBaselineRef.current = capturedBaseline;
+    setAttendanceStylePresetBaseline({
+      documentStyle: structuredClone(capturedBaseline.documentStyle),
+      autoFitOnePage: capturedBaseline.autoFitOnePage,
+    });
   }, [
     attendanceDefaultSignatureConfig,
     captureAttendanceStudioBaseline,
@@ -2588,10 +2597,6 @@ export default function Attendance() {
       </div>
     </div>
   ) : null;
-  const attendanceStylePresetBaseline = useMemo(() => ({
-    documentStyle: structuredClone(attendanceStudioBaselineRef.current?.documentStyle ?? documentStyle),
-    autoFitOnePage: attendanceStudioBaselineRef.current?.autoFitOnePage ?? autoFitOnePage,
-  }), [autoFitOnePage, documentStyle]);
   const attendanceStylePanelExtra = (
     <div className="space-y-3">
       <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 p-3">
