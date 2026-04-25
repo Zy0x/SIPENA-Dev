@@ -74,7 +74,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SliderWithButtons } from "@/components/ui/slider-with-buttons";
 import { cn } from "@/lib/utils";
 import { useEnhancedToast } from "@/contexts/ToastContext";
@@ -256,6 +255,9 @@ const EXPERIMENTAL_WINDOW_DEFAULT_RECT = {
   width: 520,
   height: 620,
 };
+const DESKTOP_STUDIO_PANEL_MIN_WIDTH = 380;
+const DESKTOP_STUDIO_PANEL_MAX_WIDTH = 640;
+const DESKTOP_STUDIO_PREVIEW_MIN_WIDTH = 440;
 
 type MobileOverlayFrame = typeof MOBILE_OVERLAY_DEFAULT_FRAME;
 
@@ -303,17 +305,17 @@ function HintInfo({
   description: string;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <Popover>
+      <PopoverTrigger asChild>
         <button type="button" className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <Info className="h-3.5 w-3.5" />
           <span className="sr-only">{label}</span>
         </button>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-72 text-[11px]">
+      </PopoverTrigger>
+      <PopoverContent align="end" side="bottom" sideOffset={8} className="max-w-72 p-3 text-[11px] leading-relaxed">
         {description}
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -2241,6 +2243,10 @@ export function ExportStudioDialog({
     originY: number;
     startFrame: MobileOverlayFrame;
   };
+  type DesktopPanelResizeState = {
+    startX: number;
+    startWidth: number;
+  };
 
   const { success, error: showError } = useEnhancedToast();
   const [open, setOpen] = useState(false);
@@ -2256,6 +2262,7 @@ export function ExportStudioDialog({
   const [mobileOverlayState, setMobileOverlayState] = useState<"expanded" | "minimized" | "hidden-temporary">("hidden-temporary");
   const [mobileOverlayZoom, setMobileOverlayZoom] = useState(30);
   const [mobileOverlayFrame, setMobileOverlayFrame] = useState<MobileOverlayFrame>(MOBILE_OVERLAY_DEFAULT_FRAME);
+  const [desktopPanelWidth, setDesktopPanelWidth] = useState(440);
   const [resetLayoutConfirmOpen, setResetLayoutConfirmOpen] = useState(false);
   const [experimentalLayoutResetToken, setExperimentalLayoutResetToken] = useState(0);
   const dialogContentRef = useRef<HTMLDivElement>(null);
@@ -2266,6 +2273,7 @@ export function ExportStudioDialog({
   const mobileOverlayCaptureRef = useRef<HTMLDivElement>(null);
   const mobileOverlayCardRef = useRef<HTMLDivElement>(null);
   const mobileOverlayInteractionRef = useRef<MobileOverlayInteraction | null>(null);
+  const desktopPanelResizeRef = useRef<DesktopPanelResizeState | null>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
   const hasOpenedRef = useRef(false);
@@ -2287,6 +2295,19 @@ export function ExportStudioDialog({
       height: rect?.height ?? 640,
     };
   }, []);
+  const getDesktopPanelBounds = useCallback(() => {
+    const boundsNode = layoutViewportRef.current ?? dialogContentRef.current;
+    const rect = boundsNode?.getBoundingClientRect();
+    const width = rect?.width ?? 1280;
+    const min = clamp(Math.round(width * 0.32), DESKTOP_STUDIO_PANEL_MIN_WIDTH, 460);
+    const max = clamp(width - DESKTOP_STUDIO_PREVIEW_MIN_WIDTH, min + 40, DESKTOP_STUDIO_PANEL_MAX_WIDTH);
+
+    return { width, min, max };
+  }, []);
+  const getDefaultDesktopPanelWidth = useCallback(() => {
+    const bounds = getDesktopPanelBounds();
+    return clamp(Math.round(bounds.width * 0.38), bounds.min, bounds.max);
+  }, [getDesktopPanelBounds]);
   const clampMobileOverlayFrame = useCallback((frame: MobileOverlayFrame) => {
     const bounds = getMobileOverlayBounds();
     const maxWidth = Math.max(240, Math.min(360, Math.floor(bounds.width - 16)));
@@ -2318,12 +2339,13 @@ export function ExportStudioDialog({
     setHighlightTarget(null);
     setExperimentalWindowOpen(false);
     setExperimentalLayoutResetToken((prev) => prev + 1);
+    setDesktopPanelWidth(getDefaultDesktopPanelWidth());
     requestAnimationFrame(() => {
       setMobileOverlayState("expanded");
       setMobileOverlayZoom(34);
       setMobileOverlayFrame(getDefaultMobileOverlayFrame());
     });
-  }, [getDefaultMobileOverlayFrame]);
+  }, [getDefaultDesktopPanelWidth, getDefaultMobileOverlayFrame]);
   const handleResetLayoutOnly = useCallback(() => {
     resetStudioLayoutState();
     setResetLayoutConfirmOpen(false);
@@ -2361,6 +2383,42 @@ export function ExportStudioDialog({
       setActivePanel("format");
     }
   }, [activePanel, includeSignature, supportsSignature]);
+  useEffect(() => {
+    if (!open || isMobileLayout) return;
+
+    const bounds = getDesktopPanelBounds();
+    setDesktopPanelWidth((prev) => clamp(prev, bounds.min, bounds.max));
+  }, [getDesktopPanelBounds, isMobileLayout, layoutWidth, open]);
+
+  useEffect(() => {
+    if (!open || isMobileLayout) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const interaction = desktopPanelResizeRef.current;
+      if (!interaction) return;
+
+      const bounds = getDesktopPanelBounds();
+      const nextWidth = clamp(interaction.startWidth + (event.clientX - interaction.startX), bounds.min, bounds.max);
+      setDesktopPanelWidth(nextWidth);
+    };
+    const handlePointerUp = () => {
+      desktopPanelResizeRef.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+    window.addEventListener("resize", handlePointerUp);
+    return () => {
+      handlePointerUp();
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+      window.removeEventListener("resize", handlePointerUp);
+    };
+  }, [getDesktopPanelBounds, isMobileLayout, open]);
 
   useEffect(() => {
     if (liveEditMode && highlightTarget?.kind === "column" && columnTypographyOptions?.length) {
@@ -2757,17 +2815,11 @@ export function ExportStudioDialog({
             </p>
             <p className="mt-2 text-[10px] text-muted-foreground">{recommendedPaperCopy}</p>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button type="button" className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Info className="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64 text-[11px]">
-              A4 cocok untuk dokumen umum, F4 memakai ukuran 8,5 x 13 in, Auto menjaga basis A4, dan Full Page membiarkan ukuran halaman mengikuti konten.
-            </TooltipContent>
-          </Tooltip>
-        </div>
+            <HintInfo
+              label="Ukuran kertas"
+              description="A4 cocok untuk dokumen umum, F4 memakai ukuran 8,5 x 13 in, Auto menjaga basis A4, dan Full Page membiarkan ukuran halaman mengikuti konten."
+            />
+          </div>
 
         <div
           className="mt-3 grid gap-2"
@@ -2856,33 +2908,33 @@ export function ExportStudioDialog({
   const mobileSetupSectionTone = {
     document: {
       icon: Sparkles,
-      card: "border-border bg-background",
-      header: "bg-background hover:bg-muted/30 dark:bg-background dark:hover:bg-muted/20",
+      card: "border-sky-200/70 bg-sky-50/55 dark:border-sky-900/55 dark:bg-sky-950/18",
+      header: "bg-sky-50/80 hover:bg-sky-100/70 dark:bg-sky-950/30 dark:hover:bg-sky-950/40",
       iconWrap: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
       badge: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
-      content: "border-border/70 bg-muted/[0.18] dark:border-border dark:bg-muted/10",
-      subCards: "",
-      chevron: "text-muted-foreground",
+      content: "border-sky-100/80 bg-white/82 dark:border-sky-900/50 dark:bg-slate-950/32",
+      subCards: "[&_.rounded-lg.border]:border-sky-200/60 [&_.rounded-xl.border]:border-sky-200/60 [&_.border-dashed]:border-sky-200/60 dark:[&_.rounded-lg.border]:border-sky-900/45 dark:[&_.rounded-xl.border]:border-sky-900/45 dark:[&_.border-dashed]:border-sky-900/45",
+      chevron: "text-sky-600 dark:text-sky-300",
     },
     data: {
       icon: Columns3,
-      card: "border-border bg-background",
-      header: "bg-background hover:bg-muted/30 dark:bg-background dark:hover:bg-muted/20",
+      card: "border-emerald-200/70 bg-emerald-50/55 dark:border-emerald-900/55 dark:bg-emerald-950/18",
+      header: "bg-emerald-50/80 hover:bg-emerald-100/70 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/40",
       iconWrap: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
       badge: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
-      content: "border-border/70 bg-muted/[0.18] dark:border-border dark:bg-muted/10",
-      subCards: "",
-      chevron: "text-muted-foreground",
+      content: "border-emerald-100/80 bg-white/82 dark:border-emerald-900/50 dark:bg-slate-950/32",
+      subCards: "[&_.rounded-lg.border]:border-emerald-200/60 [&_.rounded-xl.border]:border-emerald-200/60 [&_.border-dashed]:border-emerald-200/60 dark:[&_.rounded-lg.border]:border-emerald-900/45 dark:[&_.rounded-xl.border]:border-emerald-900/45 dark:[&_.border-dashed]:border-emerald-900/45",
+      chevron: "text-emerald-600 dark:text-emerald-300",
     },
     signature: {
       icon: PenTool,
-      card: "border-border bg-background",
-      header: "bg-background hover:bg-muted/30 dark:bg-background dark:hover:bg-muted/20",
+      card: "border-amber-200/70 bg-amber-50/55 dark:border-amber-900/55 dark:bg-amber-950/18",
+      header: "bg-amber-50/80 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:hover:bg-amber-950/40",
       iconWrap: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
       badge: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
-      content: "border-border/70 bg-muted/[0.18] dark:border-border dark:bg-muted/10",
-      subCards: "",
-      chevron: "text-muted-foreground",
+      content: "border-amber-100/80 bg-white/82 dark:border-amber-900/50 dark:bg-slate-950/32",
+      subCards: "[&_.rounded-lg.border]:border-amber-200/60 [&_.rounded-xl.border]:border-amber-200/60 [&_.border-dashed]:border-amber-200/60 dark:[&_.rounded-lg.border]:border-amber-900/45 dark:[&_.rounded-xl.border]:border-amber-900/45 dark:[&_.border-dashed]:border-amber-900/45",
+      chevron: "text-amber-600 dark:text-amber-300",
     },
   } satisfies Record<MobileSetupSection, {
     icon: LucideIcon;
@@ -3112,6 +3164,18 @@ export function ExportStudioDialog({
   );
   const showMobilePreviewOverlay = isPhoneWizard && mobileStep !== "preview";
   const mobilePreviewMaxHeight = Math.max(mobileOverlayFrame.height - 116, 96);
+  const desktopStudioGridTemplate = !isMobileLayout ? `${desktopPanelWidth}px 14px minmax(0, 1fr)` : undefined;
+  const handleDesktopPanelResizeStart = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (isMobileLayout) return;
+
+    desktopPanelResizeRef.current = {
+      startX: event.clientX,
+      startWidth: desktopPanelWidth,
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    event.preventDefault();
+  }, [desktopPanelWidth, isMobileLayout]);
   const handleMobileOverlayPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (!showMobilePreviewOverlay || mobileOverlayState === "hidden-temporary") return;
     if ((event.target as HTMLElement).closest("[data-overlay-interactive='true']")) return;
@@ -3563,8 +3627,9 @@ export function ExportStudioDialog({
             ref={layoutViewportRef}
             className={cn(
             "relative flex-1 min-h-0",
-            isMobileLayout ? "flex flex-col overflow-hidden" : "flex flex-col lg:grid lg:grid-cols-[minmax(320px,360px)_minmax(0,1fr)]",
+            isMobileLayout ? "flex flex-col overflow-hidden" : "flex flex-col lg:grid",
           )}
+          style={!isMobileLayout ? { gridTemplateColumns: desktopStudioGridTemplate } : undefined}
           >
             <ExperimentalTypographyWindow
               open={experimentalWindowOpen}
@@ -3585,7 +3650,7 @@ export function ExportStudioDialog({
                     "order-1 flex-1 overflow-hidden",
                     activeMobileSection === "panel" ? "flex" : "hidden",
                   )
-                : "order-2 border-t lg:order-1 lg:border-t-0 lg:border-r",
+                : "order-2 border-t lg:order-1 lg:border-t-0",
             )}>
               <div className={cn("px-3 sm:px-4 border-b border-border/70", isMobileLayout ? "pt-2.5 pb-2.5 space-y-3" : "pt-3 sm:pt-4 pb-3 space-y-3")}>
                 {(supportsSignature || onRestoreDefaultMode) ? (
@@ -3729,6 +3794,22 @@ export function ExportStudioDialog({
                 ) : null}
               </div>
             </div>
+
+            {!isMobileLayout ? (
+              <div className="relative hidden lg:flex lg:order-2 lg:min-h-0 lg:items-stretch lg:justify-center">
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Ubah lebar panel alat studio"
+                  className="group flex w-[14px] cursor-col-resize touch-none items-center justify-center"
+                  onPointerDown={handleDesktopPanelResizeStart}
+                >
+                  <div className="flex h-full w-[6px] items-center justify-center rounded-full bg-border/60 transition-colors group-hover:bg-primary/25">
+                    <GripVertical className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {showMobilePreviewOverlay && false ? (
               <div
@@ -3908,7 +3989,7 @@ export function ExportStudioDialog({
                     "order-1 flex-1 overflow-hidden",
                     activeMobileSection === "preview" ? "flex" : "hidden",
                   )
-                : "order-1 min-h-[18rem] lg:order-2",
+                : "order-1 min-h-[18rem] lg:order-3",
             )}>
               <div className={cn(
                 "flex flex-col gap-3 border-b border-border px-3 sm:px-4",
@@ -4248,7 +4329,7 @@ export function ExportStudioDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Reset tata letak studio?</AlertDialogTitle>
             <AlertDialogDescription>
-              Posisi overlay live preview, zoom, panel aktif, langkah mobile, dan posisi jendela Studio Eksperimen akan dikembalikan ke tata letak awal.
+              Posisi overlay live preview, zoom, panel aktif, langkah mobile, lebar panel alat studio, dan posisi jendela Studio Eksperimen akan dikembalikan ke tata letak awal.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
