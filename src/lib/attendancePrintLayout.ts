@@ -316,6 +316,79 @@ export function formatAttendancePercent(value: number, denominator: number) {
   return `${normalized.replace(".", ",")}%`;
 }
 
+function normalizeInlineAnnotationText(text: string) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function estimateInlineAnnotationCharUnit(char: string) {
+  if (!char.trim()) return 0;
+  if (/[MW@#%&8B]/.test(char)) return 0.9;
+  if (/[A-Z0-9]/.test(char)) return 0.74;
+  if (/[ilI1.,:;!'`]/.test(char)) return 0.38;
+  return 0.62;
+}
+
+function estimateInlineAnnotationTextUnits(text: string) {
+  const normalized = normalizeInlineAnnotationText(text);
+  if (!normalized) return 1;
+  return Array.from(normalized).reduce((sum, char) => sum + (/\s/.test(char) ? 0.34 : estimateInlineAnnotationCharUnit(char)), 0);
+}
+
+export function getAttendanceInlineAnnotationStackedChars(text: string) {
+  const compact = normalizeInlineAnnotationText(text).replace(/\s+/g, "");
+  const chars = Array.from(compact);
+  return chars.length > 0 ? chars : ["-"];
+}
+
+export function resolveAttendanceInlineAnnotationLayout({
+  text,
+  labelStyle,
+  widthMm,
+  heightMm,
+}: {
+  text: string;
+  labelStyle: AttendanceInlineLabelStyle;
+  widthMm: number;
+  heightMm: number;
+}) {
+  const normalizedText = normalizeInlineAnnotationText(text) || "-";
+  const widthPx = Math.max(1, mmToPreviewPx(widthMm));
+  const heightPx = Math.max(1, mmToPreviewPx(heightMm));
+
+  if (labelStyle === "rotate-90") {
+    const usableWidthPx = Math.max(8, widthPx - 5.5);
+    const usableHeightPx = Math.max(14, heightPx - 10);
+    const rawFontPx = Math.min(
+      usableWidthPx * 0.82,
+      usableHeightPx / Math.max(1, estimateInlineAnnotationTextUnits(normalizedText)),
+    );
+    const fontPx = clamp(rawFontPx, Math.min(8.5, rawFontPx), 17.5);
+    return {
+      text: normalizedText,
+      stackedChars: getAttendanceInlineAnnotationStackedChars(normalizedText),
+      fontPx: Number(fontPx.toFixed(2)),
+      lineHeightPx: Number((fontPx * 0.98).toFixed(2)),
+    };
+  }
+
+  const stackedChars = getAttendanceInlineAnnotationStackedChars(normalizedText);
+  const usableWidthPx = Math.max(8, widthPx - 6);
+  const usableHeightPx = Math.max(14, heightPx - 12);
+  const widestCharUnit = Math.max(...stackedChars.map(estimateInlineAnnotationCharUnit), 0.72);
+  const lineHeightFactor = stackedChars.length >= 10 ? 0.96 : 1.02;
+  const rawFontPx = Math.min(
+    usableWidthPx / widestCharUnit,
+    usableHeightPx / Math.max(1, stackedChars.length * lineHeightFactor),
+  );
+  const fontPx = clamp(rawFontPx, Math.min(8.2, rawFontPx), 18.5);
+  return {
+    text: stackedChars.join("\n"),
+    stackedChars,
+    fontPx: Number(fontPx.toFixed(2)),
+    lineHeightPx: Number((fontPx * lineHeightFactor).toFixed(2)),
+  };
+}
+
 function estimateWrappedLineCount(text: string, fontPt: number, widthMm: number) {
   const normalized = text.trim().replace(/\s+/g, " ");
   if (!normalized) return 1;
@@ -849,20 +922,46 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     visibleDays.map((day, index) => [Number.parseInt(day.dateLabel, 10), index]),
   );
   const inlineAnnotations: AttendanceInlineAnnotationRange[] = annotationDisplayMode === "inline-vertical"
-    ? keteranganGroups.flatMap((group) => {
-        const startColumnIndex = visibleDayNumberToIndex.get(group.startDay);
-        const endColumnIndex = visibleDayNumberToIndex.get(group.endDay);
-        if (typeof startColumnIndex !== "number" || typeof endColumnIndex !== "number") return [];
-        return [{
-          key: `${group._kind}-${group.startDay}-${group.endDay}-${group.description}`,
-          text: group.description,
-          tone: group._kind,
-          startDay: group.startDay,
-          endDay: group.endDay,
-          startColumnIndex,
-          endColumnIndex,
-        }];
-      })
+    ? (() => {
+        const explicitAnnotationDays = new Set(
+          [...data.holidayItems, ...data.eventItems].map((item) => item.dayNumber),
+        );
+        const groupedAnnotations = keteranganGroups.flatMap((group) => {
+          const startColumnIndex = visibleDayNumberToIndex.get(group.startDay);
+          const endColumnIndex = visibleDayNumberToIndex.get(group.endDay);
+          if (typeof startColumnIndex !== "number" || typeof endColumnIndex !== "number") return [];
+          return [{
+            key: `${group._kind}-${group.startDay}-${group.endDay}-${group.description}`,
+            text: group.description,
+            tone: group._kind,
+            startDay: group.startDay,
+            endDay: group.endDay,
+            startColumnIndex,
+            endColumnIndex,
+          } satisfies AttendanceInlineAnnotationRange];
+        });
+        const sundayAnnotations = data.days.flatMap((day) => {
+          if (!day.isHoliday) return [];
+          const parsedDate = new Date(day.key);
+          if (Number.isNaN(parsedDate.getTime()) || parsedDate.getDay() !== 0) return [];
+          const dayNumber = Number.parseInt(day.dateLabel, 10);
+          const columnIndex = visibleDayNumberToIndex.get(dayNumber);
+          if (!Number.isInteger(dayNumber) || explicitAnnotationDays.has(dayNumber) || typeof columnIndex !== "number") {
+            return [];
+          }
+          return [{
+            key: `default-sunday-${day.key}`,
+            text: "Hari Minggu",
+            tone: "custom",
+            startDay: dayNumber,
+            endDay: dayNumber,
+            startColumnIndex: columnIndex,
+            endColumnIndex: columnIndex,
+          } satisfies AttendanceInlineAnnotationRange];
+        });
+        return [...groupedAnnotations, ...sundayAnnotations]
+          .sort((left, right) => left.startColumnIndex - right.startColumnIndex || left.endColumnIndex - right.endColumnIndex);
+      })()
     : [];
 
   const summary: AttendancePrintSummary = {
@@ -1332,7 +1431,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     });
   }
 
-  let summaryInfoHeightMm = summaryPageContents[summaryPageContents.length - 1]?.contentHeightMm ?? 0;
+  const summaryInfoHeightMm = summaryPageContents[summaryPageContents.length - 1]?.contentHeightMm ?? 0;
 
   if (useFullPage) {
     const resolvedFullPage = resolveReportPaperSize("full-page", {

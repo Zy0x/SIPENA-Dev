@@ -7,6 +7,7 @@ import {
   buildAttendancePrintLayoutPlan,
   formatAttendancePercent,
   getAttendanceRekapLabel,
+  resolveAttendanceInlineAnnotationLayout,
   type AttendancePrintDataset,
 } from "@/lib/attendancePrintLayout";
 import type { AttendanceHolidayInputItem } from "@/lib/attendanceHolidayGrouping";
@@ -316,6 +317,52 @@ describe("attendance print layout", () => {
     expect(signaturePages).toHaveLength(1);
     expect(signaturePages[0]?.pageNumber).toBe(plan.pages[plan.pages.length - 1]?.pageNumber);
     expect(plan.signaturePlacement?.pageIndex).toBe((signaturePages[0]?.pageNumber ?? 1) - 1);
+  });
+
+  it("adds Sunday inline annotations when no explicit holiday item covers the day", () => {
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(`2026-04-${String(index + 1).padStart(2, "0")}T00:00:00`);
+      return {
+        key: `2026-04-${String(index + 1).padStart(2, "0")}`,
+        dayName: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"][day.getDay()],
+        dateLabel: String(index + 1),
+        isHoliday: day.getDay() === 0,
+        hasEvent: false,
+      };
+    });
+    const rows = createDataset().rows.map((row) => ({
+      ...row,
+      cells: days.map((day) => ({ value: day.isHoliday ? "L" : "H", isHoliday: day.isHoliday, hasEvent: false })),
+      totals: { H: 6, S: 0, I: 0, A: 0, D: 0, total: 0 },
+    }));
+    const plan = buildAttendancePrintLayoutPlan({
+      data: createDataset({
+        days,
+        rows,
+        holidayItems: [],
+        eventItems: [],
+      }),
+      paperSize: "a4",
+      includeSignature: false,
+      forceSinglePage: false,
+      annotationDisplayMode: "inline-vertical",
+      inlineLabelStyle: "rotate-90",
+    });
+
+    expect(plan.inlineAnnotations.some((annotation) => annotation.text === "Hari Minggu" && annotation.startDay === 5)).toBe(true);
+  });
+
+  it("removes spaces from stacked inline annotations so height is used for letters, not blanks", () => {
+    const layout = resolveAttendanceInlineAnnotationLayout({
+      text: "Hari Minggu",
+      labelStyle: "stacked",
+      widthMm: 6,
+      heightMm: 90,
+    });
+
+    expect(layout.stackedChars.includes(" ")).toBe(false);
+    expect(layout.text).toContain("\n");
+    expect(layout.fontPx).toBeGreaterThan(8);
   });
 
   it("builds pdf documents with the same page count as the layout plan", () => {

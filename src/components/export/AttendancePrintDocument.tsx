@@ -29,7 +29,10 @@ import type {
   AttendancePrintLayoutPlan,
   AttendancePrintRow,
 } from "@/lib/attendancePrintLayout";
-import { getAttendanceRekapLabel } from "@/lib/attendancePrintLayout";
+import {
+  getAttendanceRekapLabel,
+  resolveAttendanceInlineAnnotationLayout,
+} from "@/lib/attendancePrintLayout";
 
 // ─── Color palette ─────────────────────────────────────────────────────────
 const COLORS = {
@@ -772,9 +775,12 @@ function InlineAnnotationOverlay({
         const palette = paletteByTone[annotation.tone];
         const leftMm = fixedColumnsWidthMm + (annotation.startColumnIndex * plan.table.dayWidthMm);
         const widthMm = (annotation.endColumnIndex - annotation.startColumnIndex + 1) * plan.table.dayWidthMm;
-        const minFontPx = 7 * 1.333;
-        const fitFontPx = clamp(mm(widthMm) * 0.24, minFontPx, 14);
-        const stackedText = annotation.text.split("").join("\n");
+        const labelLayout = resolveAttendanceInlineAnnotationLayout({
+          text: annotation.text,
+          labelStyle: plan.inlineLabelStyle,
+          widthMm,
+          heightMm: bodyHeightMm,
+        });
 
         return (
           <div
@@ -798,9 +804,9 @@ function InlineAnnotationOverlay({
               style={plan.inlineLabelStyle === "rotate-90"
                 ? {
                     color: palette.color,
-                    fontSize: fitFontPx,
+                    fontSize: labelLayout.fontPx,
                     fontWeight: 700,
-                    lineHeight: 1,
+                    lineHeight: `${labelLayout.lineHeightPx}px`,
                     whiteSpace: "nowrap",
                     textAlign: "center",
                     letterSpacing: 0.2,
@@ -809,15 +815,15 @@ function InlineAnnotationOverlay({
                   }
                 : {
                     color: palette.color,
-                    fontSize: clamp(fitFontPx * 0.84, minFontPx, 12.5),
+                    fontSize: labelLayout.fontPx,
                     fontWeight: 700,
-                    lineHeight: 1.02,
+                    lineHeight: `${labelLayout.lineHeightPx}px`,
                     whiteSpace: "pre-line",
                     textAlign: "center",
-                    letterSpacing: 0.08,
+                    letterSpacing: 0,
                   }}
             >
-              {plan.inlineLabelStyle === "rotate-90" ? annotation.text : stackedText}
+              {labelLayout.text}
             </div>
           </div>
         );

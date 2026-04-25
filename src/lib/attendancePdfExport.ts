@@ -7,11 +7,29 @@ import type {
   AttendancePrintLayoutPlan,
   AttendancePrintPage,
 } from "@/lib/attendancePrintLayout";
-import { getAttendanceRekapLabel } from "@/lib/attendancePrintLayout";
+import {
+  getAttendanceRekapLabel,
+  resolveAttendanceInlineAnnotationLayout,
+} from "@/lib/attendancePrintLayout";
+import { PX_PER_MM } from "@/lib/exportEngine/sharedMetrics";
 import type {
   AttendanceExportMismatch,
   AttendancePdfRuntimeTrace,
 } from "@/lib/attendanceExportDebug";
+
+type PdfOpacityState = { opacity: number };
+type JsPdfWithGState = jsPDF & {
+  GState: new (options: PdfOpacityState) => unknown;
+  setGState: (state: unknown) => jsPDF;
+};
+type AutoTableSpanCell = {
+  content: string;
+  colSpan: number;
+  styles?: {
+    halign?: "center";
+    fontStyle?: "bold";
+  };
+};
 
 const COLORS = {
   header: [37, 99, 235] as [number, number, number],
@@ -39,6 +57,7 @@ const STATUS_COLORS: Record<string, { fill: [number, number, number]; text: [num
 import { ATTENDANCE_SHELL_MM as SHELL_MM } from "@/lib/exportEngine/attendanceShellMetrics";
 
 function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: AttendancePrintLayoutPlan, _page: AttendancePrintPage) {
+  const docWithGState = doc as JsPdfWithGState;
   const bannerY = plan.paper.marginTopMm;
   const contentLeft = plan.paper.marginLeftMm;
   const contentRight = plan.paper.pageWidthMm - plan.paper.marginRightMm;
@@ -67,9 +86,9 @@ function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: Attendan
   const pillX = contentRight - 3 - pillW;
   const pillY = bannerY + 3.0;
   doc.setFillColor(255, 255, 255);
-  doc.setGState(new (doc as any).GState({ opacity: 0.18 }));
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.18 }));
   doc.roundedRect(pillX, pillY, pillW, pillH, 1.2, 1.2, "F");
-  doc.setGState(new (doc as any).GState({ opacity: 1 }));
+  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
   doc.setTextColor(...COLORS.headerText);
   doc.setFont("helvetica", "bold");
   doc.text(classText, pillX + pillPadX, pillY + 3.4);
@@ -99,9 +118,9 @@ function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: Attendan
     const pY = bottomY - 1.6;
 
     doc.setFillColor(255, 255, 255);
-    doc.setGState(new (doc as any).GState({ opacity: 0.16 }));
+    docWithGState.setGState(new docWithGState.GState({ opacity: 0.16 }));
     doc.roundedRect(pX, pY, pW, pH, 2.2, 2.2, "F");
-    doc.setGState(new (doc as any).GState({ opacity: 1 }));
+    docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
     doc.setTextColor(...COLORS.headerText);
 
     if (pill.strong) {
@@ -199,7 +218,7 @@ function buildBodyRows(data: AttendancePrintDataset, plan: AttendancePrintLayout
       + (plan.visibleColumnKeys.has("nisn") ? 1 : 0);
     const dayColCount = plan.visibleDays.length;
 
-    const totalRow: any[] = [];
+    const totalRow: Array<string | AutoTableSpanCell> = [];
     if (fixedColCount > 0) {
       totalRow.push({ content: plan.summaryRows.totalLabel, colSpan: fixedColCount, styles: { halign: "center", fontStyle: "bold" } });
     }
@@ -209,7 +228,7 @@ function buildBodyRows(data: AttendancePrintDataset, plan: AttendancePrintLayout
     plan.visibleRekapKeys.forEach((key) => totalRow.push({ content: String(plan.totals[key]) }));
     body.push(totalRow as unknown as string[]);
 
-    const percentageRow: any[] = [];
+    const percentageRow: Array<string | AutoTableSpanCell> = [];
     if (fixedColCount > 0) {
       percentageRow.push({ content: plan.summaryRows.percentLabel, colSpan: fixedColCount, styles: { halign: "center", fontStyle: "bold" } });
     }
@@ -445,19 +464,55 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     custom: { fill: [180, 83, 9] as [number, number, number], stroke: [253, 230, 138] as [number, number, number] },
     event: { fill: [109, 40, 217] as [number, number, number], stroke: [221, 214, 254] as [number, number, number] },
   } as const;
+  const previewPxToMm = (value: number) => value / PX_PER_MM;
+  const previewPxToPt = (value: number) => value * 0.75;
 
   const resolveRotateFontPt = (text: string, widthMm: number, heightMm: number) => {
-    let fontPt = Math.min(11, Math.max(5.8, widthMm - 1.4));
-    while (fontPt > 5.5 && doc.getTextWidth(text) > Math.max(8, heightMm - 4)) {
-      fontPt -= 0.25;
+    const layout = resolveAttendanceInlineAnnotationLayout({
+      text,
+      labelStyle: "rotate-90",
+      widthMm,
+      heightMm,
+    });
+    let fontPt = previewPxToPt(layout.fontPx);
+    doc.setFontSize(fontPt);
+    while (fontPt > 4.8 && doc.getTextWidth(layout.text) > Math.max(8, heightMm - 4.2)) {
+      fontPt -= 0.2;
       doc.setFontSize(fontPt);
     }
-    return Number(fontPt.toFixed(2));
+    return {
+      text: layout.text,
+      fontPt: Number(fontPt.toFixed(2)),
+    };
   };
-  const resolveStackedFontPt = (chars: string[], widthMm: number, heightMm: number) => {
-    const usableHeight = Math.max(12, heightMm - 4);
-    const perLineHeightMm = usableHeight / Math.max(chars.length, 1);
-    return Number(Math.max(5.2, Math.min(widthMm - 1.4, perLineHeightMm * 1.9)).toFixed(2));
+  const resolveStackedLayout = (text: string, widthMm: number, heightMm: number) => {
+    const layout = resolveAttendanceInlineAnnotationLayout({
+      text,
+      labelStyle: "stacked",
+      widthMm,
+      heightMm,
+    });
+    let fontPt = previewPxToPt(layout.fontPx);
+    doc.setFontSize(fontPt);
+    let widestCharMm = Math.max(...layout.stackedChars.map((char) => doc.getTextWidth(char)), 0);
+    let lineHeightMm = Math.max(1.75, previewPxToMm(layout.lineHeightPx));
+    while (
+      fontPt > 4.6
+      && (
+        widestCharMm > Math.max(1.4, widthMm - 1.1)
+        || lineHeightMm * Math.max(layout.stackedChars.length, 1) > Math.max(8, heightMm - 3.5)
+      )
+    ) {
+      fontPt -= 0.2;
+      doc.setFontSize(fontPt);
+      widestCharMm = Math.max(...layout.stackedChars.map((char) => doc.getTextWidth(char)), 0);
+      lineHeightMm = Math.max(1.7, fontPt * 0.34 + 0.34);
+    }
+    return {
+      chars: layout.stackedChars,
+      fontPt: Number(fontPt.toFixed(2)),
+      lineHeightMm: Number(lineHeightMm.toFixed(2)),
+    };
   };
 
   plan.inlineAnnotations.forEach((annotation) => {
@@ -475,9 +530,8 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     doc.setFont("helvetica", "bold");
 
     if (plan.inlineLabelStyle === "stacked") {
-      const chars = annotation.text.replace(/\s+/g, " ").split("").filter((char) => char !== " ");
-      const fontPt = resolveStackedFontPt(chars, widthMm, bodyHeightMm);
-      const lineHeightMm = Math.max(2.3, fontPt * 0.34 + 0.4);
+      const stackedLayout = resolveStackedLayout(annotation.text, widthMm, bodyHeightMm);
+      const { chars, fontPt, lineHeightMm } = stackedLayout;
       const totalHeightMm = lineHeightMm * Math.max(chars.length, 1);
       let cursorY = centerY - (totalHeightMm / 2) + lineHeightMm * 0.78;
       doc.setFontSize(fontPt);
@@ -488,9 +542,10 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
       return;
     }
 
-    const fontPt = resolveRotateFontPt(annotation.text, widthMm, bodyHeightMm);
+    const rotateLayout = resolveRotateFontPt(annotation.text, widthMm, bodyHeightMm);
+    const { text, fontPt } = rotateLayout;
     doc.setFontSize(fontPt);
-    doc.text(annotation.text, centerX, centerY, {
+    doc.text(text, centerX, centerY, {
       align: "center",
       baseline: "middle",
       angle: 90,

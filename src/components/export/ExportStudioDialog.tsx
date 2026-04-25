@@ -1859,7 +1859,7 @@ function PositionPanel({
             <Label className="text-[11px] font-semibold">Posisi awal</Label>
             <div
               className="grid gap-1"
-              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10rem), 1fr))" }}
             >
               {([
                 { key: "bottom-left", label: "Bawah kiri" },
@@ -2357,12 +2357,12 @@ function StylePanel({
                   key={preset.id}
                   variant={isPresetActive(preset.id) ? "default" : "outline"}
                   size="sm"
-                  className="min-h-[5.25rem] min-w-0 items-start justify-start whitespace-normal break-words rounded-xl px-3 py-2 text-left text-[10px] leading-relaxed"
+                  className="min-h-[5.85rem] min-w-0 items-start justify-start whitespace-normal break-words rounded-xl px-3 py-2.5 text-left text-[11px] leading-relaxed sm:min-h-[5.5rem]"
                   title={`Gunakan preset style ${preset.label}. ${preset.desc}`}
                   onClick={() => applyPreset(preset.id)}
                 >
-                  <span className="w-full whitespace-normal break-words font-medium leading-relaxed">{preset.label}</span>
-                  <span className="w-full whitespace-normal break-words text-[8px] leading-relaxed opacity-70">{preset.desc}</span>
+                  <span className="w-full whitespace-normal break-words text-[11px] font-semibold leading-relaxed sm:text-xs">{preset.label}</span>
+                  <span className="w-full whitespace-normal break-words text-[9px] leading-relaxed opacity-75 sm:text-[10px]">{preset.desc}</span>
                 </Button>
               ))}
             </div>
@@ -3039,8 +3039,8 @@ export function ExportStudioDialog({
     try {
       await saveCurrentSignature();
       success("Pengaturan signature disimpan");
-    } catch (error: any) {
-      showError("Gagal menyimpan", error?.message || "Terjadi kesalahan saat menyimpan signature.");
+    } catch (error: unknown) {
+      showError("Gagal menyimpan", error instanceof Error ? error.message : "Terjadi kesalahan saat menyimpan signature.");
     }
   }, [saveCurrentSignature, showError, success]);
 
@@ -3059,8 +3059,8 @@ export function ExportStudioDialog({
         downloadPreviewPng,
       });
       setOpen(false);
-    } catch (error: any) {
-      showError("Ekspor gagal", error?.message || "Terjadi kesalahan saat mengekspor file.");
+    } catch (error: unknown) {
+      showError("Ekspor gagal", error instanceof Error ? error.message : "Terjadi kesalahan saat mengekspor file.");
     }
   }, [autoFitOnePage, currentPaperSize, documentStyle, downloadPreviewPng, draft, includeSignature, onExport, saveCurrentSignature, selectedFormat, showError, supportsSignature]);
   const mobileWizardSteps = useMemo(
@@ -3108,13 +3108,13 @@ export function ExportStudioDialog({
     },
   ] as const;
   const renderStudioUtilityActions = (compact = false) => (
-    <div className={cn("flex gap-2", compact ? "flex-col" : "flex-wrap")}>
+    <div className={cn("flex flex-wrap gap-2", compact && "w-full")}>
       {onRestoreDefaultMode ? (
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className={cn("h-8 rounded-lg px-3 text-[10px] sm:text-xs", compact && "w-full")}
+          className={cn("h-8 rounded-lg px-3 text-[10px] sm:text-xs", compact && "flex-1")}
           onClick={handleRestoreDefaultMode}
           title="Kembalikan seluruh studio ke mode default bawaan web, tanpa mengubah ukuran kertas dan identitas signature."
         >
@@ -3126,7 +3126,7 @@ export function ExportStudioDialog({
         type="button"
         variant="outline"
         size="sm"
-        className={cn("h-8 rounded-lg px-3 text-[10px] sm:text-xs", compact && "w-full")}
+        className={cn("h-8 rounded-lg px-3 text-[10px] sm:text-xs", compact && "flex-1")}
         onClick={() => setResetLayoutConfirmOpen(true)}
         title="Rapikan ulang layout studio ke susunan awal panel, preview, overlay, dan ukuran panel."
       >
@@ -4073,19 +4073,19 @@ export function ExportStudioDialog({
               <div className={cn(
                 "px-3 sm:px-4 border-b border-border/70",
                 isMobileLayout
-                  ? "pt-2.5 pb-2.5 space-y-3"
+                  ? "pt-2 pb-2 space-y-2"
                   : "relative z-10 bg-background/92 pt-3 sm:pt-4 pb-3 space-y-3 shadow-[0_18px_28px_-24px_rgba(15,23,42,0.8)] backdrop-blur",
               )}>
                 {(supportsSignature || onRestoreDefaultMode) ? (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {supportsSignature ? (
                       <div className={cn(
-                        "flex items-center justify-between rounded-2xl border border-border bg-background",
-                        isMobileLayout ? "p-3" : cn("p-3.5", activeDesktopPanelTone.card),
+                        "flex items-center justify-between gap-3 rounded-2xl border border-border bg-background",
+                        isMobileLayout ? "px-2.5 py-2" : cn("p-3.5", activeDesktopPanelTone.card),
                       )}>
-                        <div>
+                        <div className="min-w-0">
                           <Label className="text-xs font-semibold text-foreground">Signature</Label>
-                          <p className="mt-1 text-[10px] text-muted-foreground">
+                          <p className="mt-0.5 text-[9px] leading-snug text-muted-foreground sm:text-[10px]">
                             Aktifkan bila file ekspor perlu blok signature otomatis.
                           </p>
                         </div>
@@ -4094,15 +4094,15 @@ export function ExportStudioDialog({
                     ) : null}
                     <div className={cn(
                       "rounded-2xl border border-border bg-background/80",
-                      isMobileLayout ? "p-3" : cn("px-3.5 py-3", activeDesktopPanelTone.card),
+                      isMobileLayout ? "px-2.5 py-2" : cn("px-3.5 py-3", activeDesktopPanelTone.card),
                     )}>
                       <div className={cn(
                         "flex gap-2",
-                        isMobileLayout ? "flex-col" : "flex-wrap items-center justify-between",
+                        isMobileLayout ? "flex-col gap-1.5" : "flex-wrap items-center justify-between",
                       )}>
                         <div className="min-w-0">
                           <p className="text-[11px] font-semibold text-foreground">Aksi studio</p>
-                          <p className="mt-1 text-[10px] text-muted-foreground">
+                          <p className="mt-0.5 text-[9px] leading-snug text-muted-foreground sm:text-[10px]">
                             Gunakan untuk mengembalikan mode awal atau merapikan layout studio.
                           </p>
                         </div>
@@ -4124,7 +4124,7 @@ export function ExportStudioDialog({
                     </div>
                     <p className="text-[11px] text-muted-foreground sm:text-xs">Buka panel yang ingin Anda atur.</p>
                   </div>
-                  <div className={cn("-mx-1 px-1 pb-1", isMobileLayout ? "overflow-hidden" : "overflow-x-auto")}>
+                  <div className={cn("-mx-1 px-1 pt-1 pb-1", isMobileLayout ? "overflow-visible" : "overflow-x-auto overflow-y-visible")}>
                     {isMobileLayout ? (
                       <StudioSectionTabs
                         sections={panelSections}
@@ -4145,7 +4145,7 @@ export function ExportStudioDialog({
                               variant="outline"
                               size="sm"
                               className={cn(
-                                "h-auto min-h-9 min-w-fit shrink-0 rounded-full px-3 py-2 justify-start gap-1.5 text-[10px] leading-relaxed sm:text-xs",
+                                "h-auto min-h-9 min-w-fit shrink-0 rounded-full px-3 py-2 justify-start gap-1.5 text-[10px] leading-tight sm:text-xs",
                                 !isMobileLayout && (activePanel === id ? activeDesktopPanelTone.activeTab : activeDesktopPanelTone.idleTab),
                                 !enabled && "opacity-50",
                               )}
