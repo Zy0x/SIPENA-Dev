@@ -230,6 +230,15 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+const MOBILE_OVERLAY_DEFAULT_FRAME = {
+  left: 12,
+  top: 120,
+  width: 300,
+  height: 236,
+};
+
+type MobileOverlayFrame = typeof MOBILE_OVERLAY_DEFAULT_FRAME;
+
 function getDefaultSignaturePositionState() {
   return {
     signatureAlignment: "right" as const,
@@ -2167,6 +2176,12 @@ export function ExportStudioDialog({
   type ActivePanel = "format" | "columns" | "signers" | "style" | "position";
   type MobileWizardStep = "format" | "setup" | "preview";
   type MobileSetupSection = "document" | "data" | "signature";
+  type MobileOverlayInteraction = {
+    mode: "drag" | "resize";
+    originX: number;
+    originY: number;
+    startFrame: MobileOverlayFrame;
+  };
 
   const { success, error: showError } = useEnhancedToast();
   const [open, setOpen] = useState(false);
@@ -2181,7 +2196,7 @@ export function ExportStudioDialog({
   const [mobileSetupSection, setMobileSetupSection] = useState<MobileSetupSection>("document");
   const [mobileOverlayState, setMobileOverlayState] = useState<"expanded" | "minimized" | "hidden-temporary">("hidden-temporary");
   const [mobileOverlayZoom, setMobileOverlayZoom] = useState(30);
-  const [mobileOverlayFrame] = useState({ left: 0, top: 0, width: 300, height: 236 });
+  const [mobileOverlayFrame, setMobileOverlayFrame] = useState<MobileOverlayFrame>(MOBILE_OVERLAY_DEFAULT_FRAME);
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
@@ -2189,6 +2204,7 @@ export function ExportStudioDialog({
   const mobileOverlayViewportRef = useRef<HTMLDivElement>(null);
   const mobileOverlayCaptureRef = useRef<HTMLDivElement>(null);
   const mobileOverlayCardRef = useRef<HTMLDivElement>(null);
+  const mobileOverlayInteractionRef = useRef<MobileOverlayInteraction | null>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
   const hasOpenedRef = useRef(false);
@@ -2201,6 +2217,35 @@ export function ExportStudioDialog({
   const usesTabbedMobileStudio = isMobileLayout && !isPhoneWizard;
   const isCompactLayout = layoutWidth < 880 || viewport.isPhone;
   const isNarrowLayout = layoutWidth < 640 || viewport.isCompactPhone;
+  const getMobileOverlayBounds = useCallback(() => {
+    const boundsNode = layoutViewportRef.current ?? dialogContentRef.current;
+    const rect = boundsNode?.getBoundingClientRect();
+
+    return {
+      width: rect?.width ?? 360,
+      height: rect?.height ?? 640,
+    };
+  }, []);
+  const clampMobileOverlayFrame = useCallback((frame: MobileOverlayFrame) => {
+    const bounds = getMobileOverlayBounds();
+    const maxWidth = Math.max(240, Math.min(360, Math.floor(bounds.width - 16)));
+    const maxHeight = Math.max(184, Math.floor(bounds.height - 16));
+    const width = clamp(frame.width, 240, maxWidth);
+    const height = clamp(frame.height, 184, maxHeight);
+    const left = clamp(frame.left, 8, Math.max(8, Math.floor(bounds.width - width - 8)));
+    const top = clamp(frame.top, 8, Math.max(8, Math.floor(bounds.height - height - 8)));
+
+    return { left, top, width, height };
+  }, [getMobileOverlayBounds]);
+  const getDefaultMobileOverlayFrame = useCallback(() => {
+    const bounds = getMobileOverlayBounds();
+    const width = clamp(Math.round(bounds.width * 0.78), 240, Math.max(240, Math.min(336, Math.floor(bounds.width - 16))));
+    const height = clamp(Math.round(bounds.height * 0.34), 184, Math.max(184, Math.min(276, Math.floor(bounds.height - 16))));
+    const top = clamp(bounds.height - height - 92, 72, Math.max(72, bounds.height - height - 8));
+    const left = clamp(bounds.width - width - 8, 8, Math.max(8, bounds.width - width - 8));
+
+    return clampMobileOverlayFrame({ left, top, width, height });
+  }, [clampMobileOverlayFrame, getMobileOverlayBounds]);
 
   useEffect(() => {
     if (!open && signatureConfig) {
@@ -2215,16 +2260,22 @@ export function ExportStudioDialog({
       setActiveMobileSection("panel");
       setMobileStep("format");
       setMobileSetupSection("document");
+      setMobileOverlayState("expanded");
+      setMobileOverlayZoom(34);
       setLiveEditMode(false);
       setHighlightTarget(null);
+      requestAnimationFrame(() => {
+        setMobileOverlayFrame(getDefaultMobileOverlayFrame());
+      });
       hasOpenedRef.current = true;
     }
 
     if (!open) {
       hasOpenedRef.current = false;
       setExperimentalWindowOpen(false);
+      mobileOverlayInteractionRef.current = null;
     }
-  }, [open, signatureConfig]);
+  }, [getDefaultMobileOverlayFrame, open, signatureConfig]);
 
   useEffect(() => {
     if (!supportsSignature) return;
@@ -2253,6 +2304,62 @@ export function ExportStudioDialog({
       return prev;
     });
   }, [layoutWidth, open]);
+
+  useEffect(() => {
+    if (!open || !isPhoneWizard) return;
+
+    if (mobileStep === "preview") {
+      setMobileOverlayState("hidden-temporary");
+      return;
+    }
+
+    setMobileOverlayState(mobileStep === "format" ? "expanded" : "minimized");
+  }, [isPhoneWizard, mobileStep, open]);
+
+  useEffect(() => {
+    if (!open || !isPhoneWizard) return;
+    setMobileOverlayFrame((prev) => clampMobileOverlayFrame(prev));
+  }, [clampMobileOverlayFrame, isPhoneWizard, layoutWidth, open, viewport.isCompactPhone]);
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const interaction = mobileOverlayInteractionRef.current;
+      if (!interaction) return;
+
+      const deltaX = event.clientX - interaction.originX;
+      const deltaY = event.clientY - interaction.originY;
+
+      setMobileOverlayFrame(() => {
+        if (interaction.mode === "drag") {
+          return clampMobileOverlayFrame({
+            ...interaction.startFrame,
+            left: interaction.startFrame.left + deltaX,
+            top: interaction.startFrame.top + deltaY,
+          });
+        }
+
+        return clampMobileOverlayFrame({
+          ...interaction.startFrame,
+          width: interaction.startFrame.width + deltaX,
+          height: interaction.startFrame.height + deltaY,
+        });
+      });
+    };
+
+    const handlePointerUp = () => {
+      mobileOverlayInteractionRef.current = null;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [clampMobileOverlayFrame]);
 
   const activeFormat = useMemo(
     () => formats.find((formatOption) => formatOption.id === selectedFormat) ?? formats[0],
@@ -2640,6 +2747,43 @@ export function ExportStudioDialog({
       Posisi hanya bisa diatur saat penanda tangan aktif.
     </div>
   );
+  const mobileSetupSectionTone = {
+    document: {
+      icon: Sparkles,
+      card: "border-sky-200/80 bg-sky-50/80 dark:border-sky-900/60 dark:bg-sky-950/25",
+      header: "bg-sky-100/70 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-950/50",
+      iconWrap: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
+      badge: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
+      content: "border-sky-100/80 bg-white/70 dark:border-sky-900/60 dark:bg-slate-950/30",
+      chevron: "text-sky-600 dark:text-sky-300",
+    },
+    data: {
+      icon: Columns3,
+      card: "border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-900/60 dark:bg-emerald-950/25",
+      header: "bg-emerald-100/70 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/50",
+      iconWrap: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
+      badge: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
+      content: "border-emerald-100/80 bg-white/70 dark:border-emerald-900/60 dark:bg-slate-950/30",
+      chevron: "text-emerald-600 dark:text-emerald-300",
+    },
+    signature: {
+      icon: PenTool,
+      card: "border-amber-200/80 bg-amber-50/80 dark:border-amber-900/60 dark:bg-amber-950/25",
+      header: "bg-amber-100/70 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/50",
+      iconWrap: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
+      badge: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
+      content: "border-amber-100/80 bg-white/70 dark:border-amber-900/60 dark:bg-slate-950/30",
+      chevron: "text-amber-600 dark:text-amber-300",
+    },
+  } satisfies Record<MobileSetupSection, {
+    icon: LucideIcon;
+    card: string;
+    header: string;
+    iconWrap: string;
+    badge: string;
+    content: string;
+    chevron: string;
+  }>;
 
   const renderPhoneSetupSection = ({
     id,
@@ -2657,29 +2801,40 @@ export function ExportStudioDialog({
     status?: string;
   }) => {
     const openSection = mobileSetupSection === id && !disabled;
+    const tone = mobileSetupSectionTone[id];
+    const SectionIcon = tone.icon;
 
     return (
-      <div className={cn("overflow-hidden rounded-2xl border border-border bg-background", disabled && "opacity-70")}>
+      <div className={cn("overflow-hidden rounded-2xl border shadow-sm transition-colors", tone.card, disabled && "opacity-80 saturate-75")}>
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          className={cn(
+            "flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors",
+            tone.header,
+            openSection && "shadow-[inset_0_-1px_0_rgba(255,255,255,0.35)]",
+          )}
           onClick={() => !disabled && setMobileSetupSection(id)}
         >
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold text-foreground">{title}</p>
-              {status ? (
-                <span className="rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  {status}
-                </span>
-              ) : null}
+          <div className="flex min-w-0 items-start gap-3">
+            <div className={cn("mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border shadow-sm", tone.iconWrap)}>
+              <SectionIcon className="h-4 w-4" />
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{description}</p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-foreground">{title}</p>
+                {status ? (
+                  <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-semibold", tone.badge)}>
+                    {status}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{description}</p>
+            </div>
           </div>
-          <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", openSection && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", tone.chevron, openSection && "rotate-180")} />
         </button>
         {openSection ? (
-          <div className="border-t border-border bg-muted/20 px-3 py-3">
+          <div className={cn("border-t px-3 py-3", tone.content)}>
             <div className="space-y-3">
               {children}
             </div>
@@ -2845,12 +3000,255 @@ export function ExportStudioDialog({
       </div>
     </div>
   );
-  const showMobilePreviewOverlay = false;
-  const mobilePreviewMaxHeight = 0;
-  const handleMobileOverlayPointerDown = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {}, []);
-  const handleMobileOverlayResizePointerDown = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {}, []);
+  const showMobilePreviewOverlay = isPhoneWizard && mobileStep !== "preview";
+  const mobilePreviewMaxHeight = Math.max(mobileOverlayFrame.height - 116, 96);
+  const handleMobileOverlayPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!showMobilePreviewOverlay || mobileOverlayState === "hidden-temporary") return;
+    if ((event.target as HTMLElement).closest("[data-overlay-interactive='true']")) return;
+
+    mobileOverlayInteractionRef.current = {
+      mode: "drag",
+      originX: event.clientX,
+      originY: event.clientY,
+      startFrame: mobileOverlayFrame,
+    };
+  }, [mobileOverlayFrame, mobileOverlayState, showMobilePreviewOverlay]);
+  const handleMobileOverlayResizePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+
+    if (!showMobilePreviewOverlay || mobileOverlayState !== "expanded") return;
+
+    mobileOverlayInteractionRef.current = {
+      mode: "resize",
+      originX: event.clientX,
+      originY: event.clientY,
+      startFrame: mobileOverlayFrame,
+    };
+  }, [mobileOverlayFrame, mobileOverlayState, showMobilePreviewOverlay]);
   const handleMobileOverlayPointerMove = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {}, []);
-  const handleMobileOverlayPointerUp = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {}, []);
+  const handleMobileOverlayPointerUp = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {
+    mobileOverlayInteractionRef.current = null;
+  }, []);
+  const restoreMobileOverlay = useCallback(() => {
+    setMobileOverlayState(mobileStep === "format" ? "expanded" : "minimized");
+  }, [mobileStep]);
+  const renderMobilePreviewOverlay = () => {
+    if (!showMobilePreviewOverlay) return null;
+
+    if (mobileOverlayState === "hidden-temporary") {
+      return (
+        <div className="pointer-events-none absolute inset-0 z-20">
+          <div className="pointer-events-auto absolute bottom-24 right-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-full border-primary/20 bg-background/95 px-3 text-[10px] shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/90"
+              onClick={restoreMobileOverlay}
+            >
+              <Eye className="mr-1.5 h-3.5 w-3.5 text-primary" />
+              Tampilkan Preview
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="pointer-events-none absolute inset-0 z-20">
+        <div
+          ref={mobileOverlayCardRef}
+          className="pointer-events-auto absolute overflow-hidden rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
+          style={{
+            left: `${mobileOverlayFrame.left}px`,
+            top: `${mobileOverlayFrame.top}px`,
+            width: `${mobileOverlayFrame.width}px`,
+            height: mobileOverlayState === "expanded" ? `${mobileOverlayFrame.height}px` : "auto",
+          }}
+          onPointerDown={handleMobileOverlayPointerDown}
+        >
+          <div className="flex items-start justify-between gap-2 px-1 pb-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5 text-primary" />
+                <p className="text-[10px] font-semibold text-foreground">Preview Live</p>
+              </div>
+              <p className="mt-1 text-[9px] leading-relaxed text-muted-foreground">
+                {activeFormat?.label || "Format"} • {currentPaperLabel}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              {supportsSignature && includeSignature ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  data-overlay-interactive="true"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={handleResetSignaturePosition}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                data-overlay-interactive="true"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={() => setMobileOverlayState((prev) => (prev === "expanded" ? "minimized" : "expanded"))}
+              >
+                {mobileOverlayState === "expanded" ? (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full"
+                data-overlay-interactive="true"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={() => setMobileOverlayState("hidden-temporary")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+
+          {mobileOverlayState === "expanded" ? (
+            <>
+              <div className="pointer-events-auto flex min-h-0 flex-col gap-2">
+                <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1" data-overlay-interactive="true">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-full"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() => setMobileOverlayZoom((prev) => clamp(prev - 10, 15, 200))}
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </Button>
+                  <div className="flex min-w-0 flex-1 items-center justify-center rounded-full border border-border px-2 text-[10px] font-medium text-foreground">
+                    {mobileOverlayZoom}%
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-full"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() => setMobileOverlayZoom(clamp(effectivePreviewZoom, 15, 200))}
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-full"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() => setMobileOverlayZoom((prev) => clamp(prev + 10, 15, 200))}
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                <div
+                  ref={mobileOverlayViewportRef}
+                  data-overlay-interactive="true"
+                  className="overflow-auto rounded-[18px] border border-border bg-muted/30 p-1"
+                  style={{ height: `${mobilePreviewMaxHeight}px` }}
+                >
+                  {canPreview ? (
+                    <div className="flex min-h-full items-start justify-start">
+                      <div
+                        className="origin-top-left"
+                        style={{
+                          transform: `scale(${mobileOverlayZoom / 100})`,
+                          transformOrigin: "top left",
+                          width: "fit-content",
+                        }}
+                      >
+                        {renderPreviewContent(mobileOverlayCaptureRef)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full min-h-[96px] items-center justify-center rounded-2xl border border-dashed border-border bg-background/70 p-4 text-center text-[10px] leading-relaxed text-muted-foreground">
+                      {noPreviewMessage}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pointer-events-auto mt-2 grid grid-cols-2 gap-2" data-overlay-interactive="true">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-xl text-[10px]"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => setMobileOverlayState("minimized")}
+                >
+                  Ciutkan
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-9 rounded-xl text-[10px]"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => setMobileStep("preview")}
+                >
+                  Buka Preview
+                </Button>
+              </div>
+
+              <div
+                data-overlay-interactive="true"
+                className="pointer-events-auto absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm"
+                onPointerDown={handleMobileOverlayResizePointerDown}
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </div>
+            </>
+          ) : (
+            <div className="pointer-events-auto flex items-center justify-between gap-2 rounded-2xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-[10px] text-muted-foreground">
+              <span className="line-clamp-2">Preview diciutkan agar area pengaturan tetap lega saat Anda mengatur studio.</span>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 rounded-full px-2 text-[10px]"
+                  data-overlay-interactive="true"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => setMobileOverlayState("expanded")}
+                >
+                  Lihat
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 rounded-full px-2 text-[10px]"
+                  data-overlay-interactive="true"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => setMobileStep("preview")}
+                >
+                  Preview
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -2873,7 +3271,7 @@ export function ExportStudioDialog({
 
           {isPhoneWizard ? (
             <>
-              <div ref={layoutViewportRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div ref={layoutViewportRef} className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                 <ExperimentalTypographyWindow
                   open={experimentalWindowOpen}
                   onOpenChange={setExperimentalWindowOpen}
@@ -3021,6 +3419,7 @@ export function ExportStudioDialog({
                     )
                   )}
                 />
+                {renderMobilePreviewOverlay()}
               </div>
             </>
           ) : (
