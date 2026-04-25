@@ -1603,8 +1603,16 @@ function PositionPanel({
   return (
     <>
       <div className="rounded-xl border border-border bg-background/50 p-3">
-        <p className="text-[11px] font-semibold text-foreground">Posisi Tanda Tangan</p>
-        <p className="mt-1 text-[10px] text-muted-foreground">Seret tanda tangan langsung di preview, lalu rapikan lagi memakai offset dan kontrol presisi di bawah ini.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold text-foreground">Posisi Tanda Tangan</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Seret tanda tangan langsung di preview, lalu rapikan lagi memakai offset dan kontrol presisi di bawah ini.</p>
+          </div>
+          <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-[10px]" onClick={resetPosition}>
+            <RotateCcw className="h-3 w-3" />
+            Default
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-1.5">
@@ -1717,7 +1725,7 @@ function PositionPanel({
 
       <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs" onClick={resetPosition}>
         <RotateCcw className="h-3 w-3" />
-        Reset posisi
+        Reset posisi TTD
       </Button>
     </>
   );
@@ -2162,7 +2170,7 @@ export function ExportStudioDialog({
   const [activeMobileSection, setActiveMobileSection] = useState<"panel" | "preview">("panel");
   const [mobileOverlayState, setMobileOverlayState] = useState<StudioOverlayState>("expanded");
   const [mobileOverlayZoom, setMobileOverlayZoom] = useState(30);
-  const [mobileOverlayOffset, setMobileOverlayOffset] = useState({ x: 0, y: 0 });
+  const [mobileOverlayFrame, setMobileOverlayFrame] = useState({ left: 0, top: 0, width: 288, height: 240 });
   const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
   const previewCaptureRef = useRef<HTMLDivElement>(null);
@@ -2171,7 +2179,16 @@ export function ExportStudioDialog({
   const mobileOverlayCardRef = useRef<HTMLDivElement>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
-  const mobileOverlayDragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const mobileOverlayDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originLeft: number;
+    originTop: number;
+    originWidth: number;
+    originHeight: number;
+    mode: "move" | "resize";
+  } | null>(null);
   const hasOpenedRef = useRef(false);
   const [previewViewportWidth, setPreviewViewportWidth] = useState(0);
   const [previewContentWidth, setPreviewContentWidth] = useState(0);
@@ -2195,7 +2212,7 @@ export function ExportStudioDialog({
       setActiveMobileSection("panel");
       setMobileOverlayState("expanded");
       setMobileOverlayZoom(30);
-      setMobileOverlayOffset({ x: 0, y: 0 });
+      setMobileOverlayFrame({ left: 0, top: 0, width: 288, height: 240 });
       setLiveEditMode(false);
       setHighlightTarget(null);
       hasOpenedRef.current = true;
@@ -2245,6 +2262,24 @@ export function ExportStudioDialog({
 
     setMobileOverlayState((prev) => (prev === "hidden-temporary" ? "expanded" : prev));
   }, [activeMobileSection, activePanel, isMobileLayout, open]);
+
+  useEffect(() => {
+    if (!open || !isMobileLayout) return;
+    const viewportNode = layoutViewportRef.current;
+    if (!viewportNode) return;
+
+    const nextWidth = clamp(Math.round(viewportNode.clientWidth * (viewport.isCompactPhone ? 0.78 : 0.46)), 220, 380);
+    const nextHeight = clamp(Math.round(viewportNode.clientHeight * 0.34), 170, 340);
+    const nextLeft = Math.max(8, viewportNode.clientWidth - nextWidth - 12);
+    const nextTop = Math.max(8, viewportNode.clientHeight - nextHeight - 18);
+
+    setMobileOverlayFrame((prev) => ({
+      left: clamp(prev.left || nextLeft, 8, Math.max(8, viewportNode.clientWidth - prev.width - 8)),
+      top: clamp(prev.top || nextTop, 8, Math.max(8, viewportNode.clientHeight - prev.height - 8)),
+      width: clamp(prev.width || nextWidth, 220, Math.max(220, viewportNode.clientWidth - 16)),
+      height: clamp(prev.height || nextHeight, 170, Math.max(170, viewportNode.clientHeight - 16)),
+    }));
+  }, [isMobileLayout, open, viewport.viewportHeight, viewport.viewportWidth, viewport.isCompactPhone]);
 
   const activeFormat = useMemo(
     () => formats.find((formatOption) => formatOption.id === selectedFormat) ?? formats[0],
@@ -2432,35 +2467,72 @@ export function ExportStudioDialog({
     activeMobileSection === "panel" &&
     canPreview &&
     mobileOverlayState !== "hidden-temporary";
-  const mobileOverlayBottom = isNarrowLayout ? 96 : 108;
-  const mobilePreviewMaxHeight = Math.max(180, Math.min(viewportHeight * 0.26, 240));
+  const mobilePreviewMaxHeight = Math.max(160, Math.min(mobileOverlayFrame.height - 84, viewportHeight * 0.42));
+  const clampMobileOverlayFrame = useCallback((next: { left: number; top: number; width: number; height: number }) => {
+    const viewportNode = layoutViewportRef.current;
+    if (!viewportNode) return next;
+    const minWidth = 220;
+    const minHeight = 170;
+    const maxWidth = Math.max(minWidth, viewportNode.clientWidth - 12);
+    const maxHeight = Math.max(minHeight, viewportNode.clientHeight - 12);
+    const width = clamp(next.width, minWidth, maxWidth);
+    const height = clamp(next.height, minHeight, maxHeight);
+    const left = clamp(next.left, 6, Math.max(6, viewportNode.clientWidth - width - 6));
+    const top = clamp(next.top, 6, Math.max(6, viewportNode.clientHeight - height - 6));
+    return { left, top, width, height };
+  }, []);
   const handleMobileOverlayPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!isMobileLayout || mobileOverlayState !== "expanded") return;
+    if (!isMobileLayout) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("[data-overlay-interactive='true']")) return;
     mobileOverlayDragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: mobileOverlayOffset.x,
-      originY: mobileOverlayOffset.y,
+      originLeft: mobileOverlayFrame.left,
+      originTop: mobileOverlayFrame.top,
+      originWidth: mobileOverlayFrame.width,
+      originHeight: mobileOverlayFrame.height,
+      mode: "move",
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-  }, [isMobileLayout, mobileOverlayOffset.x, mobileOverlayOffset.y, mobileOverlayState]);
+  }, [isMobileLayout, mobileOverlayFrame.height, mobileOverlayFrame.left, mobileOverlayFrame.top, mobileOverlayFrame.width]);
+  const handleMobileOverlayResizePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isMobileLayout) return;
+    event.stopPropagation();
+    mobileOverlayDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originLeft: mobileOverlayFrame.left,
+      originTop: mobileOverlayFrame.top,
+      originWidth: mobileOverlayFrame.width,
+      originHeight: mobileOverlayFrame.height,
+      mode: "resize",
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, [isMobileLayout, mobileOverlayFrame.height, mobileOverlayFrame.left, mobileOverlayFrame.top, mobileOverlayFrame.width]);
   const handleMobileOverlayPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const dragState = mobileOverlayDragRef.current;
     if (!dragState || dragState.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - dragState.startX;
+    const deltaY = event.clientY - dragState.startY;
 
-    const layoutRect = layoutViewportRef.current?.getBoundingClientRect();
-    const cardRect = mobileOverlayCardRef.current?.getBoundingClientRect();
-    const nextX = dragState.originX + (event.clientX - dragState.startX);
-    const nextY = dragState.originY + (event.clientY - dragState.startY);
-    const maxX = layoutRect && cardRect ? Math.max(0, (layoutRect.width - cardRect.width) / 2 - 8) : 160;
-    const maxY = layoutRect && cardRect ? Math.max(0, (layoutRect.height - cardRect.height) / 2 - 32) : 180;
+    if (dragState.mode === "move") {
+      setMobileOverlayFrame((prev) => clampMobileOverlayFrame({
+        ...prev,
+        left: dragState.originLeft + deltaX,
+        top: dragState.originTop + deltaY,
+      }));
+      return;
+    }
 
-    setMobileOverlayOffset({
-      x: clamp(nextX, -maxX, maxX),
-      y: clamp(nextY, -maxY, maxY),
-    });
-  }, []);
+    setMobileOverlayFrame((prev) => clampMobileOverlayFrame({
+      ...prev,
+      width: dragState.originWidth + deltaX,
+      height: dragState.originHeight + deltaY,
+    }));
+  }, [clampMobileOverlayFrame]);
   const handleMobileOverlayPointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (mobileOverlayDragRef.current?.pointerId === event.pointerId) {
       mobileOverlayDragRef.current = null;
@@ -2799,22 +2871,27 @@ export function ExportStudioDialog({
 
             {showMobilePreviewOverlay ? (
               <div
-                className="pointer-events-none absolute inset-x-3 z-20 lg:hidden"
+                className="pointer-events-none absolute inset-0 z-20 lg:hidden"
                 style={{
-                  bottom: `${mobileOverlayBottom}px`,
-                  transform: `translate(${mobileOverlayOffset.x}px, ${mobileOverlayOffset.y}px)`,
+                  padding: "6px",
                 }}
               >
                 <div
                   ref={mobileOverlayCardRef}
-                  className="ml-auto w-full max-w-[18rem] rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
+                  className="pointer-events-auto absolute rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
+                  style={{
+                    left: `${mobileOverlayFrame.left}px`,
+                    top: `${mobileOverlayFrame.top}px`,
+                    width: `${mobileOverlayFrame.width}px`,
+                    height: mobileOverlayState === "expanded" ? `${mobileOverlayFrame.height}px` : "auto",
+                  }}
+                  onPointerDown={handleMobileOverlayPointerDown}
+                  onPointerMove={handleMobileOverlayPointerMove}
+                  onPointerUp={handleMobileOverlayPointerUp}
+                  onPointerCancel={handleMobileOverlayPointerUp}
                 >
                   <div
-                    className="pointer-events-auto flex cursor-grab touch-none items-start justify-between gap-2 px-1 pb-2 active:cursor-grabbing"
-                    onPointerDown={handleMobileOverlayPointerDown}
-                    onPointerMove={handleMobileOverlayPointerMove}
-                    onPointerUp={handleMobileOverlayPointerUp}
-                    onPointerCancel={handleMobileOverlayPointerUp}
+                    className="flex items-start justify-between gap-2 px-1 pb-2"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -2831,6 +2908,8 @@ export function ExportStudioDialog({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 rounded-full"
+                        data-overlay-interactive="true"
+                        onPointerDown={(event) => event.stopPropagation()}
                         onClick={() => setMobileOverlayState((prev) => (prev === "expanded" ? "minimized" : "expanded"))}
                       >
                         {mobileOverlayState === "expanded" ? (
@@ -2844,6 +2923,8 @@ export function ExportStudioDialog({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 rounded-full"
+                        data-overlay-interactive="true"
+                        onPointerDown={(event) => event.stopPropagation()}
                         onClick={() => setMobileOverlayState("hidden-temporary")}
                       >
                         <X className="h-3.5 w-3.5" />
@@ -2854,12 +2935,13 @@ export function ExportStudioDialog({
                   {mobileOverlayState === "expanded" ? (
                     <>
                       <div className="pointer-events-auto space-y-2">
-                        <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1">
+                        <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1" data-overlay-interactive="true">
                           <Button
                             type="button"
                             variant="outline"
                             size="icon"
                             className="h-7 w-7 rounded-full"
+                            onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => setMobileOverlayZoom((prev) => clamp(prev - 10, 15, 200))}
                           >
                             <ZoomOut className="h-3.5 w-3.5" />
@@ -2872,6 +2954,7 @@ export function ExportStudioDialog({
                             variant="outline"
                             size="icon"
                             className="h-7 w-7 rounded-full"
+                            onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => setMobileOverlayZoom(effectivePreviewZoom)}
                           >
                             <Maximize2 className="h-3.5 w-3.5" />
@@ -2881,6 +2964,7 @@ export function ExportStudioDialog({
                             variant="outline"
                             size="icon"
                             className="h-7 w-7 rounded-full"
+                            onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => setMobileOverlayZoom((prev) => clamp(prev + 10, 15, 200))}
                           >
                             <ZoomIn className="h-3.5 w-3.5" />
@@ -2888,8 +2972,9 @@ export function ExportStudioDialog({
                         </div>
                         <div
                           ref={mobileOverlayViewportRef}
+                          data-overlay-interactive="true"
                           className="overflow-auto rounded-[18px] border border-border bg-muted/30 p-1"
-                          style={{ maxHeight: `${mobilePreviewMaxHeight}px` }}
+                          style={{ height: `${mobilePreviewMaxHeight}px` }}
                         >
                           <div className="flex min-h-full items-start justify-start">
                             <div
@@ -2906,12 +2991,13 @@ export function ExportStudioDialog({
                         </div>
                       </div>
 
-                      <div className="pointer-events-auto mt-2 grid grid-cols-2 gap-2">
+                      <div className="pointer-events-auto mt-2 grid grid-cols-2 gap-2" data-overlay-interactive="true">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           className="h-9 rounded-xl text-[10px]"
+                          onPointerDown={(event) => event.stopPropagation()}
                           onClick={() => setActiveMobileSection("preview")}
                         >
                           Perbesar
@@ -2920,10 +3006,18 @@ export function ExportStudioDialog({
                           type="button"
                           size="sm"
                           className="h-9 rounded-xl text-[10px]"
+                          onPointerDown={(event) => event.stopPropagation()}
                           onClick={() => setActiveMobileSection("preview")}
                         >
                           Buka Preview
                         </Button>
+                      </div>
+                      <div
+                        data-overlay-interactive="true"
+                        className="pointer-events-auto absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm"
+                        onPointerDown={handleMobileOverlayResizePointerDown}
+                      >
+                        <Maximize2 className="h-3 w-3" />
                       </div>
                     </>
                   ) : (
@@ -2934,6 +3028,8 @@ export function ExportStudioDialog({
                         variant="ghost"
                         size="sm"
                         className="h-7 rounded-full px-2 text-[10px]"
+                        data-overlay-interactive="true"
+                        onPointerDown={(event) => event.stopPropagation()}
                         onClick={() => setActiveMobileSection("preview")}
                       >
                         Lihat
