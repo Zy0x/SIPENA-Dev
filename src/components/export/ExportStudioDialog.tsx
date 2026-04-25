@@ -2755,16 +2755,7 @@ export function ExportStudioDialog({
             <p className="mt-1 text-[10px] text-muted-foreground">
               Berlaku untuk preview dan hasil ekspor PDF/PNG. Auto memakai basis A4 yang menyesuaikan layout, sedangkan Full Page membuat ukuran halaman mengikuti isi dokumen.
             </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {recommendedPaperOption ? (
-                <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[9px] font-semibold text-primary">
-                  Rekomendasi: {recommendedPaperOption.label}
-                </span>
-              ) : null}
-              <span className="text-[10px] text-muted-foreground">
-                {recommendedPaperCopy}
-              </span>
-            </div>
+            <p className="mt-2 text-[10px] text-muted-foreground">{recommendedPaperCopy}</p>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -2796,39 +2787,23 @@ export function ExportStudioDialog({
                     ? "border-primary bg-primary/5 shadow-sm"
                     : recommended
                       ? "border-primary/30 bg-primary/[0.03] hover:border-primary/50"
-                      : "border-border bg-background hover:border-primary/40",
+                  : "border-border bg-background hover:border-primary/40",
                 )}
               >
-                <div className="flex flex-col items-start gap-2">
+                <div className="flex items-start justify-between gap-2">
                   <p className="text-xs font-semibold leading-tight text-foreground">{option.label}</p>
-                  {recommended || active ? (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {recommended ? (
-                        <span className={cn(
-                          "inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold sm:text-[9px]",
-                          active
-                            ? "border-primary/35 bg-primary/[0.12] text-primary"
-                            : "border-primary/25 bg-primary/[0.08] text-primary",
-                        )}>
-                          Rekomendasi
-                        </span>
-                      ) : null}
-                      {active ? (
-                        <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[8px] font-semibold text-primary sm:text-[9px]">
-                          Aktif
-                        </span>
-                      ) : null}
-                    </div>
+                  {active || recommended ? (
+                    <span className={cn(
+                      "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold sm:text-[9px]",
+                      active
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-primary/20 bg-primary/[0.06] text-primary/90",
+                    )}>
+                      {active ? "Aktif" : "Disarankan"}
+                    </span>
                   ) : null}
                 </div>
                 <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{option.description}</p>
-                {recommended ? (
-                  <p className="mt-2 text-[10px] font-medium text-primary/90">
-                    {activeFormat?.id === "pdf"
-                      ? "Paling disarankan untuk ekspor PDF."
-                      : "Paling disarankan untuk ekspor PNG."}
-                  </p>
-                ) : null}
               </button>
             );
           })}
@@ -2881,33 +2856,33 @@ export function ExportStudioDialog({
   const mobileSetupSectionTone = {
     document: {
       icon: Sparkles,
-      card: "border-sky-200/80 bg-sky-50/80 dark:border-sky-900/60 dark:bg-sky-950/25",
-      header: "bg-sky-100/70 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-950/50",
+      card: "border-border bg-background",
+      header: "bg-background hover:bg-muted/30 dark:bg-background dark:hover:bg-muted/20",
       iconWrap: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
       badge: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
-      content: "border-sky-100/80 bg-white/70 dark:border-sky-900/60 dark:bg-slate-950/30",
-      subCards: "[&_.rounded-lg.border]:border-sky-200/70 [&_.rounded-xl.border]:border-sky-200/70 [&_.border-dashed]:border-sky-200/70 dark:[&_.rounded-lg.border]:border-sky-900/55 dark:[&_.rounded-xl.border]:border-sky-900/55 dark:[&_.border-dashed]:border-sky-900/55",
-      chevron: "text-sky-600 dark:text-sky-300",
+      content: "border-border/70 bg-muted/[0.18] dark:border-border dark:bg-muted/10",
+      subCards: "",
+      chevron: "text-muted-foreground",
     },
     data: {
       icon: Columns3,
-      card: "border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-900/60 dark:bg-emerald-950/25",
-      header: "bg-emerald-100/70 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/50",
+      card: "border-border bg-background",
+      header: "bg-background hover:bg-muted/30 dark:bg-background dark:hover:bg-muted/20",
       iconWrap: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
       badge: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
-      content: "border-emerald-100/80 bg-white/70 dark:border-emerald-900/60 dark:bg-slate-950/30",
-      subCards: "[&_.rounded-lg.border]:border-emerald-200/70 [&_.rounded-xl.border]:border-emerald-200/70 [&_.border-dashed]:border-emerald-200/70 dark:[&_.rounded-lg.border]:border-emerald-900/55 dark:[&_.rounded-xl.border]:border-emerald-900/55 dark:[&_.border-dashed]:border-emerald-900/55",
-      chevron: "text-emerald-600 dark:text-emerald-300",
+      content: "border-border/70 bg-muted/[0.18] dark:border-border dark:bg-muted/10",
+      subCards: "",
+      chevron: "text-muted-foreground",
     },
     signature: {
       icon: PenTool,
-      card: "border-amber-200/80 bg-amber-50/80 dark:border-amber-900/60 dark:bg-amber-950/25",
-      header: "bg-amber-100/70 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/50",
+      card: "border-border bg-background",
+      header: "bg-background hover:bg-muted/30 dark:bg-background dark:hover:bg-muted/20",
       iconWrap: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
       badge: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
-      content: "border-amber-100/80 bg-white/70 dark:border-amber-900/60 dark:bg-slate-950/30",
-      subCards: "[&_.rounded-lg.border]:border-amber-200/70 [&_.rounded-xl.border]:border-amber-200/70 [&_.border-dashed]:border-amber-200/70 dark:[&_.rounded-lg.border]:border-amber-900/55 dark:[&_.rounded-xl.border]:border-amber-900/55 dark:[&_.border-dashed]:border-amber-900/55",
-      chevron: "text-amber-600 dark:text-amber-300",
+      content: "border-border/70 bg-muted/[0.18] dark:border-border dark:bg-muted/10",
+      subCards: "",
+      chevron: "text-muted-foreground",
     },
   } satisfies Record<MobileSetupSection, {
     icon: LucideIcon;
@@ -3402,20 +3377,12 @@ export function ExportStudioDialog({
             <DialogDescription className="text-[11px] sm:text-xs">
               {description}
             </DialogDescription>
-            <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-wrap gap-2">
-                {studioSummaryChips.map((chip) => (
-                  <span key={chip.text} className={cn("inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", chip.tone)}>
-                    {chip.text}
-                  </span>
-                ))}
-              </div>
-              <div className="flex flex-col gap-1">
-                {renderStudioUtilityActions(false)}
-                {onRestoreDefaultMode ? (
-                  <p className="text-[10px] leading-relaxed text-muted-foreground">{defaultModeDescription}</p>
-                ) : null}
-              </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {studioSummaryChips.map((chip) => (
+                <span key={chip.text} className={cn("inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", chip.tone)}>
+                  {chip.text}
+                </span>
+              ))}
             </div>
           </DialogHeader>
 
@@ -3470,11 +3437,9 @@ export function ExportStudioDialog({
                       {formatPanelContent}
 
                       <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
-                        <div className="flex flex-col gap-2">
-                          <p className="text-[11px] leading-relaxed text-muted-foreground">
-                            {defaultModeDescription}
-                          </p>
-                          {renderStudioUtilityActions(true)}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-[10px] text-muted-foreground">Gunakan aksi studio hanya bila perlu.</p>
+                          {renderStudioUtilityActions(false)}
                         </div>
                       </div>
 
@@ -3491,39 +3456,9 @@ export function ExportStudioDialog({
                       {renderPhoneSetupSection({
                         id: "document",
                         title: "Dokumen",
-                        description: "Atur style dokumen, tipografi, preset tampilan, dan akses Studio Eksperimen.",
+                        description: "Atur style dokumen, tipografi, dan preset tampilan dengan panel yang lebih ringkas.",
                         status: documentStyle ? "Siap diatur" : "Dasar",
-                        children: (
-                          <div className="space-y-3">
-                            {columnTypographyOptions?.length ? (
-                              <div className="rounded-xl border border-sky-200/80 bg-white/90 p-3 dark:border-sky-900/60 dark:bg-slate-950/60">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <p className="text-xs font-semibold text-foreground">Studio Eksperimen</p>
-                                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                                      Font per kolom, alignment, dan lebar tabel akan terhubung langsung ke live preview agar perubahan lebih mudah dipantau.
-                                    </p>
-                                  </div>
-                                  <span className={cn(
-                                    "rounded-full border px-2 py-0.5 text-[9px] font-semibold",
-                                    experimentalModeActive
-                                      ? "border-amber-200 bg-amber-50 text-amber-700"
-                                      : "border-border bg-muted/40 text-muted-foreground",
-                                  )}>
-                                    {experimentalModeActive ? "Aktif" : "Standar"}
-                                  </span>
-                                </div>
-                                <div className="mt-3">
-                                  <Button type="button" className="h-8 rounded-lg px-3 text-[10px]" onClick={() => setExperimentalWindowOpen(true)}>
-                                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                                    Buka Studio Eksperimen
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : null}
-                            {stylePanelContent}
-                          </div>
-                        ),
+                        children: stylePanelContent,
                       })}
 
                       {renderPhoneSetupSection({
@@ -3653,48 +3588,38 @@ export function ExportStudioDialog({
                 : "order-2 border-t lg:order-1 lg:border-t-0 lg:border-r",
             )}>
               <div className={cn("px-3 sm:px-4 border-b border-border/70", isMobileLayout ? "pt-2.5 pb-2.5 space-y-3" : "pt-3 sm:pt-4 pb-3 space-y-3")}>
-                <div className={cn("rounded-2xl border border-border bg-background", isMobileLayout ? "p-3" : "p-3.5")}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-foreground">Tujuan ekspor</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Pilih format hasil akhir, lalu sesuaikan style dan penanda tangan dalam satu studio.
-                      </p>
-                    </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button type="button" className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                          <Info className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-64 text-[11px]">
-                        Preview PDF dan PNG memakai sumber state yang sama dengan proses ekspor. Excel dan CSV belum memakai preview visual.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {studioSummaryChips.map((chip) => (
-                      <span key={chip.text} className={cn("inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", chip.tone)}>
-                        {chip.text}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-                  {supportsSignature ? (
-                    <div className={cn("flex items-center justify-between rounded-2xl border border-border bg-background", isMobileLayout ? "p-3" : "p-3.5")}>
-                      <div>
-                        <Label className="text-xs font-semibold text-foreground">Penanda tangan</Label>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
-                          Aktifkan bila file ekspor perlu blok tanda tangan otomatis.
-                        </p>
+                {(supportsSignature || onRestoreDefaultMode) ? (
+                  <div className="space-y-2">
+                    {supportsSignature ? (
+                      <div className={cn("flex items-center justify-between rounded-2xl border border-border bg-background", isMobileLayout ? "p-3" : "p-3.5")}>
+                        <div>
+                          <Label className="text-xs font-semibold text-foreground">Penanda tangan</Label>
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            Aktifkan bila file ekspor perlu blok tanda tangan otomatis.
+                          </p>
+                        </div>
+                        <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
                       </div>
-                      <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
+                    ) : null}
+                    <div className={cn(
+                      "rounded-2xl border border-border bg-background/80",
+                      isMobileLayout ? "p-3" : "px-3.5 py-3",
+                    )}>
+                      <div className={cn(
+                        "flex gap-2",
+                        isMobileLayout ? "flex-col" : "flex-wrap items-center justify-between",
+                      )}>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-foreground">Aksi studio</p>
+                          <p className="mt-1 text-[10px] text-muted-foreground">
+                            Gunakan untuk mengembalikan mode awal atau merapikan layout studio.
+                          </p>
+                        </div>
+                        {renderStudioUtilityActions(isMobileLayout)}
+                      </div>
                     </div>
-                  ) : <div />}
-                  {renderStudioUtilityActions(isMobileLayout)}
-                </div>
+                  </div>
+                ) : null}
 
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -3745,138 +3670,10 @@ export function ExportStudioDialog({
                     <div className="rounded-xl border border-border bg-background/80 p-3">
                       <p className="text-[11px] font-semibold text-foreground">Format ekspor</p>
                       <p className="mt-1 text-[10px] text-muted-foreground">
-                        Semua format memakai data aktif saat ini. PDF dan PNG menampilkan preview langsung di sisi kanan.
+                        Pilih format hasil akhir dan ukuran halaman. Perubahan langsung masuk ke live preview.
                       </p>
                     </div>
-
-                    <div className="grid gap-2">
-                      {formats.map((formatOption) => {
-                        const Icon = formatOption.icon;
-                        const active = selectedFormat === formatOption.id;
-                        return (
-                          <button
-                            key={formatOption.id}
-                            type="button"
-                            className={cn(
-                              "rounded-xl border p-3 text-left transition-all",
-                              active ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background hover:border-primary/40",
-                            )}
-                            onClick={() => onFormatChange(formatOption.id)}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-start gap-3 min-w-0">
-                                <div className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border", getFormatToneClasses(formatOption.id))}>
-                                  <Icon className="h-4 w-4" />
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-xs font-semibold text-foreground">{formatOption.label}</p>
-                                    {formatOption.badge ? (
-                                      <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold", getFormatToneClasses(formatOption.id))}>
-                                        {formatOption.badge}
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                  <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                                    {formatOption.description}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className={cn("mt-0.5 rounded-full border px-2 py-1 text-[9px] font-semibold", active ? "border-primary/30 bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-                                {formatOption.previewMode ? "Preview" : "Tanpa preview"}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[11px] font-semibold text-foreground">Ukuran kertas</p>
-                          <p className="mt-1 text-[10px] text-muted-foreground">
-                            Berlaku untuk preview dan hasil ekspor PDF/PNG. Auto memakai basis A4 yang menyesuaikan layout, sedangkan Full Page membuat ukuran halaman mengikuti isi dokumen.
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            {recommendedPaperOption ? (
-                              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[9px] font-semibold text-primary">
-                                Rekomendasi: {recommendedPaperOption.label}
-                              </span>
-                            ) : null}
-                            <span className="text-[10px] text-muted-foreground">
-                              {recommendedPaperCopy}
-                            </span>
-                          </div>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button type="button" className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                              <Info className="h-3.5 w-3.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-64 text-[11px]">
-                            A4 cocok untuk dokumen umum, F4 memakai ukuran 8,5 x 13 in, Auto menjaga basis A4, dan Full Page membiarkan ukuran halaman mengikuti konten.
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-
-                      <div
-                        className="mt-3 grid gap-2"
-                        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10.75rem), 1fr))" }}
-                      >
-                        {PAPER_SIZE_OPTIONS.map((option) => {
-                          const active = currentPaperSize === option.id;
-                          const recommended = recommendedPaperSize === option.id;
-                          return (
-                            <button
-                              key={option.id}
-                              type="button"
-                              onClick={() => onPaperSizeChange?.(option.id)}
-                              className={cn(
-                                "min-w-0 rounded-xl border p-3 text-left transition-all",
-                                active
-                                  ? "border-primary bg-primary/5 shadow-sm"
-                                  : recommended
-                                    ? "border-primary/30 bg-primary/[0.03] hover:border-primary/50"
-                                    : "border-border bg-background hover:border-primary/40",
-                              )}
-                            >
-                              <div className="flex flex-col items-start gap-2">
-                                <p className="text-xs font-semibold leading-tight text-foreground">{option.label}</p>
-                                {recommended || active ? (
-                                  <div className="flex flex-wrap items-center gap-1.5">
-                                    {recommended ? (
-                                      <span className={cn(
-                                        "inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold sm:text-[9px]",
-                                        active
-                                          ? "border-primary/35 bg-primary/[0.12] text-primary"
-                                          : "border-primary/25 bg-primary/[0.08] text-primary",
-                                      )}>
-                                        Rekomendasi
-                                      </span>
-                                    ) : null}
-                                    {active ? (
-                                      <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[8px] font-semibold text-primary sm:text-[9px]">
-                                        Aktif
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                ) : null}
-                              </div>
-                              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{option.description}</p>
-                              {recommended ? (
-                                <p className="mt-2 text-[10px] font-medium text-primary/90">
-                                  {activeFormat?.id === "pdf"
-                                    ? "Paling disarankan untuk ekspor PDF."
-                                    : "Paling disarankan untuk ekspor PNG."}
-                                </p>
-                              ) : null}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    {formatPanelContent}
 
                     <div className="rounded-xl border border-dashed border-border bg-background/60 p-3">
                       <p className="text-[11px] font-semibold text-foreground">Hint studio</p>
