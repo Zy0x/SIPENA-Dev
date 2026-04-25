@@ -83,6 +83,7 @@ import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
 import {
   StudioActionFooter,
   StudioPreviewToggle,
+  StudioSectionTabs,
   StudioStepHeader,
   type StudioSectionDescriptor,
 } from "@/components/studio/ResponsiveStudio";
@@ -2328,7 +2329,7 @@ function StylePanel({
             metaFontSize: presetId === "default" ? baseline.documentStyle.metaFontSize : presetId === "one-page" ? 9 : presetId === "single-column-full" ? 8 : presetId === "compact" ? 9 : 12,
             tableHeaderFontSize: presetId === "default" ? baseline.documentStyle.tableHeaderFontSize : presetId === "one-page" ? 10 : presetId === "single-column-full" ? 8 : presetId === "compact" ? 9 : 14,
             tableBodyFontSize: presetId === "default" ? baseline.documentStyle.tableBodyFontSize : presetId === "one-page" ? 10 : presetId === "single-column-full" ? 7 : presetId === "compact" ? 8 : 13,
-            layoutPreset: presetId === "default" ? "standard" : presetId === "one-page" ? "one-page" : presetId === "single-column-full" ? "single-column-full" : presetId === "compact" ? "compact" : "large",
+            layoutPreset: (presetId === "default" ? "standard" : presetId === "one-page" ? "one-page" : presetId === "single-column-full" ? "single-column-full" : presetId === "compact" ? "compact" : "large") as ReportDocumentStyle["layoutPreset"],
           },
           autoFitOnePage: presetId === "one-page",
         };
@@ -2912,11 +2913,11 @@ export function ExportStudioDialog({
   );
   const panelSections = useMemo<StudioSectionDescriptor<typeof activePanel>[]>(
     () => ([
-      { id: "format", label: "Format", icon: Download, priority: "primary", mobileVisibility: "visible", desktopVisibility: "visible" },
-      ...(columnOptions ? [{ id: "columns" as const, label: "Kolom", icon: Columns3, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" }] : []),
-      { id: "signature", label: "Signature", icon: PenTool, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" },
-      { id: "style", label: "Style", icon: Sparkles, priority: "primary", mobileVisibility: "visible", desktopVisibility: "visible" },
-      { id: "signatureStyle", label: "Style Signature", icon: Move, priority: "secondary", mobileVisibility: "visible", desktopVisibility: "visible" },
+      { id: "format", label: "Format", icon: Download, priority: "primary" as const, mobileVisibility: "visible" as const, desktopVisibility: "visible" as const },
+      ...(columnOptions ? [{ id: "columns" as const, label: "Kolom", icon: Columns3, priority: "secondary" as const, mobileVisibility: "visible" as const, desktopVisibility: "visible" as const }] : []),
+      { id: "signature", label: "Signature", icon: PenTool, priority: "secondary" as const, mobileVisibility: "visible" as const, desktopVisibility: "visible" as const },
+      { id: "style", label: "Style", icon: Sparkles, priority: "primary" as const, mobileVisibility: "visible" as const, desktopVisibility: "visible" as const },
+      { id: "signatureStyle", label: "Style Signature", icon: Move, priority: "secondary" as const, mobileVisibility: "visible" as const, desktopVisibility: "visible" as const },
     ]),
     [columnOptions],
   );

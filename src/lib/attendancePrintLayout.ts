@@ -217,7 +217,7 @@ export interface AttendancePrintSummaryRows {
 }
 
 export interface AttendancePrintLayoutPlan {
-  shell: typeof ATTENDANCE_SHELL_MM;
+  shell: { -readonly [K in keyof typeof ATTENDANCE_SHELL_MM]: number };
   paper: AttendancePrintPaper;
   table: AttendancePrintTableLayout;
   visibleColumnKeys: Set<string>;
@@ -442,7 +442,7 @@ function buildInfoBlockMeasurement(
   items: AttendanceInfoLike[],
   widthMm: number,
   baseFontPt: number,
-  infoBlockGapMm = SHELL_HEIGHT_MM.infoBlockGap,
+  infoBlockGapMm: number = SHELL_HEIGHT_MM.infoBlockGap,
 ) {
   const contentFontPt = resolveInfoContentFontPt(baseFontPt);
   const useTwoCols = items.length > 2;
@@ -483,7 +483,7 @@ function measureInfoBlockHeightMm(
   items: AttendanceInfoLike[],
   widthMm: number,
   baseFontPt: number,
-  infoBlockGapMm = SHELL_HEIGHT_MM.infoBlockGap,
+  infoBlockGapMm: number = SHELL_HEIGHT_MM.infoBlockGap,
 ) {
   if (items.length <= 0) return 0;
   return buildInfoBlockMeasurement(items, widthMm, baseFontPt, infoBlockGapMm).totalHeightMm;
@@ -494,7 +494,7 @@ function takeInfoItemsForHeight(
   widthMm: number,
   baseFontPt: number,
   availableMm: number,
-  infoBlockGapMm = SHELL_HEIGHT_MM.infoBlockGap,
+  infoBlockGapMm: number = SHELL_HEIGHT_MM.infoBlockGap,
 ) {
   if (items.length <= 0 || availableMm <= 0) return 0;
   const measurement = buildInfoBlockMeasurement(items, widthMm, baseFontPt, infoBlockGapMm);

@@ -27,6 +27,7 @@ import type {
   AttendancePrintDataset,
   AttendancePrintInfoItem,
   AttendancePrintLayoutPlan,
+  AttendancePrintPage,
   AttendancePrintRow,
 } from "@/lib/attendancePrintLayout";
 import {

@@ -24,7 +24,7 @@ type JsPdfWithGState = jsPDF & {
 };
 type AutoTableSpanCell = {
   content: string;
-  colSpan: number;
+  colSpan?: number;
   styles?: {
     halign?: "center";
     fontStyle?: "bold";
@@ -372,7 +372,7 @@ function drawInfoBlock(
   fontSizePt: number,
   accentColor = "#0f172a",
   accentBg = "#f8fafc",
-  infoBlockGapMm = SHELL_MM.infoBlockGap,
+  infoBlockGapMm: number = SHELL_MM.infoBlockGap,
 ) {
   if (items.length === 0) return y;
 

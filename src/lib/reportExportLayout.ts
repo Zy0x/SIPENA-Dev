@@ -66,6 +66,13 @@ export interface ExportConfig {
       headerRowHeightMm?: number;
       bodyRowHeightMm?: number;
     };
+    attendanceLayout?: {
+      contentPaddingYMm?: number;
+      summaryGapMm?: number;
+      infoBlockGapMm?: number;
+      signatureGapMm?: number;
+      footerClearanceMm?: number;
+    };
     columnFontOverrides?: Record<string, {
       headerFontSize?: number;
       bodyFontSize?: number;
