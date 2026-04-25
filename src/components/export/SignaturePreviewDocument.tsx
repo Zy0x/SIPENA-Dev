@@ -101,6 +101,10 @@ function useSignatureDrag(
   const dragging = useRef(false);
   const startPoint = useRef({ x: 0, y: 0 });
   const startPosition = useRef({ xMm: 0, yMm: 0 });
+  // Effective px-per-mm at the moment dragging started — derived from the
+  // signature element's actual rendered bounding rect so the conversion stays
+  // accurate even when the preview wrapper is CSS-scaled (zoom).
+  const effectivePxPerMm = useRef(PX_PER_MM);
 
   const endDrag = useCallback(() => {
     dragging.current = false;
@@ -111,6 +115,12 @@ function useSignatureDrag(
     dragging.current = true;
     startPoint.current = { x: event.clientX, y: event.clientY };
     startPosition.current = { xMm: placement.xMm, yMm: placement.yMm };
+    // Measure the rendered width of the signature box (which we know is
+    // placement.widthMm in mm) to derive the live px-per-mm — automatically
+    // compensates for any parent transform: scale().
+    const rect = event.currentTarget.getBoundingClientRect();
+    const measuredPxPerMm = placement.widthMm > 0 ? rect.width / placement.widthMm : PX_PER_MM;
+    effectivePxPerMm.current = Math.max(0.5, Number.isFinite(measuredPxPerMm) ? measuredPxPerMm : PX_PER_MM);
     event.currentTarget.setPointerCapture?.(event.pointerId);
     event.preventDefault();
   }, [draft.lockSignaturePosition, placement]);
@@ -118,8 +128,9 @@ function useSignatureDrag(
   const onPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (!dragging.current || !placement) return;
 
-    const deltaMmX = (event.clientX - startPoint.current.x) / PX_PER_MM;
-    const deltaMmY = (event.clientY - startPoint.current.y) / PX_PER_MM;
+    const pxPerMm = effectivePxPerMm.current;
+    const deltaMmX = (event.clientX - startPoint.current.x) / pxPerMm;
+    const deltaMmY = (event.clientY - startPoint.current.y) / pxPerMm;
     const grid = draft.snapToGrid ? Math.max(1, draft.gridSizeMm || 5) : 0;
 
     let nextXMm = startPosition.current.xMm + deltaMmX;
@@ -325,13 +336,13 @@ function SignatureBlock({
                     }}
                   />
                 ) : null}
-          <div style={{ fontWeight: 700, lineHeight: 1.3 }}>{signer.name || "[Nama Signer]"}</div>
+          <div style={{ fontWeight: 700, lineHeight: (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? 1.05 : 1.3 }}>{signer.name || "[Nama Signer]"}</div>
                 {draft.showSignatureLine && (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? (
                   <div
                     style={{
                       width: signatureLineWidthPx,
                       borderBottom: `1px solid ${COLORS.ink}`,
-                      margin: signer.nip ? "4px auto 0" : "6px auto 0",
+                      margin: signer.nip ? "1px auto 0" : "2px auto 0",
                     }}
                   />
                 ) : null}

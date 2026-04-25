@@ -118,15 +118,28 @@ export function SignatureExportPanel({
     });
   };
 
-  // Position nudge — 1mm per step
+  // Position nudge — moves signature in 1% steps along the safe-zone axis.
+  // Switches to fixed mode so manual coords actually drive layout placement.
   const nudgePosition = useCallback((axis: 'x' | 'y', delta: number) => {
-    setDraft((prev) => ({
-      ...prev,
-      ...(axis === 'x'
-        ? { signatureOffsetX: Math.max(-80, Math.min(80, prev.signatureOffsetX + delta)) }
-        : { signatureOffsetY: Math.max(-40, Math.min(60, prev.signatureOffsetY + delta)) }),
-    }));
-  }, []);
+    setDraft((prev) => {
+      const baseX = typeof prev.manualXPercent === 'number' ? prev.manualXPercent : (prev.signatureAlignment === 'left' ? 0 : prev.signatureAlignment === 'center' ? 50 : 100);
+      const baseY = typeof prev.manualYPercent === 'number' ? prev.manualYPercent : 100;
+      // 1% per click — fine-grained nudge that survives across page sizes.
+      const stepPercent = 1;
+      const nextX = axis === 'x' ? Math.max(0, Math.min(100, baseX + delta * stepPercent)) : baseX;
+      const nextY = axis === 'y' ? Math.max(0, Math.min(100, baseY + delta * stepPercent)) : baseY;
+      return {
+        ...prev,
+        placementMode: 'fixed',
+        manualXPercent: nextX,
+        manualYPercent: nextY,
+        // Also keep legacy mm-offsets in sync for non-V2 export paths.
+        ...(axis === 'x'
+          ? { signatureOffsetX: Math.max(-80, Math.min(80, prev.signatureOffsetX + delta)) }
+          : { signatureOffsetY: Math.max(-40, Math.min(60, prev.signatureOffsetY + delta)) }),
+      };
+    });
+  }, [setDraft]);
 
   const resetPosition = useCallback(() => {
     setDraft((prev) => ({
@@ -143,7 +156,7 @@ export function SignatureExportPanel({
       lockSignaturePosition: false,
       showDebugGuides: false,
     }));
-  }, []);
+  }, [setDraft]);
 
   const handleSave = async () => {
     if (!hasValidSignatureConfig(draft)) {
@@ -803,7 +816,7 @@ function PositionPanel({
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => nudgePosition('y', 1)}>
             <ArrowDown className="w-3.5 h-3.5" />
           </Button>
-          <p className="text-[9px] text-muted-foreground mt-1">1mm per klik</p>
+          <p className="text-[9px] text-muted-foreground mt-1">1% per klik (mengaktifkan mode Fixed)</p>
         </div>
       </div>
 

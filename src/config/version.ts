@@ -3,7 +3,7 @@ export const APP_VERSION = "2.4.0";
 export const VERSION_DATE = "2026-04-25";
 
 export const VERSION_HISTORY: Record<string, string> = {
-  "2.4.0": "Rombakan Studio Ekspor Presensi: baseline Default mengikuti kondisi first-open, preset Presensi ditata ulang dari baseline yang sama, sinkronisasi Studio Eksperimental dengan Edit Langsung diperjelas, dan mode keterangan tabel mulai mendukung penempatan vertikal.",
+  "2.4.0": "Rombakan Studio Ekspor Presensi: side panel dipadatkan, keterangan vertikal PDF kini benar-benar tampil sebagai cell merged, jarak garis pada Style Signature dipresisi, dan kontrol presisi TTD (drag + D-Pad) dirombak agar bekerja akurat di setiap zoom preview.",
   "2.3.100": "Sinkronisasi metrik layout ekspor dan loader latar belakang diperkuat agar preview, PDF, dan PNG tetap konsisten saat aplikasi berpindah fokus.",
   "2.3.99": "Keterangan Presensi, rekap, dan pembaruan aplikasi dipoles agar hasil ekspor lebih stabil dan lebih mudah dipahami.",
   "2.3.98": "Sinkronisasi ekspor Presensi, Keterangan dua kolom, penempatan signature, dan alur pembaruan aplikasi diperbaiki.",

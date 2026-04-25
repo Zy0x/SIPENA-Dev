@@ -523,21 +523,38 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     const centerX = leftMm + (widthMm / 2);
     const centerY = bodyTopMm + (bodyHeightMm / 2);
 
+    // Step 1: paint a white merged-cell background so the table's row/column
+    // separators (which still draw underneath) disappear visually.
+    doc.setFillColor(255, 255, 255);
+    doc.rect(leftMm, bodyTopMm, widthMm, bodyHeightMm, "F");
+
+    // Step 2: draw the rounded outline of the merged annotation cell.
     doc.setDrawColor(...tone.stroke);
-    doc.setLineWidth(0.1);
-    doc.roundedRect(leftMm + 0.4, bodyTopMm + 0.5, Math.max(1, widthMm - 0.8), Math.max(1, bodyHeightMm - 1), 1.4, 1.4, "S");
+    doc.setLineWidth(0.18);
+    const padInset = 0.6;
+    doc.roundedRect(
+      leftMm + padInset,
+      bodyTopMm + padInset,
+      Math.max(1, widthMm - padInset * 2),
+      Math.max(1, bodyHeightMm - padInset * 2),
+      1.6,
+      1.6,
+      "S",
+    );
     doc.setTextColor(...tone.fill);
     doc.setFont("helvetica", "bold");
 
     if (plan.inlineLabelStyle === "stacked") {
       const stackedLayout = resolveStackedLayout(annotation.text, widthMm, bodyHeightMm);
       const { chars, fontPt, lineHeightMm } = stackedLayout;
-      const totalHeightMm = lineHeightMm * Math.max(chars.length, 1);
-      let cursorY = centerY - (totalHeightMm / 2) + lineHeightMm * 0.78;
+      // Slightly relax line-height so short keterangan don't look cramped.
+      const breathLineHeightMm = Math.max(lineHeightMm, fontPt * 0.42);
+      const totalHeightMm = breathLineHeightMm * Math.max(chars.length, 1);
+      let cursorY = centerY - (totalHeightMm / 2) + breathLineHeightMm * 0.78;
       doc.setFontSize(fontPt);
       chars.forEach((char) => {
         doc.text(char, centerX, cursorY, { align: "center", baseline: "middle" });
-        cursorY += lineHeightMm;
+        cursorY += breathLineHeightMm;
       });
       return;
     }
@@ -732,6 +749,14 @@ export function buildAttendancePdfDocument(args: {
       + (plan.visibleColumnKeys.has("name") ? 1 : 0)
       + (plan.visibleColumnKeys.has("nisn") ? 1 : 0);
     const dayEndIndex = dayStartIndex + plan.visibleDays.length;
+    const inlineDayTableColumns = new Set<number>();
+    if (plan.annotationDisplayMode === "inline-vertical") {
+      plan.inlineAnnotations.forEach((range) => {
+        for (let columnIndex = range.startColumnIndex; columnIndex <= range.endColumnIndex; columnIndex += 1) {
+          inlineDayTableColumns.add(dayStartIndex + columnIndex);
+        }
+      });
+    }
     const nameColumnIndex = plan.visibleColumnKeys.has("name")
       ? (plan.visibleColumnKeys.has("no") ? 1 : 0)
       : -1;
@@ -908,12 +933,23 @@ export function buildAttendancePdfDocument(args: {
           && hook.column.index >= dayStartIndex
           && hook.column.index < dayEndIndex
         ) {
-          const cellValue = String(hook.cell.raw ?? "");
-          const status = STATUS_COLORS[cellValue];
-          if (status) {
-            hook.cell.styles.fillColor = status.fill;
-            hook.cell.styles.textColor = status.text;
-            hook.cell.styles.fontStyle = "bold";
+          const dayColumnIndex = hook.column.index;
+          if (inlineDayTableColumns.has(dayColumnIndex)) {
+            // Visually merge inline-annotation columns: hide row separators
+            // and cell fill so drawInlineAnnotations() can paint a single
+            // continuous block over the entire body strip.
+            hook.cell.styles.fillColor = [255, 255, 255];
+            hook.cell.styles.lineColor = [255, 255, 255];
+            hook.cell.styles.lineWidth = 0.001;
+            hook.cell.text = [];
+          } else {
+            const cellValue = String(hook.cell.raw ?? "");
+            const status = STATUS_COLORS[cellValue];
+            if (status) {
+              hook.cell.styles.fillColor = status.fill;
+              hook.cell.styles.textColor = status.text;
+              hook.cell.styles.fontStyle = "bold";
+            }
           }
         }
 

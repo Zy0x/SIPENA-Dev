@@ -41,7 +41,26 @@ export interface ChangelogEntry {
 // ============================================
 
 export const changelogData: ChangelogEntry[] = [
-  // v2.3.100 - TERBARU
+  // v2.4.0 - TERBARU (patch tambahan)
+  {
+    id: "v2.4.0-p2",
+    version: "2.4.0",
+    title: "Studio Ekspor: Side Panel Ramping, Keterangan Vertikal Merged, & TTD Presisi",
+    description: "Side panel Studio Ekspor dipadatkan agar konten Alat studio lebih tinggi, keterangan vertikal pada PDF kini benar-benar tampil sebagai cell merged tanpa garis bantu, dan kontrol presisi TTD (drag + D-Pad) dirombak agar bekerja akurat di setiap zoom preview.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-04-25",
+    details: [
+      "UI: Header side panel Studio Ekspor (Signature switch, Aksi studio, Alat studio) dipadatkan padding & font-nya — area Alat studio yang scrollable kini menampilkan lebih banyak konten dalam satu pandang",
+      "Fix: Keterangan vertikal pada PDF (rotate-90 maupun stacked) kini menutup cell hari dengan latar putih dan border tunggal, sehingga benar-benar tampil seperti cell yang di-merge — tidak ada lagi garis baris yang melintang di teks keterangan",
+      "Improve: Spasi baris pada mode stacked direlaksasi agar keterangan singkat tidak terlihat berdempetan; rotate-90 mempertahankan perilaku 90° dengan ruang aman lebih lega",
+      "Fix: Style Signature — jarak antara nama dan garis pada mode 'Garis di antara Nama & NIP' diperketat agar tampak menyatu seperti dokumen resmi",
+      "Fix: Drag TTD pada live preview kini mengukur skala render aktual dari bounding rect signature, sehingga tetap presisi walaupun preview di-zoom (sebelumnya selalu memakai PX_PER_MM statis)",
+      "Fix: Tombol D-Pad Kontrol Presisi TTD kini menggeser manualXPercent / manualYPercent dan otomatis pindah ke mode Fixed — sebelumnya hanya memutar variabel offset legacy yang tidak dipakai layout V2",
+      "Chore: Versi aplikasi tetap di v2.4.0 — perubahan ini dirilis sebagai patch lanjutan",
+    ],
+  },
+
   {
     id: "v2.3.100",
     version: "2.3.100",

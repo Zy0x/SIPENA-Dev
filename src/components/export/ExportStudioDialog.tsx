@@ -4071,39 +4071,39 @@ export function ExportStudioDialog({
                 : cn("order-2 border-t lg:order-1 lg:border-t-0 lg:border-r shadow-[inset_-1px_0_0_rgba(148,163,184,0.12)]", activeDesktopPanelTone.shell),
             )}>
               <div className={cn(
-                "px-3 sm:px-4 border-b border-border/70",
+                "px-3 sm:px-3.5 border-b border-border/70",
                 isMobileLayout
-                  ? "pt-2 pb-2 space-y-2"
-                  : "relative z-10 bg-background/92 pt-3 sm:pt-4 pb-3 space-y-3 shadow-[0_18px_28px_-24px_rgba(15,23,42,0.8)] backdrop-blur",
+                  ? "pt-1.5 pb-1.5 space-y-1.5"
+                  : "relative z-10 bg-background/92 pt-2 pb-2 space-y-1.5 shadow-[0_18px_28px_-24px_rgba(15,23,42,0.8)] backdrop-blur",
               )}>
                 {(supportsSignature || onRestoreDefaultMode) ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {supportsSignature ? (
                       <div className={cn(
-                        "flex items-center justify-between gap-3 rounded-2xl border border-border bg-background",
-                        isMobileLayout ? "px-2.5 py-2" : cn("p-3.5", activeDesktopPanelTone.card),
+                        "flex items-center justify-between gap-2 rounded-xl border border-border bg-background",
+                        isMobileLayout ? "px-2 py-1.5" : cn("px-2.5 py-1.5", activeDesktopPanelTone.card),
                       )}>
                         <div className="min-w-0">
-                          <Label className="text-xs font-semibold text-foreground">Signature</Label>
-                          <p className="mt-0.5 text-[9px] leading-snug text-muted-foreground sm:text-[10px]">
-                            Aktifkan bila file ekspor perlu blok signature otomatis.
+                          <Label className="text-[11px] font-semibold text-foreground">Signature</Label>
+                          <p className="mt-0 text-[9px] leading-tight text-muted-foreground">
+                            Sertakan blok signature pada file ekspor.
                           </p>
                         </div>
                         <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
                       </div>
                     ) : null}
                     <div className={cn(
-                      "rounded-2xl border border-border bg-background/80",
-                      isMobileLayout ? "px-2.5 py-2" : cn("px-3.5 py-3", activeDesktopPanelTone.card),
+                      "rounded-xl border border-border bg-background/80",
+                      isMobileLayout ? "px-2 py-1.5" : cn("px-2.5 py-1.5", activeDesktopPanelTone.card),
                     )}>
                       <div className={cn(
-                        "flex gap-2",
-                        isMobileLayout ? "flex-col gap-1.5" : "flex-wrap items-center justify-between",
+                        "flex gap-1.5",
+                        isMobileLayout ? "flex-col gap-1" : "flex-wrap items-center justify-between",
                       )}>
                         <div className="min-w-0">
-                          <p className="text-[11px] font-semibold text-foreground">Aksi studio</p>
-                          <p className="mt-0.5 text-[9px] leading-snug text-muted-foreground sm:text-[10px]">
-                            Gunakan untuk mengembalikan mode awal atau merapikan layout studio.
+                          <p className="text-[10px] font-semibold text-foreground">Aksi studio</p>
+                          <p className="mt-0 text-[9px] leading-tight text-muted-foreground">
+                            Kembalikan mode awal atau rapikan layout.
                           </p>
                         </div>
                         {renderStudioUtilityActions(isMobileLayout)}
@@ -4112,19 +4112,19 @@ export function ExportStudioDialog({
                   </div>
                 ) : null}
 
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[11px] font-semibold text-foreground">Alat studio</p>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-[10px] font-semibold text-foreground">Alat studio</p>
                       {!isMobileLayout ? (
-                        <span className={cn("max-w-full rounded-full border px-2.5 py-0.5 text-[10px] font-semibold leading-relaxed sm:text-[11px]", activeDesktopPanelTone.badge)}>
+                        <span className={cn("max-w-full rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-tight", activeDesktopPanelTone.badge)}>
                           {activePanelMeta.label}
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-[11px] text-muted-foreground sm:text-xs">Buka panel yang ingin Anda atur.</p>
+                    <p className="text-[10px] text-muted-foreground">Buka panel yang ingin diatur.</p>
                   </div>
-                  <div className={cn("-mx-1 px-1 pt-1 pb-1", isMobileLayout ? "overflow-visible" : "overflow-x-auto overflow-y-visible")}>
+                  <div className={cn("-mx-1 px-1 pt-0.5 pb-0.5", isMobileLayout ? "overflow-visible" : "overflow-x-auto overflow-y-visible")}>
                     {isMobileLayout ? (
                       <StudioSectionTabs
                         sections={panelSections}
