@@ -2650,38 +2650,34 @@ export function ExportStudioDialog({
     if (!option.children?.length) return total + (option.checked ? 1 : 0);
     return total + option.children.filter((child) => child.checked).length;
   }, 0) ?? 0;
-  const studioStatusCards = [
+  const studioSummaryChips = [
     {
-      label: "Format",
-      value: activeFormat?.label || "Format",
+      text: activeFormat?.label || "Format",
       tone: getFormatToneClasses(activeFormat?.id || "pdf"),
     },
     {
-      label: "Kertas",
-      value: currentPaperLabel,
+      text: currentPaperLabel,
       tone: "border-slate-200 bg-slate-50/80 text-slate-700",
     },
     {
-      label: "Kolom",
-      value: canConfigureColumns ? `${activeColumnCount} aktif` : "Tetap",
+      text: canConfigureColumns ? `${activeColumnCount} kolom` : "Kolom tetap",
       tone: "border-emerald-200 bg-emerald-50/80 text-emerald-700",
     },
     {
-      label: "Eksperimen",
-      value: experimentalModeActive ? "Aktif" : "Standar",
+      text: experimentalModeActive ? "Eksperimen aktif" : "Eksperimen standar",
       tone: experimentalModeActive
         ? "border-amber-200 bg-amber-50/80 text-amber-700"
         : "border-slate-200 bg-slate-50/80 text-slate-700",
     },
   ] as const;
   const renderStudioUtilityActions = (compact = false) => (
-    <div className={cn("flex gap-2", compact ? "flex-col" : "flex-wrap justify-end")}>
+    <div className={cn("flex gap-2", compact ? "flex-col" : "flex-wrap")}>
       {onRestoreDefaultMode ? (
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className={cn("h-9 rounded-xl text-[10px] sm:text-xs", compact && "w-full")}
+          className={cn("h-8 rounded-lg px-3 text-[10px] sm:text-xs", compact && "w-full")}
           onClick={handleRestoreDefaultMode}
         >
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
@@ -2692,7 +2688,7 @@ export function ExportStudioDialog({
         type="button"
         variant="outline"
         size="sm"
-        className={cn("h-9 rounded-xl text-[10px] sm:text-xs", compact && "w-full")}
+        className={cn("h-8 rounded-lg px-3 text-[10px] sm:text-xs", compact && "w-full")}
         onClick={() => setResetLayoutConfirmOpen(true)}
       >
         <ScanSearch className="mr-1.5 h-3.5 w-3.5" />
@@ -3406,21 +3402,18 @@ export function ExportStudioDialog({
             <DialogDescription className="text-[11px] sm:text-xs">
               {description}
             </DialogDescription>
-            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                {studioStatusCards.map((card) => (
-                  <div key={card.label} className="rounded-2xl border border-border bg-muted/20 px-3 py-2.5">
-                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{card.label}</p>
-                    <span className={cn("mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", card.tone)}>
-                      {card.value}
-                    </span>
-                  </div>
+            <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap gap-2">
+                {studioSummaryChips.map((chip) => (
+                  <span key={chip.text} className={cn("inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", chip.tone)}>
+                    {chip.text}
+                  </span>
                 ))}
               </div>
-              <div className="lg:min-w-[17rem]">
-                {renderStudioUtilityActions(isNarrowLayout)}
+              <div className="flex flex-col gap-1">
+                {renderStudioUtilityActions(false)}
                 {onRestoreDefaultMode ? (
-                  <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{defaultModeDescription}</p>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">{defaultModeDescription}</p>
                 ) : null}
               </div>
             </div>
@@ -3476,17 +3469,12 @@ export function ExportStudioDialog({
 
                       {formatPanelContent}
 
-                      <div className="rounded-2xl border border-border bg-gradient-to-br from-background to-muted/30 px-4 py-3">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">Mode kerja studio</p>
-                            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                              Gunakan mode default untuk kembali ke baseline awal, atau reset tata letak bila hanya ingin merapikan panel dan preview.
-                            </p>
-                          </div>
-                          <div className="w-full sm:w-auto">
-                            {renderStudioUtilityActions(true)}
-                          </div>
+                      <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+                        <div className="flex flex-col gap-2">
+                          <p className="text-[11px] leading-relaxed text-muted-foreground">
+                            {defaultModeDescription}
+                          </p>
+                          {renderStudioUtilityActions(true)}
                         </div>
                       </div>
 
@@ -3508,7 +3496,7 @@ export function ExportStudioDialog({
                         children: (
                           <div className="space-y-3">
                             {columnTypographyOptions?.length ? (
-                              <div className="rounded-2xl border border-sky-200/80 bg-white/90 p-3 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/60">
+                              <div className="rounded-xl border border-sky-200/80 bg-white/90 p-3 dark:border-sky-900/60 dark:bg-slate-950/60">
                                 <div className="flex items-start justify-between gap-3">
                                   <div>
                                     <p className="text-xs font-semibold text-foreground">Studio Eksperimen</p>
@@ -3525,12 +3513,11 @@ export function ExportStudioDialog({
                                     {experimentalModeActive ? "Aktif" : "Standar"}
                                   </span>
                                 </div>
-                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                  <Button type="button" className="h-9 rounded-xl text-[10px]" onClick={() => setExperimentalWindowOpen(true)}>
+                                <div className="mt-3">
+                                  <Button type="button" className="h-8 rounded-lg px-3 text-[10px]" onClick={() => setExperimentalWindowOpen(true)}>
                                     <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                                     Buka Studio Eksperimen
                                   </Button>
-                                  {renderStudioUtilityActions(true)}
                                 </div>
                               </div>
                             ) : null}
@@ -3669,9 +3656,9 @@ export function ExportStudioDialog({
                 <div className={cn("rounded-2xl border border-border bg-background", isMobileLayout ? "p-3" : "p-3.5")}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold text-foreground">Studio ekspor yang lebih terarah</p>
+                      <p className="text-xs font-semibold text-foreground">Tujuan ekspor</p>
                       <p className="text-[10px] text-muted-foreground">
-                        Semua alat dikelompokkan berdasarkan pekerjaan: format akhir, isi tabel, style dokumen, dan eksperimen per kolom.
+                        Pilih format hasil akhir, lalu sesuaikan style dan penanda tangan dalam satu studio.
                       </p>
                     </div>
                     <Tooltip>
@@ -3685,14 +3672,11 @@ export function ExportStudioDialog({
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    {studioStatusCards.map((card) => (
-                      <div key={card.label} className="rounded-2xl border border-border bg-muted/20 px-3 py-2.5">
-                        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{card.label}</p>
-                        <span className={cn("mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", card.tone)}>
-                          {card.value}
-                        </span>
-                      </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {studioSummaryChips.map((chip) => (
+                      <span key={chip.text} className={cn("inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", chip.tone)}>
+                        {chip.text}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -3714,56 +3698,43 @@ export function ExportStudioDialog({
 
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold text-foreground">Kelompok alat</p>
-                    <p className="text-[10px] text-muted-foreground">Pilih kelompok yang ingin Anda rapikan.</p>
+                    <p className="text-[11px] font-semibold text-foreground">Alat studio</p>
+                    <p className="text-[10px] text-muted-foreground">Buka panel yang ingin Anda atur.</p>
                   </div>
-                  <div
-                    className="grid gap-2"
-                    style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10rem), 1fr))" }}
-                  >
-                    {panelSections.map(({ id, label, icon: Icon }) => {
-                      const enabled = !((id === "signers" || id === "position") && (!supportsSignature || !includeSignature));
-                      const panelDescription = id === "format"
-                        ? "Format akhir dan ukuran kertas."
-                        : id === "columns"
-                          ? "Kolom hari dan rekap."
-                          : id === "signers"
-                            ? "Identitas penanda tangan."
-                            : id === "style"
-                              ? "Preset, tipografi, dan eksperimen."
-                              : "Posisi blok tanda tangan.";
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          className={cn(
-                            "rounded-2xl border p-3 text-left transition-all",
-                            activePanel === id ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background hover:border-primary/35",
-                            !enabled && "opacity-50",
-                          )}
-                          onClick={() => enabled && switchPanel(id)}
-                          disabled={!enabled}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={cn(
-                              "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border",
-                              activePanel === id ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-muted/30 text-muted-foreground",
-                            )}>
-                              {Icon ? <Icon className="h-4 w-4" /> : null}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-xs font-semibold text-foreground">{label}</p>
-                                {activePanel === id ? (
-                                  <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">Aktif</span>
-                                ) : null}
-                              </div>
-                              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{panelDescription}</p>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <div className={cn("-mx-1 px-1 pb-1", isMobileLayout ? "overflow-hidden" : "overflow-x-auto")}>
+                    {isMobileLayout ? (
+                      <StudioSectionTabs
+                        sections={panelSections}
+                        active={activePanel}
+                        onChange={(next) => {
+                          if ((next === "signers" || next === "position") && (!supportsSignature || !includeSignature)) return;
+                          switchPanel(next);
+                        }}
+                      />
+                    ) : (
+                      <div className="grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap">
+                        {panelSections.map(({ id, label, icon: Icon }) => {
+                          const enabled = !((id === "signers" || id === "position") && (!supportsSignature || !includeSignature));
+                          return (
+                            <Button
+                              key={id}
+                              type="button"
+                              variant={activePanel === id ? "default" : "outline"}
+                              size="sm"
+                              className={cn(
+                                "h-9 min-w-fit shrink-0 rounded-full px-3 justify-start gap-1.5 text-[10px] sm:text-xs",
+                                !enabled && "opacity-50",
+                              )}
+                              onClick={() => enabled && switchPanel(id)}
+                              disabled={!enabled}
+                            >
+                              {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+                              {label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
