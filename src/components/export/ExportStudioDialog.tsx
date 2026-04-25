@@ -231,6 +231,21 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function getDefaultSignaturePositionState() {
+  return {
+    signatureAlignment: "right" as const,
+    signaturePreset: "bottom-right" as const,
+    signatureOffsetX: 0,
+    signatureOffsetY: 0,
+    manualXPercent: null,
+    manualYPercent: null,
+    snapToGrid: true,
+    gridSizeMm: 5,
+    lockSignaturePosition: false,
+    showDebugGuides: false,
+  };
+}
+
 function getVisibleSigners(signers: SignatureSigner[]) {
   const active = signers.filter((signer) => signer.name.trim() || signer.title.trim());
   return active.length > 0 ? active : signers.slice(0, 1);
@@ -1587,16 +1602,7 @@ function PositionPanel({
   const resetPosition = () => {
     setDraft((prev) => ({
       ...prev,
-      signatureAlignment: "right",
-      signaturePreset: "bottom-right",
-      signatureOffsetX: 0,
-      signatureOffsetY: 0,
-      manualXPercent: null,
-      manualYPercent: null,
-      snapToGrid: true,
-      gridSizeMm: 5,
-      lockSignaturePosition: false,
-      showDebugGuides: false,
+      ...getDefaultSignaturePositionState(),
     }));
   };
 
@@ -2171,6 +2177,7 @@ export function ExportStudioDialog({
   const [mobileOverlayState, setMobileOverlayState] = useState<StudioOverlayState>("expanded");
   const [mobileOverlayZoom, setMobileOverlayZoom] = useState(30);
   const [mobileOverlayFrame, setMobileOverlayFrame] = useState({ left: 0, top: 0, width: 288, height: 240 });
+  const dialogContentRef = useRef<HTMLDivElement>(null);
   const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
   const previewCaptureRef = useRef<HTMLDivElement>(null);
@@ -2212,7 +2219,7 @@ export function ExportStudioDialog({
       setActiveMobileSection("panel");
       setMobileOverlayState("expanded");
       setMobileOverlayZoom(30);
-      setMobileOverlayFrame({ left: 0, top: 0, width: 288, height: 240 });
+      setMobileOverlayFrame({ left: 0, top: 0, width: 300, height: 236 });
       setLiveEditMode(false);
       setHighlightTarget(null);
       hasOpenedRef.current = true;
@@ -2265,7 +2272,7 @@ export function ExportStudioDialog({
 
   useEffect(() => {
     if (!open || !isMobileLayout) return;
-    const viewportNode = layoutViewportRef.current;
+    const viewportNode = dialogContentRef.current;
     if (!viewportNode) return;
 
     const nextWidth = clamp(Math.round(viewportNode.clientWidth * (viewport.isCompactPhone ? 0.78 : 0.46)), 220, 380);
@@ -2276,8 +2283,8 @@ export function ExportStudioDialog({
     setMobileOverlayFrame((prev) => ({
       left: clamp(prev.left || nextLeft, 8, Math.max(8, viewportNode.clientWidth - prev.width - 8)),
       top: clamp(prev.top || nextTop, 8, Math.max(8, viewportNode.clientHeight - prev.height - 8)),
-      width: clamp(prev.width || nextWidth, 220, Math.max(220, viewportNode.clientWidth - 16)),
-      height: clamp(prev.height || nextHeight, 170, Math.max(170, viewportNode.clientHeight - 16)),
+      width: clamp(prev.width || nextWidth, 252, Math.max(252, viewportNode.clientWidth - 16)),
+      height: clamp(prev.height || nextHeight, 224, Math.max(224, viewportNode.clientHeight - 16)),
     }));
   }, [isMobileLayout, open, viewport.viewportHeight, viewport.viewportWidth, viewport.isCompactPhone]);
 
@@ -2418,6 +2425,12 @@ export function ExportStudioDialog({
       supportsSignature,
     ],
   );
+  const handleResetSignaturePosition = useCallback(() => {
+    setDraft((prev) => ({
+      ...prev,
+      ...getDefaultSignaturePositionState(),
+    }));
+  }, []);
 
   const saveCurrentSignature = useCallback(async () => {
     if (!supportsSignature) return;
@@ -2467,12 +2480,12 @@ export function ExportStudioDialog({
     activeMobileSection === "panel" &&
     canPreview &&
     mobileOverlayState !== "hidden-temporary";
-  const mobilePreviewMaxHeight = Math.max(160, Math.min(mobileOverlayFrame.height - 84, viewportHeight * 0.42));
+  const mobilePreviewMaxHeight = Math.max(120, Math.min(mobileOverlayFrame.height - 112, viewportHeight * 0.42));
   const clampMobileOverlayFrame = useCallback((next: { left: number; top: number; width: number; height: number }) => {
-    const viewportNode = layoutViewportRef.current;
+    const viewportNode = dialogContentRef.current;
     if (!viewportNode) return next;
-    const minWidth = 220;
-    const minHeight = 170;
+    const minWidth = 252;
+    const minHeight = 224;
     const maxWidth = Math.max(minWidth, viewportNode.clientWidth - 12);
     const maxHeight = Math.max(minHeight, viewportNode.clientHeight - 12);
     const width = clamp(next.width, minWidth, maxWidth);
@@ -2550,7 +2563,7 @@ export function ExportStudioDialog({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[calc(100vw-0.5rem)] sm:w-[calc(100vw-0.75rem)] max-w-[96rem] h-[calc(100dvh-0.5rem)] sm:h-[min(94dvh,58rem)] overflow-hidden rounded-[22px] sm:rounded-[28px] flex flex-col p-0 gap-0">
+        <DialogContent ref={dialogContentRef} className="w-[calc(100vw-0.5rem)] sm:w-[calc(100vw-0.75rem)] max-w-[96rem] h-[calc(100dvh-0.5rem)] sm:h-[min(94dvh,58rem)] overflow-hidden rounded-[22px] sm:rounded-[28px] flex flex-col p-0 gap-0">
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 border-b border-border">
             <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Download className="h-4 w-4 text-primary" />
@@ -2869,7 +2882,7 @@ export function ExportStudioDialog({
               </div>
             </div>
 
-            {showMobilePreviewOverlay ? (
+            {showMobilePreviewOverlay && false ? (
               <div
                 className="pointer-events-none absolute inset-0 z-20 lg:hidden"
                 style={{
@@ -3070,12 +3083,24 @@ export function ExportStudioDialog({
                   "flex w-full gap-2",
                   isCompactLayout ? "flex-col" : "flex-wrap items-center sm:w-auto sm:justify-end",
                 )}>
+                  {supportsSignature && includeSignature ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-1")}
+                      onClick={handleResetSignaturePosition}
+                    >
+                      <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                      Reset Posisi TTD
+                    </Button>
+                  ) : null}
                   {canPreview ? (
                     <Button
                       type="button"
                       variant={liveEditMode ? "default" : "outline"}
                       size="sm"
-                      className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-1")}
+                      className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-2")}
                       onClick={() => setLiveEditMode((prev) => !prev)}
                     >
                       {liveEditMode ? "Edit Langsung Aktif" : "Edit di Preview"}
@@ -3154,6 +3179,185 @@ export function ExportStudioDialog({
               </div>
             </div>
           </div>
+
+          {showMobilePreviewOverlay ? (
+            <div className="pointer-events-none absolute inset-0 z-30 lg:hidden">
+              <div
+                ref={mobileOverlayCardRef}
+                className="pointer-events-auto absolute overflow-hidden rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
+                style={{
+                  left: `${mobileOverlayFrame.left}px`,
+                  top: `${mobileOverlayFrame.top}px`,
+                  width: `${mobileOverlayFrame.width}px`,
+                  height: mobileOverlayState === "expanded" ? `${mobileOverlayFrame.height}px` : "auto",
+                }}
+                onPointerDown={handleMobileOverlayPointerDown}
+                onPointerMove={handleMobileOverlayPointerMove}
+                onPointerUp={handleMobileOverlayPointerUp}
+                onPointerCancel={handleMobileOverlayPointerUp}
+              >
+                <div className="flex items-start justify-between gap-2 px-1 pb-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Eye className="h-3.5 w-3.5 text-primary" />
+                      <p className="text-[10px] font-semibold text-foreground">Preview Live</p>
+                    </div>
+                    <p className="mt-1 text-[9px] leading-relaxed text-muted-foreground">
+                      {activeFormat?.label || "Format"} • {recommendedPaperOption?.label || currentPaperSize}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {supportsSignature && includeSignature ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full"
+                        data-overlay-interactive="true"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={handleResetSignaturePosition}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full"
+                      data-overlay-interactive="true"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => setMobileOverlayState((prev) => (prev === "expanded" ? "minimized" : "expanded"))}
+                    >
+                      {mobileOverlayState === "expanded" ? (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full"
+                      data-overlay-interactive="true"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => setMobileOverlayState("hidden-temporary")}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {mobileOverlayState === "expanded" ? (
+                  <>
+                    <div className="pointer-events-auto flex min-h-0 flex-col gap-2">
+                      <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1" data-overlay-interactive="true">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-full"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={() => setMobileOverlayZoom((prev) => clamp(prev - 10, 15, 200))}
+                        >
+                          <ZoomOut className="h-3.5 w-3.5" />
+                        </Button>
+                        <div className="flex min-w-0 flex-1 items-center justify-center rounded-full border border-border px-2 text-[10px] font-medium text-foreground">
+                          {mobileOverlayZoom}%
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-full"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={() => setMobileOverlayZoom(effectivePreviewZoom)}
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 rounded-full"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={() => setMobileOverlayZoom((prev) => clamp(prev + 10, 15, 200))}
+                        >
+                          <ZoomIn className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+
+                      <div
+                        ref={mobileOverlayViewportRef}
+                        data-overlay-interactive="true"
+                        className="overflow-auto rounded-[18px] border border-border bg-muted/30 p-1"
+                        style={{ height: `${mobilePreviewMaxHeight}px` }}
+                      >
+                        <div className="flex min-h-full items-start justify-start">
+                          <div
+                            className="origin-top-left"
+                            style={{
+                              transform: `scale(${mobileOverlayZoom / 100})`,
+                              transformOrigin: "top left",
+                              width: "fit-content",
+                            }}
+                          >
+                            {renderPreviewContent(mobileOverlayCaptureRef)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pointer-events-auto mt-2 grid grid-cols-2 gap-2" data-overlay-interactive="true">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 rounded-xl text-[10px]"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={() => setActiveMobileSection("preview")}
+                      >
+                        Perbesar
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-9 rounded-xl text-[10px]"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={() => setActiveMobileSection("preview")}
+                      >
+                        Buka Preview
+                      </Button>
+                    </div>
+
+                    <div
+                      data-overlay-interactive="true"
+                      className="pointer-events-auto absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm"
+                      onPointerDown={handleMobileOverlayResizePointerDown}
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="pointer-events-auto flex items-center justify-between gap-2 rounded-2xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-[10px] text-muted-foreground">
+                    <span className="line-clamp-2">Preview diciutkan agar panel tetap lega saat Anda mengatur alat.</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-full px-2 text-[10px]"
+                      data-overlay-interactive="true"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => setActiveMobileSection("preview")}
+                    >
+                      Lihat
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
 
           <StudioActionFooter
             sticky={isMobileLayout}
