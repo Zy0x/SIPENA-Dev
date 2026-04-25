@@ -2161,11 +2161,17 @@ export function ExportStudioDialog({
   const [highlightTarget, setHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
   const [activeMobileSection, setActiveMobileSection] = useState<"panel" | "preview">("panel");
   const [mobileOverlayState, setMobileOverlayState] = useState<StudioOverlayState>("expanded");
+  const [mobileOverlayZoom, setMobileOverlayZoom] = useState(30);
+  const [mobileOverlayOffset, setMobileOverlayOffset] = useState({ x: 0, y: 0 });
   const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
   const previewCaptureRef = useRef<HTMLDivElement>(null);
+  const mobileOverlayViewportRef = useRef<HTMLDivElement>(null);
+  const mobileOverlayCaptureRef = useRef<HTMLDivElement>(null);
+  const mobileOverlayCardRef = useRef<HTMLDivElement>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
+  const mobileOverlayDragRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
   const hasOpenedRef = useRef(false);
   const [previewViewportWidth, setPreviewViewportWidth] = useState(0);
   const [previewContentWidth, setPreviewContentWidth] = useState(0);
@@ -2188,6 +2194,8 @@ export function ExportStudioDialog({
       setActivePanel("format");
       setActiveMobileSection("panel");
       setMobileOverlayState("expanded");
+      setMobileOverlayZoom(30);
+      setMobileOverlayOffset({ x: 0, y: 0 });
       setLiveEditMode(false);
       setHighlightTarget(null);
       hasOpenedRef.current = true;
@@ -2330,6 +2338,51 @@ export function ExportStudioDialog({
   const previewDate = draft.useCustomDate && draft.customDate
     ? formatSignatureDisplayDate(draft.customDate)
     : formatSignatureDisplayDate();
+  const renderPreviewContent = useCallback(
+    (captureRef?: React.RefObject<HTMLDivElement>) => (
+      <div
+        ref={captureRef}
+        className="origin-top"
+        style={{
+          width: "fit-content",
+        }}
+      >
+        {renderPreview ? renderPreview({
+          previewFormat,
+          draft,
+          setDraft,
+          previewDate,
+          includeSignature: supportsSignature ? includeSignature : false,
+          paperSize: currentPaperSize,
+          documentStyle,
+          autoFitOnePage,
+          liveEditMode,
+          highlightTarget,
+          onHighlightTargetChange: setHighlightTarget,
+        }) : (
+          <GenericSignaturePreview
+            draft={draft}
+            setDraft={setDraft}
+            previewDate={previewDate}
+            includeSignature={supportsSignature ? includeSignature : false}
+          />
+        )}
+      </div>
+    ),
+    [
+      autoFitOnePage,
+      currentPaperSize,
+      documentStyle,
+      draft,
+      highlightTarget,
+      includeSignature,
+      liveEditMode,
+      previewDate,
+      previewFormat,
+      renderPreview,
+      supportsSignature,
+    ],
+  );
 
   const saveCurrentSignature = useCallback(async () => {
     if (!supportsSignature) return;
@@ -2381,6 +2434,41 @@ export function ExportStudioDialog({
     mobileOverlayState !== "hidden-temporary";
   const mobileOverlayBottom = isNarrowLayout ? 96 : 108;
   const mobilePreviewMaxHeight = Math.max(180, Math.min(viewportHeight * 0.26, 240));
+  const handleMobileOverlayPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isMobileLayout || mobileOverlayState !== "expanded") return;
+    mobileOverlayDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: mobileOverlayOffset.x,
+      originY: mobileOverlayOffset.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, [isMobileLayout, mobileOverlayOffset.x, mobileOverlayOffset.y, mobileOverlayState]);
+  const handleMobileOverlayPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const dragState = mobileOverlayDragRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    const layoutRect = layoutViewportRef.current?.getBoundingClientRect();
+    const cardRect = mobileOverlayCardRef.current?.getBoundingClientRect();
+    const nextX = dragState.originX + (event.clientX - dragState.startX);
+    const nextY = dragState.originY + (event.clientY - dragState.startY);
+    const maxX = layoutRect && cardRect ? Math.max(0, (layoutRect.width - cardRect.width) / 2 - 8) : 160;
+    const maxY = layoutRect && cardRect ? Math.max(0, (layoutRect.height - cardRect.height) / 2 - 32) : 180;
+
+    setMobileOverlayOffset({
+      x: clamp(nextX, -maxX, maxX),
+      y: clamp(nextY, -maxY, maxY),
+    });
+  }, []);
+  const handleMobileOverlayPointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (mobileOverlayDragRef.current?.pointerId === event.pointerId) {
+      mobileOverlayDragRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
+  }, []);
 
   return (
     <>
@@ -2712,10 +2800,22 @@ export function ExportStudioDialog({
             {showMobilePreviewOverlay ? (
               <div
                 className="pointer-events-none absolute inset-x-3 z-20 lg:hidden"
-                style={{ bottom: `${mobileOverlayBottom}px` }}
+                style={{
+                  bottom: `${mobileOverlayBottom}px`,
+                  transform: `translate(${mobileOverlayOffset.x}px, ${mobileOverlayOffset.y}px)`,
+                }}
               >
-                <div className="ml-auto w-full max-w-[15.5rem] rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90">
-                  <div className="pointer-events-auto flex items-start justify-between gap-2 px-1 pb-2">
+                <div
+                  ref={mobileOverlayCardRef}
+                  className="ml-auto w-full max-w-[18rem] rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
+                >
+                  <div
+                    className="pointer-events-auto flex cursor-grab touch-none items-start justify-between gap-2 px-1 pb-2 active:cursor-grabbing"
+                    onPointerDown={handleMobileOverlayPointerDown}
+                    onPointerMove={handleMobileOverlayPointerMove}
+                    onPointerUp={handleMobileOverlayPointerUp}
+                    onPointerCancel={handleMobileOverlayPointerUp}
+                  >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <Eye className="h-3.5 w-3.5 text-primary" />
@@ -2753,39 +2853,55 @@ export function ExportStudioDialog({
 
                   {mobileOverlayState === "expanded" ? (
                     <>
-                      <div className="pointer-events-none overflow-hidden rounded-[18px] border border-border bg-muted/30 p-1">
+                      <div className="pointer-events-auto space-y-2">
+                        <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full"
+                            onClick={() => setMobileOverlayZoom((prev) => clamp(prev - 10, 15, 200))}
+                          >
+                            <ZoomOut className="h-3.5 w-3.5" />
+                          </Button>
+                          <div className="flex min-w-0 flex-1 items-center justify-center rounded-full border border-border px-2 text-[10px] font-medium text-foreground">
+                            {mobileOverlayZoom}%
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full"
+                            onClick={() => setMobileOverlayZoom(effectivePreviewZoom)}
+                          >
+                            <Maximize2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full"
+                            onClick={() => setMobileOverlayZoom((prev) => clamp(prev + 10, 15, 200))}
+                          >
+                            <ZoomIn className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                         <div
-                          className="origin-top overflow-hidden rounded-[14px] bg-white"
+                          ref={mobileOverlayViewportRef}
+                          className="overflow-auto rounded-[18px] border border-border bg-muted/30 p-1"
                           style={{ maxHeight: `${mobilePreviewMaxHeight}px` }}
                         >
-                          <div
-                            style={{
-                              transform: "scale(0.22)",
-                              transformOrigin: "top left",
-                              width: previewContentWidth > 0 ? `${previewContentWidth}px` : undefined,
-                              height: previewContentWidth > 0 ? `${Math.max(180, mobilePreviewMaxHeight / 0.22)}px` : undefined,
-                            }}
-                          >
-                            {renderPreview ? renderPreview({
-                              previewFormat,
-                              draft,
-                              setDraft,
-                              previewDate,
-                              includeSignature: supportsSignature ? includeSignature : false,
-                              paperSize: currentPaperSize,
-                              documentStyle,
-                              autoFitOnePage,
-                              liveEditMode: false,
-                              highlightTarget,
-                              onHighlightTargetChange: setHighlightTarget,
-                            }) : (
-                              <GenericSignaturePreview
-                                draft={draft}
-                                setDraft={setDraft}
-                                previewDate={previewDate}
-                                includeSignature={supportsSignature ? includeSignature : false}
-                              />
-                            )}
+                          <div className="flex min-h-full items-start justify-start">
+                            <div
+                              className="origin-top-left"
+                              style={{
+                                transform: `scale(${mobileOverlayZoom / 100})`,
+                                transformOrigin: "top left",
+                                width: "fit-content",
+                              }}
+                            >
+                              {renderPreviewContent(mobileOverlayCaptureRef)}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2892,11 +3008,11 @@ export function ExportStudioDialog({
                     <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev - 10, 25, previewZoomMax))}>
                       <ZoomOut className="h-3.5 w-3.5" />
                     </Button>
-                    <div className={cn(
-                      "flex h-8 items-center justify-center rounded-full border border-border px-2 text-[11px] font-medium text-foreground",
-                      isCompactLayout ? "flex-1 min-w-0" : "min-w-16",
-                    )}>
-                      {effectivePreviewZoom}%
+                      <div className={cn(
+                        "flex h-8 items-center justify-center rounded-full border border-border px-2 text-[11px] font-medium text-foreground",
+                        isCompactLayout ? "flex-1 min-w-0" : "min-w-16",
+                      )}>
+                        {effectivePreviewZoom}%
                     </div>
                     <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
                       <Maximize2 className="h-3.5 w-3.5" />
@@ -2916,7 +3032,6 @@ export function ExportStudioDialog({
                   <div className="flex min-h-full flex-col items-center gap-3">
                     <div className="flex w-full items-start justify-center">
                       <div
-                        ref={previewCaptureRef}
                         className="origin-top"
                         style={{
                           transform: `scale(${effectivePreviewZoom / 100})`,
@@ -2924,26 +3039,7 @@ export function ExportStudioDialog({
                           width: "fit-content",
                         }}
                       >
-                        {renderPreview ? renderPreview({
-                          previewFormat,
-                          draft,
-                          setDraft,
-                          previewDate,
-                          includeSignature: supportsSignature ? includeSignature : false,
-                          paperSize: currentPaperSize,
-                          documentStyle,
-                          autoFitOnePage,
-                          liveEditMode,
-                          highlightTarget,
-                          onHighlightTargetChange: setHighlightTarget,
-                        }) : (
-                          <GenericSignaturePreview
-                            draft={draft}
-                            setDraft={setDraft}
-                            previewDate={previewDate}
-                            includeSignature={supportsSignature ? includeSignature : false}
-                          />
-                        )}
+                        {renderPreviewContent(previewCaptureRef)}
                       </div>
                     </div>
                     {previewFooter ? <div className="w-full max-w-5xl">{previewFooter}</div> : null}
