@@ -1,11 +1,11 @@
 /**
- * AttendanceExportPreviewV2 — thin preview shell (backward-compatible API).
+ * AttendanceExportPreviewV2 - thin preview shell (backward-compatible API).
  *
  * After the WYSIWYG refactor (v2.3.92), this component no longer computes
  * its own layout. It builds the layout plan via `buildAttendancePrintLayoutPlan`
  * and delegates rendering to the PDF canvas preview so that:
  *
- *   preview ≡ exported PDF ≡ exported PNG
+ *   preview === exported PDF === exported PNG
  *
  * Existing callers (Attendance.tsx) keep the same props.
  */
@@ -16,6 +16,8 @@ import type { ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import {
   buildAttendancePrintLayoutPlan,
+  type AttendanceAnnotationDisplayMode,
+  type AttendanceInlineLabelStyle,
   type AttendancePrintDataset,
 } from "@/lib/attendancePrintLayout";
 import type { AttendanceHolidayInputItem } from "@/lib/attendanceHolidayGrouping";
@@ -57,10 +59,10 @@ export interface AttendanceExportPreviewDataV2 {
     hasEvent: boolean;
   }>;
   notes: string[];
-  /** Legacy strings: "20 Mei: Cuti bersama..." */
   holidays: string[];
-  /** Legacy strings: "21 Mei: Bakti Sosial — desc" */
   events: string[];
+  holidayItems?: AttendanceHolidayInputItem[];
+  eventItems?: AttendanceHolidayInputItem[];
 }
 
 interface AttendanceExportPreviewV2Props {
@@ -79,9 +81,10 @@ interface AttendanceExportPreviewV2Props {
   liveEditMode?: boolean;
   highlightTarget?: ExportPreviewHighlightTarget | null;
   onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  annotationDisplayMode?: AttendanceAnnotationDisplayMode;
+  inlineLabelStyle?: AttendanceInlineLabelStyle;
 }
 
-/** Parse legacy "20 Mei: Description" string → structured item. Best-effort. */
 function parseLegacyHolidayString(raw: string): AttendanceHolidayInputItem | null {
   const match = raw.match(/^(\d{1,2})\s+\S+\s*[:\u2013\u2014-]\s*(.+)$/);
   if (!match) return null;
@@ -95,12 +98,16 @@ function parseLegacyHolidayString(raw: string): AttendanceHolidayInputItem | nul
 }
 
 function toPrintDataset(data: AttendanceExportPreviewDataV2): AttendancePrintDataset {
-  const holidayItems: AttendanceHolidayInputItem[] = data.holidays
-    .map(parseLegacyHolidayString)
-    .filter((item): item is AttendanceHolidayInputItem => item !== null);
-  const eventItems: AttendanceHolidayInputItem[] = data.events
-    .map(parseLegacyHolidayString)
-    .filter((item): item is AttendanceHolidayInputItem => item !== null);
+  const holidayItems: AttendanceHolidayInputItem[] = data.holidayItems?.length
+    ? data.holidayItems
+    : data.holidays
+      .map(parseLegacyHolidayString)
+      .filter((item): item is AttendanceHolidayInputItem => item !== null);
+  const eventItems: AttendanceHolidayInputItem[] = data.eventItems?.length
+    ? data.eventItems
+    : data.events
+      .map(parseLegacyHolidayString)
+      .filter((item): item is AttendanceHolidayInputItem => item !== null);
 
   return {
     className: data.className,
@@ -132,6 +139,8 @@ export function AttendanceExportPreviewV2({
   liveEditMode = false,
   highlightTarget = null,
   onHighlightTargetChange,
+  annotationDisplayMode = "summary-card",
+  inlineLabelStyle = "rotate-90",
 }: AttendanceExportPreviewV2Props) {
   const printDataset = useMemo(() => toPrintDataset(data), [data]);
 
@@ -145,8 +154,20 @@ export function AttendanceExportPreviewV2({
       signature: draft,
       forceSinglePage: !!autoFitOnePage,
       signatureOffsetYMm: draft.signatureOffsetY,
+      annotationDisplayMode,
+      inlineLabelStyle,
     }),
-    [printDataset, paperSize, documentStyle, visibleColumnKeys, includeSignature, autoFitOnePage, draft, draft.signatureOffsetY],
+    [
+      printDataset,
+      paperSize,
+      documentStyle,
+      visibleColumnKeys,
+      includeSignature,
+      autoFitOnePage,
+      draft,
+      annotationDisplayMode,
+      inlineLabelStyle,
+    ],
   );
 
   const pdfBuild = useMemo(() => (

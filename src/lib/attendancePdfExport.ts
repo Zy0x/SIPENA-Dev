@@ -42,7 +42,7 @@ function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: Attendan
   const bannerY = plan.paper.marginTopMm;
   const contentLeft = plan.paper.marginLeftMm;
   const contentRight = plan.paper.pageWidthMm - plan.paper.marginRightMm;
-  const bannerHeight = SHELL_MM.topBanner - 2; // 16mm visible
+  const bannerHeight = plan.shell.topBanner - 2; // 16mm visible
   const bannerWidth = plan.paper.contentWidthMm;
 
   // Solid banner with subtle bottom band for depth.
@@ -162,14 +162,26 @@ function buildHeadRows(plan: AttendancePrintLayoutPlan) {
 function buildBodyRows(data: AttendancePrintDataset, plan: AttendancePrintLayoutPlan, page: AttendancePrintPage) {
   const rows = plan.rows.slice(page.rowStart, page.rowEnd);
   const visibleDayIndex = new Map(plan.visibleDays.map((day) => [day.key, data.days.findIndex((item) => item.key === day.key)]));
+  const inlineDayColumns = new Set<number>();
+  if (plan.annotationDisplayMode === "inline-vertical") {
+    plan.inlineAnnotations.forEach((range) => {
+      for (let columnIndex = range.startColumnIndex; columnIndex <= range.endColumnIndex; columnIndex += 1) {
+        inlineDayColumns.add(columnIndex);
+      }
+    });
+  }
   const body = rows.map((row) => {
     const values: string[] = [];
     if (plan.visibleColumnKeys.has("no")) values.push(String(row.number));
     if (plan.visibleColumnKeys.has("name")) values.push(row.name);
     if (plan.visibleColumnKeys.has("nisn")) values.push(row.nisn);
 
-    plan.visibleDays.forEach((day) => {
+    plan.visibleDays.forEach((day, visibleDayColumnIndex) => {
       const index = visibleDayIndex.get(day.key) ?? -1;
+      if (inlineDayColumns.has(visibleDayColumnIndex)) {
+        values.push("");
+        return;
+      }
       values.push(index >= 0 ? row.cells[index]?.value ?? "-" : "-");
     });
 
@@ -341,6 +353,7 @@ function drawInfoBlock(
   fontSizePt: number,
   accentColor = "#0f172a",
   accentBg = "#f8fafc",
+  infoBlockGapMm = SHELL_MM.infoBlockGap,
 ) {
   if (items.length === 0) return y;
 
@@ -411,7 +424,78 @@ function drawInfoBlock(
     });
   }
 
-  return y + blockHeight + SHELL_MM.infoBlockGap;
+  return y + blockHeight + infoBlockGapMm;
+}
+
+function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page: AttendancePrintPage) {
+  if (plan.annotationDisplayMode !== "inline-vertical" || plan.inlineAnnotations.length === 0) return;
+
+  const headerHeightMm = plan.table.headerRowHeightMm * 2;
+  const bodyTopMm = page.tableStartYMm + headerHeightMm;
+  const bodyHeightMm = page.rowHeightsMm.reduce((sum, height) => sum + height, 0);
+  if (bodyHeightMm <= 0) return;
+
+  let dayAreaLeftMm = plan.paper.marginLeftMm;
+  if (plan.visibleColumnKeys.has("no")) dayAreaLeftMm += plan.table.noWidthMm;
+  if (plan.visibleColumnKeys.has("name")) dayAreaLeftMm += plan.table.nameWidthMm;
+  if (plan.visibleColumnKeys.has("nisn")) dayAreaLeftMm += plan.table.nisnWidthMm;
+
+  const toneMap = {
+    national: { fill: [30, 64, 175] as [number, number, number], stroke: [191, 219, 254] as [number, number, number] },
+    custom: { fill: [180, 83, 9] as [number, number, number], stroke: [253, 230, 138] as [number, number, number] },
+    event: { fill: [109, 40, 217] as [number, number, number], stroke: [221, 214, 254] as [number, number, number] },
+  } as const;
+
+  const resolveRotateFontPt = (text: string, widthMm: number, heightMm: number) => {
+    let fontPt = Math.min(11, Math.max(5.8, widthMm - 1.4));
+    while (fontPt > 5.5 && doc.getTextWidth(text) > Math.max(8, heightMm - 4)) {
+      fontPt -= 0.25;
+      doc.setFontSize(fontPt);
+    }
+    return Number(fontPt.toFixed(2));
+  };
+  const resolveStackedFontPt = (chars: string[], widthMm: number, heightMm: number) => {
+    const usableHeight = Math.max(12, heightMm - 4);
+    const perLineHeightMm = usableHeight / Math.max(chars.length, 1);
+    return Number(Math.max(5.2, Math.min(widthMm - 1.4, perLineHeightMm * 1.9)).toFixed(2));
+  };
+
+  plan.inlineAnnotations.forEach((annotation) => {
+    const leftMm = dayAreaLeftMm + (annotation.startColumnIndex * plan.table.dayWidthMm);
+    const widthMm = (annotation.endColumnIndex - annotation.startColumnIndex + 1) * plan.table.dayWidthMm;
+    if (widthMm <= 0) return;
+    const tone = toneMap[annotation.tone];
+    const centerX = leftMm + (widthMm / 2);
+    const centerY = bodyTopMm + (bodyHeightMm / 2);
+
+    doc.setDrawColor(...tone.stroke);
+    doc.setLineWidth(0.1);
+    doc.roundedRect(leftMm + 0.4, bodyTopMm + 0.5, Math.max(1, widthMm - 0.8), Math.max(1, bodyHeightMm - 1), 1.4, 1.4, "S");
+    doc.setTextColor(...tone.fill);
+    doc.setFont("helvetica", "bold");
+
+    if (plan.inlineLabelStyle === "stacked") {
+      const chars = annotation.text.replace(/\s+/g, " ").split("").filter((char) => char !== " ");
+      const fontPt = resolveStackedFontPt(chars, widthMm, bodyHeightMm);
+      const lineHeightMm = Math.max(2.3, fontPt * 0.34 + 0.4);
+      const totalHeightMm = lineHeightMm * Math.max(chars.length, 1);
+      let cursorY = centerY - (totalHeightMm / 2) + lineHeightMm * 0.78;
+      doc.setFontSize(fontPt);
+      chars.forEach((char) => {
+        doc.text(char, centerX, cursorY, { align: "center", baseline: "middle" });
+        cursorY += lineHeightMm;
+      });
+      return;
+    }
+
+    const fontPt = resolveRotateFontPt(annotation.text, widthMm, bodyHeightMm);
+    doc.setFontSize(fontPt);
+    doc.text(annotation.text, centerX, centerY, {
+      align: "center",
+      baseline: "middle",
+      angle: 90,
+    });
+  });
 }
 
 function drawSummary(
@@ -430,7 +514,7 @@ function drawSummary(
   const x = plan.paper.marginLeftMm;
   const legendFontPt = Math.max(6, plan.table.metaFontPt - 1.2);
 
-  let nextY = currentY + SHELL_MM.summaryGap;
+  let nextY = currentY + plan.shell.summaryGap;
   if (summaryContent.showLegend) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(legendFontPt);
@@ -461,10 +545,10 @@ function drawSummary(
     nextY = legendY + 4.1;
   }
   if (summaryContent.keteranganItems.length > 0) {
-    nextY = drawInfoBlock(doc, summaryContent.keteranganTitle ?? "Keterangan", summaryContent.keteranganItems, x, nextY, contentWidth, summaryContent.keteranganFontPt, "#0369a1", "#f0f9ff");
+    nextY = drawInfoBlock(doc, summaryContent.keteranganTitle ?? "Keterangan", summaryContent.keteranganItems, x, nextY, contentWidth, summaryContent.keteranganFontPt, "#0369a1", "#f0f9ff", plan.shell.infoBlockGap);
   }
   if (summaryContent.notesItems.length > 0) {
-    nextY = drawInfoBlock(doc, summaryContent.notesTitle ?? "Catatan Siswa", summaryContent.notesItems, x, nextY, contentWidth, summaryContent.notesFontPt, "#0f172a", "#f8fafc");
+    nextY = drawInfoBlock(doc, summaryContent.notesTitle ?? "Catatan Siswa", summaryContent.notesItems, x, nextY, contentWidth, summaryContent.notesFontPt, "#0f172a", "#f8fafc", plan.shell.infoBlockGap);
   }
 
   // CRITICAL: only draw the signature when this page is the designated TTD page.
@@ -474,7 +558,7 @@ function drawSummary(
     addSignatureBlockPDF(
       doc,
       signature,
-      nextY + SHELL_MM.signatureGap,
+      nextY + plan.shell.signatureGap,
       plan.signaturePlacement
         ? {
             xMm: plan.signaturePlacement.xMm,
@@ -525,7 +609,7 @@ export function buildAttendancePdfDocument(args: {
     format: [plan.paper.pageWidthMm, plan.paper.pageHeightMm],
   });
 
-  const tableStartY = plan.paper.marginTopMm + SHELL_MM.topBanner + SHELL_MM.metaBar + SHELL_MM.contentPaddingY;
+    const tableStartY = plan.paper.marginTopMm + plan.shell.topBanner + plan.shell.metaBar + plan.shell.contentPaddingY;
   const bodyRowsByPage = plan.pages.map((page) => buildBodyRows(data, plan, page));
   const { row1, row2, mergedColumns } = buildHeadRows(plan);
   const columnStyles = buildColumnStyles(plan);
@@ -817,6 +901,7 @@ export function buildAttendancePdfDocument(args: {
           "S",
         );
       }
+      drawInlineAnnotations(doc, plan, page);
 
       runtimeTrace.docPageAfterTable = doc.getCurrentPageInfo().pageNumber;
       runtimeTrace.autoTableFinalY = Number(((doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 0).toFixed(2));
@@ -851,7 +936,7 @@ export function buildAttendancePdfDocument(args: {
         plan,
         page,
         page.kind === "summary-continuation"
-          ? (plan.paper.marginTopMm + Math.max(0, SHELL_MM.topBanner - 2))
+          ? (plan.paper.marginTopMm + Math.max(0, plan.shell.topBanner - 2))
           : plan.summaryLayout.tableEndYMm,
         signature,
         includeSignature,

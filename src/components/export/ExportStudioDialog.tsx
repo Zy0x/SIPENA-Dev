@@ -203,10 +203,16 @@ interface ExportStudioDialogProps {
   }) => ReactNode;
   noPreviewMessage?: string;
   formatPanelExtra?: ReactNode;
+  stylePanelExtra?: ReactNode;
   previewFooter?: ReactNode;
   onRestoreDefaultMode?: () => void;
   defaultModeLabel?: string;
   defaultModeDescription?: string;
+  stylePresetMode?: "generic" | "attendance";
+  stylePresetBaseline?: {
+    documentStyle: ReportDocumentStyle;
+    autoFitOnePage?: boolean;
+  };
 }
 
 const PAPER_SIZE_OPTIONS: Array<{
@@ -747,6 +753,8 @@ function ExperimentalTypographyWindow({
   const dragState = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const scrollMemoryRef = useRef<Record<string, number>>({ typography: 0, layout: 0 });
+  const layoutSectionRef = useRef<HTMLDivElement>(null);
+  const columnCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     dragState.current = null;
@@ -807,6 +815,19 @@ function ExperimentalTypographyWindow({
       bodyRef.current?.scrollTo({ top: scrollMemoryRef.current[activeTab] ?? 0 });
     });
   }, [activeTab, open]);
+
+  useEffect(() => {
+    if (!open || !highlightTarget) return;
+    const nextTab = highlightTarget.kind === "column" ? "typography" : "layout";
+    setActiveTab(nextTab);
+    requestAnimationFrame(() => {
+      if (highlightTarget.kind === "column") {
+        columnCardRefs.current[highlightTarget.key]?.scrollIntoView({ block: "center", behavior: "smooth" });
+        return;
+      }
+      layoutSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }, [highlightTarget, open]);
 
   if (!open || !documentStyle || !onDocumentStyleChange || !columnTypographyOptions?.length) {
     return null;
@@ -1020,7 +1041,7 @@ function ExperimentalTypographyWindow({
           </div>
 
           {activeTab === "layout" ? (
-            <div className="mb-3 rounded-xl border border-border bg-background/80 p-3">
+            <div ref={layoutSectionRef} className="mb-3 rounded-xl border border-border bg-background/80 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold text-foreground">General</p>
@@ -1175,6 +1196,9 @@ function ExperimentalTypographyWindow({
               return (
                 <div
                   key={option.key}
+                  ref={(element) => {
+                    columnCardRefs.current[option.key] = element;
+                  }}
                   className={cn("rounded-xl border bg-background/80 p-3 transition-colors", isHighlighted ? "border-primary shadow-sm" : "border-border")}
                   onMouseEnter={() => onHighlightTargetChange?.({ kind: "column", key: option.key, label: option.label })}
                 >
@@ -2126,6 +2150,9 @@ function StylePanel({
   showAutoFitPreset,
   columnTypographyOptions,
   onOpenExperimentalWindow,
+  stylePresetExtra,
+  presetMode = "generic",
+  presetBaseline,
 }: {
   documentStyle?: ReportDocumentStyle;
   onDocumentStyleChange?: Dispatch<SetStateAction<ReportDocumentStyle>>;
@@ -2134,6 +2161,12 @@ function StylePanel({
   showAutoFitPreset?: boolean;
   columnTypographyOptions?: ExportColumnTypographyOption[];
   onOpenExperimentalWindow: () => void;
+  stylePresetExtra?: ReactNode;
+  presetMode?: "generic" | "attendance";
+  presetBaseline?: {
+    documentStyle: ReportDocumentStyle;
+    autoFitOnePage?: boolean;
+  };
 }) {
   const parseCustomNumber = (value: string, fallback: number) => {
     const parsed = Number.parseFloat(value);
@@ -2141,27 +2174,167 @@ function StylePanel({
     return clamp(Number(parsed.toFixed(2)), 1, 40);
   };
 
-  const defaultDocumentStyle = useMemo(() => createDefaultReportDocumentStyle(), []);
-  const presets = [
-    { label: "Default", title: defaultDocumentStyle.titleFontSize, meta: defaultDocumentStyle.metaFontSize, header: defaultDocumentStyle.tableHeaderFontSize, body: defaultDocumentStyle.tableBodyFontSize, desc: "Baseline default studio", autoFit: false, layoutPreset: "standard" as const },
-    { label: "1 Halaman", title: 14, meta: 9, header: 10, body: 10, desc: "Utamakan 1 halaman tabel", autoFit: true, layoutPreset: "one-page" as const },
-    { label: "1 Kolom Penuh", title: 12, meta: 8, header: 8, body: 7, desc: "Titik awal agar semua kolom muat", autoFit: false, layoutPreset: "single-column-full" as const },
-    { label: "Kompak", title: 14, meta: 9, header: 9, body: 8, desc: "Ringkas", autoFit: false, layoutPreset: "compact" as const },
-    { label: "Standar", title: 17, meta: 10, header: 12, body: 11, desc: "Seimbang", autoFit: false, layoutPreset: "standard" as const },
-    { label: "Besar", title: 20, meta: 12, header: 14, body: 13, desc: "Paling mudah dibaca", autoFit: false, layoutPreset: "large" as const },
-  ] as const;
+  const baseline = useMemo(
+    () => presetBaseline ?? {
+      documentStyle: createDefaultReportDocumentStyle(),
+      autoFitOnePage: false,
+    },
+    [presetBaseline],
+  );
 
-  const isPresetActive = useCallback((preset: (typeof presets)[number]) => {
+  const buildAttendancePreset = useCallback((presetId: "default" | "one-page" | "single-column-full" | "compact" | "large") => {
+    const next = structuredClone(baseline.documentStyle);
+    if (presetId === "default") {
+      next.layoutPreset = "standard";
+      return { documentStyle: next, autoFitOnePage: !!baseline.autoFitOnePage };
+    }
+    if (presetId === "one-page") {
+      next.layoutPreset = "one-page";
+      next.titleFontSize = clamp(baseline.documentStyle.titleFontSize - 1, 7, 40);
+      next.metaFontSize = clamp(baseline.documentStyle.metaFontSize - 0.8, 7, 40);
+      next.tableHeaderFontSize = clamp(baseline.documentStyle.tableHeaderFontSize - 1.3, 7, 40);
+      next.tableBodyFontSize = clamp(baseline.documentStyle.tableBodyFontSize - 1.1, 7, 40);
+      next.tableSizing = {
+        ...next.tableSizing,
+        mode: "autofit-window",
+        tableWidthPercent: 100,
+        headerRowHeightMm: 8.4,
+        bodyRowHeightMm: 6.1,
+      };
+      next.attendanceLayout = {
+        ...next.attendanceLayout,
+        contentPaddingYMm: Math.max(2, baseline.documentStyle.attendanceLayout.contentPaddingYMm - 0.8),
+        summaryGapMm: Math.max(1.5, baseline.documentStyle.attendanceLayout.summaryGapMm - 0.9),
+        infoBlockGapMm: Math.max(1, baseline.documentStyle.attendanceLayout.infoBlockGapMm - 0.5),
+        signatureGapMm: Math.max(1.8, baseline.documentStyle.attendanceLayout.signatureGapMm - 0.8),
+        footerClearanceMm: Math.max(2, baseline.documentStyle.attendanceLayout.footerClearanceMm - 0.6),
+      };
+      return { documentStyle: next, autoFitOnePage: true };
+    }
+    if (presetId === "single-column-full") {
+      next.layoutPreset = "single-column-full";
+      next.titleFontSize = clamp(baseline.documentStyle.titleFontSize - 1.4, 7, 40);
+      next.metaFontSize = clamp(baseline.documentStyle.metaFontSize - 1, 7, 40);
+      next.tableHeaderFontSize = clamp(baseline.documentStyle.tableHeaderFontSize - 2, 7, 40);
+      next.tableBodyFontSize = clamp(baseline.documentStyle.tableBodyFontSize - 1.8, 7, 40);
+      next.tableSizing = {
+        ...next.tableSizing,
+        mode: "autofit-window",
+        tableWidthPercent: 100,
+        headerRowHeightMm: 8.1,
+        bodyRowHeightMm: 5.7,
+      };
+      next.attendanceLayout = {
+        ...next.attendanceLayout,
+        summaryGapMm: Math.max(1.5, baseline.documentStyle.attendanceLayout.summaryGapMm - 0.6),
+        infoBlockGapMm: Math.max(1, baseline.documentStyle.attendanceLayout.infoBlockGapMm - 0.35),
+      };
+      return { documentStyle: next, autoFitOnePage: false };
+    }
+    if (presetId === "compact") {
+      next.layoutPreset = "compact";
+      next.titleFontSize = clamp(baseline.documentStyle.titleFontSize - 1.8, 7, 40);
+      next.metaFontSize = clamp(baseline.documentStyle.metaFontSize - 1.2, 7, 40);
+      next.tableHeaderFontSize = clamp(baseline.documentStyle.tableHeaderFontSize - 1.8, 7, 40);
+      next.tableBodyFontSize = clamp(baseline.documentStyle.tableBodyFontSize - 1.6, 7, 40);
+      next.tableSizing = {
+        ...next.tableSizing,
+        mode: "autofit-content",
+        tableWidthPercent: 98,
+        headerRowHeightMm: 8,
+        bodyRowHeightMm: 5.6,
+      };
+      next.attendanceLayout = {
+        ...next.attendanceLayout,
+        contentPaddingYMm: Math.max(2, baseline.documentStyle.attendanceLayout.contentPaddingYMm - 0.7),
+        summaryGapMm: Math.max(1.5, baseline.documentStyle.attendanceLayout.summaryGapMm - 1),
+        infoBlockGapMm: Math.max(1, baseline.documentStyle.attendanceLayout.infoBlockGapMm - 0.55),
+        signatureGapMm: Math.max(1.6, baseline.documentStyle.attendanceLayout.signatureGapMm - 1),
+        footerClearanceMm: Math.max(2, baseline.documentStyle.attendanceLayout.footerClearanceMm - 0.8),
+      };
+      return { documentStyle: next, autoFitOnePage: false };
+    }
+    next.layoutPreset = "large";
+    next.titleFontSize = clamp(baseline.documentStyle.titleFontSize + 1.5, 7, 40);
+    next.metaFontSize = clamp(baseline.documentStyle.metaFontSize + 0.8, 7, 40);
+    next.tableHeaderFontSize = clamp(baseline.documentStyle.tableHeaderFontSize + 1, 7, 40);
+    next.tableBodyFontSize = clamp(baseline.documentStyle.tableBodyFontSize + 0.8, 7, 40);
+    next.tableSizing = {
+      ...next.tableSizing,
+      mode: "autofit-content",
+      tableWidthPercent: 100,
+      headerRowHeightMm: 9.4,
+      bodyRowHeightMm: 6.7,
+    };
+    next.attendanceLayout = {
+      ...next.attendanceLayout,
+      summaryGapMm: baseline.documentStyle.attendanceLayout.summaryGapMm + 0.4,
+      infoBlockGapMm: baseline.documentStyle.attendanceLayout.infoBlockGapMm + 0.2,
+      signatureGapMm: baseline.documentStyle.attendanceLayout.signatureGapMm + 0.5,
+      footerClearanceMm: baseline.documentStyle.attendanceLayout.footerClearanceMm + 0.3,
+    };
+    return { documentStyle: next, autoFitOnePage: !!baseline.autoFitOnePage };
+  }, [baseline]);
+
+  const presets = useMemo(() => (
+    presetMode === "attendance"
+      ? [
+          { id: "default", label: "Default", desc: "Kondisi awal saat studio pertama dibuka." },
+          { id: "one-page", label: "1 Halaman", desc: "Padat wajar agar header sampai footer tetap muat." },
+          { id: "single-column-full", label: "1 Kolom Penuh", desc: "Prioritaskan semua kolom muat dalam satu halaman." },
+          { id: "compact", label: "Kompak", desc: "Lebih rapat, tetapi tetap menjaga keterbacaan." },
+          { id: "large", label: "Besar", desc: "Lebih lega untuk dibaca tanpa merusak layout." },
+        ] as const
+      : [
+          { id: "default", label: "Default", desc: "Baseline style bawaan studio." },
+          { id: "one-page", label: "1 Halaman", desc: "Utamakan satu halaman." },
+          { id: "single-column-full", label: "1 Kolom Penuh", desc: "Fokus agar semua kolom muat." },
+          { id: "compact", label: "Kompak", desc: "Layout lebih ringkas." },
+          { id: "large", label: "Besar", desc: "Tampilan lebih besar dan nyaman dibaca." },
+        ] as const
+  ), [presetMode]);
+
+  const isPresetActive = useCallback((presetId: (typeof presets)[number]["id"]) => {
     if (!documentStyle) return false;
-    return (
-      documentStyle.titleFontSize === preset.title &&
-      documentStyle.metaFontSize === preset.meta &&
-      documentStyle.tableHeaderFontSize === preset.header &&
-      documentStyle.tableBodyFontSize === preset.body &&
-      (!!autoFitOnePage === preset.autoFit) &&
-      (documentStyle.layoutPreset ?? "standard") === preset.layoutPreset
-    );
-  }, [autoFitOnePage, documentStyle]);
+    const applied = presetMode === "attendance"
+      ? buildAttendancePreset(presetId)
+      : {
+          documentStyle: {
+            ...baseline.documentStyle,
+            layoutPreset: presetId === "default"
+              ? "standard"
+              : presetId === "one-page"
+                ? "one-page"
+                : presetId === "single-column-full"
+                  ? "single-column-full"
+                  : presetId === "compact"
+                    ? "compact"
+                    : "large",
+          },
+          autoFitOnePage: presetId === "one-page",
+        };
+
+    return JSON.stringify(documentStyle) === JSON.stringify(applied.documentStyle)
+      && !!autoFitOnePage === !!applied.autoFitOnePage;
+  }, [autoFitOnePage, baseline.documentStyle, buildAttendancePreset, documentStyle, presetMode]);
+
+  const applyPreset = useCallback((presetId: (typeof presets)[number]["id"]) => {
+    const applied = presetMode === "attendance"
+      ? buildAttendancePreset(presetId)
+      : {
+          documentStyle: {
+            ...baseline.documentStyle,
+            titleFontSize: presetId === "default" ? baseline.documentStyle.titleFontSize : presetId === "one-page" ? 14 : presetId === "single-column-full" ? 12 : presetId === "compact" ? 14 : 20,
+            metaFontSize: presetId === "default" ? baseline.documentStyle.metaFontSize : presetId === "one-page" ? 9 : presetId === "single-column-full" ? 8 : presetId === "compact" ? 9 : 12,
+            tableHeaderFontSize: presetId === "default" ? baseline.documentStyle.tableHeaderFontSize : presetId === "one-page" ? 10 : presetId === "single-column-full" ? 8 : presetId === "compact" ? 9 : 14,
+            tableBodyFontSize: presetId === "default" ? baseline.documentStyle.tableBodyFontSize : presetId === "one-page" ? 10 : presetId === "single-column-full" ? 7 : presetId === "compact" ? 8 : 13,
+            layoutPreset: presetId === "default" ? "standard" : presetId === "one-page" ? "one-page" : presetId === "single-column-full" ? "single-column-full" : presetId === "compact" ? "compact" : "large",
+          },
+          autoFitOnePage: presetId === "one-page",
+        };
+    onDocumentStyleChange?.(applied.documentStyle);
+    onAutoFitOnePageChange?.(applied.autoFitOnePage);
+  }, [baseline.documentStyle, buildAttendancePreset, onAutoFitOnePageChange, onDocumentStyleChange, presetMode]);
 
   return (
     <>
@@ -2169,9 +2342,11 @@ function StylePanel({
         <>
           <StudioSubsection
             title="Preset Dokumen"
-            description="Pilih titik awal style dokumen. Preset Default selalu mengikuti baseline style bawaan studio."
+            description={presetMode === "attendance"
+              ? "Semua preset Presensi diturunkan dari Default. Preset Default selalu mengikuti kondisi awal saat studio pertama dibuka."
+              : "Pilih titik awal style dokumen. Preset Default selalu mengikuti baseline style bawaan studio."}
             tone="rose"
-            badge={presets.find(isPresetActive)?.label ?? "Kustom"}
+            badge={presets.find((preset) => isPresetActive(preset.id))?.label ?? "Kustom"}
           >
             <div
               className="grid gap-1"
@@ -2179,22 +2354,12 @@ function StylePanel({
             >
               {presets.map((preset) => (
                 <Button
-                  key={preset.label}
-                  variant={isPresetActive(preset) ? "default" : "outline"}
+                  key={preset.id}
+                  variant={isPresetActive(preset.id) ? "default" : "outline"}
                   size="sm"
                   className="h-auto flex-col items-start rounded-xl py-2 text-[10px]"
                   title={`Gunakan preset style ${preset.label}. ${preset.desc}`}
-                  onClick={() => {
-                    onDocumentStyleChange((prev) => ({
-                      ...prev,
-                      titleFontSize: preset.title,
-                      metaFontSize: preset.meta,
-                      tableHeaderFontSize: preset.header,
-                      tableBodyFontSize: preset.body,
-                      layoutPreset: preset.layoutPreset,
-                    }));
-                    onAutoFitOnePageChange?.(preset.autoFit);
-                  }}
+                  onClick={() => applyPreset(preset.id)}
                 >
                   <span className="font-medium">{preset.label}</span>
                   <span className="text-[8px] opacity-70">{preset.desc}</span>
@@ -2202,6 +2367,8 @@ function StylePanel({
               ))}
             </div>
           </StudioSubsection>
+
+          {stylePresetExtra ? stylePresetExtra : null}
 
           {showAutoFitPreset ? (
             <StudioSubsection
@@ -2346,10 +2513,13 @@ export function ExportStudioDialog({
   renderPreview,
   noPreviewMessage = "Preview untuk format spreadsheet belum ditampilkan di studio ini. Data aktif dan filter tetap dipakai saat ekspor.",
   formatPanelExtra,
+  stylePanelExtra,
   previewFooter,
   onRestoreDefaultMode,
   defaultModeLabel = "Mode Default",
   defaultModeDescription = "Kembalikan studio ke baseline awal tanpa mengubah ukuran kertas dan identitas signature.",
+  stylePresetMode = "generic",
+  stylePresetBaseline,
 }: ExportStudioDialogProps) {
   type ActivePanel = "format" | "columns" | "signature" | "style" | "signatureStyle";
   type MobileWizardStep = "format" | "setup" | "preview";
@@ -2504,10 +2674,14 @@ export function ExportStudioDialog({
   }, [activePanel, includeSignature, supportsSignature]);
   useEffect(() => {
     if (previousExperimentalOpenRef.current && !experimentalWindowOpen) {
+      setLiveEditMode(false);
       setHighlightTarget(null);
     }
+    if (experimentalWindowOpen && !liveEditMode) {
+      setLiveEditMode(true);
+    }
     previousExperimentalOpenRef.current = experimentalWindowOpen;
-  }, [experimentalWindowOpen]);
+  }, [experimentalWindowOpen, liveEditMode]);
   useEffect(() => {
     if (!open || isMobileLayout) return;
 
@@ -2546,15 +2720,29 @@ export function ExportStudioDialog({
   }, [getDesktopPanelBounds, isMobileLayout, open]);
 
   useEffect(() => {
-    if (liveEditMode && highlightTarget?.kind === "column" && columnTypographyOptions?.length) {
-      setExperimentalWindowOpen(true);
-      setActivePanel("style");
-      if (isPhoneWizard) {
-        setMobileStep("setup");
-        setMobileSetupSection("document");
+    if (!open) return;
+    if (!liveEditMode) {
+      if (experimentalWindowOpen) {
+        setExperimentalWindowOpen(false);
       }
+      setHighlightTarget(null);
+      return;
     }
-  }, [columnTypographyOptions?.length, highlightTarget, isPhoneWizard, liveEditMode]);
+    if (!experimentalWindowOpen) {
+      setExperimentalWindowOpen(true);
+    }
+  }, [experimentalWindowOpen, liveEditMode, open]);
+
+  useEffect(() => {
+    if (!open || !liveEditMode || !highlightTarget) return;
+    setExperimentalWindowOpen(true);
+    setActivePanel("style");
+    setActiveMobileSection("panel");
+    if (isPhoneWizard) {
+      setMobileStep("setup");
+      setMobileSetupSection("document");
+    }
+  }, [highlightTarget, isPhoneWizard, liveEditMode, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -2630,6 +2818,7 @@ export function ExportStudioDialog({
   const previewFormat = activeFormat?.previewMode === "png" ? "png" : "pdf";
   const canPreview = !!activeFormat?.previewMode;
   const currentPaperSize = paperSize;
+  const experimentalModeActive = !!(documentStyle?.experimentalColumnTypographyEnabled || documentStyle?.experimentalColumnLayoutEnabled);
 
   useEffect(() => {
     if (!open) return;
@@ -2894,9 +3083,6 @@ export function ExportStudioDialog({
   const currentPaperLabel = currentPaperOption?.label ?? currentPaperSize;
   const canConfigureColumns = !!(columnOptions && onColumnOptionChange);
   const canConfigureSignature = supportsSignature;
-  const experimentalModeActive = !!documentStyle && (
-    documentStyle.experimentalColumnTypographyEnabled || documentStyle.experimentalColumnLayoutEnabled
-  );
   const activeColumnCount = columnCount ?? columnOptions?.reduce((total, option) => {
     if (!option.children?.length) return total + (option.checked ? 1 : 0);
     return total + option.children.filter((child) => child.checked).length;
@@ -3093,6 +3279,9 @@ export function ExportStudioDialog({
       showAutoFitPreset={showAutoFitPreset}
       columnTypographyOptions={columnTypographyOptions}
       onOpenExperimentalWindow={() => setExperimentalWindowOpen(true)}
+      stylePresetExtra={stylePanelExtra}
+      presetMode={stylePresetMode}
+      presetBaseline={stylePresetBaseline}
     />
   );
 
@@ -3293,15 +3482,31 @@ export function ExportStudioDialog({
                 "h-8 rounded-full px-3 text-[10px]",
                 phoneWizard ? "order-3" : isCompactLayout ? "w-full" : "order-3 sm:order-2",
               )}
-              onClick={() => setLiveEditMode((prev) => !prev)}
+              onClick={() => {
+                if (liveEditMode) {
+                  setLiveEditMode(false);
+                  setExperimentalWindowOpen(false);
+                } else {
+                  setExperimentalWindowOpen(true);
+                  setLiveEditMode(true);
+                }
+              }}
             >
               {liveEditMode ? "Edit Langsung Aktif" : "Edit di Preview"}
             </Button>
           ) : null}
+          {experimentalModeActive ? (
+            <div className={cn(
+              "rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/25 dark:text-amber-200",
+              phoneWizard ? "order-4" : isCompactLayout ? "w-full text-center" : "order-2 sm:order-1",
+            )}>
+              Eksperimental Aktif
+            </div>
+          ) : null}
           {highlightTarget ? (
             <div className={cn(
               "rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-medium text-primary",
-              phoneWizard ? "order-4" : isCompactLayout ? "w-full text-center" : "order-3 sm:order-1",
+              phoneWizard ? "order-5" : isCompactLayout ? "w-full text-center" : "order-3 sm:order-1",
             )}>
               {highlightTarget.label || (highlightTarget.kind === "column" ? highlightTarget.key : highlightTarget.kind)}
             </div>
@@ -3961,12 +4166,20 @@ export function ExportStudioDialog({
               </div>
 
                 <div
+                  className={cn(
+                    "flex-1 min-h-0",
+                    isMobileLayout
+                      ? ""
+                      : "mx-3 my-3 overflow-hidden rounded-[24px] border border-border/80 bg-background/88 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+                  )}
+                >
+                <div
                   ref={panelScrollRef}
                   className={cn(
-                    "flex-1 overflow-y-auto space-y-3",
+                    "h-full overflow-y-auto space-y-3",
                     isMobileLayout
                       ? "px-3 py-3 pb-44 sm:px-4"
-                      : "mx-3 my-3 rounded-[24px] border border-border/80 bg-background/88 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] sm:px-4 sm:py-4",
+                      : "px-3 py-3 pr-2 sm:px-4 sm:py-4",
                   )}
                 >
                 {activePanel === "format" ? (
@@ -4015,6 +4228,7 @@ export function ExportStudioDialog({
                 {activePanel === "signatureStyle" ? (
                   positionPanelContent
                 ) : null}
+              </div>
               </div>
             </div>
 
@@ -4254,11 +4468,27 @@ export function ExportStudioDialog({
                       variant={liveEditMode ? "default" : "outline"}
                       size="sm"
                       className={cn("h-8 rounded-full px-3 text-[10px]", isCompactLayout ? "w-full" : "order-3 sm:order-2")}
-                      onClick={() => setLiveEditMode((prev) => !prev)}
+                      onClick={() => {
+                        if (liveEditMode) {
+                          setLiveEditMode(false);
+                          setExperimentalWindowOpen(false);
+                        } else {
+                          setExperimentalWindowOpen(true);
+                          setLiveEditMode(true);
+                        }
+                      }}
                       title={liveEditMode ? "Matikan mode edit langsung di preview." : "Aktifkan mode edit langsung agar perubahan dan highlight bisa dicek langsung di preview."}
                     >
                       {liveEditMode ? "Edit Langsung Aktif" : "Edit di Preview"}
                     </Button>
+                  ) : null}
+                  {experimentalModeActive ? (
+                    <div className={cn(
+                      "rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-semibold text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/25 dark:text-amber-200",
+                      isCompactLayout ? "w-full text-center" : "order-2 sm:order-1",
+                    )}>
+                      Eksperimental Aktif
+                    </div>
                   ) : null}
                   {highlightTarget ? (
                     <div className={cn(

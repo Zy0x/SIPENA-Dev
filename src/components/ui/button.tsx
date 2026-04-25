@@ -49,13 +49,56 @@ export interface ButtonProps
   asChild?: boolean;
 }
 
+function isCoarsePointerEvent(
+  event: React.PointerEvent<HTMLElement> | React.TouchEvent<HTMLElement>,
+) {
+  if ("pointerType" in event && typeof event.pointerType === "string") {
+    return event.pointerType === "touch" || event.pointerType === "pen";
+  }
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+}
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({
+    className,
+    variant,
+    size,
+    asChild = false,
+    onPointerUp,
+    onPointerCancel,
+    onTouchEnd,
+    ...props
+  }, ref) => {
     const Comp = asChild ? Slot : "button";
+
+    const clearPressedState = React.useCallback((target: EventTarget | null, coarse: boolean) => {
+      if (!coarse) return;
+      const button = target instanceof HTMLElement ? target.closest("button") : null;
+      if (button instanceof HTMLButtonElement) {
+        requestAnimationFrame(() => button.blur());
+      }
+    }, []);
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        onPointerUp={(event: React.PointerEvent<HTMLButtonElement>) => {
+          onPointerUp?.(event);
+          if (event.defaultPrevented) return;
+          clearPressedState(event.target, isCoarsePointerEvent(event));
+        }}
+        onPointerCancel={(event: React.PointerEvent<HTMLButtonElement>) => {
+          onPointerCancel?.(event);
+          if (event.defaultPrevented) return;
+          clearPressedState(event.target, isCoarsePointerEvent(event));
+        }}
+        onTouchEnd={(event: React.TouchEvent<HTMLButtonElement>) => {
+          onTouchEnd?.(event);
+          if (event.defaultPrevented) return;
+          clearPressedState(event.target, isCoarsePointerEvent(event));
+        }}
         {...props}
       />
     );

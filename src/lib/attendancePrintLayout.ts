@@ -154,6 +154,19 @@ export interface AttendancePrintInfoItem {
   tone?: "default" | "national" | "custom" | "event";
 }
 
+export type AttendanceAnnotationDisplayMode = "summary-card" | "inline-vertical";
+export type AttendanceInlineLabelStyle = "rotate-90" | "stacked";
+
+export interface AttendanceInlineAnnotationRange {
+  key: string;
+  text: string;
+  tone: "national" | "custom" | "event";
+  startDay: number;
+  endDay: number;
+  startColumnIndex: number;
+  endColumnIndex: number;
+}
+
 export interface AttendancePrintPageSummaryContent {
   mode: "table-tail" | "continuation";
   showLegend: boolean;
@@ -204,11 +217,15 @@ export interface AttendancePrintSummaryRows {
 }
 
 export interface AttendancePrintLayoutPlan {
+  shell: typeof ATTENDANCE_SHELL_MM;
   paper: AttendancePrintPaper;
   table: AttendancePrintTableLayout;
   visibleColumnKeys: Set<string>;
   visibleDays: AttendancePrintDay[];
   visibleRekapKeys: ("H" | "S" | "I" | "A" | "D" | "total")[];
+  annotationDisplayMode: AttendanceAnnotationDisplayMode;
+  inlineLabelStyle: AttendanceInlineLabelStyle;
+  inlineAnnotations: AttendanceInlineAnnotationRange[];
   rows: AttendancePrintRow[];
   rowHeightsMm: number[];
   pages: AttendancePrintPage[];
@@ -242,6 +259,8 @@ export interface BuildAttendancePrintLayoutArgs {
   includeSignature: boolean;
   signature?: SignatureData | null;
   forceSinglePage: boolean;
+  annotationDisplayMode?: AttendanceAnnotationDisplayMode;
+  inlineLabelStyle?: AttendanceInlineLabelStyle;
   /** Vertical signature offset in mm (positive = downward). Reserved into page so TTD never gets clipped. */
   signatureOffsetYMm?: number;
 }
@@ -346,7 +365,12 @@ function resolveInfoContentFontPt(baseFontPt: number) {
   return Math.max(5.6, baseFontPt - 1.1);
 }
 
-function buildInfoBlockMeasurement(items: AttendanceInfoLike[], widthMm: number, baseFontPt: number) {
+function buildInfoBlockMeasurement(
+  items: AttendanceInfoLike[],
+  widthMm: number,
+  baseFontPt: number,
+  infoBlockGapMm = SHELL_HEIGHT_MM.infoBlockGap,
+) {
   const contentFontPt = resolveInfoContentFontPt(baseFontPt);
   const useTwoCols = items.length > 2;
   const effectiveWidthMm = useTwoCols ? Math.max(40, (widthMm - 12) / 2) : widthMm;
@@ -370,7 +394,7 @@ function buildInfoBlockMeasurement(items: AttendanceInfoLike[], widthMm: number,
     return SHELL_HEIGHT_MM.infoBlockHeader
       + contentHeightMm
       + INFO_BLOCK_BOTTOM_PADDING_MM
-      + SHELL_HEIGHT_MM.infoBlockGap;
+      + infoBlockGapMm;
   };
 
   return {
@@ -382,14 +406,25 @@ function buildInfoBlockMeasurement(items: AttendanceInfoLike[], widthMm: number,
   };
 }
 
-function measureInfoBlockHeightMm(items: AttendanceInfoLike[], widthMm: number, baseFontPt: number) {
+function measureInfoBlockHeightMm(
+  items: AttendanceInfoLike[],
+  widthMm: number,
+  baseFontPt: number,
+  infoBlockGapMm = SHELL_HEIGHT_MM.infoBlockGap,
+) {
   if (items.length <= 0) return 0;
-  return buildInfoBlockMeasurement(items, widthMm, baseFontPt).totalHeightMm;
+  return buildInfoBlockMeasurement(items, widthMm, baseFontPt, infoBlockGapMm).totalHeightMm;
 }
 
-function takeInfoItemsForHeight(items: AttendanceInfoLike[], widthMm: number, baseFontPt: number, availableMm: number) {
+function takeInfoItemsForHeight(
+  items: AttendanceInfoLike[],
+  widthMm: number,
+  baseFontPt: number,
+  availableMm: number,
+  infoBlockGapMm = SHELL_HEIGHT_MM.infoBlockGap,
+) {
   if (items.length <= 0 || availableMm <= 0) return 0;
-  const measurement = buildInfoBlockMeasurement(items, widthMm, baseFontPt);
+  const measurement = buildInfoBlockMeasurement(items, widthMm, baseFontPt, infoBlockGapMm);
   let fitCount = 0;
   for (let count = 1; count <= items.length; count += 1) {
     if (measurement.resolveHeightForCount(count) <= availableMm + 0.01) {
@@ -399,6 +434,17 @@ function takeInfoItemsForHeight(items: AttendanceInfoLike[], widthMm: number, ba
     break;
   }
   return fitCount > 0 ? fitCount : 1;
+}
+
+function resolveAttendanceShellMetrics(documentStyle: ReportDocumentStyle) {
+  return {
+    ...ATTENDANCE_SHELL_MM,
+    contentPaddingY: documentStyle.attendanceLayout.contentPaddingYMm,
+    summaryGap: documentStyle.attendanceLayout.summaryGapMm,
+    infoBlockGap: documentStyle.attendanceLayout.infoBlockGapMm,
+    signatureGap: documentStyle.attendanceLayout.signatureGapMm,
+    footerClearance: documentStyle.attendanceLayout.footerClearanceMm,
+  };
 }
 
 function enumerateKeteranganBaseFontCandidates(baseFontPt: number) {
@@ -722,8 +768,18 @@ function headerRowHeightMm(headerFontPt: number, dayHeaderFontPt: number, dayDat
 }
 
 export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutArgs): AttendancePrintLayoutPlan {
-  const { data, paperSize, includeSignature, signature = null, forceSinglePage, signatureOffsetYMm = 0 } = args;
+  const {
+    data,
+    paperSize,
+    includeSignature,
+    signature = null,
+    forceSinglePage,
+    signatureOffsetYMm = 0,
+    annotationDisplayMode = "summary-card",
+    inlineLabelStyle = "rotate-90",
+  } = args;
   const documentStyle = resolveDocumentStyle(args.documentStyle);
+  const shell = resolveAttendanceShellMetrics(documentStyle);
   const useFullPage = paperSize === "full-page";
   const visibleSet = buildVisibleColumnSet(data, args.visibleColumnKeys);
   const signatureMetrics = includeSignature ? estimateSignatureBlockMetrics(signature) : null;
@@ -789,6 +845,25 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     text: g.text,
     tone: g._kind,
   } satisfies AttendancePrintInfoItem));
+  const visibleDayNumberToIndex = new Map(
+    visibleDays.map((day, index) => [Number.parseInt(day.dateLabel, 10), index]),
+  );
+  const inlineAnnotations: AttendanceInlineAnnotationRange[] = annotationDisplayMode === "inline-vertical"
+    ? keteranganGroups.flatMap((group) => {
+        const startColumnIndex = visibleDayNumberToIndex.get(group.startDay);
+        const endColumnIndex = visibleDayNumberToIndex.get(group.endDay);
+        if (typeof startColumnIndex !== "number" || typeof endColumnIndex !== "number") return [];
+        return [{
+          key: `${group._kind}-${group.startDay}-${group.endDay}-${group.description}`,
+          text: group.description,
+          tone: group._kind,
+          startDay: group.startDay,
+          endDay: group.endDay,
+          startColumnIndex,
+          endColumnIndex,
+        }];
+      })
+    : [];
 
   const summary: AttendancePrintSummary = {
     legend: DEFAULT_LEGEND,
@@ -817,12 +892,12 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   // signature block never gets clipped by the page rectangle in PDF/PNG capture.
   const signatureSafetyMm = includeSignature ? Math.max(0, signatureOffsetYMm) : 0;
   const signatureReserveMm = signatureMetrics
-    ? Math.max(signatureMetrics.heightMm + 4, SHELL_HEIGHT_MM.signatureBlock) + signatureSafetyMm
+    ? Math.max(signatureMetrics.heightMm + 4, shell.signatureBlock) + signatureSafetyMm
     : 0;
   const summaryContentWidthMm = paper.contentWidthMm;
   const legendHeightMm = estimateLegendHeightMm(summary.legend, summaryContentWidthMm, Math.max(6, documentStyle.metaFontSize - 1.2));
   const notesBaseFontPt = documentStyle.metaFontSize;
-  const notesHeightMm = measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt);
+  const notesHeightMm = measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt, shell.infoBlockGap);
   // Legacy fields kept for backwards compat in trace/debug paths
   const eventsHeightMm = 0;
   const customHolidaysHeightMm = 0;
@@ -830,18 +905,18 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const holidaysHeightMm = 0;
 
   const reservedShellMm =
-    SHELL_HEIGHT_MM.topBanner
-    + SHELL_HEIGHT_MM.metaBar
-    + SHELL_HEIGHT_MM.contentPaddingY
-    + SHELL_HEIGHT_MM.footerBar
-    + SHELL_HEIGHT_MM.footerClearance;
+    shell.topBanner
+    + shell.metaBar
+    + shell.contentPaddingY
+    + shell.footerBar
+    + shell.footerClearance;
   const keteranganFontCandidates = enumerateKeteranganBaseFontCandidates(documentStyle.metaFontSize);
   const minKeteranganBaseFontPt = keteranganFontCandidates[keteranganFontCandidates.length - 1] ?? documentStyle.metaFontSize;
   const minimalSummaryReserveMm = reservedShellMm
-    + SHELL_HEIGHT_MM.summaryGap
+    + shell.summaryGap
     + legendHeightMm
-    + (summary.keterangan.length > 0
-      ? measureInfoBlockHeightMm(summary.keterangan.slice(0, 1), summaryContentWidthMm, minKeteranganBaseFontPt)
+    + (annotationDisplayMode === "summary-card" && summary.keterangan.length > 0
+      ? measureInfoBlockHeightMm(summary.keterangan.slice(0, 1), summaryContentWidthMm, minKeteranganBaseFontPt, shell.infoBlockGap)
       : 0);
 
   const firstPass = autoFitTable({
@@ -865,9 +940,11 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   let selectedSinglePageSummaryInfoHeightMm = 0;
   for (const candidateFontPt of keteranganFontCandidates) {
     const candidateInfoHeightMm =
-      SHELL_HEIGHT_MM.summaryGap
+      shell.summaryGap
       + legendHeightMm
-      + measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, candidateFontPt)
+      + (annotationDisplayMode === "summary-card"
+        ? measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, candidateFontPt, shell.infoBlockGap)
+        : 0)
       + notesHeightMm;
     if (candidateInfoHeightMm + signatureReserveMm <= firstPassMaxTableTailSummaryMm + 0.01) {
       selectedSinglePageFontPt = candidateFontPt;
@@ -910,7 +987,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const tableHeaderHeightMm = table.headerRowHeightMm * 2;
   const availableLastPageMm = Math.max(10, paper.contentHeightMm - reservedLastPageMm - tableHeaderHeightMm - (summaryRowHeightMm * 2) - TABLE_BOTTOM_SAFETY_MM);
   const availableRegularPageMm =
-    Math.max(10, paper.contentHeightMm - reservedShellMm - SHELL_HEIGHT_MM.continuationNote - tableHeaderHeightMm - TABLE_BOTTOM_SAFETY_MM);
+    Math.max(10, paper.contentHeightMm - reservedShellMm - shell.continuationNote - tableHeaderHeightMm - TABLE_BOTTOM_SAFETY_MM);
   const bodyRowsTotalHeightMm = rowHeightsMm.reduce((sum, height) => sum + height, 0);
   const tablePlannedTotalHeightMm = tableHeaderHeightMm + bodyRowsTotalHeightMm + (summaryRowHeightMm * 2);
   const overflowRisk = tableRightSlackMm > TABLE_SLACK_TOLERANCE_MM || (!useFullPage && !singlePageFits);
@@ -920,9 +997,9 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   if (forceSinglePage && !singlePageFits && !useFullPage) {
     plannerWarnings.push("Mode satu halaman tidak muat penuh, planner beralih ke multi-page terencana.");
   }
-  const tableStartYMm = paper.marginTopMm + SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.metaBar + SHELL_HEIGHT_MM.contentPaddingY;
-  const tableMaxBottomRegularMm = paper.pageHeightMm - paper.marginBottomMm - SHELL_HEIGHT_MM.footerBar - SHELL_HEIGHT_MM.footerClearance - SHELL_HEIGHT_MM.continuationNote - TABLE_BOTTOM_SAFETY_MM;
-  const tableMaxBottomLastMm = paper.pageHeightMm - paper.marginBottomMm - SHELL_HEIGHT_MM.footerBar - SHELL_HEIGHT_MM.footerClearance - TABLE_BOTTOM_SAFETY_MM;
+  const tableStartYMm = paper.marginTopMm + shell.topBanner + shell.metaBar + shell.contentPaddingY;
+  const tableMaxBottomRegularMm = paper.pageHeightMm - paper.marginBottomMm - shell.footerBar - shell.footerClearance - shell.continuationNote - TABLE_BOTTOM_SAFETY_MM;
+  const tableMaxBottomLastMm = paper.pageHeightMm - paper.marginBottomMm - shell.footerBar - shell.footerClearance - TABLE_BOTTOM_SAFETY_MM;
 
   const pages: AttendancePrintPage[] = [];
   const pushTablePage = (page: Omit<AttendancePrintPage, "kind" | "summaryContent">) => {
@@ -944,8 +1021,8 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       tableMaxBottomMm: Number.MAX_SAFE_INTEGER,
       plannedBodyHeightMm: bodyRowsTotalHeightMm,
       plannedSummaryHeightMm: summaryRowHeightMm * 2,
-      plannedFooterReserveMm: SHELL_HEIGHT_MM.footerBar,
-      plannedHeaderReserveMm: SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.metaBar + SHELL_HEIGHT_MM.contentPaddingY + tableHeaderHeightMm,
+      plannedFooterReserveMm: shell.footerBar,
+      plannedHeaderReserveMm: shell.topBanner + shell.metaBar + shell.contentPaddingY + tableHeaderHeightMm,
       pageContentHeightMm: paper.contentHeightMm,
       availableBodyHeightMm: bodyRowsTotalHeightMm,
       hasDocumentHeader: true,
@@ -969,8 +1046,8 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       tableMaxBottomMm: tableMaxBottomLastMm,
       plannedBodyHeightMm,
       plannedSummaryHeightMm: summaryRowHeightMm * 2,
-      plannedFooterReserveMm: SHELL_HEIGHT_MM.footerBar,
-      plannedHeaderReserveMm: SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.metaBar + SHELL_HEIGHT_MM.contentPaddingY + tableHeaderHeightMm,
+      plannedFooterReserveMm: shell.footerBar,
+      plannedHeaderReserveMm: shell.topBanner + shell.metaBar + shell.contentPaddingY + tableHeaderHeightMm,
       pageContentHeightMm: paper.contentHeightMm,
       availableBodyHeightMm: availableLastPageMm,
       hasDocumentHeader: true,
@@ -994,8 +1071,8 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       tableMaxBottomMm: tableMaxBottomLastMm,
       plannedBodyHeightMm,
       plannedSummaryHeightMm: summaryRowHeightMm * 2,
-      plannedFooterReserveMm: SHELL_HEIGHT_MM.footerBar,
-      plannedHeaderReserveMm: SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.metaBar + SHELL_HEIGHT_MM.contentPaddingY + tableHeaderHeightMm,
+      plannedFooterReserveMm: shell.footerBar,
+      plannedHeaderReserveMm: shell.topBanner + shell.metaBar + shell.contentPaddingY + tableHeaderHeightMm,
       pageContentHeightMm: paper.contentHeightMm,
       availableBodyHeightMm: availableLastPageMm,
       hasDocumentHeader: true,
@@ -1040,8 +1117,8 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
         tableMaxBottomMm: isLastPage ? tableMaxBottomLastMm : tableMaxBottomRegularMm,
         plannedBodyHeightMm,
         plannedSummaryHeightMm: isLastPage ? summaryRowHeightMm * 2 : 0,
-        plannedFooterReserveMm: SHELL_HEIGHT_MM.footerBar + (isLastPage ? 0 : SHELL_HEIGHT_MM.continuationNote),
-        plannedHeaderReserveMm: SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.metaBar + SHELL_HEIGHT_MM.contentPaddingY + tableHeaderHeightMm,
+        plannedFooterReserveMm: shell.footerBar + (isLastPage ? 0 : shell.continuationNote),
+        plannedHeaderReserveMm: shell.topBanner + shell.metaBar + shell.contentPaddingY + tableHeaderHeightMm,
         pageContentHeightMm: paper.contentHeightMm,
         availableBodyHeightMm: isLastPage ? availableLastPageMm : availableRegularPageMm,
         hasDocumentHeader: true,
@@ -1077,15 +1154,17 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const lastTablePage = pages[lastTablePageIndex];
   const lastPageRowsHeightMm = lastTablePage ? lastTablePage.rowHeightsMm.reduce((sum, height) => sum + height, 0) : 0;
   const tableEndYMm = tableStartYMm + (table.headerRowHeightMm * 2) + lastPageRowsHeightMm + (lastTablePage?.hasSummaryRows ? summaryRowHeightMm * 2 : 0);
-  let printableBottomMm = paper.pageHeightMm - paper.marginBottomMm - SHELL_HEIGHT_MM.footerBar - SHELL_HEIGHT_MM.footerClearance;
+  let printableBottomMm = paper.pageHeightMm - paper.marginBottomMm - shell.footerBar - shell.footerClearance;
 
-  const continuationSummaryStartYMm = paper.marginTopMm + Math.max(0, SHELL_HEIGHT_MM.topBanner - 2);
+  const continuationSummaryStartYMm = paper.marginTopMm + Math.max(0, shell.topBanner - 2);
   const firstSummaryAvailableMm = Math.max(0, printableBottomMm - tableEndYMm);
   const continuationSummaryAvailableMm = Math.max(0, printableBottomMm - continuationSummaryStartYMm);
   const chosenKeteranganFontPt = useFullPage
     ? documentStyle.metaFontSize
     : selectedSinglePageFontPt ?? minKeteranganBaseFontPt;
-  const totalKeteranganHeightMm = measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt);
+  const totalKeteranganHeightMm = annotationDisplayMode === "summary-card"
+    ? measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt, shell.infoBlockGap)
+    : 0;
 
   const buildSummaryPageContent = (
     availableMm: number,
@@ -1093,28 +1172,50 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     remainingKeterangan: AttendancePrintInfoItem[],
     remainingNotes: string[],
   ): AttendancePrintPageSummaryContent => {
-    let usedMm = SHELL_HEIGHT_MM.summaryGap + (showLegend ? legendHeightMm : 0);
+    let usedMm = shell.summaryGap + (showLegend ? legendHeightMm : 0);
     let keteranganItems: AttendancePrintInfoItem[] = [];
     let notesItems: string[] = [];
 
-    if (remainingKeterangan.length > 0) {
+    if (annotationDisplayMode === "summary-card" && remainingKeterangan.length > 0) {
       const availableForKeteranganMm = Math.max(0, availableMm - usedMm);
-      const fitsAllKeterangan = usedMm + measureInfoBlockHeightMm(remainingKeterangan, summaryContentWidthMm, chosenKeteranganFontPt) <= availableMm + 0.01;
+      const fitsAllKeterangan = usedMm + measureInfoBlockHeightMm(
+        remainingKeterangan,
+        summaryContentWidthMm,
+        chosenKeteranganFontPt,
+        shell.infoBlockGap,
+      ) <= availableMm + 0.01;
       const takeCount = fitsAllKeterangan
         ? remainingKeterangan.length
-        : takeInfoItemsForHeight(remainingKeterangan, summaryContentWidthMm, chosenKeteranganFontPt, availableForKeteranganMm);
+        : takeInfoItemsForHeight(
+            remainingKeterangan,
+            summaryContentWidthMm,
+            chosenKeteranganFontPt,
+            availableForKeteranganMm,
+            shell.infoBlockGap,
+          );
       keteranganItems = remainingKeterangan.splice(0, takeCount);
-      usedMm += measureInfoBlockHeightMm(keteranganItems, summaryContentWidthMm, chosenKeteranganFontPt);
+      usedMm += measureInfoBlockHeightMm(keteranganItems, summaryContentWidthMm, chosenKeteranganFontPt, shell.infoBlockGap);
     }
 
     if (remainingKeterangan.length === 0 && remainingNotes.length > 0) {
       const availableForNotesMm = Math.max(0, availableMm - usedMm);
-      const fitsAllNotes = usedMm + measureInfoBlockHeightMm(remainingNotes, summaryContentWidthMm, notesBaseFontPt) <= availableMm + 0.01;
+      const fitsAllNotes = usedMm + measureInfoBlockHeightMm(
+        remainingNotes,
+        summaryContentWidthMm,
+        notesBaseFontPt,
+        shell.infoBlockGap,
+      ) <= availableMm + 0.01;
       const takeCount = fitsAllNotes
         ? remainingNotes.length
-        : takeInfoItemsForHeight(remainingNotes, summaryContentWidthMm, notesBaseFontPt, availableForNotesMm);
+        : takeInfoItemsForHeight(
+            remainingNotes,
+            summaryContentWidthMm,
+            notesBaseFontPt,
+            availableForNotesMm,
+            shell.infoBlockGap,
+          );
       notesItems = remainingNotes.splice(0, takeCount);
-      usedMm += measureInfoBlockHeightMm(notesItems, summaryContentWidthMm, notesBaseFontPt);
+      usedMm += measureInfoBlockHeightMm(notesItems, summaryContentWidthMm, notesBaseFontPt, shell.infoBlockGap);
     }
 
     return {
@@ -1124,17 +1225,17 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       keteranganTitle: keteranganItems.length > 0 ? (showLegend ? "Keterangan" : "Keterangan (Lanjutan)") : null,
       keteranganItems,
       keteranganFontPt: chosenKeteranganFontPt,
-      keteranganHeightMm: measureInfoBlockHeightMm(keteranganItems, summaryContentWidthMm, chosenKeteranganFontPt),
+      keteranganHeightMm: measureInfoBlockHeightMm(keteranganItems, summaryContentWidthMm, chosenKeteranganFontPt, shell.infoBlockGap),
       notesTitle: notesItems.length > 0 ? "Catatan Siswa" : null,
       notesItems,
       notesFontPt: notesBaseFontPt,
-      notesHeightMm: measureInfoBlockHeightMm(notesItems, summaryContentWidthMm, notesBaseFontPt),
+      notesHeightMm: measureInfoBlockHeightMm(notesItems, summaryContentWidthMm, notesBaseFontPt, shell.infoBlockGap),
       contentHeightMm: usedMm,
       reservedSignatureHeightMm: 0,
     };
   };
 
-  const remainingKeterangan = [...summary.keterangan];
+  const remainingKeterangan = annotationDisplayMode === "summary-card" ? [...summary.keterangan] : [];
   const remainingNotes = [...summary.notes];
   const summaryPageContents: AttendancePrintPageSummaryContent[] = [];
   if (useFullPage) {
@@ -1142,19 +1243,23 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       mode: "table-tail",
       showLegend: true,
       legendHeightMm,
-      keteranganTitle: summary.keterangan.length > 0 ? "Keterangan" : null,
-      keteranganItems: [...summary.keterangan],
+      keteranganTitle: annotationDisplayMode === "summary-card" && summary.keterangan.length > 0 ? "Keterangan" : null,
+      keteranganItems: annotationDisplayMode === "summary-card" ? [...summary.keterangan] : [],
       keteranganFontPt: chosenKeteranganFontPt,
-      keteranganHeightMm: measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt),
+      keteranganHeightMm: annotationDisplayMode === "summary-card"
+        ? measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt, shell.infoBlockGap)
+        : 0,
       notesTitle: summary.notes.length > 0 ? "Catatan Siswa" : null,
       notesItems: [...summary.notes],
       notesFontPt: notesBaseFontPt,
-      notesHeightMm: measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt),
+      notesHeightMm: measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt, shell.infoBlockGap),
       contentHeightMm:
-        SHELL_HEIGHT_MM.summaryGap
+        shell.summaryGap
         + legendHeightMm
-        + measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt)
-        + measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt),
+        + (annotationDisplayMode === "summary-card"
+          ? measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt, shell.infoBlockGap)
+          : 0)
+        + measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt, shell.infoBlockGap),
       reservedSignatureHeightMm: signatureReserveMm,
     });
     remainingKeterangan.length = 0;
@@ -1189,7 +1294,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       notesItems: [],
       notesFontPt: notesBaseFontPt,
       notesHeightMm: 0,
-      contentHeightMm: SHELL_HEIGHT_MM.summaryGap + legendHeightMm,
+      contentHeightMm: shell.summaryGap + legendHeightMm,
       reservedSignatureHeightMm: 0,
     });
   }
@@ -1211,8 +1316,8 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       tableMaxBottomMm: tableMaxBottomLastMm,
       plannedBodyHeightMm: 0,
       plannedSummaryHeightMm: 0,
-      plannedFooterReserveMm: SHELL_HEIGHT_MM.footerBar,
-      plannedHeaderReserveMm: SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.contentPaddingY,
+      plannedFooterReserveMm: shell.footerBar,
+      plannedHeaderReserveMm: shell.topBanner + shell.contentPaddingY,
       pageContentHeightMm: paper.contentHeightMm,
       availableBodyHeightMm: continuationSummaryAvailableMm,
       hasDocumentHeader: true,
@@ -1236,10 +1341,10 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       requiredContentHeightMm:
         tableEndYMm
         + summaryInfoHeightMm
-        + (includeSignature && signatureMetrics ? SHELL_HEIGHT_MM.signatureGap + signatureMetrics.heightMm + 3 : 0)
+        + (includeSignature && signatureMetrics ? shell.signatureGap + signatureMetrics.heightMm + 3 : 0)
         + paper.marginBottomMm
-        + SHELL_HEIGHT_MM.footerBar
-        + SHELL_HEIGHT_MM.footerClearance,
+        + shell.footerBar
+        + shell.footerClearance,
     });
     paper = {
       ...paper,
@@ -1248,7 +1353,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       contentWidthMm: resolvedFullPage.pageWidthMm - paper.marginLeftMm - paper.marginRightMm,
       contentHeightMm: resolvedFullPage.pageHeightMm - paper.marginTopMm - paper.marginBottomMm,
     };
-    printableBottomMm = paper.pageHeightMm - paper.marginBottomMm - SHELL_HEIGHT_MM.footerBar - SHELL_HEIGHT_MM.footerClearance;
+    printableBottomMm = paper.pageHeightMm - paper.marginBottomMm - shell.footerBar - shell.footerClearance;
     const fullPageBottomMm = printableBottomMm - TABLE_BOTTOM_SAFETY_MM;
     const fullPageAvailableBodyMm = Math.max(
       bodyRowsTotalHeightMm,
@@ -1272,7 +1377,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const lastPage = pages[pages.length - 1];
   const provisionalSignatureZoneTopMm = (lastPage?.kind === "table" ? tableEndYMm : continuationSummaryStartYMm)
     + summaryInfoHeightMm
-    + (includeSignature ? SHELL_HEIGHT_MM.signatureGap : 0);
+    + (includeSignature ? shell.signatureGap : 0);
   const provisionalSignatureZoneHeightMm = includeSignature
     ? Math.max(0, printableBottomMm - provisionalSignatureZoneTopMm)
     : 0;
@@ -1319,8 +1424,8 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       tableMaxBottomMm: tableMaxBottomLastMm,
       plannedBodyHeightMm: 0,
       plannedSummaryHeightMm: 0,
-      plannedFooterReserveMm: SHELL_HEIGHT_MM.footerBar,
-      plannedHeaderReserveMm: SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.contentPaddingY,
+      plannedFooterReserveMm: shell.footerBar,
+      plannedHeaderReserveMm: shell.topBanner + shell.contentPaddingY,
       pageContentHeightMm: paper.contentHeightMm,
       availableBodyHeightMm: paper.contentHeightMm - reservedShellMm,
       hasDocumentHeader: true,
@@ -1344,7 +1449,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     }
     pages.push(signaturePage);
     signatureOnDedicatedPage = true;
-    signatureZoneTopMm = paper.marginTopMm + SHELL_HEIGHT_MM.topBanner + SHELL_HEIGHT_MM.contentPaddingY + 6;
+    signatureZoneTopMm = paper.marginTopMm + shell.topBanner + shell.contentPaddingY + 6;
     signatureZoneHeightMm = printableBottomMm - signatureZoneTopMm;
   }
 
@@ -1381,7 +1486,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
         marginRightMm: paper.marginRightMm,
         marginTopMm: paper.marginTopMm,
         marginBottomMm: paper.marginBottomMm,
-        footerHeightMm: SHELL_HEIGHT_MM.footerBar,
+        footerHeightMm: shell.footerBar,
         safeZoneTopMm: signatureZoneTopMm,
       })
     : null;
@@ -1482,11 +1587,15 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   };
 
   return {
+    shell,
     paper,
     table,
     visibleColumnKeys: visibleSet,
     visibleDays,
     visibleRekapKeys,
+    annotationDisplayMode,
+    inlineLabelStyle,
+    inlineAnnotations,
     rows,
     rowHeightsMm,
     pages,

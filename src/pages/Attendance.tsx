@@ -62,7 +62,12 @@ import { SmartScrollTable } from "@/components/attendance/SmartScrollTable";
 import { createDefaultReportDocumentStyle, getNaturalColumnWidthMmV2, resolveReportPaperSize, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import { computeAttendanceColumnLayout } from "@/lib/attendanceExport";
-import { buildAttendancePrintLayoutPlan, type AttendancePrintDataset } from "@/lib/attendancePrintLayout";
+import {
+  buildAttendancePrintLayoutPlan,
+  type AttendanceAnnotationDisplayMode,
+  type AttendanceInlineLabelStyle,
+  type AttendancePrintDataset,
+} from "@/lib/attendancePrintLayout";
 import { buildAttendancePdfDocument, exportAttendancePdf } from "@/lib/attendancePdfExport";
 import {
   collectTraceMismatches,
@@ -75,6 +80,17 @@ import {
   type AttendancePngRuntimeTrace,
 } from "@/lib/attendanceExportDebug";
 type AttendanceStatus = AttendanceStatusValue | null;
+type AttendanceExportStudioBaseline = {
+  format: "pdf" | "excel" | "png-hd" | "png-4k";
+  documentStyle: ReportDocumentStyle;
+  autoFitOnePage: boolean;
+  paperSize: ReportPaperSize;
+  includeSignature: boolean;
+  selectedAttendanceColumnKeys: string[];
+  signatureConfig: ReturnType<typeof createDefaultSignatureConfig>;
+  annotationDisplayMode: AttendanceAnnotationDisplayMode;
+  inlineLabelStyle: AttendanceInlineLabelStyle;
+};
 
 function sanitizeFileNamePart(value: string) {
   return value
@@ -181,6 +197,8 @@ export default function Attendance() {
   // Presensi WAJIB termuat 1 halaman per bulan + tanda tangan (project knowledge).
   const [autoFitOnePage, setAutoFitOnePage] = useState(true);
   const [paperSize, setPaperSize] = useState<ReportPaperSize>("a4");
+  const [attendanceAnnotationDisplayMode, setAttendanceAnnotationDisplayMode] = useState<AttendanceAnnotationDisplayMode>("summary-card");
+  const [attendanceInlineLabelStyle, setAttendanceInlineLabelStyle] = useState<AttendanceInlineLabelStyle>("rotate-90");
   const [attendanceDebugEnabled, setAttendanceDebugEnabled] = useState(false);
   const [lastAttendanceExportTrace, setLastAttendanceExportTrace] = useState<AttendanceExportTrace | null>(null);
   const [selectedAttendanceColumnKeys, setSelectedAttendanceColumnKeys] = useState<string[]>([]);
@@ -213,6 +231,7 @@ export default function Attendance() {
     isSaving: signatureSaving,
     saveSignature,
   } = useSignatureSettings();
+  const attendanceStudioBaselineRef = useRef<AttendanceExportStudioBaseline | null>(null);
 
   const handleWorkDayFormatChange = useCallback((fmt: "5days" | "6days") => {
     setWorkDayFormat(fmt);
@@ -506,6 +525,12 @@ export default function Attendance() {
     };
   }, [attendancePreviewData, holidays, monthNationalHolidays, dayEvents, currentMonth]);
 
+  const attendancePreviewStudioData = useMemo<AttendanceExportPreviewDataV2>(() => ({
+    ...attendancePreviewData,
+    holidayItems: attendancePrintDataset.holidayItems,
+    eventItems: attendancePrintDataset.eventItems,
+  }), [attendancePreviewData, attendancePrintDataset]);
+
 
   const buildAttendanceTraceBase = useCallback((args: {
     plan: ReturnType<typeof buildAttendancePrintLayoutPlan>;
@@ -617,6 +642,40 @@ export default function Attendance() {
     () => normalizeAttendanceSignatureConfig(signatureConfig),
     [normalizeAttendanceSignatureConfig, signatureConfig],
   );
+  const captureAttendanceStudioBaseline = useCallback((): AttendanceExportStudioBaseline => ({
+    format: attendanceExportFormat,
+    documentStyle: structuredClone(documentStyle),
+    autoFitOnePage,
+    paperSize,
+    includeSignature,
+    selectedAttendanceColumnKeys: [...selectedAttendanceColumnKeys],
+    signatureConfig: structuredClone(attendanceDefaultSignatureConfig ?? createDefaultSignatureConfig()),
+    annotationDisplayMode: attendanceAnnotationDisplayMode,
+    inlineLabelStyle: attendanceInlineLabelStyle,
+  }), [
+    attendanceAnnotationDisplayMode,
+    attendanceDefaultSignatureConfig,
+    attendanceExportFormat,
+    attendanceInlineLabelStyle,
+    autoFitOnePage,
+    documentStyle,
+    includeSignature,
+    paperSize,
+    selectedAttendanceColumnKeys,
+  ]);
+
+  useEffect(() => {
+    if (signatureLoading) return;
+    if (!attendanceDefaultSignatureConfig) return;
+    if (selectedAttendanceColumnKeys.length === 0) return;
+    if (attendanceStudioBaselineRef.current) return;
+    attendanceStudioBaselineRef.current = captureAttendanceStudioBaseline();
+  }, [
+    attendanceDefaultSignatureConfig,
+    captureAttendanceStudioBaseline,
+    selectedAttendanceColumnKeys,
+    signatureLoading,
+  ]);
 
   const renderAttendanceExportElement = useCallback((
     exportSignature: typeof signatureConfig,
@@ -639,14 +698,22 @@ export default function Attendance() {
             : format(new Date(), "d MMMM yyyy", { locale: idLocale })
         }
         includeSignature={shouldIncludeSignature}
-        data={attendancePreviewData}
+        data={attendancePreviewStudioData}
         paperSize={exportPaperSize}
         documentStyle={exportStyle}
         autoFitOnePage={exportAutoFitOnePage}
         visibleColumnKeys={visibleColumnKeys}
+        annotationDisplayMode={attendanceAnnotationDisplayMode}
+        inlineLabelStyle={attendanceInlineLabelStyle}
       />
     );
-  }, [attendancePreviewData, normalizeAttendanceSignatureConfig, signatureConfig]);
+  }, [
+    attendanceAnnotationDisplayMode,
+    attendanceInlineLabelStyle,
+    attendancePreviewStudioData,
+    normalizeAttendanceSignatureConfig,
+    signatureConfig,
+  ]);
 
   const handleAttendanceExportFormatChange = useCallback((value: string) => {
     const nextFormat = value as typeof attendanceExportFormat;
@@ -817,12 +884,27 @@ export default function Attendance() {
     });
   }, [attendancePreviewData.days]);
   const resetAttendanceStudioDefaults = useCallback(() => {
-    setAttendanceExportFormat("pdf");
-    setDocumentStyle(createDefaultReportDocumentStyle());
-    setAutoFitOnePage(true);
-    setIncludeSignature(false);
-    setSelectedAttendanceColumnKeys(defaultAttendanceVisibleColumnKeys);
-  }, [defaultAttendanceVisibleColumnKeys]);
+    const baseline = attendanceStudioBaselineRef.current;
+    if (!baseline) {
+      setAttendanceExportFormat("pdf");
+      setDocumentStyle(createDefaultReportDocumentStyle());
+      setAutoFitOnePage(true);
+      setIncludeSignature(hasSignature);
+      setSelectedAttendanceColumnKeys(defaultAttendanceVisibleColumnKeys);
+      setAttendanceAnnotationDisplayMode("summary-card");
+      setAttendanceInlineLabelStyle("rotate-90");
+      return;
+    }
+
+    setAttendanceExportFormat(baseline.format);
+    setDocumentStyle(structuredClone(baseline.documentStyle));
+    setAutoFitOnePage(baseline.autoFitOnePage);
+    setPaperSize(baseline.paperSize);
+    setIncludeSignature(baseline.includeSignature);
+    setSelectedAttendanceColumnKeys([...baseline.selectedAttendanceColumnKeys]);
+    setAttendanceAnnotationDisplayMode(baseline.annotationDisplayMode);
+    setAttendanceInlineLabelStyle(baseline.inlineLabelStyle);
+  }, [defaultAttendanceVisibleColumnKeys, hasSignature]);
 
   const showThrottledNotification = useCallback((title: string, message: string) => {
     const now = Date.now();
@@ -2188,6 +2270,8 @@ export default function Attendance() {
         signature: exportSignature,
         forceSinglePage: exportAutoFitOnePage,
         signatureOffsetYMm: exportSignature?.signatureOffsetY ?? 0,
+        annotationDisplayMode: attendanceAnnotationDisplayMode,
+        inlineLabelStyle: attendanceInlineLabelStyle,
       });
       const builtPdf = buildAttendancePdfDocument({
         data: attendancePrintDataset,
@@ -2288,7 +2372,26 @@ export default function Attendance() {
     } catch (error) {
       showWarning("Gagal", "Tidak dapat mengekspor PNG presensi.");
     }
-  }, [selectedAttendanceColumnKeys, selectedClass, includeSignature, documentStyle, autoFitOnePage, paperSize, currentMonth, showLoader, attendancePrintDataset, attendanceDebugEnabled, buildAttendanceTraceBase, commitAttendanceTrace, autoDownloadAttendanceTrace, showSuccess, showWarning, attendanceDefaultSignatureConfig]);
+  }, [
+    attendanceAnnotationDisplayMode,
+    attendanceDebugEnabled,
+    attendanceDefaultSignatureConfig,
+    attendanceInlineLabelStyle,
+    attendancePrintDataset,
+    autoDownloadAttendanceTrace,
+    autoFitOnePage,
+    buildAttendanceTraceBase,
+    commitAttendanceTrace,
+    currentMonth,
+    documentStyle,
+    includeSignature,
+    paperSize,
+    selectedAttendanceColumnKeys,
+    selectedClass,
+    showLoader,
+    showSuccess,
+    showWarning,
+  ]);
 
   const handleExportPDFVector = useCallback(async (
     signatureOverride?: typeof signatureConfig,
@@ -2320,6 +2423,8 @@ export default function Attendance() {
         signature: exportSignature,
         forceSinglePage: exportAutoFitOnePage,
         signatureOffsetYMm: exportSignature?.signatureOffsetY ?? 0,
+        annotationDisplayMode: attendanceAnnotationDisplayMode,
+        inlineLabelStyle: attendanceInlineLabelStyle,
       });
 
       const runtimeEntries: AttendancePdfRuntimeTrace[] = [];
@@ -2368,7 +2473,26 @@ export default function Attendance() {
       console.error("Attendance PDF vector export error:", error);
       showWarning("Gagal", "Tidak dapat mengekspor PDF presensi vektor.");
     }
-  }, [selectedClass, signatureConfig, includeSignature, documentStyle, paperSize, autoFitOnePage, selectedAttendanceColumnKeys, currentMonth, showLoader, attendancePrintDataset, buildAttendanceTraceBase, attendanceDebugEnabled, commitAttendanceTrace, autoDownloadAttendanceTrace, showSuccess, showWarning]);
+  }, [
+    attendanceAnnotationDisplayMode,
+    attendanceDebugEnabled,
+    attendanceDefaultSignatureConfig,
+    attendanceInlineLabelStyle,
+    attendancePrintDataset,
+    autoDownloadAttendanceTrace,
+    autoFitOnePage,
+    buildAttendanceTraceBase,
+    commitAttendanceTrace,
+    currentMonth,
+    documentStyle,
+    includeSignature,
+    paperSize,
+    selectedAttendanceColumnKeys,
+    selectedClass,
+    showLoader,
+    showSuccess,
+    showWarning,
+  ]);
 
   const handlePrevMonth = () => {
     const prev = subMonths(currentMonth, 1);
@@ -2464,6 +2588,73 @@ export default function Attendance() {
       </div>
     </div>
   ) : null;
+  const attendanceStylePresetBaseline = useMemo(() => ({
+    documentStyle: structuredClone(attendanceStudioBaselineRef.current?.documentStyle ?? documentStyle),
+    autoFitOnePage: attendanceStudioBaselineRef.current?.autoFitOnePage ?? autoFitOnePage,
+  }), [autoFitOnePage, documentStyle]);
+  const attendanceStylePanelExtra = (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 p-3">
+        <p className="text-[11px] font-semibold text-foreground">Keterangan Presensi</p>
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          Pilih apakah keterangan tetap tampil sebagai kartu ringkasan atau langsung ditulis di dalam kolom tanggal tabel.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Button
+            type="button"
+            variant={attendanceAnnotationDisplayMode === "summary-card" ? "default" : "outline"}
+            size="sm"
+            className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
+            onClick={() => setAttendanceAnnotationDisplayMode("summary-card")}
+            title="Pertahankan keterangan sebagai kartu ringkasan di bawah tabel."
+          >
+            <span className="font-semibold">Kartu Ringkasan</span>
+          </Button>
+          <Button
+            type="button"
+            variant={attendanceAnnotationDisplayMode === "inline-vertical" ? "default" : "outline"}
+            size="sm"
+            className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
+            onClick={() => setAttendanceAnnotationDisplayMode("inline-vertical")}
+            title="Tulis keterangan langsung di area kolom tanggal pada tabel."
+          >
+            <span className="font-semibold">Vertikal di Tabel</span>
+          </Button>
+        </div>
+      </div>
+
+      {attendanceAnnotationDisplayMode === "inline-vertical" ? (
+        <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/70 p-3">
+          <p className="text-[11px] font-semibold text-foreground">Style Label Vertikal</p>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Pilih orientasi label vertikal yang dipakai saat keterangan dipindah ke dalam tabel.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant={attendanceInlineLabelStyle === "rotate-90" ? "default" : "outline"}
+              size="sm"
+              className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
+              onClick={() => setAttendanceInlineLabelStyle("rotate-90")}
+              title="Putar label 90 derajat ke atas agar tetap hemat ruang."
+            >
+              <span className="font-semibold">Rotate -90</span>
+            </Button>
+            <Button
+              type="button"
+              variant={attendanceInlineLabelStyle === "stacked" ? "default" : "outline"}
+              size="sm"
+              className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
+              onClick={() => setAttendanceInlineLabelStyle("stacked")}
+              title="Tulis label per huruf ke bawah untuk ruang kolom yang sangat sempit."
+            >
+              <span className="font-semibold">Stacked Text</span>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
@@ -2557,6 +2748,7 @@ export default function Attendance() {
                     onAutoFitOnePageChange={setAutoFitOnePage}
                     showAutoFitPreset
                     formatPanelExtra={attendanceDebugPanel}
+                    stylePanelExtra={attendanceStylePanelExtra}
                     previewFooter={attendanceDebugPreviewFooter}
                     columnOptions={attendanceColumnOptions}
                     onColumnOptionChange={handleAttendanceColumnOptionChange}
@@ -2564,6 +2756,8 @@ export default function Attendance() {
                     columnTypographyOptions={attendanceColumnTypographyOptions}
                     onRestoreDefaultMode={resetAttendanceStudioDefaults}
                     defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
+                    stylePresetMode="attendance"
+                    stylePresetBaseline={attendanceStylePresetBaseline}
                     renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
@@ -2571,7 +2765,7 @@ export default function Attendance() {
                         setDraft={setDraft}
                         previewDate={previewDate}
                         includeSignature={previewIncludeSignature}
-                        data={attendancePreviewData}
+                        data={attendancePreviewStudioData}
                         paperSize={previewPaperSize}
                         documentStyle={previewDocumentStyle ?? documentStyle}
                         autoFitOnePage={previewAutoFitOnePage ?? autoFitOnePage}
@@ -2581,6 +2775,8 @@ export default function Attendance() {
                         liveEditMode={liveEditMode}
                         highlightTarget={highlightTarget}
                         onHighlightTargetChange={onHighlightTargetChange}
+                        annotationDisplayMode={attendanceAnnotationDisplayMode}
+                        inlineLabelStyle={attendanceInlineLabelStyle}
                       />
                     )}
                   />
@@ -2649,6 +2845,7 @@ export default function Attendance() {
                     onAutoFitOnePageChange={setAutoFitOnePage}
                     showAutoFitPreset
                     formatPanelExtra={attendanceDebugPanel}
+                    stylePanelExtra={attendanceStylePanelExtra}
                     previewFooter={attendanceDebugPreviewFooter}
                     columnOptions={attendanceColumnOptions}
                     onColumnOptionChange={handleAttendanceColumnOptionChange}
@@ -2656,6 +2853,8 @@ export default function Attendance() {
                     columnTypographyOptions={attendanceColumnTypographyOptions}
                     onRestoreDefaultMode={resetAttendanceStudioDefaults}
                     defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
+                    stylePresetMode="attendance"
+                    stylePresetBaseline={attendanceStylePresetBaseline}
                     renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
@@ -2663,7 +2862,7 @@ export default function Attendance() {
                         setDraft={setDraft}
                         previewDate={previewDate}
                         includeSignature={previewIncludeSignature}
-                        data={attendancePreviewData}
+                        data={attendancePreviewStudioData}
                         paperSize={previewPaperSize}
                         documentStyle={previewDocumentStyle ?? documentStyle}
                         autoFitOnePage={previewAutoFitOnePage ?? autoFitOnePage}
@@ -2673,6 +2872,8 @@ export default function Attendance() {
                         liveEditMode={liveEditMode}
                         highlightTarget={highlightTarget}
                         onHighlightTargetChange={onHighlightTargetChange}
+                        annotationDisplayMode={attendanceAnnotationDisplayMode}
+                        inlineLabelStyle={attendanceInlineLabelStyle}
                       />
                     )}
                   />

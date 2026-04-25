@@ -23,7 +23,6 @@ import {
 } from "react";
 import type { SignatureSettingsConfig } from "@/hooks/useSignatureSettings";
 import { PX_PER_MM } from "@/lib/exportEngine/sharedMetrics";
-import { ATTENDANCE_SHELL_MM as SHELL_MM } from "@/lib/exportEngine/attendanceShellMetrics";
 import type {
   AttendancePrintDataset,
   AttendancePrintInfoItem,
@@ -192,8 +191,8 @@ export function AttendancePrintDocument({
   const bodyFontPx   = plan.table.bodyFontPt   * PT;
   const metaFontPx   = plan.table.metaFontPt   * PT;
   const titleFontPx  = plan.table.titleFontPt  * PT;
-  const bannerHeight = mm(SHELL_MM.topBanner - 2);
-  const bannerBottomGap = mm(SHELL_MM.topBanner - (SHELL_MM.topBanner - 2) + SHELL_MM.contentPaddingY);
+  const bannerHeight = mm(plan.shell.topBanner - 2);
+  const bannerBottomGap = mm(plan.shell.contentPaddingY + 2);
 
   const headerRowH = mm(plan.table.headerRowHeightMm);
   const bodyRowH   = mm(plan.table.bodyRowHeightMm);
@@ -217,6 +216,16 @@ export function AttendancePrintDocument({
   const sheetOverflow: CSSProperties["overflow"] = "hidden";
 
   const visSet = plan.visibleColumnKeys;
+  const inlineAnnotationColumns = useMemo(() => new Set(
+    plan.inlineAnnotations.flatMap((annotation) => {
+      const keys: string[] = [];
+      for (let index = annotation.startColumnIndex; index <= annotation.endColumnIndex; index += 1) {
+        const day = plan.visibleDays[index];
+        if (day) keys.push(day.key);
+      }
+      return keys;
+    }),
+  ), [plan.inlineAnnotations, plan.visibleDays]);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -371,6 +380,7 @@ export function AttendancePrintDocument({
                 borderRadius: mm(1.6),
                 border: `1px solid ${COLORS.border}`,
                 background: COLORS.page,
+                position: "relative",
               }}
             >
               <table
@@ -460,11 +470,29 @@ export function AttendancePrintDocument({
                 </thead>
 
                 <tbody>
-                  {segmentRows.map((row, ri) => renderRow(row, ri, bodyFontPx, nisnBodyFontPx, rekapBodyFontPx, segmentRowHeights[ri] ?? bodyRowH, padPx, plan, visSet))}
+                  {segmentRows.map((row, ri) => renderRow(
+                    row,
+                    ri,
+                    bodyFontPx,
+                    nisnBodyFontPx,
+                    rekapBodyFontPx,
+                    segmentRowHeights[ri] ?? bodyRowH,
+                    padPx,
+                    plan,
+                    visSet,
+                    inlineAnnotationColumns,
+                  ))}
                   {page.hasSummaryRows ? renderTotalRow(plan, bodyFontPx, rekapBodyFontPx, summaryRowH, padPx, visSet) : null}
                   {page.hasSummaryRows ? renderPercentRow(plan, data, bodyFontPx, rekapBodyFontPx, summaryRowH, padPx, visSet) : null}
                 </tbody>
               </table>
+              {plan.annotationDisplayMode === "inline-vertical" ? (
+                <InlineAnnotationOverlay
+                  page={page}
+                  plan={plan}
+                  headerHeightMm={plan.table.headerRowHeightMm * 2}
+                />
+              ) : null}
             </div>
             ) : null}
 
@@ -472,7 +500,7 @@ export function AttendancePrintDocument({
             {page.showSummary ? (
               <div
                 className="attendance-print-summary"
-                style={{ marginTop: mm(SHELL_MM.summaryGap), display: "grid", gap: mm(1.5), flexShrink: 0 }}
+                style={{ marginTop: mm(plan.shell.summaryGap), display: "grid", gap: mm(plan.shell.infoBlockGap), flexShrink: 0 }}
               >
                 {summaryContent?.showLegend ? (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: mm(1.5), fontSize: metaFontPx }}>
@@ -713,6 +741,91 @@ export function AttendancePrintDocument({
 }
 
 // ─── Row renderers ─────────────────────────────────────────────────────────
+function InlineAnnotationOverlay({
+  page,
+  plan,
+  headerHeightMm,
+}: {
+  page: AttendancePrintPage;
+  plan: AttendancePrintLayoutPlan;
+  headerHeightMm: number;
+}) {
+  if (plan.annotationDisplayMode !== "inline-vertical" || page.kind !== "table" || plan.inlineAnnotations.length === 0) {
+    return null;
+  }
+
+  const paletteByTone = {
+    national: { color: "#1d4ed8", bg: "rgba(219,234,254,0.28)", border: "rgba(29,78,216,0.38)" },
+    custom: { color: "#b45309", bg: "rgba(254,243,199,0.34)", border: "rgba(180,83,9,0.32)" },
+    event: { color: "#6d28d9", bg: "rgba(237,233,254,0.36)", border: "rgba(109,40,217,0.32)" },
+  } as const;
+  const fixedColumnsWidthMm = (
+    (plan.visibleColumnKeys.has("no") ? plan.table.noWidthMm : 0)
+    + (plan.visibleColumnKeys.has("name") ? plan.table.nameWidthMm : 0)
+    + (plan.visibleColumnKeys.has("nisn") ? plan.table.nisnWidthMm : 0)
+  );
+  const bodyHeightMm = page.rowHeightsMm.reduce((sum, value) => sum + value, 0) + (page.hasSummaryRows ? plan.table.summaryRowHeightMm * 2 : 0);
+
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+      {plan.inlineAnnotations.map((annotation) => {
+        const palette = paletteByTone[annotation.tone];
+        const leftMm = fixedColumnsWidthMm + (annotation.startColumnIndex * plan.table.dayWidthMm);
+        const widthMm = (annotation.endColumnIndex - annotation.startColumnIndex + 1) * plan.table.dayWidthMm;
+        const minFontPx = 7 * 1.333;
+        const fitFontPx = clamp(mm(widthMm) * 0.24, minFontPx, 14);
+        const stackedText = annotation.text.split("").join("\n");
+
+        return (
+          <div
+            key={`${page.key}-${annotation.key}`}
+            style={{
+              position: "absolute",
+              left: mm(leftMm),
+              top: mm(headerHeightMm),
+              width: mm(widthMm),
+              height: mm(bodyHeightMm),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: mm(1.2),
+              border: `1px dashed ${palette.border}`,
+              background: palette.bg,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={plan.inlineLabelStyle === "rotate-90"
+                ? {
+                    color: palette.color,
+                    fontSize: fitFontPx,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    whiteSpace: "nowrap",
+                    textAlign: "center",
+                    letterSpacing: 0.2,
+                    transform: "rotate(-90deg)",
+                    transformOrigin: "center center",
+                  }
+                : {
+                    color: palette.color,
+                    fontSize: clamp(fitFontPx * 0.84, minFontPx, 12.5),
+                    fontWeight: 700,
+                    lineHeight: 1.02,
+                    whiteSpace: "pre-line",
+                    textAlign: "center",
+                    letterSpacing: 0.08,
+                  }}
+            >
+              {plan.inlineLabelStyle === "rotate-90" ? annotation.text : stackedText}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function renderRow(
   row: AttendancePrintRow,
   ri: number,
@@ -723,6 +836,7 @@ function renderRow(
   padPx: number,
   plan: AttendancePrintLayoutPlan,
   visSet: Set<string>,
+  inlineAnnotationColumns: Set<string>,
 ) {
   const altBg = ri % 2 === 0 ? COLORS.page : COLORS.panel;
   return (
@@ -751,6 +865,7 @@ function renderRow(
         const day = plan.visibleDays[ci];
         if (!day) return null;
         const status = STATUS_COLORS[cell.value];
+        const hideCellValue = plan.annotationDisplayMode === "inline-vertical" && inlineAnnotationColumns.has(day.key);
         return (
           <td
             key={`${row.id}-${day.key}`}
@@ -762,7 +877,7 @@ function renderRow(
               padding: "1px 0.6px",
             }}
           >
-            {cell.value !== "-" ? cell.value : ""}
+            {!hideCellValue && cell.value !== "-" ? cell.value : ""}
           </td>
         );
       })}

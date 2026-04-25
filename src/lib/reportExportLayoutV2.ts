@@ -1,6 +1,7 @@
 // TESTING
 import { computeSignatureHeight, type SignatureData } from "./exportSignature";
 import { pdfBodyRowHeightMm, pdfHeaderRowHeightMm } from "./exportEngine/sharedMetrics";
+import { ATTENDANCE_SHELL_MM } from "./exportEngine/attendanceShellMetrics";
 import type { ExportColumn, ExportConfig, HeaderGroup, ReportPaperSize } from "./reportExportLayout";
 
 export type ReportColumnAlignment = "left" | "center" | "right";
@@ -22,6 +23,14 @@ export interface ReportTableSizingStyle {
   bodyRowHeightMm?: number;
 }
 
+export interface AttendanceDocumentLayoutStyle {
+  contentPaddingYMm: number;
+  summaryGapMm: number;
+  infoBlockGapMm: number;
+  signatureGapMm: number;
+  footerClearanceMm: number;
+}
+
 export interface ReportDocumentStyle {
   titleFontSize: number;
   metaFontSize: number;
@@ -31,6 +40,7 @@ export interface ReportDocumentStyle {
   experimentalColumnTypographyEnabled: boolean;
   experimentalColumnLayoutEnabled: boolean;
   tableSizing: ReportTableSizingStyle;
+  attendanceLayout: AttendanceDocumentLayoutStyle;
   columnFontOverrides: Record<string, ReportColumnStyleOverride>;
 }
 
@@ -224,6 +234,13 @@ const DEFAULT_DOCUMENT_STYLE: ReportDocumentStyle = {
     mode: "autofit-window",
     tableWidthPercent: 100,
   },
+  attendanceLayout: {
+    contentPaddingYMm: ATTENDANCE_SHELL_MM.contentPaddingY,
+    summaryGapMm: ATTENDANCE_SHELL_MM.summaryGap,
+    infoBlockGapMm: ATTENDANCE_SHELL_MM.infoBlockGap,
+    signatureGapMm: ATTENDANCE_SHELL_MM.signatureGap,
+    footerClearanceMm: ATTENDANCE_SHELL_MM.footerClearance,
+  },
   columnFontOverrides: {},
 };
 
@@ -341,6 +358,7 @@ export function createDefaultReportDocumentStyle() {
   return {
     ...DEFAULT_DOCUMENT_STYLE,
     tableSizing: { ...DEFAULT_DOCUMENT_STYLE.tableSizing },
+    attendanceLayout: { ...DEFAULT_DOCUMENT_STYLE.attendanceLayout },
     columnFontOverrides: {},
   };
 }
@@ -363,6 +381,33 @@ export function resolveDocumentStyle(style?: Partial<ReportDocumentStyle> | Expo
       bodyRowHeightMm: typeof style?.tableSizing?.bodyRowHeightMm === "number"
         ? clamp(style.tableSizing.bodyRowHeightMm, 3, 30)
         : undefined,
+    },
+    attendanceLayout: {
+      contentPaddingYMm: clamp(
+        style?.attendanceLayout?.contentPaddingYMm ?? DEFAULT_DOCUMENT_STYLE.attendanceLayout.contentPaddingYMm,
+        1,
+        10,
+      ),
+      summaryGapMm: clamp(
+        style?.attendanceLayout?.summaryGapMm ?? DEFAULT_DOCUMENT_STYLE.attendanceLayout.summaryGapMm,
+        0,
+        8,
+      ),
+      infoBlockGapMm: clamp(
+        style?.attendanceLayout?.infoBlockGapMm ?? DEFAULT_DOCUMENT_STYLE.attendanceLayout.infoBlockGapMm,
+        0,
+        6,
+      ),
+      signatureGapMm: clamp(
+        style?.attendanceLayout?.signatureGapMm ?? DEFAULT_DOCUMENT_STYLE.attendanceLayout.signatureGapMm,
+        0,
+        8,
+      ),
+      footerClearanceMm: clamp(
+        style?.attendanceLayout?.footerClearanceMm ?? DEFAULT_DOCUMENT_STYLE.attendanceLayout.footerClearanceMm,
+        0.5,
+        6,
+      ),
     },
     columnFontOverrides: Object.fromEntries(
       Object.entries(style?.columnFontOverrides ?? {}).map(([key, value]) => [
