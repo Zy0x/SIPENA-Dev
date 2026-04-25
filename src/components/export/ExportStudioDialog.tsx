@@ -2274,6 +2274,7 @@ export function ExportStudioDialog({
   const mobileOverlayCardRef = useRef<HTMLDivElement>(null);
   const mobileOverlayInteractionRef = useRef<MobileOverlayInteraction | null>(null);
   const desktopPanelResizeRef = useRef<DesktopPanelResizeState | null>(null);
+  const previousExperimentalOpenRef = useRef(false);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
   const hasOpenedRef = useRef(false);
@@ -2383,6 +2384,12 @@ export function ExportStudioDialog({
       setActivePanel("format");
     }
   }, [activePanel, includeSignature, supportsSignature]);
+  useEffect(() => {
+    if (previousExperimentalOpenRef.current && !experimentalWindowOpen) {
+      setHighlightTarget(null);
+    }
+    previousExperimentalOpenRef.current = experimentalWindowOpen;
+  }, [experimentalWindowOpen]);
   useEffect(() => {
     if (!open || isMobileLayout) return;
 
@@ -2583,6 +2590,51 @@ export function ExportStudioDialog({
     ]),
     [columnOptions],
   );
+  const desktopPanelToneMap = {
+    format: {
+      shell: "border-sky-200/80 bg-sky-50/30",
+      card: "border-sky-200/80 bg-sky-50/45",
+      activeTab: "border-sky-300 bg-sky-600 text-white hover:bg-sky-600",
+      idleTab: "border-sky-200/80 hover:border-sky-300 hover:bg-sky-50/60",
+      badge: "border-sky-200/80 bg-sky-100/80 text-sky-700",
+    },
+    columns: {
+      shell: "border-emerald-200/80 bg-emerald-50/30",
+      card: "border-emerald-200/80 bg-emerald-50/45",
+      activeTab: "border-emerald-300 bg-emerald-600 text-white hover:bg-emerald-600",
+      idleTab: "border-emerald-200/80 hover:border-emerald-300 hover:bg-emerald-50/60",
+      badge: "border-emerald-200/80 bg-emerald-100/80 text-emerald-700",
+    },
+    signers: {
+      shell: "border-amber-200/80 bg-amber-50/30",
+      card: "border-amber-200/80 bg-amber-50/45",
+      activeTab: "border-amber-300 bg-amber-500 text-white hover:bg-amber-500",
+      idleTab: "border-amber-200/80 hover:border-amber-300 hover:bg-amber-50/60",
+      badge: "border-amber-200/80 bg-amber-100/80 text-amber-700",
+    },
+    style: {
+      shell: "border-rose-200/80 bg-rose-50/30",
+      card: "border-rose-200/80 bg-rose-50/45",
+      activeTab: "border-rose-300 bg-rose-600 text-white hover:bg-rose-600",
+      idleTab: "border-rose-200/80 hover:border-rose-300 hover:bg-rose-50/60",
+      badge: "border-rose-200/80 bg-rose-100/80 text-rose-700",
+    },
+    position: {
+      shell: "border-indigo-200/80 bg-indigo-50/30",
+      card: "border-indigo-200/80 bg-indigo-50/45",
+      activeTab: "border-indigo-300 bg-indigo-600 text-white hover:bg-indigo-600",
+      idleTab: "border-indigo-200/80 hover:border-indigo-300 hover:bg-indigo-50/60",
+      badge: "border-indigo-200/80 bg-indigo-100/80 text-indigo-700",
+    },
+  } satisfies Record<ActivePanel, {
+    shell: string;
+    card: string;
+    activeTab: string;
+    idleTab: string;
+    badge: string;
+  }>;
+  const activeDesktopPanelTone = desktopPanelToneMap[activePanel];
+  const activePanelMeta = panelSections.find((section) => section.id === activePanel) ?? panelSections[0];
   const previewDate = draft.useCustomDate && draft.customDate
     ? formatSignatureDisplayDate(draft.customDate)
     : formatSignatureDisplayDate();
@@ -3113,11 +3165,11 @@ export function ExportStudioDialog({
             )}>
               {effectivePreviewZoom}%
             </div>
-            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
-              <Maximize2 className="h-3.5 w-3.5" />
-            </Button>
             <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, previewZoomMax))}>
               <ZoomIn className="h-3.5 w-3.5" />
+            </Button>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
+              <Maximize2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
@@ -3317,9 +3369,9 @@ export function ExportStudioDialog({
                     size="icon"
                     className="h-7 w-7 rounded-full"
                     onPointerDown={(event) => event.stopPropagation()}
-                    onClick={() => setMobileOverlayZoom(clamp(effectivePreviewZoom, 15, 200))}
+                    onClick={() => setMobileOverlayZoom((prev) => clamp(prev + 10, 15, 200))}
                   >
-                    <Maximize2 className="h-3.5 w-3.5" />
+                    <ZoomIn className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     type="button"
@@ -3327,9 +3379,9 @@ export function ExportStudioDialog({
                     size="icon"
                     className="h-7 w-7 rounded-full"
                     onPointerDown={(event) => event.stopPropagation()}
-                    onClick={() => setMobileOverlayZoom((prev) => clamp(prev + 10, 15, 200))}
+                    onClick={() => setMobileOverlayZoom(clamp(effectivePreviewZoom, 15, 200))}
                   >
-                    <ZoomIn className="h-3.5 w-3.5" />
+                    <Maximize2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
 
@@ -3650,13 +3702,16 @@ export function ExportStudioDialog({
                     "order-1 flex-1 overflow-hidden",
                     activeMobileSection === "panel" ? "flex" : "hidden",
                   )
-                : "order-2 border-t lg:order-1 lg:border-t-0",
+                : cn("order-2 border-t lg:order-1 lg:border-t-0 lg:border-r", activeDesktopPanelTone.shell),
             )}>
               <div className={cn("px-3 sm:px-4 border-b border-border/70", isMobileLayout ? "pt-2.5 pb-2.5 space-y-3" : "pt-3 sm:pt-4 pb-3 space-y-3")}>
                 {(supportsSignature || onRestoreDefaultMode) ? (
                   <div className="space-y-2">
                     {supportsSignature ? (
-                      <div className={cn("flex items-center justify-between rounded-2xl border border-border bg-background", isMobileLayout ? "p-3" : "p-3.5")}>
+                      <div className={cn(
+                        "flex items-center justify-between rounded-2xl border border-border bg-background",
+                        isMobileLayout ? "p-3" : cn("p-3.5", activeDesktopPanelTone.card),
+                      )}>
                         <div>
                           <Label className="text-xs font-semibold text-foreground">Penanda tangan</Label>
                           <p className="mt-1 text-[10px] text-muted-foreground">
@@ -3668,7 +3723,7 @@ export function ExportStudioDialog({
                     ) : null}
                     <div className={cn(
                       "rounded-2xl border border-border bg-background/80",
-                      isMobileLayout ? "p-3" : "px-3.5 py-3",
+                      isMobileLayout ? "p-3" : cn("px-3.5 py-3", activeDesktopPanelTone.card),
                     )}>
                       <div className={cn(
                         "flex gap-2",
@@ -3688,7 +3743,14 @@ export function ExportStudioDialog({
 
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold text-foreground">Alat studio</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[11px] font-semibold text-foreground">Alat studio</p>
+                      {!isMobileLayout ? (
+                        <span className={cn("rounded-full border px-2.5 py-0.5 text-[10px] font-semibold", activeDesktopPanelTone.badge)}>
+                          {activePanelMeta.label}
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="text-[10px] text-muted-foreground">Buka panel yang ingin Anda atur.</p>
                   </div>
                   <div className={cn("-mx-1 px-1 pb-1", isMobileLayout ? "overflow-hidden" : "overflow-x-auto")}>
@@ -3709,10 +3771,11 @@ export function ExportStudioDialog({
                             <Button
                               key={id}
                               type="button"
-                              variant={activePanel === id ? "default" : "outline"}
+                              variant="outline"
                               size="sm"
                               className={cn(
                                 "h-9 min-w-fit shrink-0 rounded-full px-3 justify-start gap-1.5 text-[10px] sm:text-xs",
+                                !isMobileLayout && (activePanel === id ? activeDesktopPanelTone.activeTab : activeDesktopPanelTone.idleTab),
                                 !enabled && "opacity-50",
                               )}
                               onClick={() => enabled && switchPanel(id)}
@@ -3729,10 +3792,10 @@ export function ExportStudioDialog({
                 </div>
               </div>
 
-              <div ref={panelScrollRef} className={cn("flex-1 overflow-y-auto px-3 sm:px-4 space-y-3", isMobileLayout ? "py-3 pb-44" : "py-3 sm:py-4")}>
+                <div ref={panelScrollRef} className={cn("flex-1 overflow-y-auto px-3 sm:px-4 space-y-3", isMobileLayout ? "py-3 pb-44" : "py-3 sm:py-4")}>
                 {activePanel === "format" ? (
                   <>
-                    <div className="rounded-xl border border-border bg-background/80 p-3">
+                    <div className={cn("rounded-xl border border-border bg-background/80 p-3", !isMobileLayout && activeDesktopPanelTone.card)}>
                       <p className="text-[11px] font-semibold text-foreground">Format ekspor</p>
                       <p className="mt-1 text-[10px] text-muted-foreground">
                         Pilih format hasil akhir dan ukuran halaman. Perubahan langsung masuk ke live preview.
@@ -4064,11 +4127,11 @@ export function ExportStudioDialog({
                       )}>
                         {effectivePreviewZoom}%
                     </div>
-                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
-                      <Maximize2 className="h-3.5 w-3.5" />
-                    </Button>
                     <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, previewZoomMax))}>
                       <ZoomIn className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
+                      <Maximize2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
