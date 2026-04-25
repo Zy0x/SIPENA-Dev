@@ -57,6 +57,16 @@ function RepeatButton({ onTrigger, children, ...rest }: RepeatButtonProps) {
   );
 }
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -189,6 +199,9 @@ interface ExportStudioDialogProps {
   noPreviewMessage?: string;
   formatPanelExtra?: ReactNode;
   previewFooter?: ReactNode;
+  onRestoreDefaultMode?: () => void;
+  defaultModeLabel?: string;
+  defaultModeDescription?: string;
 }
 
 const PAPER_SIZE_OPTIONS: Array<{
@@ -237,6 +250,13 @@ const MOBILE_OVERLAY_DEFAULT_FRAME = {
   height: 236,
 };
 
+const EXPERIMENTAL_WINDOW_DEFAULT_RECT = {
+  x: 48,
+  y: 48,
+  width: 520,
+  height: 620,
+};
+
 type MobileOverlayFrame = typeof MOBILE_OVERLAY_DEFAULT_FRAME;
 
 function getDefaultSignaturePositionState() {
@@ -252,6 +272,22 @@ function getDefaultSignaturePositionState() {
     lockSignaturePosition: false,
     showDebugGuides: false,
   };
+}
+
+function createDefaultModeSignatureDraft(source?: SignatureSettingsConfig | null) {
+  const base = createDefaultSignatureConfig();
+  const preservedSigners = source?.signers?.length
+    ? source.signers.map((signer) => ({
+        ...createEmptySignatureSigner(),
+        ...signer,
+      }))
+    : base.signers;
+
+  return {
+    ...base,
+    city: source?.city ?? base.city,
+    signers: preservedSigners,
+  } satisfies SignatureSettingsConfig;
 }
 
 function getVisibleSigners(signers: SignatureSigner[]) {
@@ -589,6 +625,7 @@ function ExperimentalTypographyWindow({
   isMobile,
   highlightTarget,
   onHighlightTargetChange,
+  layoutResetToken = 0,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
@@ -598,12 +635,21 @@ function ExperimentalTypographyWindow({
   isMobile: boolean;
   highlightTarget?: ExportPreviewHighlightTarget | null;
   onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  layoutResetToken?: number;
 }) {
-  const [windowRect, setWindowRect] = useState({ x: 48, y: 48, width: 520, height: 620 });
+  const [windowRect, setWindowRect] = useState(EXPERIMENTAL_WINDOW_DEFAULT_RECT);
   const [activeTab, setActiveTab] = useState<"typography" | "layout">("typography");
   const dragState = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const scrollMemoryRef = useRef<Record<string, number>>({ typography: 0, layout: 0 });
+
+  useEffect(() => {
+    dragState.current = null;
+    setWindowRect(EXPERIMENTAL_WINDOW_DEFAULT_RECT);
+    setActiveTab("typography");
+    scrollMemoryRef.current = { typography: 0, layout: 0 };
+    bodyRef.current?.scrollTo({ top: 0 });
+  }, [layoutResetToken]);
 
   useEffect(() => {
     if (!open || isMobile) return;
@@ -767,7 +813,11 @@ function ExperimentalTypographyWindow({
         style={{ ...windowStyle, overscrollBehavior: "contain" }}
       >
         <div
-          className={cn("flex items-center justify-between gap-3 border-b border-border bg-muted/60 px-3 py-2", !isMobile && "cursor-grab")}
+          className={cn(
+            "flex items-center justify-between gap-3 border-b border-border px-3 py-2",
+            isMobile ? "bg-gradient-to-r from-slate-950 to-slate-900 text-white" : "bg-muted/60",
+            !isMobile && "cursor-grab",
+          )}
           onPointerDown={isMobile ? undefined : (event) => {
             dragState.current = {
               startX: event.clientX,
@@ -779,19 +829,25 @@ function ExperimentalTypographyWindow({
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <p className="text-sm font-semibold text-foreground">Studio Eksperimental</p>
+              <Sparkles className={cn("h-4 w-4", isMobile ? "text-sky-200" : "text-primary")} />
+              <p className={cn("text-sm font-semibold", isMobile ? "text-white" : "text-foreground")}>Studio Eksperimental</p>
             </div>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">
+            <p className={cn("mt-0.5 text-[10px]", isMobile ? "text-slate-200" : "text-muted-foreground")}>
               Atur tipografi, alignment, dan ukuran tabel per kolom sambil tetap melihat preview. {isMobile ? "Di mobile tampil penuh agar tetap nyaman." : "Jendela ini bisa digeser, diperbesar, dan diletakkan lebih bebas."}
             </p>
           </div>
-          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn("h-8 w-8 rounded-full", isMobile && "text-white hover:bg-white/10 hover:text-white")}
+            onClick={() => onOpenChange(false)}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+        <div className={cn("flex flex-wrap items-center gap-2 border-b border-border px-3 py-2", isMobile && "bg-slate-50/90")}>
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={applySuggestions}>
               Saran Cerdas
@@ -2172,6 +2228,9 @@ export function ExportStudioDialog({
   noPreviewMessage = "Preview untuk format spreadsheet belum ditampilkan di studio ini. Data aktif dan filter tetap dipakai saat ekspor.",
   formatPanelExtra,
   previewFooter,
+  onRestoreDefaultMode,
+  defaultModeLabel = "Mode Default",
+  defaultModeDescription = "Kembalikan studio ke baseline awal tanpa mengubah ukuran kertas dan identitas penanda tangan.",
 }: ExportStudioDialogProps) {
   type ActivePanel = "format" | "columns" | "signers" | "style" | "position";
   type MobileWizardStep = "format" | "setup" | "preview";
@@ -2197,6 +2256,8 @@ export function ExportStudioDialog({
   const [mobileOverlayState, setMobileOverlayState] = useState<"expanded" | "minimized" | "hidden-temporary">("hidden-temporary");
   const [mobileOverlayZoom, setMobileOverlayZoom] = useState(30);
   const [mobileOverlayFrame, setMobileOverlayFrame] = useState<MobileOverlayFrame>(MOBILE_OVERLAY_DEFAULT_FRAME);
+  const [resetLayoutConfirmOpen, setResetLayoutConfirmOpen] = useState(false);
+  const [experimentalLayoutResetToken, setExperimentalLayoutResetToken] = useState(0);
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
@@ -2246,6 +2307,32 @@ export function ExportStudioDialog({
 
     return clampMobileOverlayFrame({ left, top, width, height });
   }, [clampMobileOverlayFrame, getMobileOverlayBounds]);
+  const resetStudioLayoutState = useCallback(() => {
+    panelScrollMemoryRef.current = {};
+    setActivePanel("format");
+    setActiveMobileSection("panel");
+    setMobileStep("format");
+    setMobileSetupSection("document");
+    setPreviewZoom(100);
+    setLiveEditMode(false);
+    setHighlightTarget(null);
+    setExperimentalWindowOpen(false);
+    setExperimentalLayoutResetToken((prev) => prev + 1);
+    requestAnimationFrame(() => {
+      setMobileOverlayState("expanded");
+      setMobileOverlayZoom(34);
+      setMobileOverlayFrame(getDefaultMobileOverlayFrame());
+    });
+  }, [getDefaultMobileOverlayFrame]);
+  const handleResetLayoutOnly = useCallback(() => {
+    resetStudioLayoutState();
+    setResetLayoutConfirmOpen(false);
+  }, [resetStudioLayoutState]);
+  const handleRestoreDefaultMode = useCallback(() => {
+    onRestoreDefaultMode?.();
+    setDraft((prev) => createDefaultModeSignatureDraft(prev));
+    resetStudioLayoutState();
+  }, [onRestoreDefaultMode, resetStudioLayoutState]);
 
   useEffect(() => {
     if (!open && signatureConfig) {
@@ -2256,17 +2343,7 @@ export function ExportStudioDialog({
   useEffect(() => {
     if (open && !hasOpenedRef.current) {
       setDraft(signatureConfig ? { ...createDefaultSignatureConfig(), ...signatureConfig } : createDefaultSignatureConfig());
-      setActivePanel("format");
-      setActiveMobileSection("panel");
-      setMobileStep("format");
-      setMobileSetupSection("document");
-      setMobileOverlayState("expanded");
-      setMobileOverlayZoom(34);
-      setLiveEditMode(false);
-      setHighlightTarget(null);
-      requestAnimationFrame(() => {
-        setMobileOverlayFrame(getDefaultMobileOverlayFrame());
-      });
+      resetStudioLayoutState();
       hasOpenedRef.current = true;
     }
 
@@ -2274,8 +2351,9 @@ export function ExportStudioDialog({
       hasOpenedRef.current = false;
       setExperimentalWindowOpen(false);
       mobileOverlayInteractionRef.current = null;
+      setResetLayoutConfirmOpen(false);
     }
-  }, [getDefaultMobileOverlayFrame, open, signatureConfig]);
+  }, [open, resetStudioLayoutState, signatureConfig]);
 
   useEffect(() => {
     if (!supportsSignature) return;
@@ -2565,6 +2643,63 @@ export function ExportStudioDialog({
   const currentPaperLabel = currentPaperOption?.label ?? currentPaperSize;
   const canConfigureColumns = !!(columnOptions && onColumnOptionChange);
   const canConfigureSignature = supportsSignature && includeSignature;
+  const experimentalModeActive = !!documentStyle && (
+    documentStyle.experimentalColumnTypographyEnabled || documentStyle.experimentalColumnLayoutEnabled
+  );
+  const activeColumnCount = columnCount ?? columnOptions?.reduce((total, option) => {
+    if (!option.children?.length) return total + (option.checked ? 1 : 0);
+    return total + option.children.filter((child) => child.checked).length;
+  }, 0) ?? 0;
+  const studioStatusCards = [
+    {
+      label: "Format",
+      value: activeFormat?.label || "Format",
+      tone: getFormatToneClasses(activeFormat?.id || "pdf"),
+    },
+    {
+      label: "Kertas",
+      value: currentPaperLabel,
+      tone: "border-slate-200 bg-slate-50/80 text-slate-700",
+    },
+    {
+      label: "Kolom",
+      value: canConfigureColumns ? `${activeColumnCount} aktif` : "Tetap",
+      tone: "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+    },
+    {
+      label: "Eksperimen",
+      value: experimentalModeActive ? "Aktif" : "Standar",
+      tone: experimentalModeActive
+        ? "border-amber-200 bg-amber-50/80 text-amber-700"
+        : "border-slate-200 bg-slate-50/80 text-slate-700",
+    },
+  ] as const;
+  const renderStudioUtilityActions = (compact = false) => (
+    <div className={cn("flex gap-2", compact ? "flex-col" : "flex-wrap justify-end")}>
+      {onRestoreDefaultMode ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn("h-9 rounded-xl text-[10px] sm:text-xs", compact && "w-full")}
+          onClick={handleRestoreDefaultMode}
+        >
+          <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+          {defaultModeLabel}
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={cn("h-9 rounded-xl text-[10px] sm:text-xs", compact && "w-full")}
+        onClick={() => setResetLayoutConfirmOpen(true)}
+      >
+        <ScanSearch className="mr-1.5 h-3.5 w-3.5" />
+        Reset Tata Letak
+      </Button>
+    </div>
+  );
 
   const goToPreviousMobileStep = useCallback(() => {
     setMobileStep((prev) => (prev === "preview" ? "setup" : "format"));
@@ -3041,7 +3176,7 @@ export function ExportStudioDialog({
 
     if (mobileOverlayState === "hidden-temporary") {
       return (
-        <div className="pointer-events-none absolute inset-0 z-20">
+        <div className="pointer-events-none absolute inset-0 z-[90]">
           <div className="pointer-events-auto absolute bottom-24 right-3">
             <Button
               type="button"
@@ -3059,7 +3194,7 @@ export function ExportStudioDialog({
     }
 
     return (
-      <div className="pointer-events-none absolute inset-0 z-20">
+      <div className="pointer-events-none absolute inset-0 z-[90]">
         <div
           ref={mobileOverlayCardRef}
           className="pointer-events-auto absolute overflow-hidden rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
@@ -3271,6 +3406,24 @@ export function ExportStudioDialog({
             <DialogDescription className="text-[11px] sm:text-xs">
               {description}
             </DialogDescription>
+            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {studioStatusCards.map((card) => (
+                  <div key={card.label} className="rounded-2xl border border-border bg-muted/20 px-3 py-2.5">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{card.label}</p>
+                    <span className={cn("mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", card.tone)}>
+                      {card.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="lg:min-w-[17rem]">
+                {renderStudioUtilityActions(isNarrowLayout)}
+                {onRestoreDefaultMode ? (
+                  <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{defaultModeDescription}</p>
+                ) : null}
+              </div>
+            </div>
           </DialogHeader>
 
           {isPhoneWizard ? (
@@ -3285,6 +3438,7 @@ export function ExportStudioDialog({
                   isMobile
                   highlightTarget={highlightTarget}
                   onHighlightTargetChange={setHighlightTarget}
+                  layoutResetToken={experimentalLayoutResetToken}
                 />
 
                 <div className="border-b border-border bg-muted/20 px-3 py-3 sm:px-4">
@@ -3322,6 +3476,20 @@ export function ExportStudioDialog({
 
                       {formatPanelContent}
 
+                      <div className="rounded-2xl border border-border bg-gradient-to-br from-background to-muted/30 px-4 py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">Mode kerja studio</p>
+                            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                              Gunakan mode default untuk kembali ke baseline awal, atau reset tata letak bila hanya ingin merapikan panel dan preview.
+                            </p>
+                          </div>
+                          <div className="w-full sm:w-auto">
+                            {renderStudioUtilityActions(true)}
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
                         PDF cocok untuk cetak. PNG cocok untuk dibagikan cepat. Excel dan CSV tetap tersedia, tetapi preview visualnya belum dipakai.
                       </div>
@@ -3335,9 +3503,40 @@ export function ExportStudioDialog({
                       {renderPhoneSetupSection({
                         id: "document",
                         title: "Dokumen",
-                        description: "Atur style dokumen, tipografi, dan preset tampilan hasil ekspor.",
+                        description: "Atur style dokumen, tipografi, preset tampilan, dan akses Studio Eksperimen.",
                         status: documentStyle ? "Siap diatur" : "Dasar",
-                        children: stylePanelContent,
+                        children: (
+                          <div className="space-y-3">
+                            {columnTypographyOptions?.length ? (
+                              <div className="rounded-2xl border border-sky-200/80 bg-white/90 p-3 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/60">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-xs font-semibold text-foreground">Studio Eksperimen</p>
+                                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                                      Font per kolom, alignment, dan lebar tabel akan terhubung langsung ke live preview agar perubahan lebih mudah dipantau.
+                                    </p>
+                                  </div>
+                                  <span className={cn(
+                                    "rounded-full border px-2 py-0.5 text-[9px] font-semibold",
+                                    experimentalModeActive
+                                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                                      : "border-border bg-muted/40 text-muted-foreground",
+                                  )}>
+                                    {experimentalModeActive ? "Aktif" : "Standar"}
+                                  </span>
+                                </div>
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                  <Button type="button" className="h-9 rounded-xl text-[10px]" onClick={() => setExperimentalWindowOpen(true)}>
+                                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                                    Buka Studio Eksperimen
+                                  </Button>
+                                  {renderStudioUtilityActions(true)}
+                                </div>
+                              </div>
+                            ) : null}
+                            {stylePanelContent}
+                          </div>
+                        ),
                       })}
 
                       {renderPhoneSetupSection({
@@ -3454,6 +3653,7 @@ export function ExportStudioDialog({
               isMobile={isMobileLayout}
               highlightTarget={highlightTarget}
               onHighlightTargetChange={setHighlightTarget}
+              layoutResetToken={experimentalLayoutResetToken}
             />
 
             <div className={cn(
@@ -3465,13 +3665,13 @@ export function ExportStudioDialog({
                   )
                 : "order-2 border-t lg:order-1 lg:border-t-0 lg:border-r",
             )}>
-              <div className={cn("px-3 sm:px-4 border-b border-border/70", isMobileLayout ? "pt-2.5 pb-2.5 space-y-2" : "pt-3 sm:pt-4 pb-3 space-y-3")}>
-                <div className={cn("rounded-xl border border-border bg-background", isMobileLayout ? "p-2.5" : "p-3")}>
+              <div className={cn("px-3 sm:px-4 border-b border-border/70", isMobileLayout ? "pt-2.5 pb-2.5 space-y-3" : "pt-3 sm:pt-4 pb-3 space-y-3")}>
+                <div className={cn("rounded-2xl border border-border bg-background", isMobileLayout ? "p-3" : "p-3.5")}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold text-foreground">Tujuan ekspor</p>
+                      <p className="text-xs font-semibold text-foreground">Studio ekspor yang lebih terarah</p>
                       <p className="text-[10px] text-muted-foreground">
-                        Pilih format hasil akhir, lalu sesuaikan style dan penanda tangan dalam satu studio.
+                        Semua alat dikelompokkan berdasarkan pekerjaan: format akhir, isi tabel, style dokumen, dan eksperimen per kolom.
                       </p>
                     </div>
                     <Tooltip>
@@ -3485,59 +3685,85 @@ export function ExportStudioDialog({
                       </TooltipContent>
                     </Tooltip>
                   </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {studioStatusCards.map((card) => (
+                      <div key={card.label} className="rounded-2xl border border-border bg-muted/20 px-3 py-2.5">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{card.label}</p>
+                        <span className={cn("mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold", card.tone)}>
+                          {card.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                {supportsSignature ? (
-                  <div className={cn("flex items-center justify-between rounded-xl border border-border bg-background", isMobileLayout ? "p-2.5" : "p-3")}>
-                    <div>
-                      <Label className="text-xs font-semibold text-foreground">Penanda tangan</Label>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        Aktifkan bila file ekspor perlu blok tanda tangan otomatis.
-                      </p>
+                <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                  {supportsSignature ? (
+                    <div className={cn("flex items-center justify-between rounded-2xl border border-border bg-background", isMobileLayout ? "p-3" : "p-3.5")}>
+                      <div>
+                        <Label className="text-xs font-semibold text-foreground">Penanda tangan</Label>
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          Aktifkan bila file ekspor perlu blok tanda tangan otomatis.
+                        </p>
+                      </div>
+                      <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
                     </div>
-                    <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
-                  </div>
-                ) : null}
+                  ) : <div />}
+                  {renderStudioUtilityActions(isMobileLayout)}
+                </div>
 
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold text-foreground">Alat studio</p>
-                    <p className="text-[10px] text-muted-foreground">Buka panel yang ingin Anda atur.</p>
+                    <p className="text-[11px] font-semibold text-foreground">Kelompok alat</p>
+                    <p className="text-[10px] text-muted-foreground">Pilih kelompok yang ingin Anda rapikan.</p>
                   </div>
-                  <div className={cn("-mx-1 px-1 pb-1", isMobileLayout ? "overflow-hidden" : "overflow-x-auto")}>
-                    {isMobileLayout ? (
-                      <StudioSectionTabs
-                        sections={panelSections}
-                        active={activePanel}
-                        onChange={(next) => {
-                          if ((next === "signers" || next === "position") && (!supportsSignature || !includeSignature)) return;
-                          switchPanel(next);
-                        }}
-                      />
-                    ) : (
-                      <div className="grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap">
-                        {panelSections.map(({ id, label, icon: Icon }) => {
-                          const enabled = !((id === "signers" || id === "position") && (!supportsSignature || !includeSignature));
-                          return (
-                            <Button
-                              key={id}
-                              type="button"
-                              variant={activePanel === id ? "default" : "outline"}
-                              size="sm"
-                              className={cn(
-                                "h-9 min-w-fit shrink-0 rounded-full px-3 justify-start gap-1.5 text-[10px] sm:text-xs",
-                                !enabled && "opacity-50",
-                              )}
-                              onClick={() => enabled && switchPanel(id)}
-                              disabled={!enabled}
-                            >
-                              {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-                              {label}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    )}
+                  <div
+                    className="grid gap-2"
+                    style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10rem), 1fr))" }}
+                  >
+                    {panelSections.map(({ id, label, icon: Icon }) => {
+                      const enabled = !((id === "signers" || id === "position") && (!supportsSignature || !includeSignature));
+                      const panelDescription = id === "format"
+                        ? "Format akhir dan ukuran kertas."
+                        : id === "columns"
+                          ? "Kolom hari dan rekap."
+                          : id === "signers"
+                            ? "Identitas penanda tangan."
+                            : id === "style"
+                              ? "Preset, tipografi, dan eksperimen."
+                              : "Posisi blok tanda tangan.";
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          className={cn(
+                            "rounded-2xl border p-3 text-left transition-all",
+                            activePanel === id ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background hover:border-primary/35",
+                            !enabled && "opacity-50",
+                          )}
+                          onClick={() => enabled && switchPanel(id)}
+                          disabled={!enabled}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={cn(
+                              "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border",
+                              activePanel === id ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-muted/30 text-muted-foreground",
+                            )}>
+                              {Icon ? <Icon className="h-4 w-4" /> : null}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-xs font-semibold text-foreground">{label}</p>
+                                {activePanel === id ? (
+                                  <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[9px] font-semibold text-primary">Aktif</span>
+                                ) : null}
+                              </div>
+                              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{panelDescription}</p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -4035,7 +4261,7 @@ export function ExportStudioDialog({
           </div>
 
           {showMobilePreviewOverlay ? (
-            <div className="pointer-events-none absolute inset-0 z-30 lg:hidden">
+            <div className="pointer-events-none absolute inset-0 z-[90] lg:hidden">
               <div
                 ref={mobileOverlayCardRef}
                 className="pointer-events-auto absolute overflow-hidden rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
@@ -4248,6 +4474,23 @@ export function ExportStudioDialog({
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={resetLayoutConfirmOpen} onOpenChange={setResetLayoutConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset tata letak studio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Posisi overlay live preview, zoom, panel aktif, langkah mobile, dan posisi jendela Studio Eksperimen akan dikembalikan ke tata letak awal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetLayoutOnly}>
+              Reset Tata Letak
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

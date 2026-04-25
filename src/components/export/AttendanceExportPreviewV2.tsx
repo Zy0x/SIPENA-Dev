@@ -22,6 +22,7 @@ import type { AttendanceHolidayInputItem } from "@/lib/attendanceHolidayGrouping
 import type { AttendanceExportTrace } from "@/lib/attendanceExportDebug";
 import { AttendancePdfCanvasPreview } from "@/components/export/AttendancePdfCanvasPreview";
 import { buildAttendancePdfDocument } from "@/lib/attendancePdfExport";
+import type { ExportPreviewHighlightTarget } from "@/components/export/SignaturePreviewCanvas";
 
 export interface AttendanceExportPreviewDataV2 {
   className: string;
@@ -75,6 +76,9 @@ interface AttendanceExportPreviewV2Props {
   visibleColumnKeys?: string[];
   debugEnabled?: boolean;
   onTrace?: (trace: AttendanceExportTrace) => void;
+  liveEditMode?: boolean;
+  highlightTarget?: ExportPreviewHighlightTarget | null;
+  onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
 }
 
 /** Parse legacy "20 Mei: Description" string → structured item. Best-effort. */
@@ -125,6 +129,9 @@ export function AttendanceExportPreviewV2({
   visibleColumnKeys,
   debugEnabled = false,
   onTrace,
+  liveEditMode = false,
+  highlightTarget = null,
+  onHighlightTargetChange,
 }: AttendanceExportPreviewV2Props) {
   const printDataset = useMemo(() => toPrintDataset(data), [data]);
 
@@ -239,6 +246,9 @@ export function AttendanceExportPreviewV2({
       signature={draft}
       setSignature={setDraft}
       includeSignature={includeSignature}
+      liveEditMode={liveEditMode}
+      highlightTarget={highlightTarget}
+      onHighlightTargetChange={onHighlightTargetChange}
     />
   );
 }

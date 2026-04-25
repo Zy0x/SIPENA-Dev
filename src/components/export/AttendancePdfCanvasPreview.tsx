@@ -11,7 +11,7 @@ import {
 import { Loader2, Move } from "lucide-react";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { SignatureSettingsConfig } from "@/hooks/useSignatureSettings";
-import type { AttendancePrintDataset, AttendancePrintLayoutPlan } from "@/lib/attendancePrintLayout";
+import type { AttendancePrintDataset, AttendancePrintLayoutPlan, AttendancePrintPage } from "@/lib/attendancePrintLayout";
 import { mmToPreviewPx } from "@/lib/attendancePrintLayout";
 import { buildAttendancePdfDocument } from "@/lib/attendancePdfExport";
 import { resolveSignatureRenderBoxMm } from "@/lib/exportSignature";
@@ -20,6 +20,7 @@ import {
   convertPreviewDeltaPxToMm,
   resolveManualSignaturePercents,
 } from "@/lib/attendancePdfPreview";
+import type { ExportPreviewHighlightTarget } from "@/components/export/SignaturePreviewCanvas";
 
 GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
 
@@ -33,6 +34,9 @@ interface AttendancePdfCanvasPreviewProps {
   signature: SignatureSettingsConfig;
   setSignature: Dispatch<SetStateAction<SignatureSettingsConfig>>;
   includeSignature: boolean;
+  liveEditMode?: boolean;
+  highlightTarget?: ExportPreviewHighlightTarget | null;
+  onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
 }
 
 interface RenderedPage {
@@ -50,12 +54,100 @@ interface DragState {
   startYMm: number;
 }
 
+interface PreviewHotspot {
+  target: ExportPreviewHighlightTarget;
+  leftMm: number;
+  topMm: number;
+  widthMm: number;
+  heightMm: number;
+}
+
+function isSameHighlightTarget(
+  left: ExportPreviewHighlightTarget | null | undefined,
+  right: ExportPreviewHighlightTarget,
+) {
+  if (!left) return false;
+  if (left.kind !== right.kind) return false;
+  if (left.kind === "column" && right.kind === "column") {
+    return left.key === right.key;
+  }
+  return true;
+}
+
+function buildPageHotspots(plan: AttendancePrintLayoutPlan, page: AttendancePrintPage): PreviewHotspot[] {
+  if (page.kind !== "table") return [];
+
+  const tableLeftMm = plan.paper.marginLeftMm;
+  const tableTopMm = page.tableStartYMm;
+  const headerHeightMm = plan.table.headerRowHeightMm * 2;
+  const bodyHeightMm = page.rowHeightsMm.reduce((sum, height) => sum + height, 0) + (page.hasSummaryRows ? plan.table.summaryRowHeightMm * 2 : 0);
+  const tableHeightMm = headerHeightMm + bodyHeightMm;
+
+  const hotspots: PreviewHotspot[] = [
+    {
+      target: { kind: "table", label: "Seluruh tabel" },
+      leftMm: tableLeftMm,
+      topMm: tableTopMm,
+      widthMm: plan.table.tableWidthMm,
+      heightMm: tableHeightMm,
+    },
+    {
+      target: { kind: "header-row", label: "Baris header tabel" },
+      leftMm: tableLeftMm,
+      topMm: tableTopMm,
+      widthMm: plan.table.tableWidthMm,
+      heightMm: headerHeightMm,
+    },
+    {
+      target: { kind: "body-row", label: "Baris data tabel" },
+      leftMm: tableLeftMm,
+      topMm: tableTopMm + headerHeightMm,
+      widthMm: plan.table.tableWidthMm,
+      heightMm: bodyHeightMm,
+    },
+  ];
+
+  const orderedColumns: Array<{ key: string; label: string; widthMm: number }> = [];
+  if (plan.visibleColumnKeys.has("no") && plan.table.noWidthMm > 0) {
+    orderedColumns.push({ key: "no", label: "No", widthMm: plan.table.noWidthMm });
+  }
+  if (plan.visibleColumnKeys.has("name") && plan.table.nameWidthMm > 0) {
+    orderedColumns.push({ key: "name", label: "Nama", widthMm: plan.table.nameWidthMm });
+  }
+  if (plan.visibleColumnKeys.has("nisn") && plan.table.nisnWidthMm > 0) {
+    orderedColumns.push({ key: "nisn", label: "NISN", widthMm: plan.table.nisnWidthMm });
+  }
+  plan.visibleDays.forEach((day) => {
+    orderedColumns.push({ key: day.key, label: `${day.dayName} ${day.dateLabel}`, widthMm: plan.table.dayWidthMm });
+  });
+  plan.visibleRekapKeys.forEach((key) => {
+    orderedColumns.push({ key, label: key === "total" ? "Jumlah Total" : key, widthMm: plan.table.rekapWidthMm });
+  });
+
+  let cursorLeftMm = tableLeftMm;
+  orderedColumns.forEach((column) => {
+    hotspots.push({
+      target: { kind: "column", key: column.key, label: column.label },
+      leftMm: cursorLeftMm,
+      topMm: tableTopMm,
+      widthMm: column.widthMm,
+      heightMm: tableHeightMm,
+    });
+    cursorLeftMm += column.widthMm;
+  });
+
+  return hotspots;
+}
+
 export function AttendancePdfCanvasPreview({
   data,
   plan,
   signature,
   setSignature,
   includeSignature,
+  liveEditMode = false,
+  highlightTarget = null,
+  onHighlightTargetChange,
 }: AttendancePdfCanvasPreviewProps) {
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [isRendering, setIsRendering] = useState(true);
@@ -66,6 +158,10 @@ export function AttendancePdfCanvasPreview({
   const pageWidthPx = useMemo(() => mmToPreviewPx(plan.paper.pageWidthMm), [plan.paper.pageWidthMm]);
   const pageHeightPx = useMemo(() => mmToPreviewPx(plan.paper.pageHeightMm), [plan.paper.pageHeightMm]);
   const dragEnabled = includeSignature && !!plan.signaturePlacement && !signature.lockSignaturePosition;
+  const pageHotspots = useMemo(
+    () => plan.pages.map((page) => buildPageHotspots(plan, page)),
+    [plan],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -246,6 +342,41 @@ export function AttendancePdfCanvasPreview({
               pointerEvents: "none",
             }}
           />
+
+          {pageHotspots[index]?.map((hotspot) => {
+            const active = isSameHighlightTarget(highlightTarget, hotspot.target);
+            return (
+              <div
+                key={`${page.pageNumber}-${hotspot.target.kind}-${hotspot.target.kind === "column" ? hotspot.target.key : hotspot.target.label ?? hotspot.target.kind}`}
+                style={{
+                  position: "absolute",
+                  left: mmToPreviewPx(hotspot.leftMm),
+                  top: mmToPreviewPx(hotspot.topMm),
+                  width: mmToPreviewPx(hotspot.widthMm),
+                  height: mmToPreviewPx(hotspot.heightMm),
+                  borderRadius: hotspot.target.kind === "table" ? 12 : 8,
+                  boxShadow: active
+                    ? hotspot.target.kind === "column"
+                      ? "inset 0 0 0 2px rgba(249, 115, 22, 0.92), 0 0 0 1px rgba(255,255,255,0.55)"
+                      : hotspot.target.kind === "header-row"
+                        ? "inset 0 0 0 2px rgba(37, 99, 235, 0.85)"
+                        : hotspot.target.kind === "body-row"
+                          ? "inset 0 0 0 2px rgba(14, 165, 233, 0.82)"
+                          : "inset 0 0 0 2px rgba(37, 99, 235, 0.72)"
+                    : "none",
+                  background: active
+                    ? hotspot.target.kind === "column"
+                      ? "rgba(249, 115, 22, 0.12)"
+                      : "rgba(37, 99, 235, 0.08)"
+                    : "transparent",
+                  pointerEvents: active || liveEditMode ? "auto" : "none",
+                  cursor: liveEditMode ? "pointer" : "default",
+                }}
+                onClick={liveEditMode ? () => onHighlightTargetChange?.(hotspot.target) : undefined}
+                onMouseEnter={liveEditMode ? () => onHighlightTargetChange?.(hotspot.target) : undefined}
+              />
+            );
+          })}
 
           {dragEnabled && plan.signaturePlacement && signaturePageIndex === index && overlayPosition && renderBox ? (
             <div

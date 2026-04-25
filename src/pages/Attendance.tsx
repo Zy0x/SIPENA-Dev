@@ -806,6 +806,13 @@ export default function Attendance() {
       return prev;
     });
   }, [attendancePreviewData.days]);
+  const resetAttendanceStudioDefaults = useCallback(() => {
+    setAttendanceExportFormat("pdf");
+    setDocumentStyle(createDefaultReportDocumentStyle());
+    setAutoFitOnePage(true);
+    setIncludeSignature(false);
+    setSelectedAttendanceColumnKeys(defaultAttendanceVisibleColumnKeys);
+  }, [defaultAttendanceVisibleColumnKeys]);
 
   const showThrottledNotification = useCallback((title: string, message: string) => {
     const now = Date.now();
@@ -2542,7 +2549,9 @@ export default function Attendance() {
                     onColumnOptionChange={handleAttendanceColumnOptionChange}
                     columnCount={selectedAttendanceColumnKeys.length}
                     columnTypographyOptions={attendanceColumnTypographyOptions}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage }) => (
+                    onRestoreDefaultMode={resetAttendanceStudioDefaults}
+                    defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas penanda tangan."
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
                         draft={draft}
@@ -2556,6 +2565,9 @@ export default function Attendance() {
                         visibleColumnKeys={selectedAttendanceColumnKeys}
                         debugEnabled={attendanceDebugEnabled}
                         onTrace={(trace) => attendanceDebugEnabled && commitAttendanceTrace(trace)}
+                        liveEditMode={liveEditMode}
+                        highlightTarget={highlightTarget}
+                        onHighlightTargetChange={onHighlightTargetChange}
                       />
                     )}
                   />
@@ -2629,7 +2641,9 @@ export default function Attendance() {
                     onColumnOptionChange={handleAttendanceColumnOptionChange}
                     columnCount={selectedAttendanceColumnKeys.length}
                     columnTypographyOptions={attendanceColumnTypographyOptions}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage }) => (
+                    onRestoreDefaultMode={resetAttendanceStudioDefaults}
+                    defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas penanda tangan."
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
                         draft={draft}
@@ -2643,6 +2657,9 @@ export default function Attendance() {
                         visibleColumnKeys={selectedAttendanceColumnKeys}
                         debugEnabled={attendanceDebugEnabled}
                         onTrace={(trace) => attendanceDebugEnabled && commitAttendanceTrace(trace)}
+                        liveEditMode={liveEditMode}
+                        highlightTarget={highlightTarget}
+                        onHighlightTargetChange={onHighlightTargetChange}
                       />
                     )}
                   />
