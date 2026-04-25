@@ -2193,7 +2193,7 @@ export function ExportStudioDialog({
   const [highlightTarget, setHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
   const [activeMobileSection, setActiveMobileSection] = useState<"panel" | "preview">("panel");
   const [mobileStep, setMobileStep] = useState<MobileWizardStep>("format");
-  const [mobileSetupSection, setMobileSetupSection] = useState<MobileSetupSection>("document");
+  const [mobileSetupSection, setMobileSetupSection] = useState<MobileSetupSection | null>("document");
   const [mobileOverlayState, setMobileOverlayState] = useState<"expanded" | "minimized" | "hidden-temporary">("hidden-temporary");
   const [mobileOverlayZoom, setMobileOverlayZoom] = useState(30);
   const [mobileOverlayFrame, setMobileOverlayFrame] = useState<MobileOverlayFrame>(MOBILE_OVERLAY_DEFAULT_FRAME);
@@ -2755,6 +2755,7 @@ export function ExportStudioDialog({
       iconWrap: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
       badge: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
       content: "border-sky-100/80 bg-white/70 dark:border-sky-900/60 dark:bg-slate-950/30",
+      subCards: "[&_.rounded-lg.border]:border-sky-200/70 [&_.rounded-xl.border]:border-sky-200/70 [&_.border-dashed]:border-sky-200/70 dark:[&_.rounded-lg.border]:border-sky-900/55 dark:[&_.rounded-xl.border]:border-sky-900/55 dark:[&_.border-dashed]:border-sky-900/55",
       chevron: "text-sky-600 dark:text-sky-300",
     },
     data: {
@@ -2764,6 +2765,7 @@ export function ExportStudioDialog({
       iconWrap: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
       badge: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
       content: "border-emerald-100/80 bg-white/70 dark:border-emerald-900/60 dark:bg-slate-950/30",
+      subCards: "[&_.rounded-lg.border]:border-emerald-200/70 [&_.rounded-xl.border]:border-emerald-200/70 [&_.border-dashed]:border-emerald-200/70 dark:[&_.rounded-lg.border]:border-emerald-900/55 dark:[&_.rounded-xl.border]:border-emerald-900/55 dark:[&_.border-dashed]:border-emerald-900/55",
       chevron: "text-emerald-600 dark:text-emerald-300",
     },
     signature: {
@@ -2773,6 +2775,7 @@ export function ExportStudioDialog({
       iconWrap: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
       badge: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
       content: "border-amber-100/80 bg-white/70 dark:border-amber-900/60 dark:bg-slate-950/30",
+      subCards: "[&_.rounded-lg.border]:border-amber-200/70 [&_.rounded-xl.border]:border-amber-200/70 [&_.border-dashed]:border-amber-200/70 dark:[&_.rounded-lg.border]:border-amber-900/55 dark:[&_.rounded-xl.border]:border-amber-900/55 dark:[&_.border-dashed]:border-amber-900/55",
       chevron: "text-amber-600 dark:text-amber-300",
     },
   } satisfies Record<MobileSetupSection, {
@@ -2782,6 +2785,7 @@ export function ExportStudioDialog({
     iconWrap: string;
     badge: string;
     content: string;
+    subCards: string;
     chevron: string;
   }>;
 
@@ -2813,7 +2817,7 @@ export function ExportStudioDialog({
             tone.header,
             openSection && "shadow-[inset_0_-1px_0_rgba(255,255,255,0.35)]",
           )}
-          onClick={() => !disabled && setMobileSetupSection(id)}
+          onClick={() => !disabled && setMobileSetupSection((prev) => (prev === id ? null : id))}
         >
           <div className="flex min-w-0 items-start gap-3">
             <div className={cn("mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border shadow-sm", tone.iconWrap)}>
@@ -2834,7 +2838,7 @@ export function ExportStudioDialog({
           <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", tone.chevron, openSection && "rotate-180")} />
         </button>
         {openSection ? (
-          <div className={cn("border-t px-3 py-3", tone.content)}>
+          <div className={cn("border-t px-3 py-3", tone.content, tone.subCards)}>
             <div className="space-y-3">
               {children}
             </div>
