@@ -74,8 +74,7 @@ import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
 import {
   StudioActionFooter,
   StudioPreviewToggle,
-  StudioSectionTabs,
-  type StudioOverlayState,
+  StudioStepHeader,
   type StudioSectionDescriptor,
 } from "@/components/studio/ResponsiveStudio";
 import {
@@ -2165,18 +2164,24 @@ export function ExportStudioDialog({
   formatPanelExtra,
   previewFooter,
 }: ExportStudioDialogProps) {
+  type ActivePanel = "format" | "columns" | "signers" | "style" | "position";
+  type MobileWizardStep = "format" | "setup" | "preview";
+  type MobileSetupSection = "document" | "data" | "signature";
+
   const { success, error: showError } = useEnhancedToast();
   const [open, setOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<"format" | "columns" | "signers" | "style" | "position">("format");
+  const [activePanel, setActivePanel] = useState<ActivePanel>("format");
   const [previewZoom, setPreviewZoom] = useState(100);
   const [draft, setDraft] = useState<SignatureSettingsConfig>(createDefaultSignatureConfig());
   const [experimentalWindowOpen, setExperimentalWindowOpen] = useState(false);
   const [liveEditMode, setLiveEditMode] = useState(false);
   const [highlightTarget, setHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
   const [activeMobileSection, setActiveMobileSection] = useState<"panel" | "preview">("panel");
-  const [mobileOverlayState, setMobileOverlayState] = useState<StudioOverlayState>("expanded");
+  const [mobileStep, setMobileStep] = useState<MobileWizardStep>("format");
+  const [mobileSetupSection, setMobileSetupSection] = useState<MobileSetupSection>("document");
+  const [mobileOverlayState, setMobileOverlayState] = useState<"expanded" | "minimized" | "hidden-temporary">("hidden-temporary");
   const [mobileOverlayZoom, setMobileOverlayZoom] = useState(30);
-  const [mobileOverlayFrame, setMobileOverlayFrame] = useState({ left: 0, top: 0, width: 288, height: 240 });
+  const [mobileOverlayFrame] = useState({ left: 0, top: 0, width: 300, height: 236 });
   const dialogContentRef = useRef<HTMLDivElement>(null);
   const layoutViewportRef = useRef<HTMLDivElement>(null);
   const previewViewportRef = useRef<HTMLDivElement>(null);
@@ -2186,23 +2191,14 @@ export function ExportStudioDialog({
   const mobileOverlayCardRef = useRef<HTMLDivElement>(null);
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
-  const mobileOverlayDragRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    originLeft: number;
-    originTop: number;
-    originWidth: number;
-    originHeight: number;
-    mode: "move" | "resize";
-  } | null>(null);
   const hasOpenedRef = useRef(false);
   const [previewViewportWidth, setPreviewViewportWidth] = useState(0);
   const [previewContentWidth, setPreviewContentWidth] = useState(0);
   const viewport = useStudioViewportProfile(layoutViewportRef, open);
   const layoutWidth = viewport.layoutWidth;
-  const viewportHeight = viewport.viewportHeight;
   const isMobileLayout = layoutWidth < 1024;
+  const isPhoneWizard = viewport.isPhone;
+  const usesTabbedMobileStudio = isMobileLayout && !isPhoneWizard;
   const isCompactLayout = layoutWidth < 880 || viewport.isPhone;
   const isNarrowLayout = layoutWidth < 640 || viewport.isCompactPhone;
 
@@ -2217,9 +2213,8 @@ export function ExportStudioDialog({
       setDraft(signatureConfig ? { ...createDefaultSignatureConfig(), ...signatureConfig } : createDefaultSignatureConfig());
       setActivePanel("format");
       setActiveMobileSection("panel");
-      setMobileOverlayState("expanded");
-      setMobileOverlayZoom(30);
-      setMobileOverlayFrame({ left: 0, top: 0, width: 300, height: 236 });
+      setMobileStep("format");
+      setMobileSetupSection("document");
       setLiveEditMode(false);
       setHighlightTarget(null);
       hasOpenedRef.current = true;
@@ -2242,8 +2237,12 @@ export function ExportStudioDialog({
     if (liveEditMode && highlightTarget?.kind === "column" && columnTypographyOptions?.length) {
       setExperimentalWindowOpen(true);
       setActivePanel("style");
+      if (isPhoneWizard) {
+        setMobileStep("setup");
+        setMobileSetupSection("document");
+      }
     }
-  }, [columnTypographyOptions?.length, highlightTarget, liveEditMode]);
+  }, [columnTypographyOptions?.length, highlightTarget, isPhoneWizard, liveEditMode]);
 
   useEffect(() => {
     if (!open) return;
@@ -2254,39 +2253,6 @@ export function ExportStudioDialog({
       return prev;
     });
   }, [layoutWidth, open]);
-
-  useEffect(() => {
-    if (!open || !isMobileLayout) return;
-    if (activeMobileSection === "preview") {
-      setMobileOverlayState("hidden-temporary");
-      return;
-    }
-
-    if (activePanel === "style" || activePanel === "position" || activePanel === "signers") {
-      setMobileOverlayState((prev) => (prev === "hidden-temporary" ? "minimized" : prev === "expanded" ? "minimized" : prev));
-      return;
-    }
-
-    setMobileOverlayState((prev) => (prev === "hidden-temporary" ? "expanded" : prev));
-  }, [activeMobileSection, activePanel, isMobileLayout, open]);
-
-  useEffect(() => {
-    if (!open || !isMobileLayout) return;
-    const viewportNode = dialogContentRef.current;
-    if (!viewportNode) return;
-
-    const nextWidth = clamp(Math.round(viewportNode.clientWidth * (viewport.isCompactPhone ? 0.78 : 0.46)), 220, 380);
-    const nextHeight = clamp(Math.round(viewportNode.clientHeight * 0.34), 170, 340);
-    const nextLeft = Math.max(8, viewportNode.clientWidth - nextWidth - 12);
-    const nextTop = Math.max(8, viewportNode.clientHeight - nextHeight - 18);
-
-    setMobileOverlayFrame((prev) => ({
-      left: clamp(prev.left || nextLeft, 8, Math.max(8, viewportNode.clientWidth - prev.width - 8)),
-      top: clamp(prev.top || nextTop, 8, Math.max(8, viewportNode.clientHeight - prev.height - 8)),
-      width: clamp(prev.width || nextWidth, 252, Math.max(252, viewportNode.clientWidth - 16)),
-      height: clamp(prev.height || nextHeight, 224, Math.max(224, viewportNode.clientHeight - 16)),
-    }));
-  }, [isMobileLayout, open, viewport.viewportHeight, viewport.viewportWidth, viewport.isCompactPhone]);
 
   const activeFormat = useMemo(
     () => formats.find((formatOption) => formatOption.id === selectedFormat) ?? formats[0],
@@ -2326,14 +2292,14 @@ export function ExportStudioDialog({
       observer.disconnect();
       window.removeEventListener("resize", updatePreviewMetrics);
     };
-  }, [activePanel, canPreview, currentPaperSize, open, previewFormat]);
+  }, [activeMobileSection, activePanel, canPreview, currentPaperSize, mobileStep, open, previewFormat]);
 
   useEffect(() => {
-    if (!open || !panelScrollRef.current) return;
+    if (!open || isPhoneWizard || !panelScrollRef.current) return;
     requestAnimationFrame(() => {
       panelScrollRef.current?.scrollTo({ top: panelScrollMemoryRef.current[activePanel] ?? 0 });
     });
-  }, [activePanel, open]);
+  }, [activePanel, isPhoneWizard, open]);
 
   const switchPanel = useCallback((nextPanel: typeof activePanel) => {
     panelScrollMemoryRef.current[activePanel] = panelScrollRef.current?.scrollTop ?? 0;
@@ -2356,16 +2322,13 @@ export function ExportStudioDialog({
     () => PAPER_SIZE_OPTIONS.find((option) => option.id === recommendedPaperSize) ?? null,
     [recommendedPaperSize],
   );
+  const currentPaperOption = useMemo(
+    () => PAPER_SIZE_OPTIONS.find((option) => option.id === currentPaperSize) ?? null,
+    [currentPaperSize],
+  );
   const recommendedPaperCopy = useMemo(
     () => getRecommendedPaperCopy(activeFormat?.id ?? ""),
     [activeFormat?.id],
-  );
-  const mobileSections = useMemo<StudioSectionDescriptor<"panel" | "preview">[]>(
-    () => [
-      { id: "panel", label: "Panel Studio", icon: ScanSearch, priority: "primary", mobileVisibility: "visible" },
-      { id: "preview", label: "Live Preview", icon: Eye, priority: "primary", mobileVisibility: "visible", supportsPreviewSync: true },
-    ],
-    [],
   );
   const panelSections = useMemo<StudioSectionDescriptor<typeof activePanel>[]>(
     () => ([
@@ -2475,85 +2438,419 @@ export function ExportStudioDialog({
       showError("Ekspor gagal", error?.message || "Terjadi kesalahan saat mengekspor file.");
     }
   }, [autoFitOnePage, currentPaperSize, documentStyle, downloadPreviewPng, draft, includeSignature, onExport, saveCurrentSignature, selectedFormat, showError, supportsSignature]);
-  const showMobilePreviewOverlay =
-    isMobileLayout &&
-    activeMobileSection === "panel" &&
-    canPreview &&
-    mobileOverlayState !== "hidden-temporary";
-  const mobilePreviewMaxHeight = Math.max(120, Math.min(mobileOverlayFrame.height - 112, viewportHeight * 0.42));
-  const clampMobileOverlayFrame = useCallback((next: { left: number; top: number; width: number; height: number }) => {
-    const viewportNode = dialogContentRef.current;
-    if (!viewportNode) return next;
-    const minWidth = 252;
-    const minHeight = 224;
-    const maxWidth = Math.max(minWidth, viewportNode.clientWidth - 12);
-    const maxHeight = Math.max(minHeight, viewportNode.clientHeight - 12);
-    const width = clamp(next.width, minWidth, maxWidth);
-    const height = clamp(next.height, minHeight, maxHeight);
-    const left = clamp(next.left, 6, Math.max(6, viewportNode.clientWidth - width - 6));
-    const top = clamp(next.top, 6, Math.max(6, viewportNode.clientHeight - height - 6));
-    return { left, top, width, height };
-  }, []);
-  const handleMobileOverlayPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!isMobileLayout) return;
-    const target = event.target as HTMLElement | null;
-    if (target?.closest("[data-overlay-interactive='true']")) return;
-    mobileOverlayDragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      originLeft: mobileOverlayFrame.left,
-      originTop: mobileOverlayFrame.top,
-      originWidth: mobileOverlayFrame.width,
-      originHeight: mobileOverlayFrame.height,
-      mode: "move",
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }, [isMobileLayout, mobileOverlayFrame.height, mobileOverlayFrame.left, mobileOverlayFrame.top, mobileOverlayFrame.width]);
-  const handleMobileOverlayResizePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!isMobileLayout) return;
-    event.stopPropagation();
-    mobileOverlayDragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      originLeft: mobileOverlayFrame.left,
-      originTop: mobileOverlayFrame.top,
-      originWidth: mobileOverlayFrame.width,
-      originHeight: mobileOverlayFrame.height,
-      mode: "resize",
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }, [isMobileLayout, mobileOverlayFrame.height, mobileOverlayFrame.left, mobileOverlayFrame.top, mobileOverlayFrame.width]);
-  const handleMobileOverlayPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    const dragState = mobileOverlayDragRef.current;
-    if (!dragState || dragState.pointerId !== event.pointerId) return;
-    const deltaX = event.clientX - dragState.startX;
-    const deltaY = event.clientY - dragState.startY;
-
-    if (dragState.mode === "move") {
-      setMobileOverlayFrame((prev) => clampMobileOverlayFrame({
-        ...prev,
-        left: dragState.originLeft + deltaX,
-        top: dragState.originTop + deltaY,
-      }));
-      return;
+  const mobileWizardSteps = useMemo(
+    () => [
+      { id: "format" as const, label: "Format" },
+      { id: "setup" as const, label: "Pengaturan" },
+      { id: "preview" as const, label: "Preview" },
+    ],
+    [],
+  );
+  const mobileStepDescription = useMemo(() => {
+    if (mobileStep === "format") {
+      return "Pilih format hasil akhir, ukuran kertas, dan kebutuhan tanda tangan sebelum lanjut mengatur detail.";
     }
-
-    setMobileOverlayFrame((prev) => clampMobileOverlayFrame({
-      ...prev,
-      width: dragState.originWidth + deltaX,
-      height: dragState.originHeight + deltaY,
-    }));
-  }, [clampMobileOverlayFrame]);
-  const handleMobileOverlayPointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (mobileOverlayDragRef.current?.pointerId === event.pointerId) {
-      mobileOverlayDragRef.current = null;
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
+    if (mobileStep === "setup") {
+      return "Rapikan tampilan dokumen, kolom data, dan blok tanda tangan dari panel yang lebih fokus.";
     }
+    return "Periksa hasil akhir pada layar penuh sebelum file diekspor.";
+  }, [mobileStep]);
+  const currentPaperLabel = currentPaperOption?.label ?? currentPaperSize;
+  const canConfigureColumns = !!(columnOptions && onColumnOptionChange);
+  const canConfigureSignature = supportsSignature && includeSignature;
+
+  const goToPreviousMobileStep = useCallback(() => {
+    setMobileStep((prev) => (prev === "preview" ? "setup" : "format"));
   }, []);
+  const goToNextMobileStep = useCallback(() => {
+    setMobileStep((prev) => (prev === "format" ? "setup" : "preview"));
+  }, []);
+
+  const formatPanelContent = (
+    <>
+      <div className="grid gap-2">
+        {formats.map((formatOption) => {
+          const Icon = formatOption.icon;
+          const active = selectedFormat === formatOption.id;
+          return (
+            <button
+              key={formatOption.id}
+              type="button"
+              className={cn(
+                "rounded-xl border p-3 text-left transition-all",
+                active ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background hover:border-primary/40",
+              )}
+              onClick={() => onFormatChange(formatOption.id)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border", getFormatToneClasses(formatOption.id))}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-semibold text-foreground">{formatOption.label}</p>
+                      {formatOption.badge ? (
+                        <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold", getFormatToneClasses(formatOption.id))}>
+                          {formatOption.badge}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                      {formatOption.description}
+                    </p>
+                  </div>
+                </div>
+                <div className={cn("mt-0.5 rounded-full border px-2 py-1 text-[9px] font-semibold", active ? "border-primary/30 bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                  {formatOption.previewMode ? "Preview" : "Tanpa preview"}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="rounded-xl border border-border bg-background/80 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold text-foreground">Ukuran kertas</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Berlaku untuk preview dan hasil ekspor PDF/PNG. Auto memakai basis A4 yang menyesuaikan layout, sedangkan Full Page membuat ukuran halaman mengikuti isi dokumen.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {recommendedPaperOption ? (
+                <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[9px] font-semibold text-primary">
+                  Rekomendasi: {recommendedPaperOption.label}
+                </span>
+              ) : null}
+              <span className="text-[10px] text-muted-foreground">
+                {recommendedPaperCopy}
+              </span>
+            </div>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Info className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64 text-[11px]">
+              A4 cocok untuk dokumen umum, F4 memakai ukuran 8,5 x 13 in, Auto menjaga basis A4, dan Full Page membiarkan ukuran halaman mengikuti konten.
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        <div
+          className="mt-3 grid gap-2"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10.75rem), 1fr))" }}
+        >
+          {PAPER_SIZE_OPTIONS.map((option) => {
+            const active = currentPaperSize === option.id;
+            const recommended = recommendedPaperSize === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onPaperSizeChange?.(option.id)}
+                className={cn(
+                  "min-w-0 rounded-xl border p-3 text-left transition-all",
+                  active
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : recommended
+                      ? "border-primary/30 bg-primary/[0.03] hover:border-primary/50"
+                      : "border-border bg-background hover:border-primary/40",
+                )}
+              >
+                <div className="flex flex-col items-start gap-2">
+                  <p className="text-xs font-semibold leading-tight text-foreground">{option.label}</p>
+                  {recommended || active ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {recommended ? (
+                        <span className={cn(
+                          "inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold sm:text-[9px]",
+                          active
+                            ? "border-primary/35 bg-primary/[0.12] text-primary"
+                            : "border-primary/25 bg-primary/[0.08] text-primary",
+                        )}>
+                          Rekomendasi
+                        </span>
+                      ) : null}
+                      {active ? (
+                        <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[8px] font-semibold text-primary sm:text-[9px]">
+                          Aktif
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{option.description}</p>
+                {recommended ? (
+                  <p className="mt-2 text-[10px] font-medium text-primary/90">
+                    {activeFormat?.id === "pdf"
+                      ? "Paling disarankan untuk ekspor PDF."
+                      : "Paling disarankan untuk ekspor PNG."}
+                  </p>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {formatPanelExtra ? formatPanelExtra : null}
+    </>
+  );
+
+  const columnsPanelContent = canConfigureColumns ? (
+    <ColumnPanel columnOptions={columnOptions} onColumnOptionChange={onColumnOptionChange} />
+  ) : (
+    <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
+      Pengaturan kolom tidak tersedia untuk format ini.
+    </div>
+  );
+
+  const signersPanelContent = canConfigureSignature ? (
+    <SignerPanel draft={draft} setDraft={setDraft} />
+  ) : (
+    <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
+      Aktifkan penanda tangan terlebih dahulu agar panel ini bisa dipakai.
+    </div>
+  );
+
+  const stylePanelContent = (
+    <StylePanel
+      draft={draft}
+      setDraft={setDraft}
+      documentStyle={documentStyle}
+      onDocumentStyleChange={onDocumentStyleChange}
+      autoFitOnePage={autoFitOnePage}
+      onAutoFitOnePageChange={onAutoFitOnePageChange}
+      showAutoFitPreset={showAutoFitPreset}
+      includeSignature={includeSignature}
+      supportsSignature={supportsSignature}
+      columnTypographyOptions={columnTypographyOptions}
+      onOpenExperimentalWindow={() => setExperimentalWindowOpen(true)}
+    />
+  );
+
+  const positionPanelContent = canConfigureSignature ? (
+    <PositionPanel draft={draft} setDraft={setDraft} />
+  ) : (
+    <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
+      Posisi hanya bisa diatur saat penanda tangan aktif.
+    </div>
+  );
+
+  const renderPhoneSetupSection = ({
+    id,
+    title,
+    description,
+    children,
+    disabled = false,
+    status,
+  }: {
+    id: MobileSetupSection;
+    title: string;
+    description: string;
+    children: ReactNode;
+    disabled?: boolean;
+    status?: string;
+  }) => {
+    const openSection = mobileSetupSection === id && !disabled;
+
+    return (
+      <div className={cn("overflow-hidden rounded-2xl border border-border bg-background", disabled && "opacity-70")}>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          onClick={() => !disabled && setMobileSetupSection(id)}
+        >
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-foreground">{title}</p>
+              {status ? (
+                <span className="rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {status}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{description}</p>
+          </div>
+          <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", openSection && "rotate-180")} />
+        </button>
+        {openSection ? (
+          <div className="border-t border-border bg-muted/20 px-3 py-3">
+            <div className="space-y-3">
+              {children}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderPreviewWorkspace = (phoneWizard = false) => (
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <div className={cn(
+        "flex flex-col gap-3 border-b border-border px-3 sm:px-4",
+        phoneWizard ? "py-3" : isMobileLayout ? "py-2.5" : "py-3 xl:flex-row xl:items-center xl:justify-between",
+      )}>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Eye className="h-4 w-4 text-primary" />
+            <p className="text-xs font-semibold text-foreground">Live Preview</p>
+            {!phoneWizard ? (
+              <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-semibold", getFormatToneClasses(activeFormat?.id || "pdf"))}>
+                {activeFormat?.label || "Format"}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            {phoneWizard
+              ? "Preview ini memakai state akhir yang sama dengan proses ekspor. Pastikan komposisi dokumen sudah terasa pas."
+              : "Preview di bawah ini selalu mengikuti state aktif. Gunakan zoom untuk memeriksa detail sebelum ekspor."}
+          </p>
+          {phoneWizard ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className={cn("rounded-full border px-2.5 py-1 text-[10px] font-semibold", getFormatToneClasses(activeFormat?.id || "pdf"))}>
+                {activeFormat?.label || "Format"}
+              </span>
+              <span className="rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[10px] font-medium text-foreground">
+                {currentPaperLabel}
+              </span>
+              {supportsSignature ? (
+                <span className={cn(
+                  "rounded-full border px-2.5 py-1 text-[10px] font-medium",
+                  includeSignature
+                    ? "border-primary/20 bg-primary/10 text-primary"
+                    : "border-border bg-muted/30 text-muted-foreground",
+                )}>
+                  {includeSignature ? "TTD aktif" : "Tanpa TTD"}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className={cn(
+          "flex w-full gap-2",
+          phoneWizard
+            ? "flex-wrap items-center"
+            : isCompactLayout ? "flex-col" : "flex-wrap items-center sm:w-auto sm:justify-end",
+        )}>
+          {supportsSignature && includeSignature ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-8 rounded-full px-3 text-[10px]",
+                phoneWizard ? "order-2" : isCompactLayout ? "w-full" : "order-3 sm:order-1",
+              )}
+              onClick={handleResetSignaturePosition}
+            >
+              <RotateCcw className="mr-1 h-3.5 w-3.5" />
+              Reset Posisi TTD
+            </Button>
+          ) : null}
+          {canPreview ? (
+            <Button
+              type="button"
+              variant={liveEditMode ? "default" : "outline"}
+              size="sm"
+              className={cn(
+                "h-8 rounded-full px-3 text-[10px]",
+                phoneWizard ? "order-3" : isCompactLayout ? "w-full" : "order-3 sm:order-2",
+              )}
+              onClick={() => setLiveEditMode((prev) => !prev)}
+            >
+              {liveEditMode ? "Edit Langsung Aktif" : "Edit di Preview"}
+            </Button>
+          ) : null}
+          {highlightTarget ? (
+            <div className={cn(
+              "rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-medium text-primary",
+              phoneWizard ? "order-4" : isCompactLayout ? "w-full text-center" : "order-3 sm:order-1",
+            )}>
+              {highlightTarget.label || (highlightTarget.kind === "column" ? highlightTarget.key : highlightTarget.kind)}
+            </div>
+          ) : null}
+          {!phoneWizard && !isNarrowLayout ? (
+            <div className={cn(
+              "rounded-full border border-border bg-muted/30 px-3 py-1 text-[10px] text-muted-foreground",
+              isCompactLayout ? "w-full text-center" : "order-2 sm:order-1",
+            )}>
+              Zoom tetap stabil saat panel diubah
+            </div>
+          ) : null}
+          <div className={cn(
+            "flex items-center gap-1 rounded-full border border-border bg-background p-1",
+            phoneWizard ? "order-1" : isCompactLayout ? "w-full justify-between" : "order-1 sm:order-2",
+          )}>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev - 10, 25, previewZoomMax))}>
+              <ZoomOut className="h-3.5 w-3.5" />
+            </Button>
+            <div className={cn(
+              "flex h-8 items-center justify-center rounded-full border border-border px-2 text-[11px] font-medium text-foreground",
+              phoneWizard ? "min-w-16" : isCompactLayout ? "flex-1 min-w-0" : "min-w-16",
+            )}>
+              {effectivePreviewZoom}%
+            </div>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
+              <Maximize2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, previewZoomMax))}>
+              <ZoomIn className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "flex-1 overflow-auto bg-muted/30",
+          phoneWizard
+            ? "px-2 py-2"
+            : isMobileLayout ? "max-h-[min(46dvh,28rem)] px-2 py-2" : "px-2 sm:px-4 py-2 sm:py-4",
+        )}
+        ref={previewViewportRef}
+      >
+        {canPreview ? (
+          <div className="flex min-h-full flex-col items-center gap-3">
+            <div className="flex w-full items-start justify-center">
+              <div
+                className="origin-top"
+                style={{
+                  transform: `scale(${effectivePreviewZoom / 100})`,
+                  transformOrigin: "top center",
+                  width: "fit-content",
+                }}
+              >
+                {renderPreviewContent(previewCaptureRef)}
+              </div>
+            </div>
+            {previewFooter ? <div className="w-full max-w-5xl">{previewFooter}</div> : null}
+          </div>
+        ) : (
+          <div className="flex h-full min-h-[420px] items-center justify-center">
+            <div className="max-w-md rounded-2xl border border-dashed border-border bg-background p-6 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-muted/50">
+                <Eye className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <p className="mt-4 text-sm font-semibold text-foreground">Preview belum ditampilkan</p>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{noPreviewMessage}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+  const showMobilePreviewOverlay = false;
+  const mobilePreviewMaxHeight = 0;
+  const handleMobileOverlayPointerDown = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {}, []);
+  const handleMobileOverlayResizePointerDown = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {}, []);
+  const handleMobileOverlayPointerMove = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {}, []);
+  const handleMobileOverlayPointerUp = useCallback((_event: ReactPointerEvent<HTMLDivElement>) => {}, []);
 
   return (
     <>
@@ -2574,7 +2871,161 @@ export function ExportStudioDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {isMobileLayout ? (
+          {isPhoneWizard ? (
+            <>
+              <div ref={layoutViewportRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <ExperimentalTypographyWindow
+                  open={experimentalWindowOpen}
+                  onOpenChange={setExperimentalWindowOpen}
+                  documentStyle={documentStyle}
+                  onDocumentStyleChange={onDocumentStyleChange}
+                  columnTypographyOptions={columnTypographyOptions}
+                  isMobile
+                  highlightTarget={highlightTarget}
+                  onHighlightTargetChange={setHighlightTarget}
+                />
+
+                <div className="border-b border-border bg-muted/20 px-3 py-3 sm:px-4">
+                  <div className="flex items-center justify-between gap-2">
+                    {mobileStep !== "format" ? (
+                      <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-[11px]" onClick={goToPreviousMobileStep}>
+                        <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+                        Kembali
+                      </Button>
+                    ) : (
+                      <div className="h-8" />
+                    )}
+                    <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                      Studio Mobile
+                    </span>
+                  </div>
+                  <StudioStepHeader steps={mobileWizardSteps} currentStep={mobileStep} className="mt-2" />
+                  <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{mobileStepDescription}</p>
+                </div>
+
+                {mobileStep === "format" ? (
+                  <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
+                    <div className="space-y-4">
+                      {supportsSignature ? (
+                        <div className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3">
+                          <div>
+                            <Label className="text-sm font-semibold text-foreground">Penanda tangan</Label>
+                            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                              Aktifkan bila hasil ekspor perlu blok tanda tangan otomatis.
+                            </p>
+                          </div>
+                          <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
+                        </div>
+                      ) : null}
+
+                      {formatPanelContent}
+
+                      <div className="rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
+                        PDF cocok untuk cetak. PNG cocok untuk dibagikan cepat. Excel dan CSV tetap tersedia, tetapi preview visualnya belum dipakai.
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {mobileStep === "setup" ? (
+                  <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-4">
+                    <div className="space-y-3">
+                      {renderPhoneSetupSection({
+                        id: "document",
+                        title: "Dokumen",
+                        description: "Atur style dokumen, tipografi, dan preset tampilan hasil ekspor.",
+                        status: documentStyle ? "Siap diatur" : "Dasar",
+                        children: stylePanelContent,
+                      })}
+
+                      {renderPhoneSetupSection({
+                        id: "data",
+                        title: "Data",
+                        description: canConfigureColumns
+                          ? "Pilih kolom yang ingin muncul di hasil ekspor dan live preview."
+                          : "Format ini tidak menyediakan pengaturan kolom.",
+                        status: canConfigureColumns ? `${columnCount ?? columnOptions?.filter((item) => item.checked).length ?? 0} kolom` : "Tidak tersedia",
+                        disabled: !canConfigureColumns,
+                        children: columnsPanelContent,
+                      })}
+
+                      {renderPhoneSetupSection({
+                        id: "signature",
+                        title: "Tanda tangan",
+                        description: supportsSignature
+                          ? includeSignature
+                            ? "Isi penanda tangan, lalu rapikan posisi blok tanda tangan."
+                            : "Aktifkan penanda tangan untuk membuka pengaturan ini."
+                          : "Template ini tidak memakai panel tanda tangan.",
+                        status: supportsSignature ? (includeSignature ? "Aktif" : "Nonaktif") : "Tidak tersedia",
+                        disabled: !supportsSignature,
+                        children: canConfigureSignature ? (
+                          <div className="space-y-4">
+                            {signersPanelContent}
+                            {positionPanelContent}
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
+                            Aktifkan penanda tangan terlebih dahulu agar pengaturan ini bisa dipakai.
+                          </div>
+                        ),
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {mobileStep === "preview" ? renderPreviewWorkspace(true) : null}
+
+                <StudioActionFooter
+                  sticky
+                  helperText={
+                    mobileStep === "format"
+                      ? "Format dan ukuran kertas yang dipilih akan dipakai juga oleh live preview dan file akhir."
+                      : mobileStep === "setup"
+                        ? "Perubahan di langkah ini langsung memengaruhi preview dan hasil ekspor."
+                        : supportsSignature && includeSignature
+                          ? "Simpan pengaturan bila ingin menjadikannya default untuk ekspor berikutnya."
+                          : "Periksa hasil akhir lalu ekspor saat sudah siap."
+                  }
+                  actions={(
+                    mobileStep === "preview" ? (
+                      <>
+                        {supportsSignature && includeSignature ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleSave}
+                            disabled={isSaving || isLoading}
+                            className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto"
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                            Simpan Tanda Tangan
+                          </Button>
+                        ) : null}
+                        <Button type="button" onClick={handleExport} disabled={!activeFormat || isLoading || isSaving} className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto">
+                          <Download className="h-3.5 w-3.5" />
+                          Ekspor {activeFormat?.label || ""}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {mobileStep === "setup" ? (
+                          <Button type="button" variant="outline" onClick={goToPreviousMobileStep} className="h-11 text-xs w-full sm:h-9 sm:w-auto">
+                            Kembali
+                          </Button>
+                        ) : null}
+                        <Button type="button" onClick={goToNextMobileStep} disabled={isLoading || isSaving} className="h-11 gap-1.5 text-xs w-full sm:h-9 sm:w-auto">
+                          {mobileStep === "format" ? "Lanjut ke Pengaturan" : "Lanjut ke Preview"}
+                        </Button>
+                      </>
+                    )
+                  )}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+          {usesTabbedMobileStudio ? (
             <div className="border-b border-border px-3 py-2">
               <StudioPreviewToggle
                 active={activeMobileSection}
@@ -3390,6 +3841,8 @@ export function ExportStudioDialog({
               </>
             )}
           />
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>
