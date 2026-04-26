@@ -656,16 +656,21 @@ export function AttendancePrintDocument({
                             margin: `0 auto ${mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).aboveNameLineGapMm)}px`,
                           }} />
                         )}
-                <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
-                        {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" ? (
+                        <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
+                        {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" && signer.nip ? (
+                          <div style={{ position: "relative", width: (signature.signatureLineWidth ?? 40) * PX_PER_MM, height: mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).betweenNameAndNipZoneMm), margin: "0 auto" }}>
+                            <div style={{ position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)", borderBottom: `1px solid ${COLORS.ink}` }} />
+                          </div>
+                        ) : null}
+                        {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" && !signer.nip ? (
                           <div style={{
                             width: (signature.signatureLineWidth ?? 40) * PX_PER_MM,
                             borderBottom: `1px solid ${COLORS.ink}`,
-                            margin: `${signer.nip ? mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToLineGapMm) : mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).aboveNameLineGapMm)}px auto 0`,
+                            margin: `${mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).aboveNameLineGapMm)}px auto 0`,
                           }} />
                         ) : null}
                         {signer.nip ? (
-                          <div style={{ color: COLORS.muted, fontSize: Math.max(9, (signature.fontSize ?? 10) - 1), lineHeight: 1.05, marginTop: mm(signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" ? getSignatureLineSpacing(getSignatureLinePosition(signature)).lineToNipGapMm : getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToNipGapMm) }}>
+                          <div style={{ color: COLORS.muted, fontSize: Math.max(9, (signature.fontSize ?? 10) - 1), lineHeight: 1.05, marginTop: mm(signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" ? 0 : getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToNipGapMm) }}>
                             NIP. {signer.nip}
                           </div>
                         ) : null}

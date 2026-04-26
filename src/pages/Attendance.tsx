@@ -89,6 +89,7 @@ type AttendanceExportStudioBaseline = {
   selectedAttendanceColumnKeys: string[];
   signatureConfig: ReturnType<typeof createDefaultSignatureConfig>;
   annotationDisplayMode: AttendanceAnnotationDisplayMode;
+  eventAnnotationDisplayMode: AttendanceAnnotationDisplayMode;
   inlineLabelStyle: AttendanceInlineLabelStyle;
 };
 
@@ -198,6 +199,7 @@ export default function Attendance() {
   const [autoFitOnePage, setAutoFitOnePage] = useState(true);
   const [paperSize, setPaperSize] = useState<ReportPaperSize>("a4");
   const [attendanceAnnotationDisplayMode, setAttendanceAnnotationDisplayMode] = useState<AttendanceAnnotationDisplayMode>("summary-card");
+  const [attendanceEventAnnotationDisplayMode, setAttendanceEventAnnotationDisplayMode] = useState<AttendanceAnnotationDisplayMode>("summary-card");
   const [attendanceInlineLabelStyle, setAttendanceInlineLabelStyle] = useState<AttendanceInlineLabelStyle>("rotate-90");
   const [attendanceDebugEnabled, setAttendanceDebugEnabled] = useState(false);
   const [lastAttendanceExportTrace, setLastAttendanceExportTrace] = useState<AttendanceExportTrace | null>(null);
@@ -655,9 +657,11 @@ export default function Attendance() {
     selectedAttendanceColumnKeys: [...selectedAttendanceColumnKeys],
     signatureConfig: structuredClone(attendanceDefaultSignatureConfig ?? createDefaultSignatureConfig()),
     annotationDisplayMode: attendanceAnnotationDisplayMode,
+    eventAnnotationDisplayMode: attendanceEventAnnotationDisplayMode,
     inlineLabelStyle: attendanceInlineLabelStyle,
   }), [
     attendanceAnnotationDisplayMode,
+    attendanceEventAnnotationDisplayMode,
     attendanceDefaultSignatureConfig,
     attendanceExportFormat,
     attendanceInlineLabelStyle,
@@ -713,11 +717,13 @@ export default function Attendance() {
         autoFitOnePage={exportAutoFitOnePage}
         visibleColumnKeys={visibleColumnKeys}
         annotationDisplayMode={attendanceAnnotationDisplayMode}
+        eventAnnotationDisplayMode={attendanceEventAnnotationDisplayMode}
         inlineLabelStyle={attendanceInlineLabelStyle}
       />
     );
   }, [
     attendanceAnnotationDisplayMode,
+    attendanceEventAnnotationDisplayMode,
     attendanceInlineLabelStyle,
     attendancePreviewStudioData,
     normalizeAttendanceSignatureConfig,
@@ -901,6 +907,7 @@ export default function Attendance() {
       setIncludeSignature(hasSignature);
       setSelectedAttendanceColumnKeys(defaultAttendanceVisibleColumnKeys);
       setAttendanceAnnotationDisplayMode("summary-card");
+      setAttendanceEventAnnotationDisplayMode("summary-card");
       setAttendanceInlineLabelStyle("rotate-90");
       return;
     }
@@ -912,6 +919,7 @@ export default function Attendance() {
     setIncludeSignature(baseline.includeSignature);
     setSelectedAttendanceColumnKeys([...baseline.selectedAttendanceColumnKeys]);
     setAttendanceAnnotationDisplayMode(baseline.annotationDisplayMode);
+    setAttendanceEventAnnotationDisplayMode(baseline.eventAnnotationDisplayMode);
     setAttendanceInlineLabelStyle(baseline.inlineLabelStyle);
   }, [defaultAttendanceVisibleColumnKeys, hasSignature]);
 
@@ -2280,6 +2288,7 @@ export default function Attendance() {
         forceSinglePage: exportAutoFitOnePage,
         signatureOffsetYMm: exportSignature?.signatureOffsetY ?? 0,
         annotationDisplayMode: attendanceAnnotationDisplayMode,
+        eventAnnotationDisplayMode: attendanceEventAnnotationDisplayMode,
         inlineLabelStyle: attendanceInlineLabelStyle,
       });
       const builtPdf = buildAttendancePdfDocument({
@@ -2383,6 +2392,7 @@ export default function Attendance() {
     }
   }, [
     attendanceAnnotationDisplayMode,
+    attendanceEventAnnotationDisplayMode,
     attendanceDebugEnabled,
     attendanceDefaultSignatureConfig,
     attendanceInlineLabelStyle,
@@ -2433,6 +2443,7 @@ export default function Attendance() {
         forceSinglePage: exportAutoFitOnePage,
         signatureOffsetYMm: exportSignature?.signatureOffsetY ?? 0,
         annotationDisplayMode: attendanceAnnotationDisplayMode,
+        eventAnnotationDisplayMode: attendanceEventAnnotationDisplayMode,
         inlineLabelStyle: attendanceInlineLabelStyle,
       });
 
@@ -2600,9 +2611,9 @@ export default function Attendance() {
   const attendanceStylePanelExtra = (
     <div className="space-y-3">
       <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 p-3">
-        <p className="text-[11px] font-semibold text-foreground">Keterangan Presensi</p>
+        <p className="text-[11px] font-semibold text-foreground">Keterangan Libur & Presensi</p>
         <p className="mt-1 text-[10px] text-muted-foreground">
-          Pilih apakah keterangan tetap tampil sebagai kartu ringkasan atau langsung ditulis di dalam kolom tanggal tabel.
+          Atur keterangan hari libur agar tetap menjadi kartu ringkasan atau ditulis vertikal di dalam kolom tanggal tabel.
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-sky-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-sky-700">
@@ -2675,6 +2686,54 @@ export default function Attendance() {
         ) : (
           <div className="mt-3 rounded-xl border border-dashed border-sky-200/80 bg-white/70 p-3 text-[10px] leading-relaxed text-muted-foreground">
             Style Label Vertikal disembunyikan otomatis karena mode yang aktif adalah Kartu Ringkasan.
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-3">
+        <p className="text-[11px] font-semibold text-foreground">Kegiatan Khusus</p>
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          Pisahkan kegiatan khusus dari keterangan vertikal. Default tetap ringkasan, lalu masukkan ke tabel hanya bila memang dibutuhkan.
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-amber-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-amber-700">
+            {attendanceEventAnnotationDisplayMode === "summary-card" ? "Mode aktif: Kartu Ringkasan" : "Mode aktif: Masuk ke Tabel"}
+          </span>
+          {attendanceEventAnnotationDisplayMode === "inline-vertical" ? (
+            <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700">
+              Style mengikuti label vertikal: {attendanceInlineLabelStyle === "rotate-90" ? "Rotate -90" : "Stacked Text"}
+            </span>
+          ) : null}
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Button
+            type="button"
+            variant={attendanceEventAnnotationDisplayMode === "summary-card" ? "default" : "outline"}
+            size="sm"
+            className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
+            onClick={() => setAttendanceEventAnnotationDisplayMode("summary-card")}
+            title="Simpan kegiatan khusus pada kartu ringkasan di bawah tabel."
+          >
+            <span className="font-semibold">Kartu Ringkasan</span>
+          </Button>
+          <Button
+            type="button"
+            variant={attendanceEventAnnotationDisplayMode === "inline-vertical" ? "default" : "outline"}
+            size="sm"
+            className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
+            onClick={() => setAttendanceEventAnnotationDisplayMode("inline-vertical")}
+            title="Masukkan kegiatan khusus langsung ke tabel dengan style label vertikal yang sedang aktif."
+          >
+            <span className="font-semibold">Masukkan ke Tabel</span>
+          </Button>
+        </div>
+        {attendanceEventAnnotationDisplayMode === "inline-vertical" ? (
+          <div className="mt-3 rounded-xl border border-indigo-200/80 bg-white/80 p-3 text-[10px] leading-relaxed text-muted-foreground">
+            Opsi cerdas aktif: kegiatan khusus ikut ditulis di tabel dan memakai style label vertikal yang sama agar hasil cetak tetap konsisten.
+          </div>
+        ) : (
+          <div className="mt-3 rounded-xl border border-dashed border-amber-200/80 bg-white/70 p-3 text-[10px] leading-relaxed text-muted-foreground">
+            Kegiatan khusus tetap diringkas di kartu agar kolom tanggal tidak cepat penuh.
           </div>
         )}
       </div>
@@ -2783,7 +2842,7 @@ export default function Attendance() {
                     defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
                     stylePresetMode="attendance"
                     stylePresetBaseline={attendanceStylePresetBaseline}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
                         draft={draft}
@@ -2799,8 +2858,10 @@ export default function Attendance() {
                         onTrace={(trace) => attendanceDebugEnabled && commitAttendanceTrace(trace)}
                         liveEditMode={liveEditMode}
                         highlightTarget={highlightTarget}
-                        onHighlightTargetChange={onHighlightTargetChange}
+                        onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                        onHighlightTargetSelect={onHighlightTargetSelect}
                         annotationDisplayMode={attendanceAnnotationDisplayMode}
+                        eventAnnotationDisplayMode={attendanceEventAnnotationDisplayMode}
                         inlineLabelStyle={attendanceInlineLabelStyle}
                       />
                     )}
@@ -2880,7 +2941,7 @@ export default function Attendance() {
                     defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
                     stylePresetMode="attendance"
                     stylePresetBaseline={attendanceStylePresetBaseline}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
                         draft={draft}
@@ -2896,8 +2957,10 @@ export default function Attendance() {
                         onTrace={(trace) => attendanceDebugEnabled && commitAttendanceTrace(trace)}
                         liveEditMode={liveEditMode}
                         highlightTarget={highlightTarget}
-                        onHighlightTargetChange={onHighlightTargetChange}
+                        onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                        onHighlightTargetSelect={onHighlightTargetSelect}
                         annotationDisplayMode={attendanceAnnotationDisplayMode}
+                        eventAnnotationDisplayMode={attendanceEventAnnotationDisplayMode}
                         inlineLabelStyle={attendanceInlineLabelStyle}
                       />
                     )}

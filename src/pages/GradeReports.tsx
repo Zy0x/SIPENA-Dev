@@ -1225,7 +1225,7 @@ export default function GradeReports() {
                     })}
                     columnCount={visibleColumns.length}
                     columnTypographyOptions={columnTypographyOptions}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetChange }) => (
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
                       <ExportPreviewRenderer
                         previewFormat={previewFormat}
                         draft={draft}
@@ -1233,7 +1233,8 @@ export default function GradeReports() {
                         previewDate={previewDate}
                         liveEditMode={liveEditMode}
                         highlightTarget={highlightTarget}
-                        onHighlightTargetChange={onHighlightTargetChange}
+                        onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                        onHighlightTargetSelect={onHighlightTargetSelect}
                         previewData={{
                           ...exportConfig,
                           paperSize: previewPaperSize,

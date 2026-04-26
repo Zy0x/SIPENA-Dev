@@ -353,6 +353,25 @@ describe("attendance print layout", () => {
     expect(plan.inlineAnnotations.some((annotation) => annotation.text === "Hari Minggu" && annotation.startDay === 5)).toBe(true);
   });
 
+  it("keeps special activities in summary when only holiday labels are inline", () => {
+    const plan = buildAttendancePrintLayoutPlan({
+      data: createDataset({
+        holidayItems: [{ date: "2026-04-05", dayNumber: 5, description: "Libur Nasional" }],
+        eventItems: [{ date: "2026-04-12", dayNumber: 12, description: "Hari Raya" }],
+      }),
+      paperSize: "a4",
+      includeSignature: false,
+      forceSinglePage: false,
+      annotationDisplayMode: "inline-vertical",
+      eventAnnotationDisplayMode: "summary-card",
+      inlineLabelStyle: "rotate-90",
+    });
+
+    expect(plan.inlineAnnotations.some((annotation) => annotation.text === "Libur Nasional")).toBe(true);
+    expect(plan.inlineAnnotations.some((annotation) => annotation.text === "Hari Raya")).toBe(false);
+    expect(plan.summary.keterangan.some((item) => item.text.includes("Hari Raya"))).toBe(true);
+  });
+
   it("converts spaces and symbols in stacked inline annotations into readable word gaps", () => {
     const layout = resolveAttendanceInlineAnnotationLayout({
       text: "Wafat Isa Al-Masih",

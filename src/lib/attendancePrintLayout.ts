@@ -240,6 +240,7 @@ export interface AttendancePrintLayoutPlan {
   visibleDays: AttendancePrintDay[];
   visibleRekapKeys: ("H" | "S" | "I" | "A" | "D" | "total")[];
   annotationDisplayMode: AttendanceAnnotationDisplayMode;
+  eventAnnotationDisplayMode: AttendanceAnnotationDisplayMode;
   inlineLabelStyle: AttendanceInlineLabelStyle;
   inlineAnnotations: AttendanceInlineAnnotationRange[];
   rows: AttendancePrintRow[];
@@ -276,6 +277,7 @@ export interface BuildAttendancePrintLayoutArgs {
   signature?: SignatureData | null;
   forceSinglePage: boolean;
   annotationDisplayMode?: AttendanceAnnotationDisplayMode;
+  eventAnnotationDisplayMode?: AttendanceAnnotationDisplayMode;
   inlineLabelStyle?: AttendanceInlineLabelStyle;
   /** Vertical signature offset in mm (positive = downward). Reserved into page so TTD never gets clipped. */
   signatureOffsetYMm?: number;
@@ -894,6 +896,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     forceSinglePage,
     signatureOffsetYMm = 0,
     annotationDisplayMode = "summary-card",
+    eventAnnotationDisplayMode = "summary-card",
     inlineLabelStyle = "rotate-90",
   } = args;
   const documentStyle = resolveDocumentStyle(args.documentStyle);
@@ -941,37 +944,55 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     contentHeightMm: resolvedPaper.pageHeightMm - MARGIN_MM.top - MARGIN_MM.bottom,
   };
 
-  // Pre-group holidays for summary, then merge into a single "Keterangan" list.
-  // We unify events + custom holidays + national holidays so the user only sees
-  // one clean section under the table instead of three.
   const groupedHolidays = groupAttendanceHolidayRanges(data.holidayItems);
   const groupedEvents = groupAttendanceHolidayRanges(data.eventItems);
   const groupedCustomHolidays = groupedHolidays.filter((g) => g.source !== "national");
   const groupedNationalHolidays = groupedHolidays.filter((g) => g.source === "national");
 
-  // Build a unified, day-sorted Keterangan list (events first if same day for clarity).
-  const keteranganGroups = [
-    ...groupedEvents.map((g) => ({ ...g, _kind: "event" as const })),
-    ...groupedHolidays.map((g) => ({ ...g, _kind: g.source === "national" ? "national" as const : "custom" as const })),
+  const holidayAnnotationGroups = groupedHolidays.map((group) => ({
+    ...group,
+    _kind: group.source === "national" ? "national" as const : "custom" as const,
+  }));
+  const eventAnnotationGroups = groupedEvents.map((group) => ({ ...group, _kind: "event" as const }));
+
+  const summaryKeteranganGroups = [
+    ...(eventAnnotationDisplayMode === "summary-card" ? eventAnnotationGroups : []),
+    ...(annotationDisplayMode === "summary-card" ? holidayAnnotationGroups : []),
   ].sort((a, b) => {
     if (a.startDay !== b.startDay) return a.startDay - b.startDay;
-    // Within same day: events first, then custom, then national
     const order = { event: 0, custom: 1, national: 2 } as const;
     return order[a._kind] - order[b._kind];
   });
-  const keterangan = keteranganGroups.map((g) => ({
+  const keterangan = summaryKeteranganGroups.map((g) => ({
     text: g.text,
     tone: g._kind,
   } satisfies AttendancePrintInfoItem));
   const visibleDayNumberToIndex = new Map(
     visibleDays.map((day, index) => [Number.parseInt(day.dateLabel, 10), index]),
   );
-  const inlineAnnotations: AttendanceInlineAnnotationRange[] = annotationDisplayMode === "inline-vertical"
+  const inlineAnnotationSourceGroups = [
+    ...(annotationDisplayMode === "inline-vertical" ? holidayAnnotationGroups : []),
+    ...(eventAnnotationDisplayMode === "inline-vertical" ? eventAnnotationGroups : []),
+  ].sort((a, b) => {
+    if (a.startDay !== b.startDay) return a.startDay - b.startDay;
+    const order = { event: 0, custom: 1, national: 2 } as const;
+    return order[a._kind] - order[b._kind];
+  });
+  const shouldRenderInlineAnnotations =
+    annotationDisplayMode === "inline-vertical"
+    || eventAnnotationDisplayMode === "inline-vertical";
+  const inlineAnnotations: AttendanceInlineAnnotationRange[] = shouldRenderInlineAnnotations
     ? (() => {
         const explicitAnnotationDays = new Set(
-          [...data.holidayItems, ...data.eventItems].map((item) => item.dayNumber),
+          inlineAnnotationSourceGroups.flatMap((group) => {
+            const days: number[] = [];
+            for (let day = group.startDay; day <= group.endDay; day += 1) {
+              days.push(day);
+            }
+            return days;
+          }),
         );
-        const groupedAnnotations = keteranganGroups.flatMap((group) => {
+        const groupedAnnotations = inlineAnnotationSourceGroups.flatMap((group) => {
           const startColumnIndex = visibleDayNumberToIndex.get(group.startDay);
           const endColumnIndex = visibleDayNumberToIndex.get(group.endDay);
           if (typeof startColumnIndex !== "number" || typeof endColumnIndex !== "number") return [];
@@ -986,6 +1007,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
           } satisfies AttendanceInlineAnnotationRange];
         });
         const sundayAnnotations = data.days.flatMap((day) => {
+          if (annotationDisplayMode !== "inline-vertical") return [];
           if (!day.isHoliday) return [];
           const parsedDate = new Date(day.key);
           if (Number.isNaN(parsedDate.getTime()) || parsedDate.getDay() !== 0) return [];
@@ -1059,7 +1081,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const minimalSummaryReserveMm = reservedShellMm
     + shell.summaryGap
     + legendHeightMm
-    + (annotationDisplayMode === "summary-card" && summary.keterangan.length > 0
+    + (summary.keterangan.length > 0
       ? measureInfoBlockHeightMm(summary.keterangan.slice(0, 1), summaryContentWidthMm, minKeteranganBaseFontPt, shell.infoBlockGap)
       : 0);
 
@@ -1086,7 +1108,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     const candidateInfoHeightMm =
       shell.summaryGap
       + legendHeightMm
-      + (annotationDisplayMode === "summary-card"
+      + (summary.keterangan.length > 0
         ? measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, candidateFontPt, shell.infoBlockGap)
         : 0)
       + notesHeightMm;
@@ -1306,7 +1328,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const chosenKeteranganFontPt = useFullPage
     ? documentStyle.metaFontSize
     : selectedSinglePageFontPt ?? minKeteranganBaseFontPt;
-  const totalKeteranganHeightMm = annotationDisplayMode === "summary-card"
+  const totalKeteranganHeightMm = summary.keterangan.length > 0
     ? measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt, shell.infoBlockGap)
     : 0;
 
@@ -1320,7 +1342,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     let keteranganItems: AttendancePrintInfoItem[] = [];
     let notesItems: string[] = [];
 
-    if (annotationDisplayMode === "summary-card" && remainingKeterangan.length > 0) {
+    if (remainingKeterangan.length > 0) {
       const availableForKeteranganMm = Math.max(0, availableMm - usedMm);
       const fitsAllKeterangan = usedMm + measureInfoBlockHeightMm(
         remainingKeterangan,
@@ -1379,7 +1401,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     };
   };
 
-  const remainingKeterangan = annotationDisplayMode === "summary-card" ? [...summary.keterangan] : [];
+  const remainingKeterangan = [...summary.keterangan];
   const remainingNotes = [...summary.notes];
   const summaryPageContents: AttendancePrintPageSummaryContent[] = [];
   if (useFullPage) {
@@ -1387,10 +1409,10 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       mode: "table-tail",
       showLegend: true,
       legendHeightMm,
-      keteranganTitle: annotationDisplayMode === "summary-card" && summary.keterangan.length > 0 ? "Keterangan" : null,
-      keteranganItems: annotationDisplayMode === "summary-card" ? [...summary.keterangan] : [],
+      keteranganTitle: summary.keterangan.length > 0 ? "Keterangan" : null,
+      keteranganItems: [...summary.keterangan],
       keteranganFontPt: chosenKeteranganFontPt,
-      keteranganHeightMm: annotationDisplayMode === "summary-card"
+      keteranganHeightMm: summary.keterangan.length > 0
         ? measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt, shell.infoBlockGap)
         : 0,
       notesTitle: summary.notes.length > 0 ? "Catatan Siswa" : null,
@@ -1400,7 +1422,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
       contentHeightMm:
         shell.summaryGap
         + legendHeightMm
-        + (annotationDisplayMode === "summary-card"
+        + (summary.keterangan.length > 0
           ? measureInfoBlockHeightMm(summary.keterangan, summaryContentWidthMm, chosenKeteranganFontPt, shell.infoBlockGap)
           : 0)
         + measureInfoBlockHeightMm(summary.notes, summaryContentWidthMm, notesBaseFontPt, shell.infoBlockGap),
@@ -1738,6 +1760,7 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
     visibleDays,
     visibleRekapKeys,
     annotationDisplayMode,
+    eventAnnotationDisplayMode,
     inlineLabelStyle,
     inlineAnnotations,
     rows,

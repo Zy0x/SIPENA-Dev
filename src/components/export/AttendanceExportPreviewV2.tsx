@@ -80,8 +80,10 @@ interface AttendanceExportPreviewV2Props {
   onTrace?: (trace: AttendanceExportTrace) => void;
   liveEditMode?: boolean;
   highlightTarget?: ExportPreviewHighlightTarget | null;
-  onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
   annotationDisplayMode?: AttendanceAnnotationDisplayMode;
+  eventAnnotationDisplayMode?: AttendanceAnnotationDisplayMode;
   inlineLabelStyle?: AttendanceInlineLabelStyle;
 }
 
@@ -138,8 +140,10 @@ export function AttendanceExportPreviewV2({
   onTrace,
   liveEditMode = false,
   highlightTarget = null,
-  onHighlightTargetChange,
+  onHighlightTargetHoverChange,
+  onHighlightTargetSelect,
   annotationDisplayMode = "summary-card",
+  eventAnnotationDisplayMode = "summary-card",
   inlineLabelStyle = "rotate-90",
 }: AttendanceExportPreviewV2Props) {
   const printDataset = useMemo(() => toPrintDataset(data), [data]);
@@ -155,6 +159,7 @@ export function AttendanceExportPreviewV2({
       forceSinglePage: !!autoFitOnePage,
       signatureOffsetYMm: draft.signatureOffsetY,
       annotationDisplayMode,
+      eventAnnotationDisplayMode,
       inlineLabelStyle,
     }),
     [
@@ -166,6 +171,7 @@ export function AttendanceExportPreviewV2({
       autoFitOnePage,
       draft,
       annotationDisplayMode,
+      eventAnnotationDisplayMode,
       inlineLabelStyle,
     ],
   );
@@ -269,7 +275,8 @@ export function AttendanceExportPreviewV2({
       includeSignature={includeSignature}
       liveEditMode={liveEditMode}
       highlightTarget={highlightTarget}
-      onHighlightTargetChange={onHighlightTargetChange}
+      onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+      onHighlightTargetSelect={onHighlightTargetSelect}
     />
   );
 }

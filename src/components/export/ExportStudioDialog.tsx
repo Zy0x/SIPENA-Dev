@@ -203,7 +203,8 @@ interface ExportStudioDialogProps {
     autoFitOnePage?: boolean;
     liveEditMode?: boolean;
     highlightTarget?: ExportPreviewHighlightTarget | null;
-    onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+    onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
+    onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
   }) => ReactNode;
   noPreviewMessage?: string;
   formatPanelExtra?: ReactNode;
@@ -454,6 +455,9 @@ function GenericSignaturePreview({
   setDraft: Dispatch<SetStateAction<SignatureSettingsConfig>>;
   previewDate: string;
   includeSignature: boolean;
+  highlightTarget?: ExportPreviewHighlightTarget | null;
+  onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
 }) {
   const signers = useMemo(() => getVisibleSigners(draft.signers), [draft.signers]);
   const drag = useLooseSignatureDrag(draft, setDraft);
@@ -529,9 +533,8 @@ function GenericSignaturePreview({
             {signers.map((signer, index) => {
               const lineSpacing = getSignatureLineSpacing(getSignatureLinePosition(draft));
               const betweenNameAndNipPx = Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.35));
-              const betweenNameAndLinePx = Math.max(1, Math.round(lineSpacing.nameToLineGapMm * 3.35));
-              const betweenLineAndNipPx = Math.max(1, Math.round(lineSpacing.lineToNipGapMm * 3.35));
               const aboveNameLinePx = Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78));
+              const betweenNameAndNipZonePx = Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78));
 
               return (
                 <div key={signer.id || `${signer.name}-${index}`} style={{ width: Math.max(110, draft.signatureLineWidth * 2), textAlign: "center", color: PREVIEW_COLORS.ink, fontSize: draft.fontSize }}>
@@ -544,12 +547,26 @@ function GenericSignaturePreview({
                     <div style={{ width: draft.signatureLineWidth * 2, borderBottom: `1px solid ${PREVIEW_COLORS.ink}`, margin: `0 auto ${aboveNameLinePx}px` }} />
                   ) : null}
                   <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
-                  {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" ? (
+                  {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" && signer.nip ? (
+                    <div style={{ position: "relative", width: draft.signatureLineWidth * 2, height: betweenNameAndNipZonePx, margin: "0 auto" }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          right: 0,
+                          top: "50%",
+                          borderBottom: `1px solid ${PREVIEW_COLORS.ink}`,
+                          transform: "translateY(-50%)",
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" && !signer.nip ? (
                     <div
                       style={{
                         width: draft.signatureLineWidth * 2,
                         borderBottom: `1px solid ${PREVIEW_COLORS.ink}`,
-                        margin: signer.nip ? `${betweenNameAndLinePx}px auto 0` : `${aboveNameLinePx}px auto 0`,
+                        margin: `${aboveNameLinePx}px auto 0`,
                       }}
                     />
                   ) : null}
@@ -560,7 +577,7 @@ function GenericSignaturePreview({
                         color: PREVIEW_COLORS.muted,
                         lineHeight: 1.05,
                         marginTop: draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip"
-                          ? betweenLineAndNipPx
+                          ? 0
                           : betweenNameAndNipPx,
                       }}
                     >
@@ -754,7 +771,9 @@ function ExperimentalTypographyWindow({
   columnTypographyOptions,
   isMobile,
   highlightTarget,
-  onHighlightTargetChange,
+  selectedHighlightTarget,
+  onHighlightTargetHoverChange,
+  onHighlightTargetSelect,
   layoutResetToken = 0,
 }: {
   open: boolean;
@@ -764,7 +783,9 @@ function ExperimentalTypographyWindow({
   columnTypographyOptions?: ExportColumnTypographyOption[];
   isMobile: boolean;
   highlightTarget?: ExportPreviewHighlightTarget | null;
-  onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  selectedHighlightTarget?: ExportPreviewHighlightTarget | null;
+  onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
   layoutResetToken?: number;
 }) {
   const [windowRect, setWindowRect] = useState(EXPERIMENTAL_WINDOW_DEFAULT_RECT);
@@ -836,17 +857,17 @@ function ExperimentalTypographyWindow({
   }, [activeTab, open]);
 
   useEffect(() => {
-    if (!open || !highlightTarget) return;
-    const nextTab = highlightTarget.kind === "column" ? "typography" : "layout";
+    if (!open || !selectedHighlightTarget) return;
+    const nextTab = selectedHighlightTarget.kind === "column" ? "typography" : "layout";
     setActiveTab(nextTab);
     requestAnimationFrame(() => {
-      if (highlightTarget.kind === "column") {
-        columnCardRefs.current[highlightTarget.key]?.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (selectedHighlightTarget.kind === "column") {
+        columnCardRefs.current[selectedHighlightTarget.key]?.scrollIntoView({ block: "center", behavior: "smooth" });
         return;
       }
       layoutSectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
-  }, [highlightTarget, open]);
+  }, [open, selectedHighlightTarget]);
 
   if (!open || !documentStyle || !onDocumentStyleChange || !columnTypographyOptions?.length) {
     return null;
@@ -1219,7 +1240,8 @@ function ExperimentalTypographyWindow({
                     columnCardRefs.current[option.key] = element;
                   }}
                   className={cn("rounded-xl border bg-background/80 p-3 transition-colors", isHighlighted ? "border-primary shadow-sm" : "border-border")}
-                  onMouseEnter={() => onHighlightTargetChange?.({ kind: "column", key: option.key, label: option.label })}
+                  onMouseEnter={() => onHighlightTargetHoverChange?.({ kind: "column", key: option.key, label: option.label })}
+                  onMouseLeave={() => onHighlightTargetHoverChange?.(null)}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -1230,7 +1252,7 @@ function ExperimentalTypographyWindow({
                           variant="outline"
                           size="sm"
                           className="h-6 px-2 text-[9px]"
-                          onClick={() => onHighlightTargetChange?.({ kind: "column", key: option.key, label: option.label })}
+                          onClick={() => onHighlightTargetSelect?.({ kind: "column", key: option.key, label: option.label })}
                         >
                           Tampilkan
                         </Button>
@@ -1754,8 +1776,32 @@ function PositionPanel({
   draft: SignatureSettingsConfig;
   setDraft: Dispatch<SetStateAction<SignatureSettingsConfig>>;
 }) {
+  const applyPrecisionOverride = (mutate: (base: SignatureSettingsConfig) => SignatureSettingsConfig) => {
+    setDraft((prev) => {
+      const baseManualX = typeof prev.manualXPercent === "number"
+        ? prev.manualXPercent
+        : prev.signatureAlignment === "left"
+          ? 0
+          : prev.signatureAlignment === "center"
+            ? 50
+            : 100;
+      const baseManualY = typeof prev.manualYPercent === "number"
+        ? prev.manualYPercent
+        : prev.signaturePreset === "follow-content"
+          ? 0
+          : 100;
+      return mutate({
+        ...prev,
+        placementMode: "fixed",
+        signaturePageIndex: null,
+        manualXPercent: baseManualX,
+        manualYPercent: baseManualY,
+      });
+    });
+  };
+
   const nudgePosition = (axis: "x" | "y", delta: number) => {
-    setDraft((prev) => ({
+    applyPrecisionOverride((prev) => ({
       ...prev,
       ...(axis === "x"
         ? { signatureOffsetX: clamp(prev.signatureOffsetX + delta, -120, 120) }
@@ -1892,7 +1938,16 @@ function PositionPanel({
                   size="sm"
                   className="h-8 text-[10px]"
                   title={`Tempatkan anchor awal signature ke area ${preset.label.toLowerCase()}.`}
-                  onClick={() => setDraft((prev) => ({ ...prev, signaturePreset: preset.key }))}
+                  onClick={() => setDraft((prev) => ({
+                    ...prev,
+                    placementMode: "adaptive",
+                    signaturePreset: preset.key,
+                    signaturePageIndex: null,
+                    manualXPercent: null,
+                    manualYPercent: null,
+                    signatureOffsetX: 0,
+                    signatureOffsetY: 0,
+                  }))}
                 >
                   {preset.label}
                 </Button>
@@ -1914,7 +1969,16 @@ function PositionPanel({
                   size="sm"
                   className="flex-1 h-8 gap-1 text-[10px]"
                   title={`Atur perataan blok signature ke sisi ${label.toLowerCase()}.`}
-                  onClick={() => setDraft((prev) => ({ ...prev, signatureAlignment: key }))}
+                  onClick={() => setDraft((prev) => ({
+                    ...prev,
+                    placementMode: "adaptive",
+                    signatureAlignment: key,
+                    signaturePageIndex: null,
+                    manualXPercent: null,
+                    manualYPercent: null,
+                    signatureOffsetX: 0,
+                    signatureOffsetY: 0,
+                  }))}
                 >
                   <Icon className="h-3 w-3" />
                   {label}
@@ -1964,13 +2028,13 @@ function PositionPanel({
           <div className="rounded-xl border border-indigo-200/70 bg-white/90 p-3 space-y-3">
             <div className="space-y-1.5">
               <Label className="text-[11px]">Offset horizontal ({draft.signatureOffsetX}mm)</Label>
-              <SliderWithButtons value={draft.signatureOffsetX} min={-120} max={120} step={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureOffsetX: value }))} />
+              <SliderWithButtons value={draft.signatureOffsetX} min={-120} max={120} step={1} onValueChange={(value) => applyPrecisionOverride((prev) => ({ ...prev, signatureOffsetX: value }))} />
               <p className="text-[9px] text-muted-foreground">Angka negatif menggeser ke kiri, angka positif menggeser ke kanan.</p>
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-[11px]">Offset vertikal ({draft.signatureOffsetY}mm)</Label>
-              <SliderWithButtons value={draft.signatureOffsetY} min={-90} max={120} step={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureOffsetY: value }))} />
+              <SliderWithButtons value={draft.signatureOffsetY} min={-90} max={120} step={1} onValueChange={(value) => applyPrecisionOverride((prev) => ({ ...prev, signatureOffsetY: value }))} />
               <p className="text-[9px] text-muted-foreground">Angka negatif mengangkat posisi, angka positif menurunkannya.</p>
             </div>
           </div>
@@ -2561,7 +2625,8 @@ export function ExportStudioDialog({
   const [draft, setDraft] = useState<SignatureSettingsConfig>(createDefaultSignatureConfig());
   const [experimentalWindowOpen, setExperimentalWindowOpen] = useState(false);
   const [liveEditMode, setLiveEditMode] = useState(false);
-  const [highlightTarget, setHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
+  const [hoverHighlightTarget, setHoverHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
+  const [selectedHighlightTarget, setSelectedHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
   const [activeMobileSection, setActiveMobileSection] = useState<"panel" | "preview">("panel");
   const [mobileStep, setMobileStep] = useState<MobileWizardStep>("format");
   const [mobileSetupSection, setMobileSetupSection] = useState<MobileSetupSection | null>("document");
@@ -2584,6 +2649,7 @@ export function ExportStudioDialog({
   const mobileSetupSectionRefs = useRef<Partial<Record<MobileSetupSection, HTMLDivElement | null>>>({});
   const previousExperimentalOpenRef = useRef(false);
   const panelScrollRef = useRef<HTMLDivElement>(null);
+  const highlightTarget = hoverHighlightTarget ?? selectedHighlightTarget;
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
   const hasOpenedRef = useRef(false);
   const studioTopTrayAutoCollapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2665,7 +2731,8 @@ export function ExportStudioDialog({
     setMobileSetupSection("document");
     setPreviewZoom(100);
     setLiveEditMode(false);
-    setHighlightTarget(null);
+    setHoverHighlightTarget(null);
+    setSelectedHighlightTarget(null);
     setExperimentalWindowOpen(false);
     setExperimentalLayoutResetToken((prev) => prev + 1);
     setDesktopPanelWidth(getDefaultDesktopPanelWidth());
@@ -2730,7 +2797,8 @@ export function ExportStudioDialog({
       return;
     }
     if (previousExperimentalOpenRef.current) {
-      setHighlightTarget(null);
+      setHoverHighlightTarget(null);
+      setSelectedHighlightTarget(null);
     }
     if (liveEditMode) {
       setLiveEditMode(false);
@@ -2775,7 +2843,7 @@ export function ExportStudioDialog({
   }, [getDesktopPanelBounds, isMobileLayout, open]);
 
   useEffect(() => {
-    if (!open || !liveEditMode || !highlightTarget) return;
+    if (!open || !liveEditMode || !selectedHighlightTarget) return;
     setExperimentalWindowOpen(true);
     setActivePanel("style");
     setActiveMobileSection("panel");
@@ -2783,7 +2851,7 @@ export function ExportStudioDialog({
       setMobileStep("setup");
       setMobileSetupSection("document");
     }
-  }, [highlightTarget, isPhoneWizard, liveEditMode, open]);
+  }, [isPhoneWizard, liveEditMode, open, selectedHighlightTarget]);
 
   useEffect(() => {
     if (!open) return;
@@ -3029,13 +3097,23 @@ export function ExportStudioDialog({
           autoFitOnePage,
           liveEditMode,
           highlightTarget,
-          onHighlightTargetChange: setHighlightTarget,
+          onHighlightTargetHoverChange: setHoverHighlightTarget,
+          onHighlightTargetSelect: (target) => {
+            setHoverHighlightTarget(null);
+            setSelectedHighlightTarget(target);
+          },
         }) : (
           <GenericSignaturePreview
             draft={draft}
             setDraft={setDraft}
             previewDate={previewDate}
             includeSignature={supportsSignature ? includeSignature : false}
+            highlightTarget={highlightTarget}
+            onHighlightTargetHoverChange={setHoverHighlightTarget}
+            onHighlightTargetSelect={(target) => {
+              setHoverHighlightTarget(null);
+              setSelectedHighlightTarget(target);
+            }}
           />
         )}
       </div>
@@ -3920,7 +3998,12 @@ export function ExportStudioDialog({
                   columnTypographyOptions={columnTypographyOptions}
                   isMobile
                   highlightTarget={highlightTarget}
-                  onHighlightTargetChange={setHighlightTarget}
+                  selectedHighlightTarget={selectedHighlightTarget}
+                  onHighlightTargetHoverChange={setHoverHighlightTarget}
+                  onHighlightTargetSelect={(target) => {
+                    setHoverHighlightTarget(null);
+                    setSelectedHighlightTarget(target);
+                  }}
                   layoutResetToken={experimentalLayoutResetToken}
                 />
 
@@ -4098,7 +4181,12 @@ export function ExportStudioDialog({
               columnTypographyOptions={columnTypographyOptions}
               isMobile={isMobileLayout}
               highlightTarget={highlightTarget}
-              onHighlightTargetChange={setHighlightTarget}
+              selectedHighlightTarget={selectedHighlightTarget}
+              onHighlightTargetHoverChange={setHoverHighlightTarget}
+              onHighlightTargetSelect={(target) => {
+                setHoverHighlightTarget(null);
+                setSelectedHighlightTarget(target);
+              }}
               layoutResetToken={experimentalLayoutResetToken}
             />
 
@@ -4111,152 +4199,149 @@ export function ExportStudioDialog({
                 )
                 : cn("order-2 border-t lg:order-1 lg:border-t-0 lg:border-r shadow-[inset_-1px_0_0_rgba(148,163,184,0.12)]", activeDesktopPanelTone.shell),
             )}>
-              <Collapsible
-                open={studioTopTrayExpanded}
-                onOpenChange={handleStudioTopTrayExpandedChange}
+              <div
                 className={cn(
-                  "px-3 sm:px-3.5 border-b border-border/70",
-                  isMobileLayout
-                    ? "pt-1.5 pb-1.5"
-                    : "relative z-10 bg-background/92 pt-2 pb-2 shadow-[0_18px_28px_-24px_rgba(15,23,42,0.8)] backdrop-blur",
+                  "m-2 min-h-0 flex flex-1 flex-col overflow-hidden rounded-[28px] border border-border/80 bg-background/92 shadow-[0_28px_60px_-42px_rgba(15,23,42,0.82)]",
+                  !isMobileLayout && "backdrop-blur",
                 )}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold text-foreground">Panel studio</p>
-                    <p className="mt-0.5 text-[9px] leading-tight text-muted-foreground">
-                      Mulai terbuka lalu menciut otomatis agar area alat studio lebih tinggi.
-                    </p>
-                  </div>
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-full px-3 text-[10px] sm:text-xs"
-                      title={studioTopTrayExpanded ? "Ciutkan panel ringkas studio." : "Buka kembali panel ringkas studio."}
-                    >
-                      {studioTopTrayExpanded ? <ChevronUp className="mr-1 h-3.5 w-3.5" /> : <ChevronDown className="mr-1 h-3.5 w-3.5" />}
-                      {studioTopTrayExpanded ? "Ciutkan" : "Buka"}
-                    </Button>
-                  </CollapsibleTrigger>
-                </div>
-
-                {!studioTopTrayExpanded ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {!isMobileLayout ? (
-                      <span className={cn("max-w-full rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-tight", activeDesktopPanelTone.badge)}>
-                        {activePanelMeta.label}
-                      </span>
-                    ) : null}
-                    {supportsSignature ? (
-                      <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[9px] font-semibold text-muted-foreground">
-                        {includeSignature ? "Signature aktif" : "Tanpa signature"}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <CollapsibleContent className="mt-1.5 space-y-1.5">
-                  {(supportsSignature || onRestoreDefaultMode) ? (
-                    <div className="space-y-1">
-                      {supportsSignature ? (
-                        <div className={cn(
-                          "flex items-center justify-between gap-2 rounded-xl border border-border bg-background",
-                          isMobileLayout ? "px-2 py-1.5" : cn("px-2.5 py-1.5", activeDesktopPanelTone.card),
-                        )}>
-                          <div className="min-w-0">
-                            <Label className="text-[11px] font-semibold text-foreground">Signature</Label>
-                            <p className="mt-0 text-[9px] leading-tight text-muted-foreground">
-                              Sertakan blok signature pada file ekspor.
-                            </p>
-                          </div>
-                          <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
-                        </div>
-                      ) : null}
-                      <div className={cn(
-                        "rounded-xl border border-border bg-background/80",
-                        isMobileLayout ? "px-2 py-1.5" : cn("px-2.5 py-1.5", activeDesktopPanelTone.card),
-                      )}>
-                        <div className={cn(
-                          "flex gap-1.5",
-                          isMobileLayout ? "flex-col gap-1" : "flex-wrap items-center justify-between",
-                        )}>
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold text-foreground">Aksi studio</p>
-                            <p className="mt-0 text-[9px] leading-tight text-muted-foreground">
-                              Kembalikan mode awal atau rapikan layout.
-                            </p>
-                          </div>
-                          {renderStudioUtilityActions(isMobileLayout)}
-                        </div>
-                      </div>
+                <Collapsible
+                  open={studioTopTrayExpanded}
+                  onOpenChange={handleStudioTopTrayExpandedChange}
+                  className={cn(
+                    "shrink-0 border-b border-border/70 px-3 sm:px-3.5",
+                    isMobileLayout ? "pt-1.5 pb-1.5" : "bg-background/94 pt-2 pb-2",
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold text-foreground">Panel studio</p>
+                      <p className="mt-0.5 text-[9px] leading-tight text-muted-foreground">
+                        Ringkasan kontrol utama. Alat studio tetap berada di panel yang sama dan tetap terlihat saat bagian ini diciutkan.
+                      </p>
                     </div>
-                  ) : null}
-                </CollapsibleContent>
-              </Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-full px-3 text-[10px] sm:text-xs"
+                        title={studioTopTrayExpanded ? "Ciutkan panel ringkas studio." : "Buka kembali panel ringkas studio."}
+                      >
+                        {studioTopTrayExpanded ? <ChevronUp className="mr-1 h-3.5 w-3.5" /> : <ChevronDown className="mr-1 h-3.5 w-3.5" />}
+                        {studioTopTrayExpanded ? "Ciutkan" : "Buka"}
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
 
-              <div className={cn("px-3 sm:px-3.5 border-b border-border/70 bg-background/88", isMobileLayout ? "py-1.5" : "py-2")}>
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center justify-between gap-1.5">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-[10px] font-semibold text-foreground">Alat studio</p>
+                  {!studioTopTrayExpanded ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       {!isMobileLayout ? (
                         <span className={cn("max-w-full rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-tight", activeDesktopPanelTone.badge)}>
                           {activePanelMeta.label}
                         </span>
                       ) : null}
+                      {supportsSignature ? (
+                        <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                          {includeSignature ? "Signature aktif" : "Tanpa signature"}
+                        </span>
+                      ) : null}
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Tab tetap tampil walau panel atas diciutkan.</p>
-                  </div>
-                  <div className={cn("-mx-1 px-1 pt-0.5 pb-0.5", isMobileLayout ? "overflow-visible" : "overflow-x-auto overflow-y-visible")}>
-                    {isMobileLayout ? (
-                      <StudioSectionTabs
-                        sections={panelSections}
-                        active={activePanel}
-                        onChange={(next) => {
-                          if ((next === "signature" || next === "signatureStyle") && !supportsSignature) return;
-                          switchPanel(next);
-                        }}
-                      />
-                    ) : (
-                      <div className="grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap">
-                        {panelSections.map(({ id, label, icon: Icon }) => {
-                          const enabled = !((id === "signature" || id === "signatureStyle") && !supportsSignature);
-                          return (
-                            <Button
-                              key={id}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className={cn(
-                                "h-auto min-h-9 min-w-fit shrink-0 rounded-full px-3 py-2 justify-start gap-1.5 text-[10px] leading-tight sm:text-xs",
-                                !isMobileLayout && (activePanel === id ? activeDesktopPanelTone.activeTab : activeDesktopPanelTone.idleTab),
-                                !enabled && "opacity-50",
-                              )}
-                              onClick={() => enabled && switchPanel(id)}
-                              disabled={!enabled}
-                              title={enabled ? `Buka tab ${label} di panel alat studio.` : `Tab ${label} tidak tersedia untuk template ini.`}
-                            >
-                              {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-                              {label}
-                            </Button>
-                          );
-                        })}
+                  ) : null}
+
+                  <CollapsibleContent className="mt-1.5 space-y-1.5">
+                    {(supportsSignature || onRestoreDefaultMode) ? (
+                      <div className="space-y-1">
+                        {supportsSignature ? (
+                          <div className={cn(
+                            "flex items-center justify-between gap-2 rounded-xl border border-border bg-background",
+                            isMobileLayout ? "px-2 py-1.5" : cn("px-2.5 py-1.5", activeDesktopPanelTone.card),
+                          )}>
+                            <div className="min-w-0">
+                              <Label className="text-[11px] font-semibold text-foreground">Signature</Label>
+                              <p className="mt-0 text-[9px] leading-tight text-muted-foreground">
+                                Sertakan blok signature pada file ekspor.
+                              </p>
+                            </div>
+                            <Switch checked={includeSignature} onCheckedChange={onIncludeSignatureChange} />
+                          </div>
+                        ) : null}
+                        <div className={cn(
+                          "rounded-xl border border-border bg-background/80",
+                          isMobileLayout ? "px-2 py-1.5" : cn("px-2.5 py-1.5", activeDesktopPanelTone.card),
+                        )}>
+                          <div className={cn(
+                            "flex gap-1.5",
+                            isMobileLayout ? "flex-col gap-1" : "flex-wrap items-center justify-between",
+                          )}>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-semibold text-foreground">Aksi studio</p>
+                              <p className="mt-0 text-[9px] leading-tight text-muted-foreground">
+                                Kembalikan mode awal atau rapikan layout.
+                              </p>
+                            </div>
+                            {renderStudioUtilityActions(isMobileLayout)}
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    ) : null}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <div className={cn("shrink-0 border-b border-border/70 bg-background/88 px-3 sm:px-3.5", isMobileLayout ? "py-1.5" : "py-2")}>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-[10px] font-semibold text-foreground">Alat studio</p>
+                        {!isMobileLayout ? (
+                          <span className={cn("max-w-full rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-tight", activeDesktopPanelTone.badge)}>
+                            {activePanelMeta.label}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Tab tetap tampil di dalam panel studio agar ruang kerja alat tetap luas.</p>
+                    </div>
+                    <div className={cn("-mx-1 px-1 pt-0.5 pb-0.5", isMobileLayout ? "overflow-visible" : "overflow-x-auto overflow-y-visible")}>
+                      {isMobileLayout ? (
+                        <StudioSectionTabs
+                          sections={panelSections}
+                          active={activePanel}
+                          onChange={(next) => {
+                            if ((next === "signature" || next === "signatureStyle") && !supportsSignature) return;
+                            switchPanel(next);
+                          }}
+                        />
+                      ) : (
+                        <div className="grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap">
+                          {panelSections.map(({ id, label, icon: Icon }) => {
+                            const enabled = !((id === "signature" || id === "signatureStyle") && !supportsSignature);
+                            return (
+                              <Button
+                                key={id}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                  "h-auto min-h-9 min-w-fit shrink-0 rounded-full px-3 py-2 justify-start gap-1.5 text-[10px] leading-tight sm:text-xs",
+                                  !isMobileLayout && (activePanel === id ? activeDesktopPanelTone.activeTab : activeDesktopPanelTone.idleTab),
+                                  !enabled && "opacity-50",
+                                )}
+                                onClick={() => enabled && switchPanel(id)}
+                                disabled={!enabled}
+                                title={enabled ? `Buka tab ${label} di panel alat studio.` : `Tab ${label} tidak tersedia untuk template ini.`}
+                              >
+                                {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+                                {label}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-                <div
-                  className={cn(
-                    "flex-1 min-h-0",
-                    isMobileLayout
-                      ? ""
-                      : "mx-3 my-3 overflow-hidden rounded-[24px] border border-border/80 bg-background/88 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
-                  )}
-                >
+                <div className="flex-1 min-h-0">
                 <div
                   ref={panelScrollRef}
                   className={cn(
@@ -4305,6 +4390,7 @@ export function ExportStudioDialog({
               </div>
               </div>
             </div>
+            </div>
 
             {!isMobileLayout ? (
               <div className="relative hidden lg:flex lg:order-2 lg:min-h-0 lg:items-stretch lg:justify-center">
@@ -4331,10 +4417,8 @@ export function ExportStudioDialog({
                   )
                 : "order-1 min-h-[18rem] lg:order-3",
             )}>
-              <div className={cn(
-                "flex flex-col gap-3 border-b border-border px-3 sm:px-4",
-                isMobileLayout ? "py-2.5" : "py-3 xl:flex-row xl:items-center xl:justify-between",
-              )}>
+              <div className="border-b border-border px-3 py-3 sm:px-4">
+                <div className={cn("flex gap-3", isMobileLayout ? "flex-col" : "flex-col xl:flex-row xl:items-start xl:justify-between")}>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Eye className="h-4 w-4 text-primary" />
@@ -4346,18 +4430,35 @@ export function ExportStudioDialog({
                   <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
                     Preview di bawah ini selalu mengikuti state aktif. Gunakan zoom untuk memeriksa detail sebelum ekspor.
                   </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {experimentalModeActive ? (
+                      <div className="max-w-full rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-semibold leading-relaxed text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/25 dark:text-amber-200 sm:text-[11px]">
+                        Eksperimental Aktif
+                      </div>
+                    ) : null}
+                    {highlightTarget ? (
+                      <div className="max-w-full rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-medium leading-relaxed text-primary sm:text-[11px]">
+                        Target aktif: {highlightTarget.label || (highlightTarget.kind === "column" ? highlightTarget.key : highlightTarget.kind)}
+                      </div>
+                    ) : null}
+                    {!isNarrowLayout ? (
+                      <div className="max-w-full rounded-full border border-border bg-muted/30 px-3 py-1.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]">
+                        Zoom tetap stabil saat panel diubah
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className={cn(
                   "flex w-full min-w-0 gap-2",
-                  isCompactLayout ? "flex-col" : "flex-wrap items-center sm:w-auto sm:justify-end",
+                  isCompactLayout ? "flex-col" : "flex-wrap items-center xl:w-auto xl:justify-end",
                 )}>
                   {supportsSignature && includeSignature ? (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className={cn("min-h-9 rounded-full px-3 py-1.5 text-[11px] whitespace-normal text-center leading-relaxed sm:text-xs", isCompactLayout ? "w-full" : "order-3 sm:order-1")}
+                      className={cn("min-h-9 rounded-full px-3 py-1.5 text-[11px] whitespace-normal text-center leading-relaxed sm:text-xs", isCompactLayout ? "w-full" : "order-2")}
                       onClick={handleResetSignaturePosition}
                       title="Kembalikan blok signature ke posisi default di layout preview."
                     >
@@ -4370,7 +4471,7 @@ export function ExportStudioDialog({
                       type="button"
                       variant={liveEditMode ? "default" : "outline"}
                       size="sm"
-                      className={cn("min-h-9 rounded-full px-3 py-1.5 text-[11px] whitespace-normal text-center leading-relaxed sm:text-xs", isCompactLayout ? "w-full" : "order-3 sm:order-2")}
+                      className={cn("min-h-9 rounded-full px-3 py-1.5 text-[11px] whitespace-normal text-center leading-relaxed sm:text-xs", isCompactLayout ? "w-full" : "order-2")}
                       onClick={() => {
                         if (liveEditMode) {
                           setLiveEditMode(false);
@@ -4384,33 +4485,9 @@ export function ExportStudioDialog({
                       {liveEditMode ? "Edit Langsung Aktif" : "Edit di Preview"}
                     </Button>
                   ) : null}
-                  {experimentalModeActive ? (
-                    <div className={cn(
-                      "max-w-full rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-semibold leading-relaxed text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/25 dark:text-amber-200 sm:text-[11px]",
-                      isCompactLayout ? "w-full text-center" : "order-2 sm:order-1",
-                    )}>
-                      Eksperimental Aktif
-                    </div>
-                  ) : null}
-                  {highlightTarget ? (
-                    <div className={cn(
-                      "max-w-full rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-medium leading-relaxed text-primary sm:text-[11px]",
-                      isCompactLayout ? "w-full text-center" : "order-3 sm:order-1",
-                    )}>
-                      {highlightTarget.label || (highlightTarget.kind === "column" ? highlightTarget.key : highlightTarget.kind)}
-                    </div>
-                  ) : null}
-                  {!isNarrowLayout ? (
-                    <div className={cn(
-                      "max-w-full rounded-full border border-border bg-muted/30 px-3 py-1.5 text-[10px] leading-relaxed text-muted-foreground sm:text-[11px]",
-                      isCompactLayout ? "w-full text-center" : "order-2 sm:order-1",
-                    )}>
-                      Zoom tetap stabil saat panel diubah
-                    </div>
-                  ) : null}
                   <div className={cn(
                     "flex items-center gap-1 rounded-full border border-border bg-background p-1",
-                    isCompactLayout ? "w-full justify-between" : "order-1 sm:order-2",
+                    isCompactLayout ? "w-full justify-between" : "order-1",
                   )}>
                     <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev - 10, 25, previewZoomMax))} title="Perkecil zoom live preview 10 persen.">
                       <ZoomOut className="h-3.5 w-3.5" />
@@ -4428,6 +4505,7 @@ export function ExportStudioDialog({
                       <Maximize2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
+                </div>
                 </div>
               </div>
 

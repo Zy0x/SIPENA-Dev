@@ -1084,7 +1084,7 @@ export default function StudentRankings() {
                             onAutoFitOnePageChange={setAutoFitOnePage}
                             showAutoFitPreset
                             columnTypographyOptions={buildColumnTypographyOptions(buildSubjectExportConfig(subject.id))}
-                            renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetChange }) => {
+                            renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
                               const previewConfig = buildSubjectExportConfig(subject.id, {
                                 paperSize: previewPaperSize,
                                 documentStyle: previewDocumentStyle ?? documentStyle,
@@ -1101,7 +1101,8 @@ export default function StudentRankings() {
                                   previewDate={previewDate}
                                   liveEditMode={liveEditMode}
                                   highlightTarget={highlightTarget}
-                                  onHighlightTargetChange={onHighlightTargetChange}
+                                  onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                                  onHighlightTargetSelect={onHighlightTargetSelect}
                                   previewData={previewConfig}
                                 />
                               );
@@ -1213,7 +1214,7 @@ export default function StudentRankings() {
                       onColumnOptionChange={handleOverallColumnOptionChange}
                       columnCount={selectedOverallColumns.length}
                       columnTypographyOptions={overallColumnTypographyOptions}
-                      renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetChange }) => {
+                      renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
                         if (!overallExportConfig) return null;
                         return (
                           <ExportPreviewRenderer
@@ -1223,7 +1224,8 @@ export default function StudentRankings() {
                             previewDate={previewDate}
                             liveEditMode={liveEditMode}
                             highlightTarget={highlightTarget}
-                            onHighlightTargetChange={onHighlightTargetChange}
+                            onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                            onHighlightTargetSelect={onHighlightTargetSelect}
                             previewData={{
                               ...overallExportConfig,
                               includeSignature: previewIncludeSignature && hasSignature,

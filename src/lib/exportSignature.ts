@@ -297,7 +297,7 @@ export function addSignatureBlockPDF(
     if (showLine && linePosition === "between-name-and-nip") {
       const halfLine = Math.max(lineWidthMm, 42) / 2;
       const lineY = signer.nip
-        ? nameY + 2.1 + lineSpacing.nameToLineGapMm
+        ? nameY + (lineSpacing.betweenNameAndNipBaselineGapMm / 2)
         : nameY + 2.4 + lineSpacing.aboveNameLineGapMm;
       doc.setDrawColor(30, 30, 30);
       doc.setLineWidth(0.3);
@@ -307,11 +307,8 @@ export function addSignatureBlockPDF(
     if (signer.nip) {
       doc.setFontSize(Math.max(8, fontSize - 1));
       doc.setFont("helvetica", "normal");
-      const lineY = showLine && linePosition === "between-name-and-nip"
-        ? nameY + 2.1 + lineSpacing.nameToLineGapMm
-        : nameY;
       const nipY = showLine && linePosition === "between-name-and-nip"
-        ? lineY + 2.2 + lineSpacing.lineToNipGapMm
+        ? nameY + lineSpacing.betweenNameAndNipBaselineGapMm
         : nameY + 3.1 + lineSpacing.nameToNipGapMm;
       doc.text(`NIP. ${signer.nip}`, centerX, nipY, { align: "center" });
     }
@@ -355,11 +352,13 @@ export function generateSignatureHTML(signature: SignatureData): string {
       html += `<div style="border-bottom:1px solid #1e293b;margin-bottom:3px;width:${lineWidth * 2}px;margin-left:auto;margin-right:auto;"></div>`;
     }
     html += `<div style="font-weight:700;line-height:1.05;">${sanitize(signer.name || "")}</div>`;
-    if (showLine && linePosition === "between-name-and-nip") {
-      html += `<div style="border-bottom:1px solid #1e293b;margin:${signer.nip ? `${Math.max(1, Math.round(lineSpacing.nameToLineGapMm * 3.78))}px` : `${Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78))}px`} auto 0;width:${lineWidth * 2}px;"></div>`;
+    if (showLine && linePosition === "between-name-and-nip" && signer.nip) {
+      html += `<div style="position:relative;width:${lineWidth * 2}px;height:${Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78))}px;margin:0 auto;"><div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);border-bottom:1px solid #1e293b;"></div></div>`;
+    } else if (showLine && linePosition === "between-name-and-nip") {
+      html += `<div style="border-bottom:1px solid #1e293b;margin:${Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78))}px auto 0;width:${lineWidth * 2}px;"></div>`;
     }
     if (signer.nip) {
-      html += `<div style="font-size:${Math.max(8, fontSize - 1)}px;color:#6b7280;line-height:1.05;margin-top:${showLine && linePosition === "between-name-and-nip" ? Math.max(1, Math.round(lineSpacing.lineToNipGapMm * 3.78)) : Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.78))}px;">NIP. ${sanitize(signer.nip)}</div>`;
+      html += `<div style="font-size:${Math.max(8, fontSize - 1)}px;color:#6b7280;line-height:1.05;margin-top:${showLine && linePosition === "between-name-and-nip" ? 0 : Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.78))}px;">NIP. ${sanitize(signer.nip)}</div>`;
     }
     html += `</div>`;
   });
@@ -404,11 +403,13 @@ export function generateSignatureHTMLInline(signature: SignatureData): string {
       html += `<div style="border-bottom:1px solid #1e293b;margin-bottom:3px;width:${lineWidth * 2}px;margin-left:auto;margin-right:auto;"></div>`;
     }
     html += `<div style="font-weight:700;line-height:1.05;">${sanitize(signer.name || "")}</div>`;
-    if (showLine && linePosition === "between-name-and-nip") {
-      html += `<div style="border-bottom:1px solid #1e293b;margin:${signer.nip ? `${Math.max(1, Math.round(lineSpacing.nameToLineGapMm * 3.78))}px` : `${Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78))}px`} auto 0;width:${lineWidth * 2}px;"></div>`;
+    if (showLine && linePosition === "between-name-and-nip" && signer.nip) {
+      html += `<div style="position:relative;width:${lineWidth * 2}px;height:${Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78))}px;margin:0 auto;"><div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);border-bottom:1px solid #1e293b;"></div></div>`;
+    } else if (showLine && linePosition === "between-name-and-nip") {
+      html += `<div style="border-bottom:1px solid #1e293b;margin:${Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78))}px auto 0;width:${lineWidth * 2}px;"></div>`;
     }
     if (signer.nip) {
-      html += `<div style="font-size:${Math.max(8, fontSize - 1)}px;color:#6b7280;line-height:1.05;margin-top:${showLine && linePosition === "between-name-and-nip" ? Math.max(1, Math.round(lineSpacing.lineToNipGapMm * 3.78)) : Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.78))}px;">NIP. ${sanitize(signer.nip)}</div>`;
+      html += `<div style="font-size:${Math.max(8, fontSize - 1)}px;color:#6b7280;line-height:1.05;margin-top:${showLine && linePosition === "between-name-and-nip" ? 0 : Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.78))}px;">NIP. ${sanitize(signer.nip)}</div>`;
     }
     html += `</div>`;
   });

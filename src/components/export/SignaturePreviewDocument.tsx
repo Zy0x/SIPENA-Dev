@@ -66,7 +66,8 @@ interface SignaturePreviewCanvasProps {
   previewData?: SignaturePreviewData;
   liveEditMode?: boolean;
   highlightTarget?: ExportPreviewHighlightTarget | null;
-  onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -366,7 +367,8 @@ function TablePreview({
   documentStyle,
   liveEditMode,
   highlightTarget,
-  onHighlightTargetChange,
+  onHighlightTargetHoverChange,
+  onHighlightTargetSelect,
 }: {
   headerGroups: HeaderGroup[];
   columns: ExportColumn[];
@@ -375,7 +377,8 @@ function TablePreview({
   documentStyle: ReportDocumentStyle;
   liveEditMode?: boolean;
   highlightTarget?: ExportPreviewHighlightTarget | null;
-  onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
 }) {
   const totalWidth = widths.reduce((sum, width) => sum + width, 0) * PX_PER_MM;
 
@@ -436,8 +439,9 @@ function TablePreview({
 
   const interactiveProps = (target: ExportPreviewHighlightTarget) => liveEditMode
     ? {
-        onClick: () => onHighlightTargetChange?.(target),
-        onMouseEnter: () => onHighlightTargetChange?.(target),
+        onClick: () => onHighlightTargetSelect?.(target),
+        onMouseEnter: () => onHighlightTargetHoverChange?.(target),
+        onMouseLeave: () => onHighlightTargetHoverChange?.(null),
         style: { cursor: "pointer" as const },
       }
     : {};
@@ -600,7 +604,8 @@ export function SignaturePreviewCanvas({
   previewData,
   liveEditMode,
   highlightTarget,
-  onHighlightTargetChange,
+  onHighlightTargetHoverChange,
+  onHighlightTargetSelect,
 }: SignaturePreviewCanvasProps) {
   const mergedPreview = useMemo<SignaturePreviewData | undefined>(() => {
     if (!previewData) return undefined;
@@ -860,7 +865,8 @@ export function SignaturePreviewCanvas({
                         documentStyle={layoutPlan.documentStyle}
                         liveEditMode={liveEditMode}
                         highlightTarget={highlightTarget}
-                        onHighlightTargetChange={onHighlightTargetChange}
+                        onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                        onHighlightTargetSelect={onHighlightTargetSelect}
                       />
                     </div>
                   ) : (

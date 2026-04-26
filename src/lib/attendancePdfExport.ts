@@ -585,9 +585,9 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     }
 
     const rotateLayout = resolveRotateFontPt(annotation.text, widthMm, bodyHeightMm);
-    const { text, fontPt, boxHeightMm } = rotateLayout;
+    const { text, fontPt } = rotateLayout;
     const advancedDoc = doc as AdvancedJsPdf;
-    const rotateCenterY = centerY + Math.min(0.3, Math.max(0.08, boxHeightMm * 0.015));
+    const rotateCenterY = centerY;
     if (typeof advancedDoc.advancedAPI === "function" && typeof advancedDoc.Matrix === "function") {
       advancedDoc.advancedAPI((api) => {
         const MatrixCtor = api.Matrix ?? advancedDoc.Matrix;

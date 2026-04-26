@@ -36,7 +36,8 @@ interface AttendancePdfCanvasPreviewProps {
   includeSignature: boolean;
   liveEditMode?: boolean;
   highlightTarget?: ExportPreviewHighlightTarget | null;
-  onHighlightTargetChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
+  onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
 }
 
 interface RenderedPage {
@@ -147,7 +148,8 @@ export function AttendancePdfCanvasPreview({
   includeSignature,
   liveEditMode = false,
   highlightTarget = null,
-  onHighlightTargetChange,
+  onHighlightTargetHoverChange,
+  onHighlightTargetSelect,
 }: AttendancePdfCanvasPreviewProps) {
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [isRendering, setIsRendering] = useState(true);
@@ -304,10 +306,15 @@ export function AttendancePdfCanvasPreview({
     setDragState(null);
     setLiveSignaturePosition(null);
   }, []);
-  const updateHighlightTarget = useCallback((target: ExportPreviewHighlightTarget) => {
-    if (!onHighlightTargetChange || isSameHighlightTarget(highlightTarget, target)) return;
-    onHighlightTargetChange(target);
-  }, [highlightTarget, onHighlightTargetChange]);
+  const updateHoverTarget = useCallback((target: ExportPreviewHighlightTarget | null) => {
+    if (!onHighlightTargetHoverChange) return;
+    if (target && isSameHighlightTarget(highlightTarget, target)) return;
+    onHighlightTargetHoverChange(target);
+  }, [highlightTarget, onHighlightTargetHoverChange]);
+
+  const selectHighlightTarget = useCallback((target: ExportPreviewHighlightTarget) => {
+    onHighlightTargetSelect?.(target);
+  }, [onHighlightTargetSelect]);
 
   return (
     <div
@@ -376,8 +383,9 @@ export function AttendancePdfCanvasPreview({
                   pointerEvents: active || liveEditMode ? "auto" : "none",
                   cursor: liveEditMode ? "pointer" : "default",
                 }}
-                onClick={liveEditMode ? () => updateHighlightTarget(hotspot.target) : undefined}
-                onMouseEnter={liveEditMode ? () => updateHighlightTarget(hotspot.target) : undefined}
+                onClick={liveEditMode ? () => selectHighlightTarget(hotspot.target) : undefined}
+                onMouseEnter={liveEditMode ? () => updateHoverTarget(hotspot.target) : undefined}
+                onMouseLeave={liveEditMode ? () => updateHoverTarget(null) : undefined}
               />
             );
           })}
