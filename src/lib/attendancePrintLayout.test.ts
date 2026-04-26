@@ -369,6 +369,20 @@ describe("attendance print layout", () => {
     expect(layout.fontPx).toBeGreaterThan(8);
   });
 
+  it("resolves rotate-90 labels as a rotated cell box, not just raw text rotation", () => {
+    const layout = resolveAttendanceInlineAnnotationLayout({
+      text: "Hari Raya",
+      labelStyle: "rotate-90",
+      widthMm: 7,
+      heightMm: 96,
+    });
+
+    expect(layout.rotateBoxWidthPx).toBeDefined();
+    expect(layout.rotateBoxHeightPx).toBeDefined();
+    expect(layout.rotateBoxWidthPx).toBeGreaterThan(layout.rotateBoxHeightPx ?? 0);
+    expect(layout.text).toBe("Hari Raya");
+  });
+
   it("builds pdf documents with the same page count as the layout plan", () => {
     const dataset = createDataset({
       rows: Array.from({ length: 28 }, (_, index) => ({

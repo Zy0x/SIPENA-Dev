@@ -274,6 +274,7 @@ const EXPERIMENTAL_WINDOW_DEFAULT_RECT = {
 const DESKTOP_STUDIO_PANEL_MIN_WIDTH = 380;
 const DESKTOP_STUDIO_PANEL_MAX_WIDTH = 640;
 const DESKTOP_STUDIO_PREVIEW_MIN_WIDTH = 440;
+const STUDIO_TOP_TRAY_AUTO_COLLAPSE_DELAY_MS = 3000;
 
 type MobileOverlayFrame = typeof MOBILE_OVERLAY_DEFAULT_FRAME;
 
@@ -527,10 +528,10 @@ function GenericSignaturePreview({
           <div style={{ display: "flex", justifyContent: "flex-end", gap: Math.max(12, draft.signatureSpacing), flexWrap: "wrap" }}>
             {signers.map((signer, index) => {
               const lineSpacing = getSignatureLineSpacing(getSignatureLinePosition(draft));
-              const betweenNameAndNipPx = Math.max(2, Math.round(lineSpacing.nameToNipGapMm * 3.35));
-              const betweenNameAndLinePx = Math.max(2, Math.round(lineSpacing.nameToLineGapMm * 3.35));
-              const betweenLineAndNipPx = Math.max(2, Math.round(lineSpacing.lineToNipGapMm * 3.35));
-              const aboveNameLinePx = Math.max(4, Math.round(lineSpacing.aboveNameLineGapMm * 4));
+              const betweenNameAndNipPx = Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.35));
+              const betweenNameAndLinePx = Math.max(1, Math.round(lineSpacing.nameToLineGapMm * 3.35));
+              const betweenLineAndNipPx = Math.max(1, Math.round(lineSpacing.lineToNipGapMm * 3.35));
+              const aboveNameLinePx = Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78));
 
               return (
                 <div key={signer.id || `${signer.name}-${index}`} style={{ width: Math.max(110, draft.signatureLineWidth * 2), textAlign: "center", color: PREVIEW_COLORS.ink, fontSize: draft.fontSize }}>
@@ -542,7 +543,7 @@ function GenericSignaturePreview({
                   {draft.showSignatureLine && getSignatureLinePosition(draft) === "above-name" ? (
                     <div style={{ width: draft.signatureLineWidth * 2, borderBottom: `1px solid ${PREVIEW_COLORS.ink}`, margin: `0 auto ${aboveNameLinePx}px` }} />
                   ) : null}
-                  <div style={{ fontWeight: 700 }}>{signer.name || "[Nama Signer]"}</div>
+                  <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
                   {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" ? (
                     <div
                       style={{
@@ -557,6 +558,7 @@ function GenericSignaturePreview({
                       style={{
                         fontSize: Math.max(9, draft.fontSize - 1),
                         color: PREVIEW_COLORS.muted,
+                        lineHeight: 1.05,
                         marginTop: draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip"
                           ? betweenLineAndNipPx
                           : betweenNameAndNipPx,
@@ -2584,6 +2586,7 @@ export function ExportStudioDialog({
   const panelScrollRef = useRef<HTMLDivElement>(null);
   const panelScrollMemoryRef = useRef<Record<string, number>>({});
   const hasOpenedRef = useRef(false);
+  const studioTopTrayAutoCollapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [previewViewportWidth, setPreviewViewportWidth] = useState(0);
   const [previewContentWidth, setPreviewContentWidth] = useState(0);
   const viewport = useStudioViewportProfile(layoutViewportRef, open);
@@ -2593,8 +2596,15 @@ export function ExportStudioDialog({
   const usesTabbedMobileStudio = isMobileLayout && !isPhoneWizard;
   const isCompactLayout = layoutWidth < 880 || viewport.isPhone;
   const isNarrowLayout = layoutWidth < 640 || viewport.isCompactPhone;
-  const shouldCompactStudioTopTray = !isPhoneWizard
-    && (viewport.viewportHeight < 860 || (isMobileLayout && viewport.viewportHeight < 980));
+  const clearStudioTopTrayAutoCollapseTimer = useCallback(() => {
+    if (!studioTopTrayAutoCollapseTimerRef.current) return;
+    clearTimeout(studioTopTrayAutoCollapseTimerRef.current);
+    studioTopTrayAutoCollapseTimerRef.current = null;
+  }, []);
+  const handleStudioTopTrayExpandedChange = useCallback((next: boolean) => {
+    clearStudioTopTrayAutoCollapseTimer();
+    setStudioTopTrayExpanded(next);
+  }, [clearStudioTopTrayAutoCollapseTimer]);
   const getMobileOverlayBounds = useCallback(() => {
     const boundsNode = layoutViewportRef.current ?? dialogContentRef.current;
     const rect = boundsNode?.getBoundingClientRect();
@@ -2619,8 +2629,14 @@ export function ExportStudioDialog({
   }, [getDesktopPanelBounds]);
   useEffect(() => {
     if (!open) return;
-    setStudioTopTrayExpanded(!shouldCompactStudioTopTray);
-  }, [open, shouldCompactStudioTopTray]);
+    clearStudioTopTrayAutoCollapseTimer();
+    setStudioTopTrayExpanded(true);
+    studioTopTrayAutoCollapseTimerRef.current = setTimeout(() => {
+      setStudioTopTrayExpanded(false);
+      studioTopTrayAutoCollapseTimerRef.current = null;
+    }, STUDIO_TOP_TRAY_AUTO_COLLAPSE_DELAY_MS);
+    return () => clearStudioTopTrayAutoCollapseTimer();
+  }, [clearStudioTopTrayAutoCollapseTimer, open]);
   const clampMobileOverlayFrame = useCallback((frame: MobileOverlayFrame) => {
     const bounds = getMobileOverlayBounds();
     const maxWidth = Math.max(240, Math.min(360, Math.floor(bounds.width - 16)));
@@ -2688,11 +2704,12 @@ export function ExportStudioDialog({
 
     if (!open) {
       hasOpenedRef.current = false;
+      clearStudioTopTrayAutoCollapseTimer();
       setExperimentalWindowOpen(false);
       mobileOverlayInteractionRef.current = null;
       setResetLayoutConfirmOpen(false);
     }
-  }, [open, resetStudioLayoutState, signatureConfig]);
+  }, [clearStudioTopTrayAutoCollapseTimer, open, resetStudioLayoutState, signatureConfig]);
 
   useEffect(() => {
     if (supportsSignature) return;
@@ -4096,7 +4113,7 @@ export function ExportStudioDialog({
             )}>
               <Collapsible
                 open={studioTopTrayExpanded}
-                onOpenChange={setStudioTopTrayExpanded}
+                onOpenChange={handleStudioTopTrayExpandedChange}
                 className={cn(
                   "px-3 sm:px-3.5 border-b border-border/70",
                   isMobileLayout
@@ -4108,7 +4125,7 @@ export function ExportStudioDialog({
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold text-foreground">Panel studio</p>
                     <p className="mt-0.5 text-[9px] leading-tight text-muted-foreground">
-                      Ringkas saat layar pendek agar area alat studio lebih tinggi.
+                      Mulai terbuka lalu menciut otomatis agar area alat studio lebih tinggi.
                     </p>
                   </div>
                   <CollapsibleTrigger asChild>
@@ -4176,59 +4193,61 @@ export function ExportStudioDialog({
                       </div>
                     </div>
                   ) : null}
-
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center justify-between gap-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-[10px] font-semibold text-foreground">Alat studio</p>
-                        {!isMobileLayout ? (
-                          <span className={cn("max-w-full rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-tight", activeDesktopPanelTone.badge)}>
-                            {activePanelMeta.label}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">Buka panel yang ingin diatur.</p>
-                    </div>
-                    <div className={cn("-mx-1 px-1 pt-0.5 pb-0.5", isMobileLayout ? "overflow-visible" : "overflow-x-auto overflow-y-visible")}>
-                      {isMobileLayout ? (
-                        <StudioSectionTabs
-                          sections={panelSections}
-                          active={activePanel}
-                          onChange={(next) => {
-                            if ((next === "signature" || next === "signatureStyle") && !supportsSignature) return;
-                            switchPanel(next);
-                          }}
-                        />
-                      ) : (
-                        <div className="grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap">
-                          {panelSections.map(({ id, label, icon: Icon }) => {
-                            const enabled = !((id === "signature" || id === "signatureStyle") && !supportsSignature);
-                            return (
-                              <Button
-                                key={id}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className={cn(
-                                  "h-auto min-h-9 min-w-fit shrink-0 rounded-full px-3 py-2 justify-start gap-1.5 text-[10px] leading-tight sm:text-xs",
-                                  !isMobileLayout && (activePanel === id ? activeDesktopPanelTone.activeTab : activeDesktopPanelTone.idleTab),
-                                  !enabled && "opacity-50",
-                                )}
-                                onClick={() => enabled && switchPanel(id)}
-                                disabled={!enabled}
-                                title={enabled ? `Buka tab ${label} di panel alat studio.` : `Tab ${label} tidak tersedia untuk template ini.`}
-                              >
-                                {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-                                {label}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </CollapsibleContent>
               </Collapsible>
+
+              <div className={cn("px-3 sm:px-3.5 border-b border-border/70 bg-background/88", isMobileLayout ? "py-1.5" : "py-2")}>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-[10px] font-semibold text-foreground">Alat studio</p>
+                      {!isMobileLayout ? (
+                        <span className={cn("max-w-full rounded-full border px-2 py-0.5 text-[9px] font-semibold leading-tight", activeDesktopPanelTone.badge)}>
+                          {activePanelMeta.label}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Tab tetap tampil walau panel atas diciutkan.</p>
+                  </div>
+                  <div className={cn("-mx-1 px-1 pt-0.5 pb-0.5", isMobileLayout ? "overflow-visible" : "overflow-x-auto overflow-y-visible")}>
+                    {isMobileLayout ? (
+                      <StudioSectionTabs
+                        sections={panelSections}
+                        active={activePanel}
+                        onChange={(next) => {
+                          if ((next === "signature" || next === "signatureStyle") && !supportsSignature) return;
+                          switchPanel(next);
+                        }}
+                      />
+                    ) : (
+                      <div className="grid min-w-max auto-cols-max grid-flow-col gap-2 lg:flex lg:min-w-0 lg:flex-wrap">
+                        {panelSections.map(({ id, label, icon: Icon }) => {
+                          const enabled = !((id === "signature" || id === "signatureStyle") && !supportsSignature);
+                          return (
+                            <Button
+                              key={id}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className={cn(
+                                "h-auto min-h-9 min-w-fit shrink-0 rounded-full px-3 py-2 justify-start gap-1.5 text-[10px] leading-tight sm:text-xs",
+                                !isMobileLayout && (activePanel === id ? activeDesktopPanelTone.activeTab : activeDesktopPanelTone.idleTab),
+                                !enabled && "opacity-50",
+                              )}
+                              onClick={() => enabled && switchPanel(id)}
+                              disabled={!enabled}
+                              title={enabled ? `Buka tab ${label} di panel alat studio.` : `Tab ${label} tidak tersedia untuk template ini.`}
+                            >
+                              {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+                              {label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
 
                 <div
                   className={cn(
@@ -4265,8 +4284,6 @@ export function ExportStudioDialog({
                         <div>Excel dan CSV tetap tersedia, namun preview visualnya belum dipakai agar struktur tabel spreadsheet bisa didesain ulang nanti.</div>
                       </div>
                     </div>
-
-                    {formatPanelExtra ? formatPanelExtra : null}
                   </>
                 ) : null}
 

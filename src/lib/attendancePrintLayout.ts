@@ -162,6 +162,17 @@ export interface AttendanceInlineAnnotationStackedSegment {
   kind: "char" | "gap";
 }
 
+export interface AttendanceInlineAnnotationLayout {
+  text: string;
+  stackedChars: string[];
+  stackedSegments?: AttendanceInlineAnnotationStackedSegment[];
+  fontPx: number;
+  lineHeightPx: number;
+  gapLineHeightPx?: number;
+  rotateBoxWidthPx?: number;
+  rotateBoxHeightPx?: number;
+}
+
 export interface AttendanceInlineAnnotationRange {
   key: string;
   text: string;
@@ -350,7 +361,7 @@ export function getAttendanceInlineAnnotationStackedSegments(text: string): Atte
   const normalized = normalizeInlineAnnotationText(text);
   const words = normalized
     .split(/\s+/)
-    .flatMap((word) => word.split(/[\-–—_/|+&]+/))
+    .flatMap((word) => word.split(/[-–—_/|+&]+/))
     .map((word) => word.replace(/['’`".,;:()[\]{}]+/g, "").trim())
     .filter(Boolean);
 
@@ -375,7 +386,7 @@ export function resolveAttendanceInlineAnnotationLayout({
   labelStyle: AttendanceInlineLabelStyle;
   widthMm: number;
   heightMm: number;
-}) {
+}): AttendanceInlineAnnotationLayout {
   const normalizedText = normalizeInlineAnnotationText(text) || "-";
   const widthPx = Math.max(1, mmToPreviewPx(widthMm));
   const heightPx = Math.max(1, mmToPreviewPx(heightMm));
@@ -393,6 +404,8 @@ export function resolveAttendanceInlineAnnotationLayout({
       stackedChars: getAttendanceInlineAnnotationStackedChars(normalizedText),
       fontPx: Number(fontPx.toFixed(2)),
       lineHeightPx: Number((fontPx * 0.98).toFixed(2)),
+      rotateBoxWidthPx: Number(usableHeightPx.toFixed(2)),
+      rotateBoxHeightPx: Number(usableWidthPx.toFixed(2)),
     };
   }
 

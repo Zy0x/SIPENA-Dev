@@ -656,7 +656,7 @@ export function AttendancePrintDocument({
                             margin: `0 auto ${mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).aboveNameLineGapMm)}px`,
                           }} />
                         )}
-                <div style={{ fontWeight: 700 }}>{signer.name || "[Nama Signer]"}</div>
+                <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
                         {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" ? (
                           <div style={{
                             width: (signature.signatureLineWidth ?? 40) * PX_PER_MM,
@@ -665,7 +665,7 @@ export function AttendancePrintDocument({
                           }} />
                         ) : null}
                         {signer.nip ? (
-                          <div style={{ color: COLORS.muted, fontSize: Math.max(9, (signature.fontSize ?? 10) - 1), marginTop: mm(signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" ? getSignatureLineSpacing(getSignatureLinePosition(signature)).lineToNipGapMm : getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToNipGapMm) }}>
+                          <div style={{ color: COLORS.muted, fontSize: Math.max(9, (signature.fontSize ?? 10) - 1), lineHeight: 1.05, marginTop: mm(signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" ? getSignatureLineSpacing(getSignatureLinePosition(signature)).lineToNipGapMm : getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToNipGapMm) }}>
                             NIP. {signer.nip}
                           </div>
                         ) : null}
@@ -806,6 +806,14 @@ function InlineAnnotationOverlay({
             {plan.inlineLabelStyle === "rotate-90" ? (
               <div
                 style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: `${labelLayout.rotateBoxWidthPx ?? 0}px`,
+                  height: `${labelLayout.rotateBoxHeightPx ?? 0}px`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   color: palette.color,
                   fontSize: labelLayout.fontPx,
                   fontWeight: 700,
@@ -813,7 +821,7 @@ function InlineAnnotationOverlay({
                   whiteSpace: "nowrap",
                   textAlign: "center",
                   letterSpacing: 0.2,
-                  transform: "rotate(-90deg)",
+                  transform: "translate(-50%, -50%) rotate(-90deg)",
                   transformOrigin: "center center",
                 }}
               >

@@ -484,14 +484,18 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
       heightMm,
     });
     let fontPt = previewPxToPt(layout.fontPx);
+    const boxWidthMm = previewPxToMm(layout.rotateBoxWidthPx ?? heightMm * PX_PER_MM);
+    const boxHeightMm = previewPxToMm(layout.rotateBoxHeightPx ?? widthMm * PX_PER_MM);
     doc.setFontSize(fontPt);
-    while (fontPt > 4.8 && doc.getTextWidth(layout.text) > Math.max(8, heightMm - 4.2)) {
+    while (fontPt > 4.8 && doc.getTextWidth(layout.text) > Math.max(8, boxWidthMm - 1.8)) {
       fontPt -= 0.2;
       doc.setFontSize(fontPt);
     }
     return {
       text: layout.text,
       fontPt: Number(fontPt.toFixed(2)),
+      boxWidthMm: Number(boxWidthMm.toFixed(2)),
+      boxHeightMm: Number(boxHeightMm.toFixed(2)),
     };
   };
   const resolveStackedLayout = (text: string, widthMm: number, heightMm: number) => {
@@ -581,23 +585,24 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     }
 
     const rotateLayout = resolveRotateFontPt(annotation.text, widthMm, bodyHeightMm);
-    const { text, fontPt } = rotateLayout;
+    const { text, fontPt, boxHeightMm } = rotateLayout;
     const advancedDoc = doc as AdvancedJsPdf;
+    const rotateCenterY = centerY + Math.min(0.3, Math.max(0.08, boxHeightMm * 0.015));
     if (typeof advancedDoc.advancedAPI === "function" && typeof advancedDoc.Matrix === "function") {
       advancedDoc.advancedAPI((api) => {
         const MatrixCtor = api.Matrix ?? advancedDoc.Matrix;
         if (!MatrixCtor || typeof api.setCurrentTransformationMatrix !== "function") {
           api.setFontSize(fontPt);
-          api.text(text, centerX, centerY, {
+          api.text(text, centerX, rotateCenterY, {
             align: "center",
             baseline: "middle",
-            angle: 90,
+            angle: -90,
           });
           return;
         }
 
         api.saveGraphicsState?.();
-        api.setCurrentTransformationMatrix(new MatrixCtor(0, 1, -1, 0, centerX, centerY));
+        api.setCurrentTransformationMatrix(new MatrixCtor(0, -1, 1, 0, centerX, rotateCenterY));
         api.setFontSize(fontPt);
         api.text(text, 0, 0, {
           align: "center",
@@ -608,11 +613,11 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
       return;
     }
 
-    doc.setFontSize(fontPt);
-    doc.text(text, centerX, centerY, {
+  doc.setFontSize(fontPt);
+    doc.text(text, centerX, rotateCenterY, {
       align: "center",
       baseline: "middle",
-      angle: 90,
+      angle: -90,
     });
   });
 }

@@ -204,9 +204,15 @@ export function addSignatureBlockPDF(
   const signers = getSigners(signature);
   const showLine = signature.showSignatureLine !== false;
   const linePosition = getSignatureLinePosition(signature);
+  const lineSpacing = getSignatureLineSpacing(linePosition);
   const lineWidthMm = signature.signatureLineWidth || 50;
   const spacingMm = signature.signatureSpacing || 20;
   const alignment = signature.signatureAlignment || 'right';
+  const dateAlign: "left" | "center" | "right" = alignment === "left"
+    ? "left"
+    : alignment === "center"
+      ? "center"
+      : "right";
   const offsetX = signature.signatureOffsetX || 0;
   const offsetY = signature.signatureOffsetY || 0;
 
@@ -233,7 +239,6 @@ export function addSignatureBlockPDF(
   const startX = renderBox.xMm;
 
   // Date line — aligned with block
-  const dateAlign = alignment === 'left' ? 'left' : alignment === 'center' ? 'center' : 'right';
   const dateX = typeof placement?.xMm === "number"
     ? alignment === "left"
       ? placement.xMm
@@ -249,7 +254,7 @@ export function addSignatureBlockPDF(
   doc.setFont("helvetica", "normal");
   doc.setTextColor(30, 30, 30);
   doc.text(`${signature.city}, ${dateStr}`, Math.max(margin, Math.min(pageWidth - margin, dateX)), y, {
-    align: typeof placement?.xMm === "number" ? dateAlign as any : dateAlign as any,
+    align: dateAlign,
   });
   y += 5.2;
 
@@ -272,6 +277,9 @@ export function addSignatureBlockPDF(
     }
 
     const signLineY = yBase + 17 + extraOffset;
+    const nameY = linePosition === "between-name-and-nip"
+      ? signLineY
+      : signLineY + 3.2 + lineSpacing.aboveNameLineGapMm;
 
     if (showLine && linePosition === "above-name") {
       const halfLine = Math.max(lineWidthMm, 42) / 2;
@@ -284,11 +292,13 @@ export function addSignatureBlockPDF(
     doc.setFontSize(fontSize);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 30, 30);
-    doc.text(signer.name || "", centerX, linePosition === "between-name-and-nip" ? signLineY : signLineY + 4.8, { align: "center" });
+    doc.text(signer.name || "", centerX, nameY, { align: "center" });
 
     if (showLine && linePosition === "between-name-and-nip") {
       const halfLine = Math.max(lineWidthMm, 42) / 2;
-      const lineY = signer.nip ? signLineY + 4.1 : signLineY + 4.3;
+      const lineY = signer.nip
+        ? nameY + 2.1 + lineSpacing.nameToLineGapMm
+        : nameY + 2.4 + lineSpacing.aboveNameLineGapMm;
       doc.setDrawColor(30, 30, 30);
       doc.setLineWidth(0.3);
       doc.line(centerX - halfLine, lineY, centerX + halfLine, lineY);
@@ -297,7 +307,13 @@ export function addSignatureBlockPDF(
     if (signer.nip) {
       doc.setFontSize(Math.max(8, fontSize - 1));
       doc.setFont("helvetica", "normal");
-      doc.text(`NIP. ${signer.nip}`, centerX, signLineY + 8.6, { align: "center" });
+      const lineY = showLine && linePosition === "between-name-and-nip"
+        ? nameY + 2.1 + lineSpacing.nameToLineGapMm
+        : nameY;
+      const nipY = showLine && linePosition === "between-name-and-nip"
+        ? lineY + 2.2 + lineSpacing.lineToNipGapMm
+        : nameY + 3.1 + lineSpacing.nameToNipGapMm;
+      doc.text(`NIP. ${signer.nip}`, centerX, nipY, { align: "center" });
     }
   });
 }
@@ -314,6 +330,7 @@ export function generateSignatureHTML(signature: SignatureData): string {
   const spacing = signature.signatureSpacing || 20;
   const showLine = signature.showSignatureLine !== false;
   const linePosition = getSignatureLinePosition(signature);
+  const lineSpacing = getSignatureLineSpacing(linePosition);
   const alignment = signature.signatureAlignment || 'right';
   const offsetX = signature.signatureOffsetX || 0;
   const offsetY = signature.signatureOffsetY || 0;
@@ -337,12 +354,12 @@ export function generateSignatureHTML(signature: SignatureData): string {
     if (showLine && linePosition === "above-name") {
       html += `<div style="border-bottom:1px solid #1e293b;margin-bottom:3px;width:${lineWidth * 2}px;margin-left:auto;margin-right:auto;"></div>`;
     }
-    html += `<div style="font-weight:700;">${sanitize(signer.name || "")}</div>`;
+    html += `<div style="font-weight:700;line-height:1.05;">${sanitize(signer.name || "")}</div>`;
     if (showLine && linePosition === "between-name-and-nip") {
-      html += `<div style="border-bottom:1px solid #1e293b;margin:${signer.nip ? "3px" : "4px"} auto 0;width:${lineWidth * 2}px;"></div>`;
+      html += `<div style="border-bottom:1px solid #1e293b;margin:${signer.nip ? `${Math.max(1, Math.round(lineSpacing.nameToLineGapMm * 3.78))}px` : `${Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78))}px`} auto 0;width:${lineWidth * 2}px;"></div>`;
     }
     if (signer.nip) {
-      html += `<div style="font-size:${Math.max(8, fontSize - 1)}px;color:#6b7280;">NIP. ${sanitize(signer.nip)}</div>`;
+      html += `<div style="font-size:${Math.max(8, fontSize - 1)}px;color:#6b7280;line-height:1.05;margin-top:${showLine && linePosition === "between-name-and-nip" ? Math.max(1, Math.round(lineSpacing.lineToNipGapMm * 3.78)) : Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.78))}px;">NIP. ${sanitize(signer.nip)}</div>`;
     }
     html += `</div>`;
   });
@@ -363,6 +380,7 @@ export function generateSignatureHTMLInline(signature: SignatureData): string {
   const spacing = signature.signatureSpacing || 20;
   const showLine = signature.showSignatureLine !== false;
   const linePosition = getSignatureLinePosition(signature);
+  const lineSpacing = getSignatureLineSpacing(linePosition);
   const alignment = signature.signatureAlignment || 'right';
   const offsetX = signature.signatureOffsetX || 0;
 
@@ -385,12 +403,12 @@ export function generateSignatureHTMLInline(signature: SignatureData): string {
     if (showLine && linePosition === "above-name") {
       html += `<div style="border-bottom:1px solid #1e293b;margin-bottom:3px;width:${lineWidth * 2}px;margin-left:auto;margin-right:auto;"></div>`;
     }
-    html += `<div style="font-weight:700;">${sanitize(signer.name || "")}</div>`;
+    html += `<div style="font-weight:700;line-height:1.05;">${sanitize(signer.name || "")}</div>`;
     if (showLine && linePosition === "between-name-and-nip") {
-      html += `<div style="border-bottom:1px solid #1e293b;margin:${signer.nip ? "3px" : "4px"} auto 0;width:${lineWidth * 2}px;"></div>`;
+      html += `<div style="border-bottom:1px solid #1e293b;margin:${signer.nip ? `${Math.max(1, Math.round(lineSpacing.nameToLineGapMm * 3.78))}px` : `${Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78))}px`} auto 0;width:${lineWidth * 2}px;"></div>`;
     }
     if (signer.nip) {
-      html += `<div style="font-size:${Math.max(8, fontSize - 1)}px;color:#6b7280;">NIP. ${sanitize(signer.nip)}</div>`;
+      html += `<div style="font-size:${Math.max(8, fontSize - 1)}px;color:#6b7280;line-height:1.05;margin-top:${showLine && linePosition === "between-name-and-nip" ? Math.max(1, Math.round(lineSpacing.lineToNipGapMm * 3.78)) : Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.78))}px;">NIP. ${sanitize(signer.nip)}</div>`;
     }
     html += `</div>`;
   });

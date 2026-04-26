@@ -1,9 +1,9 @@
 export type SignatureLinePositionLike = "above-name" | "between-name-and-nip";
 
-const SIGNATURE_NAME_LINE_GAP_MM = 0.8;
-const SIGNATURE_LINE_NIP_GAP_MM = 0.8;
-const SIGNATURE_NAME_NIP_GAP_MM = 1.2;
-const SIGNATURE_ABOVE_NAME_GAP_MM = 1.5;
+const SIGNATURE_NAME_LINE_GAP_MM = 0.3;
+const SIGNATURE_LINE_NIP_GAP_MM = 0.35;
+const SIGNATURE_NAME_NIP_GAP_MM = 0.7;
+const SIGNATURE_ABOVE_NAME_GAP_MM = 1;
 
 export interface SignatureLineSpacing {
   linePosition: SignatureLinePositionLike;
