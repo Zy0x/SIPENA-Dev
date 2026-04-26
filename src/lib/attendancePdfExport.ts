@@ -3,11 +3,13 @@ import autoTable from "jspdf-autotable";
 import { addSignatureBlockPDF, type SignatureData } from "@/lib/exportSignature";
 import type {
   AttendancePrintDataset,
+  AttendanceInlineAnnotationStackedSegment,
   AttendancePrintInfoItem,
   AttendancePrintLayoutPlan,
   AttendancePrintPage,
 } from "@/lib/attendancePrintLayout";
 import {
+  getAttendanceInlineAnnotationStackedSegments,
   getAttendanceRekapLabel,
   resolveAttendanceInlineAnnotationLayout,
 } from "@/lib/attendancePrintLayout";
@@ -29,6 +31,13 @@ type AutoTableSpanCell = {
     halign?: "center";
     fontStyle?: "bold";
   };
+};
+type AdvancedJsPdf = jsPDF & {
+  advancedAPI?: (callback: (doc: AdvancedJsPdf) => void) => void;
+  Matrix?: new (sx: number, shy: number, shx: number, sy: number, tx: number, ty: number) => unknown;
+  saveGraphicsState?: () => void;
+  restoreGraphicsState?: () => void;
+  setCurrentTransformationMatrix?: (matrix: unknown) => void;
 };
 
 const COLORS = {
@@ -495,23 +504,30 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     let fontPt = previewPxToPt(layout.fontPx);
     doc.setFontSize(fontPt);
     let widestCharMm = Math.max(...layout.stackedChars.map((char) => doc.getTextWidth(char)), 0);
-    let lineHeightMm = Math.max(1.75, previewPxToMm(layout.lineHeightPx));
+    let charLineHeightMm = Math.max(1.75, previewPxToMm(layout.lineHeightPx));
+    let gapLineHeightMm = Math.max(0.9, previewPxToMm(layout.gapLineHeightPx ?? layout.lineHeightPx * 0.48));
+    const getTotalHeightMm = (segments: AttendanceInlineAnnotationStackedSegment[]) => segments.reduce(
+      (sum, segment) => sum + (segment.kind === "gap" ? gapLineHeightMm : charLineHeightMm),
+      0,
+    );
     while (
       fontPt > 4.6
       && (
         widestCharMm > Math.max(1.4, widthMm - 1.1)
-        || lineHeightMm * Math.max(layout.stackedChars.length, 1) > Math.max(8, heightMm - 3.5)
+        || getTotalHeightMm(layout.stackedSegments ?? getAttendanceInlineAnnotationStackedSegments(text)) > Math.max(8, heightMm - 3.5)
       )
     ) {
       fontPt -= 0.2;
       doc.setFontSize(fontPt);
       widestCharMm = Math.max(...layout.stackedChars.map((char) => doc.getTextWidth(char)), 0);
-      lineHeightMm = Math.max(1.7, fontPt * 0.34 + 0.34);
+      charLineHeightMm = Math.max(1.7, fontPt * 0.34 + 0.34);
+      gapLineHeightMm = Math.max(0.85, charLineHeightMm * 0.48);
     }
     return {
-      chars: layout.stackedChars,
+      segments: layout.stackedSegments ?? getAttendanceInlineAnnotationStackedSegments(text),
       fontPt: Number(fontPt.toFixed(2)),
-      lineHeightMm: Number(lineHeightMm.toFixed(2)),
+      charLineHeightMm: Number(charLineHeightMm.toFixed(2)),
+      gapLineHeightMm: Number(gapLineHeightMm.toFixed(2)),
     };
   };
 
@@ -546,21 +562,52 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
 
     if (plan.inlineLabelStyle === "stacked") {
       const stackedLayout = resolveStackedLayout(annotation.text, widthMm, bodyHeightMm);
-      const { chars, fontPt, lineHeightMm } = stackedLayout;
-      // Slightly relax line-height so short keterangan don't look cramped.
-      const breathLineHeightMm = Math.max(lineHeightMm, fontPt * 0.42);
-      const totalHeightMm = breathLineHeightMm * Math.max(chars.length, 1);
-      let cursorY = centerY - (totalHeightMm / 2) + breathLineHeightMm * 0.78;
+      const { segments, fontPt, charLineHeightMm, gapLineHeightMm } = stackedLayout;
+      const totalHeightMm = segments.reduce(
+        (sum, segment) => sum + (segment.kind === "gap" ? gapLineHeightMm : charLineHeightMm),
+        0,
+      );
+      let cursorY = centerY - (totalHeightMm / 2);
       doc.setFontSize(fontPt);
-      chars.forEach((char) => {
-        doc.text(char, centerX, cursorY, { align: "center", baseline: "middle" });
-        cursorY += breathLineHeightMm;
+      segments.forEach((segment) => {
+        const lineHeightMm = segment.kind === "gap" ? gapLineHeightMm : charLineHeightMm;
+        cursorY += lineHeightMm / 2;
+        if (segment.kind === "char") {
+          doc.text(segment.text, centerX, cursorY, { align: "center", baseline: "middle" });
+        }
+        cursorY += lineHeightMm / 2;
       });
       return;
     }
 
     const rotateLayout = resolveRotateFontPt(annotation.text, widthMm, bodyHeightMm);
     const { text, fontPt } = rotateLayout;
+    const advancedDoc = doc as AdvancedJsPdf;
+    if (typeof advancedDoc.advancedAPI === "function" && typeof advancedDoc.Matrix === "function") {
+      advancedDoc.advancedAPI((api) => {
+        const MatrixCtor = api.Matrix ?? advancedDoc.Matrix;
+        if (!MatrixCtor || typeof api.setCurrentTransformationMatrix !== "function") {
+          api.setFontSize(fontPt);
+          api.text(text, centerX, centerY, {
+            align: "center",
+            baseline: "middle",
+            angle: 90,
+          });
+          return;
+        }
+
+        api.saveGraphicsState?.();
+        api.setCurrentTransformationMatrix(new MatrixCtor(0, 1, -1, 0, centerX, centerY));
+        api.setFontSize(fontPt);
+        api.text(text, 0, 0, {
+          align: "center",
+          baseline: "middle",
+        });
+        api.restoreGraphicsState?.();
+      });
+      return;
+    }
+
     doc.setFontSize(fontPt);
     doc.text(text, centerX, centerY, {
       align: "center",

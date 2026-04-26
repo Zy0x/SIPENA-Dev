@@ -3,6 +3,7 @@
  * Adds official signature blocks to PDF, Excel, CSV, dan PNG
  */
 import jsPDF from "jspdf";
+import { getSignatureLineSpacing, resolveSignatureLinePositionLike } from "@/lib/signatureLayout";
 
 export interface SignatureSigner {
   id?: string;
@@ -82,7 +83,7 @@ function estimateTextWidthMm(text: string, fontSize: number, weight: "normal" | 
 }
 
 function getSignatureLinePosition(signature: SignatureData): SignatureLinePosition {
-  return signature.signatureLinePosition ?? "above-name";
+  return resolveSignatureLinePositionLike(signature.signatureLinePosition);
 }
 
 export function getPreferredSignerBlockWidth(signature: SignatureData) {
@@ -108,10 +109,11 @@ export function computeSignatureHeight(signature: SignatureData): number {
   const signers = getSigners(signature);
   const hasSchool = signers.some((s, i) => i === 0 && s.school_name);
   const hasNip = signers.some(s => s.nip);
+  const spacing = getSignatureLineSpacing(getSignatureLinePosition(signature));
   const lineGapMm = signature.showSignatureLine === false
-    ? 0
+    ? (hasNip ? spacing.nameToNipGapMm : 0)
     : getSignatureLinePosition(signature) === "between-name-and-nip" && hasNip
-      ? 4
+      ? spacing.nameToLineGapMm + spacing.lineToNipGapMm
       : 0;
   // date line (6) + title (4) + school_name (4?) + spacing untuk TTD (18) + name (5) + optional line gap + nip (4?)
   return 6 + 4 + (hasSchool ? 4 : 0) + 18 + 5 + lineGapMm + (hasNip ? 4 : 0);

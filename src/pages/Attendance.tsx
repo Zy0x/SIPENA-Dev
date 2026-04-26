@@ -2604,6 +2604,16 @@ export default function Attendance() {
         <p className="mt-1 text-[10px] text-muted-foreground">
           Pilih apakah keterangan tetap tampil sebagai kartu ringkasan atau langsung ditulis di dalam kolom tanggal tabel.
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-sky-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-sky-700">
+            {attendanceAnnotationDisplayMode === "summary-card" ? "Mode aktif: Kartu Ringkasan" : "Mode aktif: Vertikal di Tabel"}
+          </span>
+          {attendanceAnnotationDisplayMode === "inline-vertical" ? (
+            <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700">
+              Style: {attendanceInlineLabelStyle === "rotate-90" ? "Rotate -90" : "Stacked Text"}
+            </span>
+          ) : null}
+        </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <Button
             type="button"
@@ -2626,38 +2636,48 @@ export default function Attendance() {
             <span className="font-semibold">Vertikal di Tabel</span>
           </Button>
         </div>
-      </div>
-
-      {attendanceAnnotationDisplayMode === "inline-vertical" ? (
-        <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/70 p-3">
-          <p className="text-[11px] font-semibold text-foreground">Style Label Vertikal</p>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Pilih orientasi label vertikal yang dipakai saat keterangan dipindah ke dalam tabel.
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <Button
-              type="button"
-              variant={attendanceInlineLabelStyle === "rotate-90" ? "default" : "outline"}
-              size="sm"
-              className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
-              onClick={() => setAttendanceInlineLabelStyle("rotate-90")}
-              title="Putar label 90 derajat ke atas agar tetap hemat ruang."
-            >
-              <span className="font-semibold">Rotate -90</span>
-            </Button>
-            <Button
-              type="button"
-              variant={attendanceInlineLabelStyle === "stacked" ? "default" : "outline"}
-              size="sm"
-              className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
-              onClick={() => setAttendanceInlineLabelStyle("stacked")}
-              title="Tulis label per huruf ke bawah untuk ruang kolom yang sangat sempit."
-            >
-              <span className="font-semibold">Stacked Text</span>
-            </Button>
+        {attendanceAnnotationDisplayMode === "inline-vertical" ? (
+          <div className="mt-3 rounded-xl border border-indigo-200/80 bg-indigo-50/80 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-semibold text-foreground">Style Label Vertikal</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Hanya tampil saat mode vertikal dipakai, agar pengaturan tetap satu konteks dan tidak membingungkan.
+                </p>
+              </div>
+              <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700">
+                Dalam 1 kartu
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant={attendanceInlineLabelStyle === "rotate-90" ? "default" : "outline"}
+                size="sm"
+                className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
+                onClick={() => setAttendanceInlineLabelStyle("rotate-90")}
+                title="Putar label 90 derajat ke atas agar tetap hemat ruang."
+              >
+                <span className="font-semibold">Rotate -90</span>
+              </Button>
+              <Button
+                type="button"
+                variant={attendanceInlineLabelStyle === "stacked" ? "default" : "outline"}
+                size="sm"
+                className="h-auto items-start justify-start rounded-xl px-3 py-2 text-left text-[10px]"
+                onClick={() => setAttendanceInlineLabelStyle("stacked")}
+                title="Tulis label per huruf atau per kata vertikal dengan jarak lebih rapi untuk frasa yang memiliki spasi."
+              >
+                <span className="font-semibold">Stacked Text</span>
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : (
+          <div className="mt-3 rounded-xl border border-dashed border-sky-200/80 bg-white/70 p-3 text-[10px] leading-relaxed text-muted-foreground">
+            Style Label Vertikal disembunyikan otomatis karena mode yang aktif adalah Kartu Ringkasan.
+          </div>
+        )}
+      </div>
     </div>
   );
   const handleDateSelect = (date: Date | undefined) => {

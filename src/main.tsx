@@ -3,6 +3,7 @@ import { registerSW } from "virtual:pwa-register";
 import App from "./App.tsx";
 import "./index.css";
 import { initGSAPReducedMotion } from "./hooks/useReducedMotion";
+import { initInputModality } from "./lib/inputModality";
 
 declare global {
   interface Window {
@@ -13,6 +14,7 @@ declare global {
 
 // Initialize GSAP reduced motion before render
 initGSAPReducedMotion();
+initInputModality();
 // Initialize theme before render to prevent flash - Default to LIGHT mode
 const initializeTheme = () => {
   const savedTheme = localStorage.getItem("theme");

@@ -179,8 +179,25 @@
   }
 
   /* Focus styles for accessibility */
-  *:focus-visible {
+  html[data-input-modality="keyboard"] *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:hover,
+  [role="button"]:hover,
+  a:hover,
+  .touch-manipulation:hover {
+    background-color: inherit !important;
+    color: inherit !important;
+    border-color: inherit !important;
+    box-shadow: inherit !important;
+    transform: none !important;
   }
 }
 

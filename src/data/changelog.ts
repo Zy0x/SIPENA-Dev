@@ -43,6 +43,26 @@ export interface ChangelogEntry {
 export const changelogData: ChangelogEntry[] = [
   // v2.4.0 - TERBARU (patch tambahan)
   {
+    id: "v2.4.0-p3",
+    version: "2.4.0",
+    title: "Studio Ekspor Presensi: Label Vertikal Rapi, Panel Lebih Lega, & Touch Fix Global",
+    description: "Presensi inline-vertical kini lebih presisi pada PDF untuk mode rotate maupun stacked, panel studio diringkas agar area alat lebih tinggi, dan state tombol yang menempel pada perangkat touch dibersihkan secara global di seluruh web.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-04-26",
+    details: [
+      "Fix: Mode Rotate -90 untuk keterangan vertikal kini memakai transform terpusat di PDF sehingga label tidak lagi meleset dari kolom hari target",
+      "Improve: Mode Stacked Text kini mengenali spasi dan simbol sebagai jeda antarkata, sehingga frasa seperti 'Hari Raya' atau 'Wafat Isa Al-Masih' tetap rapi dan lebih mudah dibaca",
+      "Fix: Preview HTML dan renderer PDF kini memakai aturan stacked yang sama agar hasil studio dan file akhir tetap sinkron",
+      "Fix: Jarak garis signature pada mode 'antara Nama & NIP' disatukan ke helper bersama, sehingga gap nama-garis-NIP tampil lebih simetris",
+      "Improve: Panel atas Studio Ekspor dapat diciutkan otomatis pada viewport pendek agar area Alat studio lebih tinggi dan luas",
+      "Improve: Keterangan Presensi dan Style Label Vertikal kini berada dalam satu kartu kontekstual; opsi style disembunyikan otomatis saat mode ringkasan dipakai",
+      "Fix: Interaksi touch di seluruh web kini membersihkan focus/hover semu setelah tap dan menghapus tap highlight yang menempel",
+    ],
+  },
+
+  // v2.4.0 - TERBARU (patch tambahan)
+  {
     id: "v2.4.0-p2",
     version: "2.4.0",
     title: "Studio Ekspor: Side Panel Ramping, Keterangan Vertikal Merged, & TTD Presisi",

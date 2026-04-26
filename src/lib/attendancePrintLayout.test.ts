@@ -6,6 +6,7 @@ import { clampSignaturePlacementMm, convertPreviewDeltaPxToMm, resolveManualSign
 import {
   buildAttendancePrintLayoutPlan,
   formatAttendancePercent,
+  getAttendanceInlineAnnotationStackedSegments,
   getAttendanceRekapLabel,
   resolveAttendanceInlineAnnotationLayout,
   type AttendancePrintDataset,
@@ -352,16 +353,19 @@ describe("attendance print layout", () => {
     expect(plan.inlineAnnotations.some((annotation) => annotation.text === "Hari Minggu" && annotation.startDay === 5)).toBe(true);
   });
 
-  it("removes spaces from stacked inline annotations so height is used for letters, not blanks", () => {
+  it("converts spaces and symbols in stacked inline annotations into readable word gaps", () => {
     const layout = resolveAttendanceInlineAnnotationLayout({
-      text: "Hari Minggu",
+      text: "Wafat Isa Al-Masih",
       labelStyle: "stacked",
       widthMm: 6,
       heightMm: 90,
     });
+    const segments = getAttendanceInlineAnnotationStackedSegments("Wafat Isa Al-Masih");
 
     expect(layout.stackedChars.includes(" ")).toBe(false);
+    expect(segments.some((segment) => segment.kind === "gap")).toBe(true);
     expect(layout.text).toContain("\n");
+    expect(layout.gapLineHeightPx).toBeGreaterThan(0);
     expect(layout.fontPx).toBeGreaterThan(8);
   });
 

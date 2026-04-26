@@ -32,8 +32,10 @@ import type {
 } from "@/lib/attendancePrintLayout";
 import {
   getAttendanceRekapLabel,
+  getAttendanceInlineAnnotationStackedSegments,
   resolveAttendanceInlineAnnotationLayout,
 } from "@/lib/attendancePrintLayout";
+import { getSignatureLineSpacing, resolveSignatureLinePositionLike } from "@/lib/signatureLayout";
 
 // ─── Color palette ─────────────────────────────────────────────────────────
 const COLORS = {
@@ -73,7 +75,7 @@ export interface AttendancePrintDocumentProps {
 }
 
 function getSignatureLinePosition(signature: SignatureSettingsConfig) {
-  return signature.signatureLinePosition ?? "above-name";
+  return resolveSignatureLinePositionLike(signature.signatureLinePosition);
 }
 
 // ─── Drag hook ─────────────────────────────────────────────────────────────
@@ -651,7 +653,7 @@ export function AttendancePrintDocument({
                           <div style={{
                             width: (signature.signatureLineWidth ?? 40) * PX_PER_MM,
                             borderBottom: `1px solid ${COLORS.ink}`,
-                            margin: `0 auto ${mm(1.5)}px`,
+                            margin: `0 auto ${mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).aboveNameLineGapMm)}px`,
                           }} />
                         )}
                 <div style={{ fontWeight: 700 }}>{signer.name || "[Nama Signer]"}</div>
@@ -659,11 +661,11 @@ export function AttendancePrintDocument({
                           <div style={{
                             width: (signature.signatureLineWidth ?? 40) * PX_PER_MM,
                             borderBottom: `1px solid ${COLORS.ink}`,
-                            margin: `${signer.nip ? mm(1.2) : mm(1.5)}px auto 0`,
+                            margin: `${signer.nip ? mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToLineGapMm) : mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).aboveNameLineGapMm)}px auto 0`,
                           }} />
                         ) : null}
                         {signer.nip ? (
-                          <div style={{ color: COLORS.muted, fontSize: Math.max(9, (signature.fontSize ?? 10) - 1), marginTop: mm(1.2) }}>
+                          <div style={{ color: COLORS.muted, fontSize: Math.max(9, (signature.fontSize ?? 10) - 1), marginTop: mm(signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" ? getSignatureLineSpacing(getSignatureLinePosition(signature)).lineToNipGapMm : getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToNipGapMm) }}>
                             NIP. {signer.nip}
                           </div>
                         ) : null}
@@ -801,31 +803,53 @@ function InlineAnnotationOverlay({
               overflow: "hidden",
             }}
           >
-            <div
-              style={plan.inlineLabelStyle === "rotate-90"
-                ? {
-                    color: palette.color,
-                    fontSize: labelLayout.fontPx,
-                    fontWeight: 700,
-                    lineHeight: `${labelLayout.lineHeightPx}px`,
-                    whiteSpace: "nowrap",
-                    textAlign: "center",
-                    letterSpacing: 0.2,
-                    transform: "rotate(-90deg)",
-                    transformOrigin: "center center",
-                  }
-                : {
-                    color: palette.color,
-                    fontSize: labelLayout.fontPx,
-                    fontWeight: 700,
-                    lineHeight: `${labelLayout.lineHeightPx}px`,
-                    whiteSpace: "pre-line",
-                    textAlign: "center",
-                    letterSpacing: 0,
-                  }}
-            >
-              {labelLayout.text}
-            </div>
+            {plan.inlineLabelStyle === "rotate-90" ? (
+              <div
+                style={{
+                  color: palette.color,
+                  fontSize: labelLayout.fontPx,
+                  fontWeight: 700,
+                  lineHeight: `${labelLayout.lineHeightPx}px`,
+                  whiteSpace: "nowrap",
+                  textAlign: "center",
+                  letterSpacing: 0.2,
+                  transform: "rotate(-90deg)",
+                  transformOrigin: "center center",
+                }}
+              >
+                {labelLayout.text}
+              </div>
+            ) : (
+              <div
+                style={{
+                  color: palette.color,
+                  fontSize: labelLayout.fontPx,
+                  fontWeight: 700,
+                  textAlign: "center",
+                  letterSpacing: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {getAttendanceInlineAnnotationStackedSegments(annotation.text).map((segment, index) => (
+                  <div
+                    key={`${annotation.key}-stacked-${index}`}
+                    style={{
+                      minHeight: segment.kind === "gap"
+                        ? `${labelLayout.gapLineHeightPx ?? labelLayout.lineHeightPx * 0.5}px`
+                        : `${labelLayout.lineHeightPx}px`,
+                      lineHeight: `${segment.kind === "gap"
+                        ? (labelLayout.gapLineHeightPx ?? labelLayout.lineHeightPx * 0.5)
+                        : labelLayout.lineHeightPx}px`,
+                    }}
+                  >
+                    {segment.text}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}

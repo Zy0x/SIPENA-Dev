@@ -157,6 +157,11 @@ export interface AttendancePrintInfoItem {
 export type AttendanceAnnotationDisplayMode = "summary-card" | "inline-vertical";
 export type AttendanceInlineLabelStyle = "rotate-90" | "stacked";
 
+export interface AttendanceInlineAnnotationStackedSegment {
+  text: string;
+  kind: "char" | "gap";
+}
+
 export interface AttendanceInlineAnnotationRange {
   key: string;
   text: string;
@@ -335,9 +340,29 @@ function estimateInlineAnnotationTextUnits(text: string) {
 }
 
 export function getAttendanceInlineAnnotationStackedChars(text: string) {
-  const compact = normalizeInlineAnnotationText(text).replace(/\s+/g, "");
-  const chars = Array.from(compact);
+  const chars = getAttendanceInlineAnnotationStackedSegments(text)
+    .filter((segment) => segment.kind === "char")
+    .map((segment) => segment.text);
   return chars.length > 0 ? chars : ["-"];
+}
+
+export function getAttendanceInlineAnnotationStackedSegments(text: string): AttendanceInlineAnnotationStackedSegment[] {
+  const normalized = normalizeInlineAnnotationText(text);
+  const words = normalized
+    .split(/\s+/)
+    .flatMap((word) => word.split(/[\-–—_/|+&]+/))
+    .map((word) => word.replace(/['’`".,;:()[\]{}]+/g, "").trim())
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return [{ text: "-", kind: "char" }];
+  }
+
+  return words.flatMap((word, wordIndex) => {
+    const chars = Array.from(word).map((char) => ({ text: char, kind: "char" as const }));
+    if (wordIndex === words.length - 1) return chars;
+    return [...chars, { text: "", kind: "gap" as const }];
+  });
 }
 
 export function resolveAttendanceInlineAnnotationLayout({
@@ -372,20 +397,27 @@ export function resolveAttendanceInlineAnnotationLayout({
   }
 
   const stackedChars = getAttendanceInlineAnnotationStackedChars(normalizedText);
+  const stackedSegments = getAttendanceInlineAnnotationStackedSegments(normalizedText);
   const usableWidthPx = Math.max(8, widthPx - 6);
   const usableHeightPx = Math.max(14, heightPx - 12);
   const widestCharUnit = Math.max(...stackedChars.map(estimateInlineAnnotationCharUnit), 0.72);
   const lineHeightFactor = stackedChars.length >= 10 ? 0.96 : 1.02;
+  const stackedHeightUnits = stackedSegments.reduce(
+    (sum, segment) => sum + (segment.kind === "gap" ? 0.48 : 1),
+    0,
+  );
   const rawFontPx = Math.min(
     usableWidthPx / widestCharUnit,
-    usableHeightPx / Math.max(1, stackedChars.length * lineHeightFactor),
+    usableHeightPx / Math.max(1, stackedHeightUnits * lineHeightFactor),
   );
   const fontPx = clamp(rawFontPx, Math.min(8.2, rawFontPx), 18.5);
   return {
-    text: stackedChars.join("\n"),
+    text: stackedSegments.map((segment) => segment.text).join("\n"),
     stackedChars,
+    stackedSegments,
     fontPx: Number(fontPx.toFixed(2)),
     lineHeightPx: Number((fontPx * lineHeightFactor).toFixed(2)),
+    gapLineHeightPx: Number((fontPx * lineHeightFactor * 0.48).toFixed(2)),
   };
 }
 
