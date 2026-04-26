@@ -18,7 +18,7 @@ import { resolveSignatureRenderBoxMm } from "@/lib/exportSignature";
 import {
   clampSignaturePlacementMm,
   convertPreviewDeltaPxToMm,
-  resolveManualSignaturePercents,
+  resolveFixedSignaturePositionState,
 } from "@/lib/attendancePdfPreview";
 import type { ExportPreviewHighlightTarget } from "@/components/export/SignaturePreviewCanvas";
 
@@ -283,20 +283,15 @@ export function AttendancePdfCanvasPreview({
       return;
     }
 
-    const manual = resolveManualSignaturePercents({
-      placement: plan.signaturePlacement,
-      xMm: liveSignaturePosition.xMm,
-      yMm: liveSignaturePosition.yMm,
-    });
-
     setSignature((prev) => ({
       ...prev,
-      placementMode: "fixed",
-      signaturePageIndex: null,
-      manualXPercent: manual.manualXPercent,
-      manualYPercent: manual.manualYPercent,
-      signatureOffsetX: 0,
-      signatureOffsetY: 0,
+      ...resolveFixedSignaturePositionState({
+        placement: plan.signaturePlacement!,
+        xMm: liveSignaturePosition.xMm,
+        yMm: liveSignaturePosition.yMm,
+        snapToGrid: prev.snapToGrid,
+        gridSizeMm: prev.gridSizeMm,
+      }),
     }));
     setDragState(null);
     setLiveSignaturePosition(null);

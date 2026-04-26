@@ -58,3 +58,29 @@ export function resolveManualSignaturePercents(args: {
     manualYPercent: Number((((yMm - minY) / availableY) * 100).toFixed(2)),
   };
 }
+
+export function resolveFixedSignaturePositionState(args: {
+  placement: SignaturePlacement;
+  xMm: number;
+  yMm: number;
+  snapToGrid: boolean;
+  gridSizeMm: number;
+}) {
+  const clamped = clampSignaturePlacementMm(args);
+  const manual = resolveManualSignaturePercents({
+    placement: args.placement,
+    xMm: clamped.xMm,
+    yMm: clamped.yMm,
+  });
+
+  return {
+    placementMode: "fixed" as const,
+    signaturePageIndex: null,
+    manualXPercent: manual.manualXPercent,
+    manualYPercent: manual.manualYPercent,
+    signatureOffsetX: 0,
+    signatureOffsetY: 0,
+    xMm: clamped.xMm,
+    yMm: clamped.yMm,
+  };
+}
