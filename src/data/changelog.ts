@@ -41,6 +41,20 @@ export interface ChangelogEntry {
 // ============================================
 
 export const changelogData: ChangelogEntry[] = [
+  {
+    id: "v2.4.0-p4",
+    version: "2.4.0",
+    title: "Studio Ekspor: Garis Signature Lebih Rapi, Preset Card Tidak Overlap, & Vertikal Rotate Center",
+    description: "Memperbaiki spasi garis signature pada mode 'Di antara Nama & NIP' agar simetris, mengatasi tumpang-tindih label pada kartu Preset Dokumen di panel studio, serta meratakan keterangan vertikal rotate-90 tepat di tengah kolom.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-04-26",
+    details: [
+      "Signature: gap nama→garis dan garis→NIP dinaikkan menjadi 1.6mm agar garis tidak menempel pada nama.",
+      "Studio Ekspor: kartu Preset Dokumen & preset Tipografi memakai layout kolom dengan lebar minimum 10–11rem sehingga label dan deskripsi tidak saling menimpa pada side panel sempit.",
+      "Presensi inline-vertical (rotate-90): teks ditempatkan di tengah penuh sel via flex centering, menghilangkan offset akibat box width manual.",
+    ],
+  },
   // v2.4.0 - TERBARU (patch tambahan)
   {
     id: "v2.4.0-p3",

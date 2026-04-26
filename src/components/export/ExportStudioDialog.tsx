@@ -1461,8 +1461,8 @@ function LegacyStylePanel({
               <p className="text-[9px] text-muted-foreground">Pilih titik awal yang paling nyaman, lalu sesuaikan lagi bila perlu.</p>
             </div>
             <div
-              className="grid gap-1"
-              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+              className="grid gap-1.5"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10rem), 1fr))" }}
             >
               {([
                 { label: "1 Halaman", title: 14, meta: 9, header: 10, body: 10, desc: "Utamakan 1 halaman tabel", autoFit: true },
@@ -1481,7 +1481,7 @@ function LegacyStylePanel({
                       : "outline"
                   }
                   size="sm"
-                  className="h-auto flex-col items-start py-1.5 text-[10px]"
+                  className="flex h-auto min-h-[3rem] min-w-0 flex-col items-start justify-start gap-0.5 whitespace-normal break-words px-2.5 py-1.5 text-left leading-tight"
                   onClick={() => {
                     onDocumentStyleChange((prev) => ({
                       ...prev,
@@ -1493,8 +1493,8 @@ function LegacyStylePanel({
                     onAutoFitOnePageChange?.(preset.autoFit);
                   }}
                 >
-                  <span className="font-medium">{preset.label}</span>
-                  <span className="text-[8px] opacity-70">{preset.desc}</span>
+                  <span className="block w-full whitespace-normal break-words text-[11px] font-semibold leading-tight">{preset.label}</span>
+                  <span className="block w-full whitespace-normal break-words text-[9px] leading-snug opacity-70">{preset.desc}</span>
                 </Button>
               ))}
             </div>
@@ -2432,20 +2432,20 @@ function StylePanel({
             badge={presets.find((preset) => isPresetActive(preset.id))?.label ?? "Kustom"}
           >
             <div
-              className="grid gap-1"
-              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 8rem), 1fr))" }}
+              className="grid gap-2"
+              style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 11rem), 1fr))" }}
             >
               {presets.map((preset) => (
                 <Button
                   key={preset.id}
                   variant={isPresetActive(preset.id) ? "default" : "outline"}
                   size="sm"
-                  className="min-h-[5.85rem] min-w-0 items-start justify-start whitespace-normal break-words rounded-xl px-3 py-2.5 text-left text-[11px] leading-relaxed sm:min-h-[5.5rem]"
+                  className="flex h-auto min-h-[4.5rem] min-w-0 flex-col items-start justify-start gap-1 whitespace-normal break-words rounded-xl px-3 py-2.5 text-left leading-tight"
                   title={`Gunakan preset style ${preset.label}. ${preset.desc}`}
                   onClick={() => applyPreset(preset.id)}
                 >
-                  <span className="w-full whitespace-normal break-words text-[11px] font-semibold leading-relaxed sm:text-xs">{preset.label}</span>
-                  <span className="w-full whitespace-normal break-words text-[9px] leading-relaxed opacity-75 sm:text-[10px]">{preset.desc}</span>
+                  <span className="block w-full whitespace-normal break-words text-[12px] font-semibold leading-tight">{preset.label}</span>
+                  <span className="block w-full whitespace-normal break-words text-[10px] leading-snug opacity-75">{preset.desc}</span>
                 </Button>
               ))}
             </div>

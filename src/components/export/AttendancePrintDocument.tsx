@@ -812,25 +812,27 @@ function InlineAnnotationOverlay({
               <div
                 style={{
                   position: "absolute",
-                  left: "50%",
-                  top: "50%",
-                  width: `${labelLayout.rotateBoxWidthPx ?? 0}px`,
-                  height: `${labelLayout.rotateBoxHeightPx ?? 0}px`,
+                  inset: 0,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: palette.color,
-                  fontSize: labelLayout.fontPx,
-                  fontWeight: 700,
-                  lineHeight: `${labelLayout.lineHeightPx}px`,
-                  whiteSpace: "nowrap",
-                  textAlign: "center",
-                  letterSpacing: 0.2,
-                  transform: "translate(-50%, -50%) rotate(-90deg)",
-                  transformOrigin: "center center",
                 }}
               >
-                {labelLayout.text}
+                <div
+                  style={{
+                    color: palette.color,
+                    fontSize: labelLayout.fontPx,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    whiteSpace: "nowrap",
+                    textAlign: "center",
+                    letterSpacing: 0.2,
+                    transform: "rotate(-90deg)",
+                    transformOrigin: "center center",
+                  }}
+                >
+                  {labelLayout.text}
+                </div>
               </div>
             ) : (
               <div

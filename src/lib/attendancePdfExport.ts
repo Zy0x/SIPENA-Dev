@@ -602,7 +602,11 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
         }
 
         api.saveGraphicsState?.();
-        api.setCurrentTransformationMatrix(new MatrixCtor(0, -1, 1, 0, centerX, rotateCenterY));
+        const matrix = (typeof MatrixCtor === "function"
+          ? ((MatrixCtor as unknown as (...args: number[]) => unknown)(0, -1, 1, 0, centerX, rotateCenterY)
+            ?? new (MatrixCtor as unknown as new (...args: number[]) => unknown)(0, -1, 1, 0, centerX, rotateCenterY))
+          : null);
+        api.setCurrentTransformationMatrix(matrix as never);
         api.setFontSize(fontPt);
         api.text(text, 0, 0, {
           align: "center",

@@ -337,18 +337,18 @@ function SignatureBlock({
                     }}
                   />
                 ) : null}
-          <div style={{ fontWeight: 700, lineHeight: (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? 1 : 1.3, marginBottom: (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? -2 : 0 }}>{signer.name || "[Nama Signer]"}</div>
+          <div style={{ fontWeight: 700, lineHeight: 1.15, marginBottom: 0 }}>{signer.name || "[Nama Signer]"}</div>
                 {draft.showSignatureLine && (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? (
                   <div
                     style={{
                       width: signatureLineWidthPx,
                       borderBottom: `1px solid ${COLORS.ink}`,
-                      margin: signer.nip ? "2px auto 0" : "2px auto 0",
+                      margin: "3px auto 3px",
                     }}
                   />
                 ) : null}
                 {signer.nip ? (
-                  <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: COLORS.muted, marginTop: 2, lineHeight: 1.3 }}>NIP. {signer.nip}</div>
+                  <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: COLORS.muted, marginTop: 0, lineHeight: 1.3 }}>NIP. {signer.nip}</div>
                 ) : null}
               </div>
             ))}
