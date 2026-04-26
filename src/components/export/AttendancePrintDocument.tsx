@@ -23,7 +23,6 @@ import {
 } from "react";
 import type { SignatureSettingsConfig } from "@/hooks/useSignatureSettings";
 import { PX_PER_MM } from "@/lib/exportEngine/sharedMetrics";
-import { resolveFixedSignaturePositionState } from "@/lib/attendancePdfPreview";
 import type {
   AttendancePrintDataset,
   AttendancePrintInfoItem,
@@ -109,15 +108,21 @@ function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
 }
 
+function roundToGrid(value: number, gridSize: number) {
+  if (gridSize <= 0) return value;
+  return Math.round(value / gridSize) * gridSize;
+}
+
 function useSignatureDrag(
   setSignature: Dispatch<SetStateAction<SignatureSettingsConfig>> | undefined,
   enabled: boolean,
-  placement: AttendancePrintLayoutPlan["signaturePlacement"] | null,
+  snapToGrid: boolean,
+  gridSizeMm: number,
 ) {
   const [isDragging, setIsDragging] = useState(false);
   const dragging = useRef(false);
   const startPt = useRef({ x: 0, y: 0 });
-  const startPosition = useRef({ xMm: 0, yMm: 0 });
+  const startOff = useRef({ x: 0, y: 0 });
   const previewScale = useRef(1);
 
   const endDrag = useCallback(() => {
@@ -134,32 +139,28 @@ function useSignatureDrag(
     const renderedWidthPx = Math.max(1, rect.width);
     const logicalWidthPx = Math.max(1, e.currentTarget.offsetWidth);
     previewScale.current = renderedWidthPx / logicalWidthPx;
-    startPosition.current = {
-      xMm: placement?.xMm ?? 0,
-      yMm: placement?.yMm ?? 0,
-    };
+    setSignature((prev) => {
+      startOff.current = { x: prev.signatureOffsetX, y: prev.signatureOffsetY };
+      return prev;
+    });
     e.currentTarget.setPointerCapture?.(e.pointerId);
     e.preventDefault();
-  }, [enabled, placement, setSignature]);
+  }, [enabled, setSignature]);
 
   const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current || !setSignature || !placement) return;
+    if (!dragging.current || !setSignature) return;
     const scale = Math.max(0.01, previewScale.current);
     const dxMm = (e.clientX - startPt.current.x) / (PX_PER_MM * scale);
     const dyMm = (e.clientY - startPt.current.y) / (PX_PER_MM * scale);
-    const nextX = startPosition.current.xMm + dxMm;
-    const nextY = startPosition.current.yMm + dyMm;
+    const nextX = startOff.current.x + dxMm;
+    const nextY = startOff.current.y + dyMm;
+    const grid = snapToGrid ? Math.max(1, gridSizeMm) : 0;
     setSignature((prev) => ({
       ...prev,
-      ...resolveFixedSignaturePositionState({
-        placement,
-        xMm: nextX,
-        yMm: nextY,
-        snapToGrid: prev.snapToGrid,
-        gridSizeMm: prev.gridSizeMm,
-      }),
+      signatureOffsetX: Number((grid > 0 ? roundToGrid(nextX, grid) : nextX).toFixed(1)),
+      signatureOffsetY: Number((grid > 0 ? roundToGrid(nextY, grid) : nextY).toFixed(1)),
     }));
-  }, [placement, setSignature]);
+  }, [gridSizeMm, setSignature, snapToGrid]);
 
   return enabled
     ? { isDragging, onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag, onLostPointerCapture: endDrag }
@@ -194,7 +195,7 @@ export function AttendancePrintDocument({
 }: AttendancePrintDocumentProps) {
   const isPreview = mode === "preview";
   const dragEnabled = isPreview && !!setSignature && !signature.lockSignaturePosition;
-  const dragState = useSignatureDrag(setSignature, dragEnabled, plan.signaturePlacement);
+  const dragState = useSignatureDrag(setSignature, dragEnabled, signature.snapToGrid, signature.gridSizeMm);
   const { isDragging, ...dragHandlers } = dragState;
 
   const visibleSigners = useMemo(() => {
@@ -691,8 +692,8 @@ export function AttendancePrintDocument({
                         )}
                         <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
                         {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" && signer.nip ? (
-                          <div style={{ position: "relative", width: signerLineWidthPx, height: mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToLineGapMm + getSignatureLineSpacing(getSignatureLinePosition(signature)).lineToNipGapMm), margin: "0 auto" }}>
-                            <div style={{ position: "absolute", left: 0, right: 0, top: mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).nameToLineGapMm), borderBottom: `1px solid ${COLORS.ink}` }} />
+                          <div style={{ position: "relative", width: signerLineWidthPx, height: mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).betweenNameAndNipZoneMm), margin: "0 auto" }}>
+                            <div style={{ position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)", borderBottom: `1px solid ${COLORS.ink}` }} />
                           </div>
                         ) : null}
                         {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" && !signer.nip ? (
@@ -858,7 +859,6 @@ function InlineAnnotationOverlay({
                     fontSize: labelLayout.fontPx,
                     fontWeight: 700,
                     lineHeight: 1,
-                    display: "inline-block",
                     whiteSpace: "nowrap",
                     textAlign: "center",
                     letterSpacing: 0.2,

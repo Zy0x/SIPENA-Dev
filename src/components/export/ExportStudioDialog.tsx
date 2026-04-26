@@ -80,7 +80,6 @@ import { cn } from "@/lib/utils";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { exportElementToPng } from "@/lib/exportEngine/pngEngine";
 import { PX_PER_MM } from "@/lib/exportEngine/sharedMetrics";
-import { resolveFixedSignaturePositionState } from "@/lib/attendancePdfPreview";
 import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
 import {
   StudioActionFooter,
@@ -561,6 +560,7 @@ function GenericSignaturePreview({
               const lineSpacing = getSignatureLineSpacing(getSignatureLinePosition(draft));
               const betweenNameAndNipPx = Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.35));
               const aboveNameLinePx = Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78));
+              const betweenNameAndNipZonePx = Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78));
               const signerLineWidthPx = Math.max(22, Math.round(getSignatureLineWidth(draft, signer) * 3.78));
               const signerBlockWidthPx = Math.max(96, Math.round(getSignatureSignerBlockWidth(draft, signer) * 3.78));
 
@@ -576,14 +576,15 @@ function GenericSignaturePreview({
                   ) : null}
                   <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
                   {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" && signer.nip ? (
-                    <div style={{ position: "relative", width: signerLineWidthPx, height: Math.max(6, Math.round((lineSpacing.nameToLineGapMm + lineSpacing.lineToNipGapMm) * 3.78)), margin: "0 auto" }}>
+                    <div style={{ position: "relative", width: signerLineWidthPx, height: betweenNameAndNipZonePx, margin: "0 auto" }}>
                       <div
                         style={{
                           position: "absolute",
                           left: 0,
                           right: 0,
-                          top: Math.max(2, Math.round(lineSpacing.nameToLineGapMm * 3.78)),
+                          top: "50%",
                           borderBottom: `1px solid ${PREVIEW_COLORS.ink}`,
+                          transform: "translateY(-50%)",
                         }}
                       />
                     </div>
@@ -1805,51 +1806,50 @@ function PositionPanel({
   setDraft: Dispatch<SetStateAction<SignatureSettingsConfig>>;
   resolvedPlacement?: SignaturePlacement | null;
 }) {
-  const movementBounds = resolvedPlacement?.movementBounds ?? null;
-  const maxHorizontalTravelMm = resolvedPlacement && movementBounds
-    ? Math.max(0, movementBounds.safeWidthMm - resolvedPlacement.widthMm)
-    : 0;
-  const maxVerticalTravelMm = resolvedPlacement && movementBounds
-    ? Math.max(0, movementBounds.safeHeightMm - resolvedPlacement.heightMm)
-    : 0;
-  const currentHorizontalMm = resolvedPlacement && movementBounds
-    ? Number((resolvedPlacement.xMm - movementBounds.safeXMm).toFixed(2))
-    : 0;
-  const currentVerticalMm = resolvedPlacement && movementBounds
-    ? Number((resolvedPlacement.yMm - movementBounds.safeYMm).toFixed(2))
-    : 0;
-
-  const applyPrecisionPosition = (nextXMm: number, nextYMm: number) => {
-    if (!resolvedPlacement) return;
+  const applyPrecisionOverride = (mutate: (base: SignatureSettingsConfig) => SignatureSettingsConfig) => {
     setDraft((prev) => {
-      const fixed = resolveFixedSignaturePositionState({
-        placement: resolvedPlacement,
-        xMm: nextXMm,
-        yMm: nextYMm,
-        snapToGrid: prev.snapToGrid,
-        gridSizeMm: prev.gridSizeMm,
-      });
-      return {
+      const movementBounds = resolvedPlacement?.movementBounds;
+      const baseXMm = resolvedPlacement
+        ? resolvedPlacement.xMm - Number(prev.signatureOffsetX || 0)
+        : null;
+      const baseYMm = resolvedPlacement
+        ? resolvedPlacement.yMm - Number(prev.signatureOffsetY || 0)
+        : null;
+      const xDenominator = movementBounds ? Math.max(0.01, movementBounds.safeWidthMm - resolvedPlacement.widthMm) : null;
+      const yDenominator = movementBounds ? Math.max(0.01, movementBounds.safeHeightMm - resolvedPlacement.heightMm) : null;
+      const baseManualX = typeof baseXMm === "number" && movementBounds && xDenominator
+        ? clamp(Number((((baseXMm - movementBounds.safeXMm) / xDenominator) * 100).toFixed(2)), 0, 100)
+        : typeof prev.manualXPercent === "number"
+          ? prev.manualXPercent
+          : prev.signatureAlignment === "left"
+            ? 0
+            : prev.signatureAlignment === "center"
+              ? 50
+              : 100;
+      const baseManualY = typeof baseYMm === "number" && movementBounds && yDenominator
+        ? clamp(Number((((baseYMm - movementBounds.safeYMm) / yDenominator) * 100).toFixed(2)), 0, 100)
+        : typeof prev.manualYPercent === "number"
+          ? prev.manualYPercent
+          : prev.signaturePreset === "follow-content"
+            ? 0
+            : 100;
+      return mutate({
         ...prev,
-        ...fixed,
-      };
+        placementMode: "fixed",
+        signaturePageIndex: null,
+        manualXPercent: baseManualX,
+        manualYPercent: baseManualY,
+      });
     });
   };
 
-  const setAxisPosition = (axis: "x" | "y", axisValueMm: number) => {
-    if (!resolvedPlacement) return;
-    applyPrecisionPosition(
-      axis === "x" ? movementBounds!.safeXMm + axisValueMm : resolvedPlacement.xMm,
-      axis === "y" ? movementBounds!.safeYMm + axisValueMm : resolvedPlacement.yMm,
-    );
-  };
-
   const nudgePosition = (axis: "x" | "y", delta: number) => {
-    if (!resolvedPlacement) return;
-    applyPrecisionPosition(
-      axis === "x" ? resolvedPlacement.xMm + delta : resolvedPlacement.xMm,
-      axis === "y" ? resolvedPlacement.yMm + delta : resolvedPlacement.yMm,
-    );
+    applyPrecisionOverride((prev) => ({
+      ...prev,
+      ...(axis === "x"
+        ? { signatureOffsetX: clamp(prev.signatureOffsetX + delta, -120, 120) }
+        : { signatureOffsetY: clamp(prev.signatureOffsetY + delta, -90, 120) }),
+    }));
   };
 
   const resetPosition = () => {
@@ -2061,7 +2061,7 @@ function PositionPanel({
 
       <StudioSubsection
         title="Presisi Posisi"
-        description="Semua kontrol di bagian ini memakai posisi render aktual yang sama dengan live preview dan hasil ekspor."
+        description="Kunci, snap, offset, dan nudge manual dipusatkan di sini agar pengaturan signature tetap rapi."
         tone="indigo"
         badge={draft.lockSignaturePosition ? "Terkunci" : "Bebas"}
         action={(
@@ -2097,42 +2097,16 @@ function PositionPanel({
 
           <div className="rounded-xl border border-indigo-200/70 bg-white/90 p-3 space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-[11px]">Posisi horizontal ({currentHorizontalMm.toFixed(1)}mm)</Label>
-              <SliderWithButtons
-                value={currentHorizontalMm}
-                min={0}
-                max={Math.max(1, Number(maxHorizontalTravelMm.toFixed(2)))}
-                step={0.5}
-                buttonStep={1}
-                onValueChange={(value) => setAxisPosition("x", value)}
-                disabled={!resolvedPlacement}
-              />
-              <p className="text-[9px] text-muted-foreground">Diukur dari batas kiri area gerak aman signature. Saat posisi fixed aktif, offset lama tidak lagi dipakai.</p>
+              <Label className="text-[11px]">Offset horizontal ({draft.signatureOffsetX}mm)</Label>
+              <SliderWithButtons value={draft.signatureOffsetX} min={-120} max={120} step={1} onValueChange={(value) => applyPrecisionOverride((prev) => ({ ...prev, signatureOffsetX: value }))} />
+              <p className="text-[9px] text-muted-foreground">Angka negatif menggeser ke kiri, angka positif menggeser ke kanan.</p>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px]">Posisi vertikal ({currentVerticalMm.toFixed(1)}mm)</Label>
-              <SliderWithButtons
-                value={currentVerticalMm}
-                min={0}
-                max={Math.max(1, Number(maxVerticalTravelMm.toFixed(2)))}
-                step={0.5}
-                buttonStep={1}
-                onValueChange={(value) => setAxisPosition("y", value)}
-                disabled={!resolvedPlacement}
-              />
-              <p className="text-[9px] text-muted-foreground">Diukur dari batas atas area gerak aman. Nilai ini sama dengan posisi yang dipakai engine ekspor.</p>
+              <Label className="text-[11px]">Offset vertikal ({draft.signatureOffsetY}mm)</Label>
+              <SliderWithButtons value={draft.signatureOffsetY} min={-90} max={120} step={1} onValueChange={(value) => applyPrecisionOverride((prev) => ({ ...prev, signatureOffsetY: value }))} />
+              <p className="text-[9px] text-muted-foreground">Angka negatif mengangkat posisi, angka positif menurunkannya.</p>
             </div>
-
-            {resolvedPlacement ? (
-              <div className="rounded-xl border border-indigo-200/60 bg-indigo-50/50 px-3 py-2 text-[9px] leading-snug text-muted-foreground">
-                Area gerak aman: horizontal 0-{maxHorizontalTravelMm.toFixed(1)}mm, vertikal 0-{maxVerticalTravelMm.toFixed(1)}mm.
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-indigo-200/70 bg-indigo-50/40 px-3 py-2 text-[9px] leading-snug text-muted-foreground">
-                Preview belum memberikan koordinat signature. Buka live preview agar kontrol presisi terkunci ke posisi nyata.
-              </div>
-            )}
           </div>
 
           <Separator />

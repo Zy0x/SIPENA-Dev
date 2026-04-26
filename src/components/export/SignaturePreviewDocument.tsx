@@ -29,7 +29,6 @@ import {
   paddingMmToCss,
   rgbToCss,
 } from "@/lib/exportEngine/sharedMetrics";
-import { resolveFixedSignaturePositionState } from "@/lib/attendancePdfPreview";
 import {
   getSignatureLineSpacing,
   resolveSignatureLinePositionLike,
@@ -177,15 +176,16 @@ function useSignatureDrag(
     nextXMm = clamp(nextXMm, placement.movementBounds.safeXMm, placement.movementBounds.safeXMm + Math.max(0, placement.movementBounds.safeWidthMm - placement.widthMm));
     nextYMm = clamp(nextYMm, placement.movementBounds.safeYMm, placement.movementBounds.safeYMm + Math.max(0, placement.movementBounds.safeHeightMm - placement.heightMm));
 
+    const xDenominator = Math.max(1, placement.movementBounds.safeWidthMm - placement.widthMm);
+    const yDenominator = Math.max(1, placement.movementBounds.safeHeightMm - placement.heightMm);
+    const manualXPercent = ((nextXMm - placement.movementBounds.safeXMm) / xDenominator) * 100;
+    const manualYPercent = ((nextYMm - placement.movementBounds.safeYMm) / yDenominator) * 100;
+
     setDraft((prev) => ({
       ...prev,
-      ...resolveFixedSignaturePositionState({
-        placement,
-        xMm: nextXMm,
-        yMm: nextYMm,
-        snapToGrid: prev.snapToGrid,
-        gridSizeMm: prev.gridSizeMm,
-      }),
+      placementMode: "fixed",
+      manualXPercent,
+      manualYPercent,
     }));
   }, [draft.gridSizeMm, draft.snapToGrid, placement, setDraft]);
 
@@ -377,7 +377,7 @@ function SignatureBlock({
                     style={{
                       position: "relative",
                       width: getSignatureLineWidth(draft, signer) * PX_PER_MM,
-                      height: (lineSpacing.nameToLineGapMm + lineSpacing.lineToNipGapMm) * PX_PER_MM,
+                      height: lineSpacing.betweenNameAndNipZoneMm * PX_PER_MM,
                       margin: "0 auto",
                     }}
                   >
@@ -386,8 +386,9 @@ function SignatureBlock({
                         position: "absolute",
                         left: 0,
                         right: 0,
-                        top: lineSpacing.nameToLineGapMm * PX_PER_MM,
+                        top: "50%",
                         borderBottom: `1px solid ${COLORS.ink}`,
+                        transform: "translateY(-50%)",
                       }}
                     />
                   </div>

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolveReportPaperSize } from "@/lib/reportExportLayoutV2";
 import { computeAttendanceColumnLayout } from "@/lib/attendanceExport";
 import { buildAttendancePdfDocument } from "@/lib/attendancePdfExport";
-import { clampSignaturePlacementMm, convertPreviewDeltaPxToMm, resolveFixedSignaturePositionState, resolveManualSignaturePercents } from "@/lib/attendancePdfPreview";
+import { clampSignaturePlacementMm, convertPreviewDeltaPxToMm, resolveManualSignaturePercents } from "@/lib/attendancePdfPreview";
 import {
   buildAttendancePrintLayoutPlan,
   formatAttendancePercent,
@@ -537,19 +537,5 @@ describe("attendance print layout", () => {
     expect(manual.manualYPercent).toBeGreaterThanOrEqual(0);
     expect(manual.manualXPercent).toBeLessThanOrEqual(100);
     expect(manual.manualYPercent).toBeLessThanOrEqual(100);
-
-    const fixed = resolveFixedSignaturePositionState({
-      placement,
-      xMm: clamped.xMm,
-      yMm: clamped.yMm,
-      snapToGrid: true,
-      gridSizeMm: 5,
-    });
-
-    expect(fixed.placementMode).toBe("fixed");
-    expect(fixed.signatureOffsetX).toBe(0);
-    expect(fixed.signatureOffsetY).toBe(0);
-    expect(fixed.manualXPercent).toBeGreaterThanOrEqual(0);
-    expect(fixed.manualYPercent).toBeGreaterThanOrEqual(0);
   });
 });

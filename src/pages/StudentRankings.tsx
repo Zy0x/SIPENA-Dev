@@ -1084,7 +1084,7 @@ export default function StudentRankings() {
                             onAutoFitOnePageChange={setAutoFitOnePage}
                             showAutoFitPreset
                             columnTypographyOptions={buildColumnTypographyOptions(buildSubjectExportConfig(subject.id))}
-                            renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect, onSignaturePlacementChange }) => {
+                            renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
                               const previewConfig = buildSubjectExportConfig(subject.id, {
                                 paperSize: previewPaperSize,
                                 documentStyle: previewDocumentStyle ?? documentStyle,
@@ -1103,7 +1103,6 @@ export default function StudentRankings() {
                                   highlightTarget={highlightTarget}
                                   onHighlightTargetHoverChange={onHighlightTargetHoverChange}
                                   onHighlightTargetSelect={onHighlightTargetSelect}
-                                  onSignaturePlacementChange={onSignaturePlacementChange}
                                   previewData={previewConfig}
                                 />
                               );
@@ -1215,7 +1214,7 @@ export default function StudentRankings() {
                       onColumnOptionChange={handleOverallColumnOptionChange}
                       columnCount={selectedOverallColumns.length}
                       columnTypographyOptions={overallColumnTypographyOptions}
-                      renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect, onSignaturePlacementChange }) => {
+                      renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
                         if (!overallExportConfig) return null;
                         return (
                           <ExportPreviewRenderer
@@ -1227,7 +1226,6 @@ export default function StudentRankings() {
                             highlightTarget={highlightTarget}
                             onHighlightTargetHoverChange={onHighlightTargetHoverChange}
                             onHighlightTargetSelect={onHighlightTargetSelect}
-                            onSignaturePlacementChange={onSignaturePlacementChange}
                             previewData={{
                               ...overallExportConfig,
                               includeSignature: previewIncludeSignature && hasSignature,
