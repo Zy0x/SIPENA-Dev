@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type PointerEvent as ReactPointerEvent, type SetStateAction } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type PointerEvent as ReactPointerEvent, type SetStateAction } from "react";
 import { AlertTriangle, Lock, Move, ScanSearch, Sparkles } from "lucide-react";
 import type { SignatureSettingsConfig, SignatureSigner } from "@/hooks/useSignatureSettings";
 import {
@@ -29,6 +29,12 @@ import {
   paddingMmToCss,
   rgbToCss,
 } from "@/lib/exportEngine/sharedMetrics";
+import {
+  getSignatureLineSpacing,
+  resolveSignatureLinePositionLike,
+  resolveSignatureLineWidthMm,
+  resolveSignatureSignerBlockWidthMm,
+} from "@/lib/signatureLayout";
 
 const COLORS = {
   page: "#ffffff",
@@ -68,6 +74,7 @@ interface SignaturePreviewCanvasProps {
   highlightTarget?: ExportPreviewHighlightTarget | null;
   onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
   onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
+  onSignaturePlacementChange?: (placement: SignaturePlacement | null) => void;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -77,6 +84,30 @@ function clamp(value: number, min: number, max: number) {
 function getVisibleSigners(signers: SignatureSigner[]) {
   const active = signers.filter((signer) => signer.name.trim() || signer.title.trim());
   return active.length > 0 ? active : signers.slice(0, 1);
+}
+
+function getSignatureLinePosition(draft: SignatureSettingsConfig) {
+  return resolveSignatureLinePositionLike(draft.signatureLinePosition);
+}
+
+function getSignatureLineWidth(draft: SignatureSettingsConfig, signer: SignatureSigner) {
+  return resolveSignatureLineWidthMm({
+    lineLengthMode: draft.signatureLineLengthMode,
+    fixedWidthMm: draft.signatureLineWidth,
+    name: signer.name,
+    nip: signer.nip,
+    fontSizePt: draft.fontSize,
+  });
+}
+
+function getSignatureSignerBlockWidth(draft: SignatureSettingsConfig, signer: SignatureSigner) {
+  return resolveSignatureSignerBlockWidthMm({
+    lineLengthMode: draft.signatureLineLengthMode,
+    fixedWidthMm: draft.signatureLineWidth,
+    name: signer.name,
+    nip: signer.nip,
+    fontSizePt: draft.fontSize,
+  });
 }
 
 function getHeaderFillCss(group: HeaderGroup) {
@@ -250,14 +281,17 @@ function SignatureBlock({
     : draft.signatureAlignment === "center"
       ? "center"
       : "right";
-  const signerBlockWidthPx = Math.max(54, draft.signatureLineWidth + 10) * PX_PER_MM;
   const signerSpacingPx = Math.max(10, draft.signatureSpacing) * PX_PER_MM;
+  const signerBlockWidthsPx = useMemo(
+    () => signers.map((signer) => Math.max(32, getSignatureSignerBlockWidth(draft, signer)) * PX_PER_MM),
+    [draft, signers],
+  );
   const contentWidthPx = Math.min(
     placement.widthMm * PX_PER_MM,
-    signers.length * signerBlockWidthPx + Math.max(0, signers.length - 1) * signerSpacingPx,
+    signerBlockWidthsPx.reduce((sum, width) => sum + width, 0) + Math.max(0, signers.length - 1) * signerSpacingPx,
   );
-  const signatureLineWidthPx = Math.max(42, draft.signatureLineWidth) * PX_PER_MM;
   const spacerHeightPx = 17 * PX_PER_MM;
+  const lineSpacing = getSignatureLineSpacing(getSignatureLinePosition(draft));
 
   return (
     <div
@@ -317,7 +351,7 @@ function SignatureBlock({
               <div
                 key={signer.id || `${signer.name}-${index}`}
                 style={{
-                  width: signerBlockWidthPx,
+                  width: signerBlockWidthsPx[index] ?? signerBlockWidthsPx[signerBlockWidthsPx.length - 1] ?? 32 * PX_PER_MM,
                   textAlign: "center",
                   color: COLORS.ink,
                   fontSize: draft.fontSize,
@@ -328,27 +362,48 @@ function SignatureBlock({
                   <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: COLORS.muted, marginTop: 2, lineHeight: 1.3 }}>{signer.school_name}</div>
                 ) : null}
                 <div style={{ height: spacerHeightPx }} />
-                {draft.showSignatureLine && (draft.signatureLinePosition ?? "above-name") === "above-name" ? (
+                {draft.showSignatureLine && getSignatureLinePosition(draft) === "above-name" ? (
                   <div
                     style={{
-                      width: signatureLineWidthPx,
+                      width: getSignatureLineWidth(draft, signer) * PX_PER_MM,
                       borderBottom: `1px solid ${COLORS.ink}`,
-                      margin: "0 auto 6px",
+                      margin: `0 auto ${lineSpacing.aboveNameLineGapMm * PX_PER_MM}px`,
                     }}
                   />
                 ) : null}
-          <div style={{ fontWeight: 700, lineHeight: 1.15, marginBottom: 0 }}>{signer.name || "[Nama Signer]"}</div>
-                {draft.showSignatureLine && (draft.signatureLinePosition ?? "above-name") === "between-name-and-nip" ? (
+                <div style={{ fontWeight: 700, lineHeight: 1.15, marginBottom: 0 }}>{signer.name || "[Nama Signer]"}</div>
+                {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" && signer.nip ? (
                   <div
                     style={{
-                      width: signatureLineWidthPx,
+                      position: "relative",
+                      width: getSignatureLineWidth(draft, signer) * PX_PER_MM,
+                      height: lineSpacing.betweenNameAndNipZoneMm * PX_PER_MM,
+                      margin: "0 auto",
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        top: "50%",
+                        borderBottom: `1px solid ${COLORS.ink}`,
+                        transform: "translateY(-50%)",
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" && !signer.nip ? (
+                  <div
+                    style={{
+                      width: getSignatureLineWidth(draft, signer) * PX_PER_MM,
                       borderBottom: `1px solid ${COLORS.ink}`,
-                      margin: "3px auto 3px",
+                      margin: `${lineSpacing.aboveNameLineGapMm * PX_PER_MM}px auto 0`,
                     }}
                   />
                 ) : null}
                 {signer.nip ? (
-                  <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: COLORS.muted, marginTop: 0, lineHeight: 1.3 }}>NIP. {signer.nip}</div>
+                  <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: COLORS.muted, marginTop: getSignatureLinePosition(draft) === "between-name-and-nip" ? 0 : lineSpacing.nameToNipGapMm * PX_PER_MM, lineHeight: 1.3 }}>NIP. {signer.nip}</div>
                 ) : null}
               </div>
             ))}
@@ -606,6 +661,7 @@ export function SignaturePreviewCanvas({
   highlightTarget,
   onHighlightTargetHoverChange,
   onHighlightTargetSelect,
+  onSignaturePlacementChange,
 }: SignaturePreviewCanvasProps) {
   const mergedPreview = useMemo<SignaturePreviewData | undefined>(() => {
     if (!previewData) return undefined;
@@ -620,6 +676,7 @@ export function SignaturePreviewCanvas({
         fontSize: draft.fontSize,
         showSignatureLine: draft.showSignatureLine,
         signatureLinePosition: draft.signatureLinePosition,
+        signatureLineLengthMode: draft.signatureLineLengthMode,
         signatureLineWidth: draft.signatureLineWidth,
         signatureSpacing: draft.signatureSpacing,
         signatureAlignment: draft.signatureAlignment,
@@ -722,6 +779,10 @@ export function SignaturePreviewCanvas({
       safeZoneTopMm: measuredTop,
     });
   }, [layoutPlan, measuredSafeZoneTopMm, mergedPreview]);
+
+  useEffect(() => {
+    onSignaturePlacementChange?.(resolvedSignaturePlacement);
+  }, [onSignaturePlacementChange, resolvedSignaturePlacement]);
 
   if (!mergedPreview || !layoutPlan) {
     return <GenericPreview />;

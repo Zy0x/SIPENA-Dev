@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import type { SignatureSettingsConfig } from "@/hooks/useSignatureSettings";
-import type { ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
+import type { ReportDocumentStyle, SignaturePlacement } from "@/lib/reportExportLayoutV2";
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import {
   buildAttendancePrintLayoutPlan,
@@ -82,6 +82,7 @@ interface AttendanceExportPreviewV2Props {
   highlightTarget?: ExportPreviewHighlightTarget | null;
   onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
   onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
+  onSignaturePlacementChange?: (placement: SignaturePlacement | null) => void;
   annotationDisplayMode?: AttendanceAnnotationDisplayMode;
   eventAnnotationDisplayMode?: AttendanceAnnotationDisplayMode;
   inlineLabelStyle?: AttendanceInlineLabelStyle;
@@ -142,6 +143,7 @@ export function AttendanceExportPreviewV2({
   highlightTarget = null,
   onHighlightTargetHoverChange,
   onHighlightTargetSelect,
+  onSignaturePlacementChange,
   annotationDisplayMode = "summary-card",
   eventAnnotationDisplayMode = "summary-card",
   inlineLabelStyle = "rotate-90",
@@ -265,6 +267,10 @@ export function AttendanceExportPreviewV2({
       ],
     });
   }, [autoFitOnePage, debugEnabled, includeSignature, onTrace, paperSize, pdfBuild, plan, printDataset]);
+
+  useEffect(() => {
+    onSignaturePlacementChange?.(plan.signaturePlacement);
+  }, [onSignaturePlacementChange, plan.signaturePlacement]);
 
   return (
     <AttendancePdfCanvasPreview

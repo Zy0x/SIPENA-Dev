@@ -3,6 +3,7 @@ import { computeSignatureHeight, type SignatureData } from "./exportSignature";
 import { pdfBodyRowHeightMm, pdfHeaderRowHeightMm } from "./exportEngine/sharedMetrics";
 import { ATTENDANCE_SHELL_MM } from "./exportEngine/attendanceShellMetrics";
 import type { ExportColumn, ExportConfig, HeaderGroup, ReportPaperSize } from "./reportExportLayout";
+import { resolveSignatureSignerBlockWidthMm } from "./signatureLayout";
 
 export type ReportColumnAlignment = "left" | "center" | "right";
 export type ReportTableSizingMode = "autofit-window" | "autofit-content" | "fixed";
@@ -541,12 +542,18 @@ function estimateSignatureBlockMetrics(signature: SignatureData | null | undefin
         school_name: signature.school_name,
       }];
   const activeSigners = signers.length > 0 ? signers : [{ name: "", title: "Guru Mata Pelajaran", nip: "", school_name: "" }];
-  const lineWidthMm = Math.max(42, signature.signatureLineWidth || 50);
   const spacingMm = Math.max(10, signature.signatureSpacing || 20);
-  const blockUnitMm = Math.max(54, lineWidthMm + 10);
+  const blockWidthsMm = activeSigners.map((signer) => resolveSignatureSignerBlockWidthMm({
+    lineLengthMode: signature.signatureLineLengthMode,
+    fixedWidthMm: signature.signatureLineWidth,
+    name: signer.name,
+    nip: signer.nip,
+    fontSizePt: signature.fontSize,
+  }));
+  const totalBlockWidthMm = blockWidthsMm.reduce((sum, width) => sum + width, 0);
   const widthMm = activeSigners.length === 1
-    ? blockUnitMm
-    : clamp(activeSigners.length * blockUnitMm + (activeSigners.length - 1) * spacingMm, 86, 190);
+    ? totalBlockWidthMm
+    : clamp(totalBlockWidthMm + (activeSigners.length - 1) * spacingMm, 86, 190);
   return {
     widthMm,
     heightMm: computeSignatureHeight(signature),

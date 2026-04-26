@@ -35,7 +35,12 @@ import {
   getAttendanceInlineAnnotationStackedSegments,
   resolveAttendanceInlineAnnotationLayout,
 } from "@/lib/attendancePrintLayout";
-import { getSignatureLineSpacing, resolveSignatureLinePositionLike } from "@/lib/signatureLayout";
+import {
+  getSignatureLineSpacing,
+  resolveSignatureLinePositionLike,
+  resolveSignatureLineWidthMm,
+  resolveSignatureSignerBlockWidthMm,
+} from "@/lib/signatureLayout";
 
 // ─── Color palette ─────────────────────────────────────────────────────────
 const COLORS = {
@@ -76,6 +81,26 @@ export interface AttendancePrintDocumentProps {
 
 function getSignatureLinePosition(signature: SignatureSettingsConfig) {
   return resolveSignatureLinePositionLike(signature.signatureLinePosition);
+}
+
+function getSignatureLineWidth(signature: SignatureSettingsConfig, signer: SignatureSettingsConfig["signers"][number]) {
+  return resolveSignatureLineWidthMm({
+    lineLengthMode: signature.signatureLineLengthMode,
+    fixedWidthMm: signature.signatureLineWidth,
+    name: signer.name,
+    nip: signer.nip,
+    fontSizePt: signature.fontSize,
+  });
+}
+
+function getSignatureSignerBlockWidth(signature: SignatureSettingsConfig, signer: SignatureSettingsConfig["signers"][number]) {
+  return resolveSignatureSignerBlockWidthMm({
+    lineLengthMode: signature.signatureLineLengthMode,
+    fixedWidthMm: signature.signatureLineWidth,
+    name: signer.name,
+    nip: signer.nip,
+    fontSizePt: signature.fontSize,
+  });
 }
 
 // ─── Drag hook ─────────────────────────────────────────────────────────────
@@ -514,11 +539,17 @@ export function AttendancePrintDocument({
                       <span
                         key={item.label}
                         style={{
-                          display: "inline-flex", alignItems: "center", gap: 3,
-                          padding: `${mm(0.5)}px ${mm(1.5)}px`,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "fit-content",
+                          maxWidth: "100%",
+                          gap: 3,
+                          padding: `${mm(0.5)}px ${mm(1.2)}px`,
                           borderRadius: 999,
                           background: item.bg, color: item.color,
                           border: `1px solid ${COLORS.border}`, fontWeight: 600,
+                          boxSizing: "border-box",
                         }}
                       >
                         {item.label} = {item.description}
@@ -638,11 +669,14 @@ export function AttendancePrintDocument({
                     gap: Math.max(mm(6), (signature.signatureSpacing ?? 15) * PX_PER_MM),
                     flexWrap: "wrap", marginTop: mm(1.5),
                   }}>
-                    {visibleSigners.map((signer, idx) => (
+                    {visibleSigners.map((signer, idx) => {
+                      const signerBlockWidthPx = Math.max(mm(24), mm(getSignatureSignerBlockWidth(signature, signer)));
+                      const signerLineWidthPx = mm(getSignatureLineWidth(signature, signer));
+                      return (
                       <div
                         key={signer.id || `${signer.name}-${idx}`}
                         style={{
-                          width: Math.max(mm(28), (signature.signatureLineWidth ?? 40) * PX_PER_MM),
+                          width: signerBlockWidthPx,
                           textAlign: "center", color: COLORS.ink,
                           fontSize: signature.fontSize ?? 10,
                         }}
@@ -651,20 +685,20 @@ export function AttendancePrintDocument({
                         <div style={{ height: mm(14) }} />
                         {signature.showSignatureLine && getSignatureLinePosition(signature) === "above-name" && (
                           <div style={{
-                            width: (signature.signatureLineWidth ?? 40) * PX_PER_MM,
+                            width: signerLineWidthPx,
                             borderBottom: `1px solid ${COLORS.ink}`,
                             margin: `0 auto ${mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).aboveNameLineGapMm)}px`,
                           }} />
                         )}
                         <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
                         {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" && signer.nip ? (
-                          <div style={{ position: "relative", width: (signature.signatureLineWidth ?? 40) * PX_PER_MM, height: mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).betweenNameAndNipZoneMm), margin: "0 auto" }}>
+                          <div style={{ position: "relative", width: signerLineWidthPx, height: mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).betweenNameAndNipZoneMm), margin: "0 auto" }}>
                             <div style={{ position: "absolute", left: 0, right: 0, top: "50%", transform: "translateY(-50%)", borderBottom: `1px solid ${COLORS.ink}` }} />
                           </div>
                         ) : null}
                         {signature.showSignatureLine && getSignatureLinePosition(signature) === "between-name-and-nip" && !signer.nip ? (
                           <div style={{
-                            width: (signature.signatureLineWidth ?? 40) * PX_PER_MM,
+                            width: signerLineWidthPx,
                             borderBottom: `1px solid ${COLORS.ink}`,
                             margin: `${mm(getSignatureLineSpacing(getSignatureLinePosition(signature)).aboveNameLineGapMm)}px auto 0`,
                           }} />
@@ -675,7 +709,8 @@ export function AttendancePrintDocument({
                           </div>
                         ) : null}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
                 {dragEnabled ? (

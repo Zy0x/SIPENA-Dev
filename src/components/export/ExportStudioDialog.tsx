@@ -97,11 +97,16 @@ import {
   formatSignatureDisplayDate,
   hasValidSignatureConfig,
 } from "@/hooks/useSignatureSettings";
-import { createDefaultReportDocumentStyle, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
+import { createDefaultReportDocumentStyle, type ReportDocumentStyle, type SignaturePlacement } from "@/lib/reportExportLayoutV2";
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import type { ExportPreviewHighlightTarget } from "@/components/export/SignaturePreviewCanvas";
 import { isCoarsePointerDevice } from "@/lib/inputModality";
-import { getSignatureLineSpacing, resolveSignatureLinePositionLike } from "@/lib/signatureLayout";
+import {
+  getSignatureLineSpacing,
+  resolveSignatureLinePositionLike,
+  resolveSignatureLineWidthMm,
+  resolveSignatureSignerBlockWidthMm,
+} from "@/lib/signatureLayout";
 
 const PREVIEW_COLORS = {
   ink: "#0f172a",
@@ -205,6 +210,7 @@ interface ExportStudioDialogProps {
     highlightTarget?: ExportPreviewHighlightTarget | null;
     onHighlightTargetHoverChange?: (target: ExportPreviewHighlightTarget | null) => void;
     onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
+    onSignaturePlacementChange?: (placement: SignaturePlacement | null) => void;
   }) => ReactNode;
   noPreviewMessage?: string;
   formatPanelExtra?: ReactNode;
@@ -339,6 +345,26 @@ function HintInfo({
 
 function getSignatureLinePosition(draft: SignatureSettingsConfig): SignatureLinePosition {
   return resolveSignatureLinePositionLike(draft.signatureLinePosition);
+}
+
+function getSignatureLineWidth(draft: SignatureSettingsConfig, signer: SignatureSigner) {
+  return resolveSignatureLineWidthMm({
+    lineLengthMode: draft.signatureLineLengthMode,
+    fixedWidthMm: draft.signatureLineWidth,
+    name: signer.name,
+    nip: signer.nip,
+    fontSizePt: draft.fontSize,
+  });
+}
+
+function getSignatureSignerBlockWidth(draft: SignatureSettingsConfig, signer: SignatureSigner) {
+  return resolveSignatureSignerBlockWidthMm({
+    lineLengthMode: draft.signatureLineLengthMode,
+    fixedWidthMm: draft.signatureLineWidth,
+    name: signer.name,
+    nip: signer.nip,
+    fontSizePt: draft.fontSize,
+  });
 }
 
 function getColumnLeafOptions(columnOptions: ExportColumnOption[]) {
@@ -535,20 +561,22 @@ function GenericSignaturePreview({
               const betweenNameAndNipPx = Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.35));
               const aboveNameLinePx = Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78));
               const betweenNameAndNipZonePx = Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78));
+              const signerLineWidthPx = Math.max(22, Math.round(getSignatureLineWidth(draft, signer) * 3.78));
+              const signerBlockWidthPx = Math.max(96, Math.round(getSignatureSignerBlockWidth(draft, signer) * 3.78));
 
               return (
-                <div key={signer.id || `${signer.name}-${index}`} style={{ width: Math.max(110, draft.signatureLineWidth * 2), textAlign: "center", color: PREVIEW_COLORS.ink, fontSize: draft.fontSize }}>
+                <div key={signer.id || `${signer.name}-${index}`} style={{ width: signerBlockWidthPx, textAlign: "center", color: PREVIEW_COLORS.ink, fontSize: draft.fontSize }}>
                   <div style={{ lineHeight: 1.3 }}>{signer.title || "Guru Mata Pelajaran"}</div>
                   {index === 0 && signer.school_name ? (
                     <div style={{ fontSize: Math.max(9, draft.fontSize - 1), color: PREVIEW_COLORS.muted, marginTop: 2 }}>{signer.school_name}</div>
                   ) : null}
                   <div style={{ height: 54 }} />
                   {draft.showSignatureLine && getSignatureLinePosition(draft) === "above-name" ? (
-                    <div style={{ width: draft.signatureLineWidth * 2, borderBottom: `1px solid ${PREVIEW_COLORS.ink}`, margin: `0 auto ${aboveNameLinePx}px` }} />
+                    <div style={{ width: signerLineWidthPx, borderBottom: `1px solid ${PREVIEW_COLORS.ink}`, margin: `0 auto ${aboveNameLinePx}px` }} />
                   ) : null}
                   <div style={{ fontWeight: 700, lineHeight: 1.05 }}>{signer.name || "[Nama Signer]"}</div>
                   {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" && signer.nip ? (
-                    <div style={{ position: "relative", width: draft.signatureLineWidth * 2, height: betweenNameAndNipZonePx, margin: "0 auto" }}>
+                    <div style={{ position: "relative", width: signerLineWidthPx, height: betweenNameAndNipZonePx, margin: "0 auto" }}>
                       <div
                         style={{
                           position: "absolute",
@@ -564,7 +592,7 @@ function GenericSignaturePreview({
                   {draft.showSignatureLine && getSignatureLinePosition(draft) === "between-name-and-nip" && !signer.nip ? (
                     <div
                       style={{
-                        width: draft.signatureLineWidth * 2,
+                        width: signerLineWidthPx,
                         borderBottom: `1px solid ${PREVIEW_COLORS.ink}`,
                         margin: `${aboveNameLinePx}px auto 0`,
                       }}
@@ -1772,24 +1800,39 @@ function LegacyStylePanel({
 function PositionPanel({
   draft,
   setDraft,
+  resolvedPlacement,
 }: {
   draft: SignatureSettingsConfig;
   setDraft: Dispatch<SetStateAction<SignatureSettingsConfig>>;
+  resolvedPlacement?: SignaturePlacement | null;
 }) {
   const applyPrecisionOverride = (mutate: (base: SignatureSettingsConfig) => SignatureSettingsConfig) => {
     setDraft((prev) => {
-      const baseManualX = typeof prev.manualXPercent === "number"
-        ? prev.manualXPercent
-        : prev.signatureAlignment === "left"
-          ? 0
-          : prev.signatureAlignment === "center"
-            ? 50
+      const movementBounds = resolvedPlacement?.movementBounds;
+      const baseXMm = resolvedPlacement
+        ? resolvedPlacement.xMm - Number(prev.signatureOffsetX || 0)
+        : null;
+      const baseYMm = resolvedPlacement
+        ? resolvedPlacement.yMm - Number(prev.signatureOffsetY || 0)
+        : null;
+      const xDenominator = movementBounds ? Math.max(0.01, movementBounds.safeWidthMm - resolvedPlacement.widthMm) : null;
+      const yDenominator = movementBounds ? Math.max(0.01, movementBounds.safeHeightMm - resolvedPlacement.heightMm) : null;
+      const baseManualX = typeof baseXMm === "number" && movementBounds && xDenominator
+        ? clamp(Number((((baseXMm - movementBounds.safeXMm) / xDenominator) * 100).toFixed(2)), 0, 100)
+        : typeof prev.manualXPercent === "number"
+          ? prev.manualXPercent
+          : prev.signatureAlignment === "left"
+            ? 0
+            : prev.signatureAlignment === "center"
+              ? 50
+              : 100;
+      const baseManualY = typeof baseYMm === "number" && movementBounds && yDenominator
+        ? clamp(Number((((baseYMm - movementBounds.safeYMm) / yDenominator) * 100).toFixed(2)), 0, 100)
+        : typeof prev.manualYPercent === "number"
+          ? prev.manualYPercent
+          : prev.signaturePreset === "follow-content"
+            ? 0
             : 100;
-      const baseManualY = typeof prev.manualYPercent === "number"
-        ? prev.manualYPercent
-        : prev.signaturePreset === "follow-content"
-          ? 0
-          : 100;
       return mutate({
         ...prev,
         placementMode: "fixed",
@@ -1892,9 +1935,36 @@ function PositionPanel({
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px]">Lebar garis ({draft.signatureLineWidth}mm)</Label>
-                <SliderWithButtons value={draft.signatureLineWidth} min={20} max={100} step={5} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureLineWidth: value }))} />
+                <Label className="text-[11px]">Panjang garis</Label>
+                <div className="grid gap-1 sm:grid-cols-3">
+                  {([
+                    { value: "fixed", label: "Manual", description: "Panjang garis diatur dari slider mm." },
+                    { value: "name", label: "Sepanjang Nama", description: "Garis mengikuti lebar teks nama signer." },
+                    { value: "nip", label: "Sepanjang NIP", description: "Garis mengikuti panjang baris NIP bila tersedia." },
+                  ] as const).map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant={(draft.signatureLineLengthMode ?? "fixed") === option.value ? "default" : "outline"}
+                      className="h-auto min-h-0 w-full flex-col items-start gap-1 whitespace-normal rounded-xl px-3 py-2 text-left text-[10px] leading-tight"
+                      onClick={() => setDraft((prev) => ({ ...prev, signatureLineLengthMode: option.value }))}
+                    >
+                      <span className="block w-full font-medium leading-tight">{option.label}</span>
+                      <span className="block w-full text-[9px] leading-snug opacity-75">{option.description}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
+              {(draft.signatureLineLengthMode ?? "fixed") === "fixed" ? (
+                <div className="space-y-1.5">
+                  <Label className="text-[11px]">Lebar garis ({draft.signatureLineWidth}mm)</Label>
+                  <SliderWithButtons value={draft.signatureLineWidth} min={20} max={100} step={5} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureLineWidth: value }))} />
+                </div>
+              ) : (
+                <p className="rounded-xl border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[9px] leading-snug text-muted-foreground">
+                  Panjang garis sekarang mengikuti {(draft.signatureLineLengthMode ?? "fixed") === "name" ? "teks nama" : "baris NIP"} secara otomatis. Slider mm disimpan sebagai fallback saat data signer belum lengkap.
+                </p>
+              )}
             </>
           ) : null}
 
@@ -2627,6 +2697,7 @@ export function ExportStudioDialog({
   const [liveEditMode, setLiveEditMode] = useState(false);
   const [hoverHighlightTarget, setHoverHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
   const [selectedHighlightTarget, setSelectedHighlightTarget] = useState<ExportPreviewHighlightTarget | null>(null);
+  const [resolvedSignaturePlacement, setResolvedSignaturePlacement] = useState<SignaturePlacement | null>(null);
   const [activeMobileSection, setActiveMobileSection] = useState<"panel" | "preview">("panel");
   const [mobileStep, setMobileStep] = useState<MobileWizardStep>("format");
   const [mobileSetupSection, setMobileSetupSection] = useState<MobileSetupSection | null>("document");
@@ -2733,6 +2804,7 @@ export function ExportStudioDialog({
     setLiveEditMode(false);
     setHoverHighlightTarget(null);
     setSelectedHighlightTarget(null);
+    setResolvedSignaturePlacement(null);
     setExperimentalWindowOpen(false);
     setExperimentalLayoutResetToken((prev) => prev + 1);
     setDesktopPanelWidth(getDefaultDesktopPanelWidth());
@@ -3102,6 +3174,7 @@ export function ExportStudioDialog({
             setHoverHighlightTarget(null);
             setSelectedHighlightTarget(target);
           },
+          onSignaturePlacementChange: setResolvedSignaturePlacement,
         }) : (
           <GenericSignaturePreview
             draft={draft}
@@ -3405,7 +3478,7 @@ export function ExportStudioDialog({
   );
 
   const positionPanelContent = canConfigureSignature ? (
-    <PositionPanel draft={draft} setDraft={setDraft} />
+    <PositionPanel draft={draft} setDraft={setDraft} resolvedPlacement={resolvedSignaturePlacement} />
   ) : (
     <div className="rounded-xl border border-dashed border-border bg-background/70 p-4 text-center text-[11px] text-muted-foreground">
       Template ini tidak memakai pengaturan signature.
@@ -4209,14 +4282,14 @@ export function ExportStudioDialog({
                   open={studioTopTrayExpanded}
                   onOpenChange={handleStudioTopTrayExpandedChange}
                   className={cn(
-                    "shrink-0 border-b border-border/70 px-3 sm:px-3.5",
-                    isMobileLayout ? "pt-1.5 pb-1.5" : "bg-background/94 pt-2 pb-2",
+                    "shrink-0 border-b border-border/70 px-2.5 sm:px-3",
+                    isMobileLayout ? "pt-1.5 pb-1.5" : "bg-background/94 pt-1.5 pb-1.5",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold text-foreground">Panel studio</p>
-                      <p className="mt-0.5 text-[9px] leading-tight text-muted-foreground">
+                      <p className="mt-0.5 hidden text-[9px] leading-tight text-muted-foreground lg:block">
                         Ringkasan kontrol utama. Alat studio tetap berada di panel yang sama dan tetap terlihat saat bagian ini diciutkan.
                       </p>
                     </div>
@@ -4259,7 +4332,7 @@ export function ExportStudioDialog({
                           )}>
                             <div className="min-w-0">
                               <Label className="text-[11px] font-semibold text-foreground">Signature</Label>
-                              <p className="mt-0 text-[9px] leading-tight text-muted-foreground">
+                              <p className="mt-0 text-[9px] leading-tight text-muted-foreground md:hidden xl:block">
                                 Sertakan blok signature pada file ekspor.
                               </p>
                             </div>
@@ -4276,7 +4349,7 @@ export function ExportStudioDialog({
                           )}>
                             <div className="min-w-0">
                               <p className="text-[10px] font-semibold text-foreground">Aksi studio</p>
-                              <p className="mt-0 text-[9px] leading-tight text-muted-foreground">
+                              <p className="mt-0 text-[9px] leading-tight text-muted-foreground md:hidden xl:block">
                                 Kembalikan mode awal atau rapikan layout.
                               </p>
                             </div>
@@ -4288,7 +4361,7 @@ export function ExportStudioDialog({
                   </CollapsibleContent>
                 </Collapsible>
 
-                <div className={cn("shrink-0 border-b border-border/70 bg-background/88 px-3 sm:px-3.5", isMobileLayout ? "py-1.5" : "py-2")}>
+                <div className={cn("shrink-0 border-b border-border/70 bg-background/88 px-2.5 sm:px-3", isMobileLayout ? "py-1.5" : "py-1.5")}>
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center justify-between gap-1.5">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -4299,7 +4372,7 @@ export function ExportStudioDialog({
                           </span>
                         ) : null}
                       </div>
-                      <p className="text-[10px] text-muted-foreground">Tab tetap tampil di dalam panel studio agar ruang kerja alat tetap luas.</p>
+                      <p className="hidden text-[10px] text-muted-foreground xl:block">Tab tetap tampil di dalam panel studio agar ruang kerja alat tetap luas.</p>
                     </div>
                     <div className={cn("-mx-1 px-1 pt-0.5 pb-0.5", isMobileLayout ? "overflow-visible" : "overflow-x-auto overflow-y-visible")}>
                       {isMobileLayout ? (
@@ -4348,7 +4421,7 @@ export function ExportStudioDialog({
                     "h-full overflow-y-auto space-y-3",
                     isMobileLayout
                       ? "px-3 py-3 pb-44 sm:px-4"
-                      : "px-3 py-3 pr-2 sm:px-4 sm:py-4",
+                      : "px-3 py-2.5 pr-2 sm:px-3.5 sm:py-3",
                   )}
                 >
                 {activePanel === "format" ? (

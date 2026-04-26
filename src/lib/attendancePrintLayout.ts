@@ -21,6 +21,7 @@ import { computeAttendanceColumnLayout } from "@/lib/attendanceExport";
 import { PX_PER_MM } from "@/lib/exportEngine/sharedMetrics";
 import { groupAttendanceHolidayRanges, type AttendanceHolidayInputItem } from "@/lib/attendanceHolidayGrouping";
 import { computeSignatureHeight, type SignatureData } from "@/lib/exportSignature";
+import { resolveSignatureSignerBlockWidthMm } from "@/lib/signatureLayout";
 import type {
   AttendancePlannerPageTrace,
   AttendancePlannerStageTrace,
@@ -417,8 +418,11 @@ export function resolveAttendanceInlineAnnotationLayout({
   const usableHeightPx = Math.max(14, heightPx - 12);
   const widestCharUnit = Math.max(...stackedChars.map(estimateInlineAnnotationCharUnit), 0.72);
   const lineHeightFactor = stackedChars.length >= 10 ? 0.96 : 1.02;
+  const gapUnit = stackedSegments.some((segment) => segment.kind === "gap")
+    ? (stackedChars.length <= 10 ? 0.72 : 0.64)
+    : 0.48;
   const stackedHeightUnits = stackedSegments.reduce(
-    (sum, segment) => sum + (segment.kind === "gap" ? 0.48 : 1),
+    (sum, segment) => sum + (segment.kind === "gap" ? gapUnit : 1),
     0,
   );
   const rawFontPx = Math.min(
@@ -432,7 +436,7 @@ export function resolveAttendanceInlineAnnotationLayout({
     stackedSegments,
     fontPx: Number(fontPx.toFixed(2)),
     lineHeightPx: Number((fontPx * lineHeightFactor).toFixed(2)),
-    gapLineHeightPx: Number((fontPx * lineHeightFactor * 0.48).toFixed(2)),
+    gapLineHeightPx: Number((fontPx * lineHeightFactor * gapUnit).toFixed(2)),
   };
 }
 
@@ -592,7 +596,7 @@ function estimateLegendHeightMm(
 
   legend.forEach((item) => {
     const text = `${item.label} = ${item.description}`;
-    const badgeWidthMm = Math.max(18, text.length * averageCharWidthMm + 6);
+    const badgeWidthMm = Math.max(18, text.length * averageCharWidthMm + 4.8);
     if (cursorX > 0 && cursorX + badgeWidthMm > contentWidthMm) {
       rows += 1;
       cursorX = 0;
@@ -615,12 +619,18 @@ function estimateSignatureBlockMetrics(signature: SignatureData | null | undefin
         school_name: signature.school_name,
       }];
   const activeSigners = signers.length > 0 ? signers : [{ name: "", title: "Guru Mata Pelajaran", nip: "", school_name: "" }];
-  const lineWidthMm = Math.max(42, signature.signatureLineWidth || 50);
   const spacingMm = Math.max(10, signature.signatureSpacing || 20);
-  const blockUnitMm = Math.max(54, lineWidthMm + 10);
+  const blockWidthsMm = activeSigners.map((signer) => resolveSignatureSignerBlockWidthMm({
+    lineLengthMode: signature.signatureLineLengthMode,
+    fixedWidthMm: signature.signatureLineWidth,
+    name: signer.name,
+    nip: signer.nip,
+    fontSizePt: signature.fontSize,
+  }));
+  const totalBlockWidthMm = blockWidthsMm.reduce((sum, width) => sum + width, 0);
   const widthMm = activeSigners.length === 1
-    ? blockUnitMm
-    : clamp(activeSigners.length * blockUnitMm + (activeSigners.length - 1) * spacingMm, 86, 190);
+    ? totalBlockWidthMm
+    : clamp(totalBlockWidthMm + (activeSigners.length - 1) * spacingMm, 86, 190);
   return {
     widthMm,
     heightMm: computeSignatureHeight(signature),

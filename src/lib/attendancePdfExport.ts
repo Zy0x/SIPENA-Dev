@@ -32,13 +32,6 @@ type AutoTableSpanCell = {
     fontStyle?: "bold";
   };
 };
-type AdvancedJsPdf = jsPDF & {
-  advancedAPI?: (callback: (doc: AdvancedJsPdf) => void) => void;
-  Matrix?: new (sx: number, shy: number, shx: number, sy: number, tx: number, ty: number) => unknown;
-  saveGraphicsState?: () => void;
-  restoreGraphicsState?: () => void;
-  setCurrentTransformationMatrix?: (matrix: unknown) => void;
-};
 
 const COLORS = {
   header: [37, 99, 235] as [number, number, number],
@@ -509,7 +502,8 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     doc.setFontSize(fontPt);
     let widestCharMm = Math.max(...layout.stackedChars.map((char) => doc.getTextWidth(char)), 0);
     let charLineHeightMm = Math.max(1.75, previewPxToMm(layout.lineHeightPx));
-    let gapLineHeightMm = Math.max(0.9, previewPxToMm(layout.gapLineHeightPx ?? layout.lineHeightPx * 0.48));
+    const gapRatio = Math.max(0.52, Math.min(0.82, (layout.gapLineHeightPx ?? layout.lineHeightPx * 0.48) / Math.max(layout.lineHeightPx, 0.01)));
+    let gapLineHeightMm = Math.max(0.9, previewPxToMm(layout.gapLineHeightPx ?? layout.lineHeightPx * gapRatio));
     const getTotalHeightMm = (segments: AttendanceInlineAnnotationStackedSegment[]) => segments.reduce(
       (sum, segment) => sum + (segment.kind === "gap" ? gapLineHeightMm : charLineHeightMm),
       0,
@@ -525,7 +519,7 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
       doc.setFontSize(fontPt);
       widestCharMm = Math.max(...layout.stackedChars.map((char) => doc.getTextWidth(char)), 0);
       charLineHeightMm = Math.max(1.7, fontPt * 0.34 + 0.34);
-      gapLineHeightMm = Math.max(0.85, charLineHeightMm * 0.48);
+      gapLineHeightMm = Math.max(0.9, charLineHeightMm * gapRatio);
     }
     return {
       segments: layout.stackedSegments ?? getAttendanceInlineAnnotationStackedSegments(text),
@@ -584,41 +578,10 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
       return;
     }
 
-    const rotateLayout = resolveRotateFontPt(annotation.text, widthMm, bodyHeightMm);
+    const rotateLayout = resolveRotateFontPt(annotation.text.trim(), widthMm, bodyHeightMm);
     const { text, fontPt } = rotateLayout;
-    const advancedDoc = doc as AdvancedJsPdf;
-    const rotateCenterY = centerY;
-    if (typeof advancedDoc.advancedAPI === "function" && typeof advancedDoc.Matrix === "function") {
-      advancedDoc.advancedAPI((api) => {
-        const MatrixCtor = api.Matrix ?? advancedDoc.Matrix;
-        if (!MatrixCtor || typeof api.setCurrentTransformationMatrix !== "function") {
-          api.setFontSize(fontPt);
-          api.text(text, centerX, rotateCenterY, {
-            align: "center",
-            baseline: "middle",
-            angle: -90,
-          });
-          return;
-        }
-
-        api.saveGraphicsState?.();
-        const matrix = (typeof MatrixCtor === "function"
-          ? ((MatrixCtor as unknown as (...args: number[]) => unknown)(0, -1, 1, 0, centerX, rotateCenterY)
-            ?? new (MatrixCtor as unknown as new (...args: number[]) => unknown)(0, -1, 1, 0, centerX, rotateCenterY))
-          : null);
-        api.setCurrentTransformationMatrix(matrix as never);
-        api.setFontSize(fontPt);
-        api.text(text, 0, 0, {
-          align: "center",
-          baseline: "middle",
-        });
-        api.restoreGraphicsState?.();
-      });
-      return;
-    }
-
-  doc.setFontSize(fontPt);
-    doc.text(text, centerX, rotateCenterY, {
+    doc.setFontSize(fontPt);
+    doc.text(text.trim(), centerX, centerY, {
       align: "center",
       baseline: "middle",
       angle: -90,
@@ -655,7 +618,9 @@ function drawSummary(
         Number.parseInt(item.bg.slice(3, 5), 16),
         Number.parseInt(item.bg.slice(5, 7), 16),
       );
-      const labelWidth = Math.max(18, doc.getTextWidth(`${item.label} = ${item.description}`) + 6);
+      const labelText = `${item.label} = ${item.description}`;
+      const badgePadX = 2.4;
+      const labelWidth = Math.max(18, doc.getTextWidth(labelText) + badgePadX * 2);
       if (legendX + labelWidth > x + contentWidth) {
         legendX = x;
         legendY += 6;
@@ -666,7 +631,7 @@ function drawSummary(
         Number.parseInt(item.color.slice(3, 5), 16),
         Number.parseInt(item.color.slice(5, 7), 16),
       );
-      doc.text(`${item.label} = ${item.description}`, legendX + 2, legendY);
+      doc.text(labelText, legendX + badgePadX, legendY);
       legendX += labelWidth + 2;
     });
 
