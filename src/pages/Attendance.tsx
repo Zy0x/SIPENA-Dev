@@ -2842,7 +2842,7 @@ export default function Attendance() {
                     defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
                     stylePresetMode="attendance"
                     stylePresetBaseline={attendanceStylePresetBaseline}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect, onSignaturePlacementChange }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
                         draft={draft}
@@ -2860,6 +2860,7 @@ export default function Attendance() {
                         highlightTarget={highlightTarget}
                         onHighlightTargetHoverChange={onHighlightTargetHoverChange}
                         onHighlightTargetSelect={onHighlightTargetSelect}
+                        onSignaturePlacementChange={onSignaturePlacementChange}
                         annotationDisplayMode={attendanceAnnotationDisplayMode}
                         eventAnnotationDisplayMode={attendanceEventAnnotationDisplayMode}
                         inlineLabelStyle={attendanceInlineLabelStyle}
@@ -2941,7 +2942,7 @@ export default function Attendance() {
                     defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
                     stylePresetMode="attendance"
                     stylePresetBaseline={attendanceStylePresetBaseline}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect, onSignaturePlacementChange }) => (
                       <AttendanceExportPreviewV2
                         previewFormat={previewFormat}
                         draft={draft}
@@ -2959,6 +2960,7 @@ export default function Attendance() {
                         highlightTarget={highlightTarget}
                         onHighlightTargetHoverChange={onHighlightTargetHoverChange}
                         onHighlightTargetSelect={onHighlightTargetSelect}
+                        onSignaturePlacementChange={onSignaturePlacementChange}
                         annotationDisplayMode={attendanceAnnotationDisplayMode}
                         eventAnnotationDisplayMode={attendanceEventAnnotationDisplayMode}
                         inlineLabelStyle={attendanceInlineLabelStyle}
