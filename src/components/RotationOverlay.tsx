@@ -15,12 +15,19 @@ export function RotationOverlay() {
     if (!isStandalone) return;
 
     const checkOrientation = () => {
-      // Only show overlay on mobile devices (< 768px width in portrait)
-      const isMobileDevice = window.innerWidth < 768 || window.innerHeight < 768;
+      // Deteksi smartphone kecil berdasarkan diagonal layar fisik & pointer kasar.
+      // Tablet, laptop, TV, dan PID layar lebar TIDAK boleh dipaksa portrait.
+      const shorter = Math.min(window.innerWidth, window.innerHeight);
+      const longer = Math.max(window.innerWidth, window.innerHeight);
+      const isCoarsePointer =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches;
+      // Hanya anggap "smartphone" bila sisi pendek < 480px DAN sisi panjang < 950px
+      // (mencakup ponsel modern hingga ~6.7"), serta perangkat sentuh (coarse pointer).
+      const isSmartphone = isCoarsePointer && shorter < 480 && longer < 950;
       const isLandscape = window.innerWidth > window.innerHeight;
-      
-      // Show overlay when device is rotated to landscape on mobile in PWA mode
-      setShowOverlay(isMobileDevice && isLandscape);
+
+      setShowOverlay(isSmartphone && isLandscape);
     };
 
     // Check on mount and orientation changes

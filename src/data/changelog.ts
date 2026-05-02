@@ -42,6 +42,19 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.0-p5",
+    version: "2.4.0",
+    title: "PWA: Dukungan Penuh Mode Landscape untuk Tablet, TV, & Layar Lebar",
+    description: "Overlay 'Putar Perangkat' kini hanya muncul pada smartphone kecil. Tablet, PID, dan TV layar lebar bebas digunakan dalam orientasi apa pun tanpa interupsi.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-05-02",
+    details: [
+      "RotationOverlay: deteksi smartphone diperketat (sisi pendek <480px, sisi panjang <950px, pointer kasar) sehingga tablet/laptop/TV tidak lagi diminta berputar ke portrait.",
+      "Manifest PWA tetap menggunakan orientation: natural agar mengikuti orientasi perangkat dan preferensi pengguna.",
+    ],
+  },
+  {
     id: "v2.4.0-p4",
     version: "2.4.0",
     title: "Studio Ekspor: Garis Signature Lebih Rapi, Preset Card Tidak Overlap, & Vertikal Rotate Center",
