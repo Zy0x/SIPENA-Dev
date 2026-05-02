@@ -16,8 +16,19 @@ interface Student {
 
 interface SmartStudentSearchProps {
   students: Student[];
+  /**
+   * Dipanggil setiap kali daftar siswa hasil filter berubah.
+   * Saat siswa dipilih dari dropdown, hanya siswa itu yang dikirim.
+   */
   onFilter: (filteredStudents: Student[]) => void;
+  /** Dipanggil saat user memilih satu siswa dari dropdown. */
   onSelectStudent?: (student: Student) => void;
+  /**
+   * Dipanggil setiap kali state seleksi berubah (siswa dipilih atau direset).
+   * Lebih reliable dibanding `onSearchQueryChange` untuk parent yang ingin
+   * tahu apakah saat ini ada siswa yang dikunci.
+   */
+  onSelectionChange?: (student: Student | null) => void;
   onSearchQueryChange?: (query: string) => void;
   placeholder?: string;
   showSuggestions?: boolean;
@@ -28,6 +39,7 @@ export function SmartStudentSearch({
   students,
   onFilter,
   onSelectStudent,
+  onSelectionChange,
   onSearchQueryChange,
   placeholder = "Cari siswa dengan AI...",
   showSuggestions = true,
@@ -42,8 +54,10 @@ export function SmartStudentSearch({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const searchResults = useMemo(() => {
-    return fuzzySearchStudents(students, query, { minScore: 40, limit: 10 });
-  }, [students, query]);
+    // Saat siswa sudah dipilih, sembunyikan dropdown — tidak perlu hitung.
+    if (selectedStudent) return [];
+    return fuzzySearchStudents(students, query, { minScore: 55, limit: 12 });
+  }, [students, query, selectedStudent]);
 
   const filteredStudents = useMemo(() => {
     // If a student was explicitly selected from AI suggestions, show ONLY that student
@@ -58,6 +72,11 @@ export function SmartStudentSearch({
     onFilter(filteredStudents);
     onSearchQueryChange?.(query);
   }, [filteredStudents, query, onFilter, onSearchQueryChange]);
+
+  // Notifikasi parent saat seleksi siswa berubah
+  useEffect(() => {
+    onSelectionChange?.(selectedStudent);
+  }, [selectedStudent, onSelectionChange]);
 
   // Track if user is manually typing (not from selection)
   const isManualEditRef = useRef(true);

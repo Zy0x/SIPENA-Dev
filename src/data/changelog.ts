@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.0-p6",
+    version: "2.4.0",
+    title: "Input Nilai: Mesin 'Cari Siswa AI' Lebih Akurat & Filter Tabel Presisi",
+    description: "Pencarian siswa di halaman Input Nilai diperkuat dengan engine fuzzy multi-token. Saat satu siswa dipilih dari saran AI, tabel kini benar-benar hanya menampilkan siswa tersebut.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-05-02",
+    details: [
+      "Fuzzy engine baru: normalisasi diakritik & tanda baca, token-set scoring (urutan kata bebas), bigram Dice + Levenshtein, prioritas eksplisit untuk NISN numerik, dan threshold dinaikkan menjadi 55 untuk hasil yang lebih relevan.",
+      "Kamus alias/nickname Indonesia diperluas (Ahmad/Achmad, Muhammad/Moh, Rizky/Rizqi, Taufik/Taufiq, Khairul/Choirul, Fauzi/Fawzi, Aisyah/Aisha, dll.) sehingga ejaan alternatif tetap match.",
+      "Halaman Input Nilai memperkenalkan state lockedStudentId — saat siswa dipilih dari dropdown, tabel terkunci hanya pada siswa itu (tidak lagi menampilkan siswa lain bernama mirip karena substring).",
+      "Saat user mengetik bebas (tanpa memilih), tabel dan dropdown kini memakai engine fuzzy yang sama → hasil 100% konsisten antara saran AI dan baris tabel.",
+      "SmartStudentSearch menambah callback onSelectionChange agar parent dapat mendeteksi pilihan eksplisit secara reliable, terlepas dari isi input.",
+    ],
+  },
+  {
     id: "v2.4.0-p5",
     version: "2.4.0",
     title: "PWA: Dukungan Penuh Mode Landscape untuk Tablet, TV, & Layar Lebar",

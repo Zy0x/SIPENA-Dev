@@ -44,6 +44,7 @@ import type { Assignment } from "@/hooks/useAssignments";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { SmartStudentSearch } from "@/components/grades/SmartStudentSearch";
+import { fuzzySearchStudents } from "@/lib/fuzzySearch";
 import { ChapterStructure } from "@/components/grades/ChapterStructure";
 import { SpreadsheetTable } from "@/components/grades/SpreadsheetTable";
 import { EmptyStudentsState } from "@/components/grades/EmptyStudentsState";
@@ -91,6 +92,8 @@ export default function Grades() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(initialSubjectId);
   const [savingGrades, setSavingGrades] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  // Saat siswa dipilih dari dropdown AI Search, kunci tabel hanya untuk siswa itu.
+  const [lockedStudentId, setLockedStudentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("input");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [formula, setFormula] = useState<CustomFormula>(DEFAULT_FORMULA);
@@ -137,24 +140,23 @@ export default function Grades() {
   }, [chapters, allAssignments]);
 
   const filteredStudents = useMemo(() => {
+    // 1. Pilihan eksplisit dari AI search → kunci ke satu siswa.
+    if (lockedStudentId) {
+      const locked = students.find((s) => s.id === lockedStudentId);
+      return locked ? [locked] : students;
+    }
+
+    // 2. Tidak ada query → semua siswa.
     if (!searchQuery.trim()) return students;
-    
-    // Use fuzzy search for better matching
-    const query = searchQuery.toLowerCase();
-    return students.filter(s => {
-      const nameMatch = s.name.toLowerCase().includes(query);
-      const nisnMatch = s.nisn.toLowerCase().includes(query);
-      
-      // Also check for partial matches (fuzzy-like)
-      const nameWords = s.name.toLowerCase().split(' ');
-      const queryWords = query.split(' ');
-      const fuzzyMatch = queryWords.some(qWord => 
-        nameWords.some(nWord => nWord.startsWith(qWord) || nWord.includes(qWord))
-      );
-      
-      return nameMatch || nisnMatch || fuzzyMatch;
+
+    // 3. Free-typing → gunakan fuzzy engine yang sama dengan dropdown
+    //    agar hasil di tabel konsisten dengan saran AI.
+    const results = fuzzySearchStudents(students, searchQuery, {
+      minScore: 55,
+      limit: students.length,
     });
-  }, [students, searchQuery]);
+    return results.map((r) => r.item);
+  }, [students, searchQuery, lockedStudentId]);
 
   const getGradeValue = useCallback((studentId: string, gradeType: string, assignmentId?: string) => {
     const grade = grades.find(
@@ -515,14 +517,12 @@ export default function Grades() {
                         />
                         <SmartStudentSearch
                           students={students}
-                          onFilter={(filtered) => {
-                            // Set search query to trigger filtering in useMemo
-                            if (filtered.length === students.length) {
-                              setSearchQuery("");
-                            } else if (filtered.length > 0) {
-                              // Use first filtered student's name as search query
-                              setSearchQuery(filtered[0].name);
-                            }
+                          onFilter={() => {
+                            /* Filtering ditangani via searchQuery + lockedStudentId
+                               agar konsisten antara dropdown dan tabel. */
+                          }}
+                          onSelectionChange={(student) => {
+                            setLockedStudentId(student?.id ?? null);
                           }}
                           onSearchQueryChange={(query) => setSearchQuery(query)}
                           placeholder="Cari siswa AI..."
