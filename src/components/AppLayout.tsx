@@ -738,7 +738,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
          />
  
          {/* Page content */}
-         <main className="flex-1 overflow-x-hidden" role="main" aria-label="Konten utama">
+         <main className="flex-1 overflow-x-hidden" role="main" aria-label="Konten utama" data-app-scroll-container>
            {children}
          </main>
  

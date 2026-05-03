@@ -42,7 +42,7 @@ import { id as idLocale } from "date-fns/locale";
 import { renderToStaticMarkup } from "react-dom/server";
 import { cn } from "@/lib/utils";
 import gsap from "gsap";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
@@ -80,6 +80,17 @@ import {
   type AttendancePngRuntimeTrace,
 } from "@/lib/attendanceExportDebug";
 type AttendanceStatus = AttendanceStatusValue | null;
+type SupabaseDeleteFilter = PromiseLike<unknown> & {
+  eq: (column: string, value: string) => SupabaseDeleteFilter;
+};
+type SupabaseDeleteClient = {
+  from: (table: string) => {
+    delete: () => SupabaseDeleteFilter;
+  };
+};
+type JsPdfWithAutoTable = jsPDF & {
+  lastAutoTable?: { finalY?: number };
+};
 type AttendanceExportStudioBaseline = {
   format: "pdf" | "excel" | "png-hd" | "png-4k";
   documentStyle: ReportDocumentStyle;
@@ -111,6 +122,110 @@ function downloadBlobFile(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const EXCEL_BORDER = {
+  top: { style: "thin", color: { rgb: "CBD5E1" } },
+  right: { style: "thin", color: { rgb: "CBD5E1" } },
+  bottom: { style: "thin", color: { rgb: "CBD5E1" } },
+  left: { style: "thin", color: { rgb: "CBD5E1" } },
+} as const;
+
+function styleAttendanceCell(ws: XLSX.WorkSheet, row: number, col: number, style: XLSX.CellStyle) {
+  const ref = XLSX.utils.encode_cell({ r: row, c: col });
+  if (!ws[ref]) ws[ref] = { t: "s", v: "" };
+  ws[ref].s = { ...(ws[ref].s || {}), ...style };
+}
+
+function styleAttendanceRange(ws: XLSX.WorkSheet, startRow: number, endRow: number, startCol: number, endCol: number, style: XLSX.CellStyle | ((row: number, col: number) => XLSX.CellStyle)) {
+  for (let row = startRow; row <= endRow; row += 1) {
+    for (let col = startCol; col <= endCol; col += 1) {
+      styleAttendanceCell(ws, row, col, typeof style === "function" ? style(row, col) : style);
+    }
+  }
+}
+
+function statusFill(value: unknown) {
+  const text = String(value ?? "");
+  if (text === "H") return { fgColor: { rgb: "DCFCE7" } };
+  if (text === "I") return { fgColor: { rgb: "DBEAFE" } };
+  if (text === "S") return { fgColor: { rgb: "FEF9C3" } };
+  if (text === "A") return { fgColor: { rgb: "FEE2E2" } };
+  if (text === "D") return { fgColor: { rgb: "EDE9FE" } };
+  if (text === "L") return { fgColor: { rgb: "FFF7ED" } };
+  return undefined;
+}
+
+function polishAttendanceWorksheet(ws: XLSX.WorkSheet, options: {
+  titleRow?: number;
+  headerRowStart?: number;
+  headerRowEnd?: number;
+  dataRowStart?: number;
+  dataRowEnd?: number;
+  totalRow?: number;
+  percentRow?: number;
+  lastCol: number;
+  dayStartCol?: number;
+  dayEndCol?: number;
+}) {
+  const {
+    titleRow = 0,
+    headerRowStart,
+    headerRowEnd,
+    dataRowStart,
+    dataRowEnd,
+    totalRow,
+    percentRow,
+    lastCol,
+    dayStartCol = -1,
+    dayEndCol = -1,
+  } = options;
+  const merges = ws["!merges"] || [];
+  if (lastCol > 0) merges.push({ s: { r: titleRow, c: 0 }, e: { r: titleRow, c: lastCol } });
+  ws["!merges"] = merges;
+  styleAttendanceRange(ws, titleRow, titleRow, 0, lastCol, {
+    fill: { fgColor: { rgb: "2563EB" } },
+    font: { bold: true, color: { rgb: "FFFFFF" }, sz: 15 },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: EXCEL_BORDER,
+  });
+  if (headerRowStart !== undefined && headerRowEnd !== undefined) {
+    styleAttendanceRange(ws, headerRowStart, headerRowEnd, 0, lastCol, {
+      fill: { fgColor: { rgb: "1D4ED8" } },
+      font: { bold: true, color: { rgb: "FFFFFF" }, sz: 10 },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: EXCEL_BORDER,
+    });
+    ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: headerRowEnd, c: 0 }, e: { r: Math.max(headerRowEnd, dataRowEnd ?? headerRowEnd), c: lastCol } }) };
+    (ws as XLSX.WorkSheet & { "!freeze"?: { xSplit?: number; ySplit?: number } })["!freeze"] = { xSplit: 3, ySplit: headerRowEnd + 1 };
+  }
+  if (dataRowStart !== undefined && dataRowEnd !== undefined) {
+    styleAttendanceRange(ws, dataRowStart, dataRowEnd, 0, lastCol, (row, col) => {
+      const cell = ws[XLSX.utils.encode_cell({ r: row, c: col })];
+      return {
+        fill: col >= dayStartCol && col <= dayEndCol ? statusFill(cell?.v) : { fgColor: { rgb: row % 2 === 0 ? "FFFFFF" : "F8FAFC" } },
+        font: { color: { rgb: "0F172A" }, sz: 10 },
+        alignment: { horizontal: col === 1 ? "left" : "center", vertical: "center", wrapText: col === 1 || col === lastCol },
+        border: EXCEL_BORDER,
+      };
+    });
+  }
+  if (totalRow !== undefined) {
+    styleAttendanceRange(ws, totalRow, totalRow, 0, lastCol, {
+      fill: { fgColor: { rgb: "E2E8F0" } },
+      font: { bold: true, color: { rgb: "0F172A" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: EXCEL_BORDER,
+    });
+  }
+  if (percentRow !== undefined) {
+    styleAttendanceRange(ws, percentRow, percentRow, 0, lastCol, {
+      fill: { fgColor: { rgb: "DBEAFE" } },
+      font: { bold: true, color: { rgb: "1E40AF" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: EXCEL_BORDER,
+    });
+  }
+}
+
 function isAttendancePngFormat(formatId: string) {
   return formatId === "png-hd" || formatId === "png-4k";
 }
@@ -137,6 +252,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 const ATTENDANCE_EXPORT_FORMATS: ExportStudioFormatOption[] = [
   {
@@ -191,6 +307,9 @@ export default function Attendance() {
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [attendanceStudioOpen, setAttendanceStudioOpen] = useState(false);
+  const [showExportMonthDialog, setShowExportMonthDialog] = useState(false);
+  const [exportPickerYear, setExportPickerYear] = useState(() => new Date().getFullYear());
   const [showImportAttendance, setShowImportAttendance] = useState(false);
   const [showOCRAttendance, setShowOCRAttendance] = useState(false);
   const [attendanceExportFormat, setAttendanceExportFormat] = useState<"pdf" | "excel" | "png-hd" | "png-4k">("pdf");
@@ -1046,7 +1165,7 @@ export default function Attendance() {
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     if (selectedClassId) {
       const { supabaseExternal } = await import("@/lib/supabase-external");
-      await (supabaseExternal as any).from("attendance_records").delete().eq("class_id", selectedClassId).eq("date", dateStr);
+      await (supabaseExternal as SupabaseDeleteClient).from("attendance_records").delete().eq("class_id", selectedClassId).eq("date", dateStr);
     }
     setShowBulkDialog(false);
     setShowBulkConfirm(false);
@@ -1116,6 +1235,15 @@ export default function Attendance() {
 
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
     wsSummary["!cols"] = [{ wch: 30 }, { wch: 35 }, { wch: 30 }];
+    polishAttendanceWorksheet(wsSummary, {
+      titleRow: 0,
+      lastCol: 2,
+    });
+    styleAttendanceRange(wsSummary, 3, Math.max(3, summaryRows.length - 1), 0, 2, {
+      border: EXCEL_BORDER,
+      alignment: { horizontal: "left", vertical: "center", wrapText: true },
+      font: { color: { rgb: "0F172A" }, sz: 10 },
+    });
     XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan");
 
     monthNamesList.forEach((monthName, monthIndex) => {
@@ -1289,6 +1417,18 @@ export default function Attendance() {
         ...visibleSummaryKeys.map(() => ({ wch: 5 })),
         { wch: 50 },
       ];
+      polishAttendanceWorksheet(ws, {
+        titleRow: 0,
+        headerRowStart: headerRowIdx,
+        headerRowEnd: headerRow2Idx,
+        dataRowStart: 6,
+        dataRowEnd: 6 + dataRows.length - 1,
+        totalRow: totalRowIdx,
+        percentRow: pctRowIdx,
+        lastCol: totalColCount - 1,
+        dayStartCol: 3,
+        dayEndCol: 3 + numDayCols - 1,
+      });
       XLSX.utils.book_append_sheet(wb, ws, monthName);
     });
 
@@ -1323,6 +1463,20 @@ export default function Attendance() {
     });
     const wsYearly = XLSX.utils.aoa_to_sheet([yearlySummaryHeader, ...yearlySummaryData]);
     wsYearly["!cols"] = [{ wch: 5 }, { wch: 28 }, { wch: 15 }, ...monthNamesList.map(() => ({ wch: 8 })), { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 10 }];
+    wsYearly["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: yearlySummaryData.length, c: yearlySummaryHeader.length - 1 } }) };
+    (wsYearly as XLSX.WorkSheet & { "!freeze"?: { xSplit?: number; ySplit?: number } })["!freeze"] = { xSplit: 3, ySplit: 1 };
+    styleAttendanceRange(wsYearly, 0, 0, 0, yearlySummaryHeader.length - 1, {
+      fill: { fgColor: { rgb: "2563EB" } },
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: EXCEL_BORDER,
+    });
+    styleAttendanceRange(wsYearly, 1, yearlySummaryData.length, 0, yearlySummaryHeader.length - 1, (row, col) => ({
+      fill: { fgColor: { rgb: row % 2 === 0 ? "FFFFFF" : "F8FAFC" } },
+      font: { color: { rgb: "0F172A" } },
+      alignment: { horizontal: col === 1 ? "left" : "center", vertical: "center", wrapText: col === 1 },
+      border: EXCEL_BORDER,
+    }));
     XLSX.utils.book_append_sheet(wb, wsYearly, "Rekap Tahunan");
 
     XLSX.writeFile(wb, `Presensi_${selectedClass.name}_${year}.xlsx`);
@@ -1383,7 +1537,7 @@ export default function Attendance() {
         else {
           const st = getAttendance(student.id, day);
           row.push(st || "-");
-          if (st && stats.hasOwnProperty(st)) (stats as any)[st]++;
+          if (st && st in stats) stats[st as keyof typeof stats]++;
         }
         const note = getAttendanceNote(student.id, day);
         if (note) allNotes.push({ student: student.name, date: format(day, "d MMM", { locale: idLocale }), note });
@@ -1423,7 +1577,7 @@ export default function Attendance() {
       headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontSize: 5, fontStyle: "bold", halign: "center", valign: "middle" },
       columnStyles: {
         0: { cellWidth: 6, halign: "center", valign: "middle" },
-        1: { cellWidth: 28, halign: "left", valign: "middle", overflow: 'linebreak' as any },
+        1: { cellWidth: 28, halign: "left", valign: "middle", overflow: "linebreak" as const },
       },
       alternateRowStyles: { fillColor: [245, 247, 250] },
       didParseCell: (data) => {
@@ -1486,7 +1640,7 @@ export default function Attendance() {
       },
     });
 
-    const finalY = (doc as any).lastAutoTable?.finalY || 170;
+    const finalY = (doc as JsPdfWithAutoTable).lastAutoTable?.finalY || 170;
     let legendY = finalY + 5;
     if (legendY > pageH - 30) { doc.addPage(); legendY = 12; }
 
@@ -1683,7 +1837,7 @@ export default function Attendance() {
             if (note) allNotes.push({ student: student.name, date: format(day, "d MMM", { locale: idLocale }), note });
             let cellBg = "transparent";
             let cellColor = "#9ca3af";
-            let cellText = st || "–";
+            const cellText = st || "–";
             if (st === "H") { cellBg = "#dcfce7"; cellColor = "#16a34a"; stats.H++; }
             else if (st === "I") { cellBg = "#dbeafe"; cellColor = "#2563eb"; stats.I++; }
             else if (st === "S") { cellBg = "#fef9c3"; cellColor = "#ca8a04"; stats.S++; }
@@ -1967,7 +2121,7 @@ export default function Attendance() {
       const footerReserve = 8;
       const availableWidth = pageW - marginLR * 2;
 
-      let fontSize = 5;
+      const fontSize = 5;
       const columnLayout = computeAttendanceColumnLayout({
         rows: attendancePreviewData.rows.map((row) => ({ name: row.name, nisn: row.nisn })),
         visibleDayCount: visibleDays.length,
@@ -2092,7 +2246,7 @@ export default function Attendance() {
         },
       });
 
-      const finalY = (doc as any).lastAutoTable?.finalY || 170;
+      const finalY = (doc as JsPdfWithAutoTable).lastAutoTable?.finalY || 170;
       let legendY = finalY + 4;
 
       // Legend
@@ -2226,7 +2380,7 @@ export default function Attendance() {
           });
 
           if (index > 0) {
-            doc.addPage(paper.pdfFormat as any, "landscape");
+            doc.addPage(paper.pdfFormat, "landscape");
           }
 
           doc.addImage(
@@ -2524,6 +2678,17 @@ export default function Attendance() {
     setCurrentMonth(next);
     setSelectedDate(startOfMonth(next));
   };
+  const openAttendanceExportMonthDialog = useCallback(() => {
+    setExportPickerYear(currentMonth.getFullYear());
+    setShowExportMonthDialog(true);
+  }, [currentMonth]);
+  const confirmAttendanceExportMonth = useCallback((monthIndex: number) => {
+    const nextMonth = startOfMonth(new Date(exportPickerYear, monthIndex, 1));
+    setCurrentMonth(nextMonth);
+    setSelectedDate(nextMonth);
+    setShowExportMonthDialog(false);
+    window.setTimeout(() => setAttendanceStudioOpen(true), 0);
+  }, [exportPickerYear]);
   const handleToggleLock = async () => await toggleLock(!isLocked);
   const hasData = selectedClassId && students.length > 0;
   const attendanceDebugPanel = (
@@ -2754,7 +2919,7 @@ export default function Attendance() {
 
   return (
     <>
-      <div ref={containerRef} className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto space-y-3 sm:space-y-4">
+      <div ref={containerRef} className="app-page">
 
         <PageHeader
           icon={<CalendarDays className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />}
@@ -2803,6 +2968,9 @@ export default function Attendance() {
                     description="Pilih format ekspor presensi dan kelola signature dari satu panel yang lebih mudah dipahami."
                     triggerLabel="Ekspor"
                     triggerClassName="h-9 px-3 text-xs"
+                    open={attendanceStudioOpen}
+                    onOpenChange={setAttendanceStudioOpen}
+                    onTriggerClick={openAttendanceExportMonthDialog}
                     formats={ATTENDANCE_EXPORT_FORMATS}
                     selectedFormat={attendanceExportFormat}
                     onFormatChange={handleAttendanceExportFormatChange}
@@ -2902,6 +3070,9 @@ export default function Attendance() {
                     description="Pilih format ekspor presensi, aktifkan signature bila diperlukan, lalu unduh file dari satu studio."
                     triggerLabel="Ekspor"
                     triggerClassName="h-9 px-2.5 text-xs"
+                    open={attendanceStudioOpen}
+                    onOpenChange={setAttendanceStudioOpen}
+                    onTriggerClick={openAttendanceExportMonthDialog}
                     formats={ATTENDANCE_EXPORT_FORMATS}
                     selectedFormat={attendanceExportFormat}
                     onFormatChange={handleAttendanceExportFormatChange}
@@ -3134,7 +3305,7 @@ export default function Attendance() {
               <div ref={statsRef} className="grid grid-cols-5 gap-1.5 sm:gap-2">
                 {allStatuses.map((key) => {
                   const cfg = statusConfig[key];
-                  const val = activeView === "daily" ? (dailyStats as any)[key] : (monthlyStats as any)[key];
+                  const val = activeView === "daily" ? dailyStats[key] : monthlyStats[key];
                   const IconComp = cfg.icon;
                   return (
                     <div key={key} data-stat-card className="rounded-2xl p-2 sm:p-3 border border-border/60 bg-muted/20">
@@ -3418,7 +3589,7 @@ export default function Attendance() {
                         monthDays.forEach(day => {
                           if (!isHolidayCombined(day)) {
                             const st = getAttendance(student.id, day);
-                            if (st && studentStats.hasOwnProperty(st)) studentStats[st]++;
+                            if (st && st in studentStats) studentStats[st as keyof typeof studentStats]++;
                           }
                         });
                         return (
@@ -3526,9 +3697,9 @@ export default function Attendance() {
                             monthDays.forEach(day => {
                               if (!isHolidayCombined(day)) {
                                 const st = getAttendance(student.id, day);
-                                if (st && totals.hasOwnProperty(st)) {
-                                  totals[st]++;
-                                  studentStats[st]++;
+                                if (st && st in totals) {
+                                  totals[st as keyof typeof totals]++;
+                                  studentStats[st as keyof typeof studentStats]++;
                                 }
                               }
                             });
@@ -4517,6 +4688,51 @@ export default function Attendance() {
                 <Bookmark className="w-3.5 h-3.5 mr-1.5" />
                 Simpan{selectedDayEventDates.length > 0 ? ` (${selectedDayEventDates.length})` : ""} Kegiatan
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showExportMonthDialog} onOpenChange={setShowExportMonthDialog}>
+          <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                Pilih Bulan Ekspor
+              </DialogTitle>
+              <DialogDescription>
+                Pilih bulan presensi yang akan dibuka di Studio Ekspor. Bulan aktif akan ikut disinkronkan.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center justify-between gap-2 rounded-xl border bg-muted/30 p-2">
+              <Button type="button" variant="ghost" size="icon" onClick={() => setExportPickerYear((year) => year - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-sm font-semibold">{exportPickerYear}</div>
+              <Button type="button" variant="ghost" size="icon" onClick={() => setExportPickerYear((year) => year + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {monthNames.map((monthName, monthIndex) => {
+                const now = new Date();
+                const isCurrentSystemMonth = exportPickerYear === now.getFullYear() && monthIndex === now.getMonth();
+                const isSelectedMonth = currentMonth.getFullYear() === exportPickerYear && currentMonth.getMonth() === monthIndex;
+                return (
+                  <Button
+                    key={monthName}
+                    type="button"
+                    variant={isSelectedMonth ? "default" : "outline"}
+                    className="h-auto min-h-14 flex-col items-start gap-1 rounded-xl px-3 py-2 text-left"
+                    onClick={() => confirmAttendanceExportMonth(monthIndex)}
+                  >
+                    <span className="text-sm font-semibold">{monthName}</span>
+                    <span className="flex min-h-4 items-center gap-1 text-[10px] opacity-80">
+                      {isCurrentSystemMonth ? <Badge variant="secondary" className="h-4 rounded-full px-1.5 text-[9px]">Bulan ini</Badge> : null}
+                      {isSelectedMonth ? "Aktif" : ""}
+                    </span>
+                  </Button>
+                );
+              })}
             </div>
           </DialogContent>
         </Dialog>

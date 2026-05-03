@@ -1,9 +1,15 @@
 import { getSignatureRowsCSV } from "@/lib/exportSignature";
 import type { ExportConfig } from "@/lib/reportExportLayout";
-import { getExportFileBaseName } from "@/lib/exportEngine/shared";
+import { getExportFileBaseName, getExportMetaGroups, getExportTitle } from "@/lib/exportEngine/shared";
 
 export function exportToCSV(config: ExportConfig): void {
   const rows: string[][] = [];
+  rows.push([getExportTitle(config)]);
+  getExportMetaGroups(config).forEach((group) => {
+    group.items.forEach((item) => rows.push([`${item.label}:`, String(item.value)]));
+  });
+  rows.push(["Jumlah Siswa:", String(config.studentCount), "Jumlah BAB:", String(config.chapterCount), "Jumlah Tugas:", String(config.assignmentCount)]);
+  rows.push([]);
 
   if (config.headerGroups.length > 1) {
     const level1Row: string[] = [];

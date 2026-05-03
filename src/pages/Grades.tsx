@@ -332,10 +332,54 @@ export default function Grades() {
   const hasNoClasses = !classesLoading && classes.length === 0;
   const hasNoChapters = !chaptersLoading && chapters.length === 0 && selectedSubjectId;
   const kkm = selectedSubject?.kkm || 70;
+  const gradeToolbarActions = selectedClassId && selectedSubjectId ? (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px]">
+            <Upload className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Import</span>
+            <ChevronDown className="w-3 h-3 opacity-60" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setShowImportGrades(true)} className="gap-2 min-h-[44px]">
+            <FileSpreadsheet className="w-4 h-4" />
+            Import dari Excel
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowOCRGrades(true)} className="gap-2 min-h-[44px]">
+            <Camera className="w-4 h-4" />
+            Import dari Foto (OCR)
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <FormulaSettings 
+        formula={formula}
+        onFormulaChange={setFormula}
+        hasChapters={chapters.length > 0 && chapters.some(ch => 
+          (assignmentsByChapter[ch.id]?.length || 0) > 0
+        )}
+      />
+      <SmartStudentSearch
+        students={students}
+        onFilter={() => {
+          /* Filtering ditangani via searchQuery + lockedStudentId
+             agar konsisten antara dropdown dan tabel. */
+        }}
+        onSelectionChange={(student) => {
+          setLockedStudentId(student?.id ?? null);
+        }}
+        onSearchQueryChange={(query) => setSearchQuery(query)}
+        placeholder="Cari siswa AI..."
+        showSuggestions={true}
+        className="w-48 sm:w-56"
+      />
+    </>
+  ) : null;
 
   return (
     <>
-      <div className="p-3 sm:p-4 lg:p-8 max-w-[1600px] mx-auto space-y-3 sm:space-y-4 lg:space-y-6">
+      <div className="app-page app-page-wide">
         {/* Header */}
         <PageHeader
           icon={<FileSpreadsheet className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />}
@@ -488,48 +532,7 @@ export default function Grades() {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px]">
-                              <Upload className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">Import</span>
-                              <ChevronDown className="w-3 h-3 opacity-60" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setShowImportGrades(true)} className="gap-2 min-h-[44px]">
-                              <FileSpreadsheet className="w-4 h-4" />
-                              Import dari Excel
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowOCRGrades(true)} className="gap-2 min-h-[44px]">
-                              <Camera className="w-4 h-4" />
-                              Import dari Foto (OCR)
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <FormulaSettings 
-                          formula={formula}
-                          onFormulaChange={setFormula}
-                          hasChapters={chapters.length > 0 && chapters.some(ch => 
-                            (assignmentsByChapter[ch.id]?.length || 0) > 0
-                          )}
-                        />
-                        <SmartStudentSearch
-                          students={students}
-                          onFilter={() => {
-                            /* Filtering ditangani via searchQuery + lockedStudentId
-                               agar konsisten antara dropdown dan tabel. */
-                          }}
-                          onSelectionChange={(student) => {
-                            setLockedStudentId(student?.id ?? null);
-                          }}
-                          onSearchQueryChange={(query) => setSearchQuery(query)}
-                          placeholder="Cari siswa AI..."
-                          showSuggestions={true}
-                          className="w-48 sm:w-56"
-                        />
-                      </div>
+                      <div className="flex items-center gap-2">{gradeToolbarActions}</div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
@@ -554,6 +557,7 @@ export default function Grades() {
                         onUndo={undo}
                         onRedo={redo}
                         onEnterFullscreen={() => setIsFullscreen(true)}
+                        toolbarExtra={null}
                       />
                     </div>
                   </CardContent>
@@ -592,6 +596,7 @@ export default function Grades() {
           canRedo={canRedo}
           onUndo={undo}
           onRedo={redo}
+          toolbarExtra={gradeToolbarActions}
         />
       )}
 

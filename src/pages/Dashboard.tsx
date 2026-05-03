@@ -173,7 +173,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="p-3 sm:p-4 lg:p-8 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      <div className="app-page">
         {/* Welcome Section */}
         <div className="animate-fade-in flex items-start justify-between gap-2">
           <div className="min-w-0">

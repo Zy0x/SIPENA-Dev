@@ -354,7 +354,7 @@ export default function Help() {
 
   return (
     <>
-      <div className="p-3 sm:p-4 lg:p-8 max-w-4xl mx-auto space-y-4 sm:space-y-6">
+      <div className="app-page app-page-readable">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in">
           <div className="min-w-0">

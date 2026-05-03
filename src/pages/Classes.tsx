@@ -99,7 +99,7 @@ export default function Classes() {
 
   return (
     <>
-      <div ref={containerRef} className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto space-y-3 sm:space-y-4">
+      <div ref={containerRef} className="app-page">
         {/* iOS-style Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">

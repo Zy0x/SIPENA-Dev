@@ -34,7 +34,14 @@ import {
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
+
+type AutoTableHeaderCell = {
+  content: string;
+  rowSpan?: number;
+  colSpan?: number;
+  styles?: Record<string, unknown>;
+};
 
 interface Student {
   id: string;
@@ -71,6 +78,31 @@ interface StudentRanking {
   subjectGrades: Record<string, number>;
   overallAverage: number;
   rank: number;
+}
+
+const RANKING_EXCEL_BORDER = {
+  top: { style: "thin", color: { rgb: "CBD5E1" } },
+  right: { style: "thin", color: { rgb: "CBD5E1" } },
+  bottom: { style: "thin", color: { rgb: "CBD5E1" } },
+  left: { style: "thin", color: { rgb: "CBD5E1" } },
+} as const;
+
+function polishRankingWorksheet(ws: XLSX.WorkSheet, rowCount: number, colCount: number) {
+  ws["!cols"] = Array.from({ length: colCount }, (_, index) => ({ wch: index === 1 ? 30 : index === 2 ? 16 : 14 }));
+  ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, rowCount - 1), c: Math.max(0, colCount - 1) } }) };
+  (ws as XLSX.WorkSheet & { "!freeze"?: { xSplit?: number; ySplit?: number } })["!freeze"] = { xSplit: Math.min(3, colCount), ySplit: 1 };
+  for (let r = 0; r < rowCount; r += 1) {
+    for (let c = 0; c < colCount; c += 1) {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      if (!ws[ref]) continue;
+      ws[ref].s = {
+        border: RANKING_EXCEL_BORDER,
+        alignment: { horizontal: c === 1 && r > 0 ? "left" : "center", vertical: "center", wrapText: true },
+        font: { bold: r === 0, color: { rgb: r === 0 ? "FFFFFF" : "0F172A" } },
+        fill: { fgColor: { rgb: r === 0 ? "2563EB" : r % 2 === 0 ? "F8FAFC" : "FFFFFF" } },
+      };
+    }
+  }
 }
 
 export function RankingReportsSection({
@@ -289,6 +321,7 @@ export function RankingReportsSection({
     } else {
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
+      polishRankingWorksheet(ws, data.length + 1, Object.keys(data[0] || {}).length);
       XLSX.utils.book_append_sheet(wb, ws, "Ranking");
       XLSX.writeFile(wb, `${fileName}.xlsx`);
     }
@@ -342,7 +375,7 @@ export function RankingReportsSection({
       
       if (hasSubjects) {
         // Multi-level: Row 1 has fixed cells with rowSpan + subject group header + "Rata-rata" rowSpan
-        const level1: any[] = [];
+        const level1: AutoTableHeaderCell[] = [];
         // Fixed cols with rowSpan
         for (let i = 0; i < fixedCount; i++) {
           level1.push({
@@ -411,6 +444,7 @@ export function RankingReportsSection({
     } else {
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
+      polishRankingWorksheet(ws, data.length + 1, Object.keys(data[0] || {}).length);
       XLSX.utils.book_append_sheet(wb, ws, "Ranking Keseluruhan");
       XLSX.writeFile(wb, `${fileName}.xlsx`);
     }

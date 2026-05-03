@@ -1033,7 +1033,7 @@ export default function GradeReports() {
 
   return (
     <>
-      <div className="p-3 sm:p-4 lg:p-8 max-w-7xl mx-auto space-y-3 sm:space-y-4 lg:space-y-6">
+      <div className="app-page">
         {/* Header - Responsive */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in">
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">

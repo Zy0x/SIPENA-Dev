@@ -74,6 +74,7 @@ export interface SpreadsheetTableProps {
   onUndo?: () => void;
   onRedo?: () => void;
   onEnterFullscreen?: () => void;
+  toolbarExtra?: React.ReactNode;
 }
 
 // Constants - matching template
@@ -114,6 +115,7 @@ export function SpreadsheetTable({
   onUndo,
   onRedo,
   onEnterFullscreen,
+  toolbarExtra,
 }: SpreadsheetTableProps) {
   // State - based on template
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -128,7 +130,7 @@ export function SpreadsheetTable({
   const [showFreezeMenu, setShowFreezeMenu] = useState(false);
   const [freezeMenuType, setFreezeMenuType] = useState<'column' | 'row'>('column');
   // Auto-lock format in fullscreen mode
-  const [formatLocked, setFormatLocked] = useState(isFullscreen);
+  const [formatLocked, setFormatLocked] = useState(false);
   // Scroll lock mode - disables cell editing for free scrolling on mobile
   const [scrollLockMode, setScrollLockMode] = useState(false);
   
@@ -396,6 +398,26 @@ export function SpreadsheetTable({
     const target = e.target as HTMLDivElement;
     setScrollLeft(target.scrollLeft);
     setScrollTop(target.scrollTop);
+  }, []);
+
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const el = scrollContainerRef.current;
+    if (!el || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+
+    const tolerance = 1;
+    const atTop = el.scrollTop <= tolerance;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
+    const shouldReleaseToPage = (e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom);
+
+    if (!shouldReleaseToPage) return;
+
+    const pageScroller = document.querySelector<HTMLElement>("[data-app-scroll-container]");
+    if (pageScroller && pageScroller.scrollHeight > pageScroller.clientHeight) {
+      pageScroller.scrollBy({ top: e.deltaY, behavior: "auto" });
+    } else {
+      window.scrollBy({ top: e.deltaY, behavior: "auto" });
+    }
+    e.preventDefault();
   }, []);
 
   // Toggle freeze column - blocked when format is locked
@@ -1393,6 +1415,12 @@ export function SpreadsheetTable({
 
         {/* Right side - Zoom & Search */}
         <div className="flex items-center gap-2 flex-wrap justify-end min-w-0 ml-auto">
+          {toolbarExtra && (
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+              {toolbarExtra}
+            </div>
+          )}
+
           {/* Zoom Controls - matching template */}
           <div className={`flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
             <Button 
@@ -1581,6 +1609,7 @@ export function SpreadsheetTable({
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
+          onWheel={handleWheel}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -1589,7 +1618,7 @@ export function SpreadsheetTable({
             paddingTop: totalHeaderHeight * zoomFactor,
             paddingLeft: getFrozenWidth(),
             WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'contain',
+            overscrollBehavior: 'auto',
             touchAction: 'manipulation',
             WebkitTapHighlightColor: 'transparent',
           }}

@@ -311,6 +311,7 @@ const SHELL_HEIGHT_MM = ATTENDANCE_SHELL_MM;
 const MARGIN_MM = ATTENDANCE_MARGIN_MM;
 const TABLE_SLACK_TOLERANCE_MM = ATTENDANCE_LAYOUT_TOLERANCE_MM.tableSlack;
 const TABLE_BOTTOM_SAFETY_MM = ATTENDANCE_LAYOUT_TOLERANCE_MM.tableBottomSafety;
+const FULL_PAGE_BOTTOM_PADDING_MM = 3;
 const AUTOTABLE_ROW_OVERHEAD_MM = ATTENDANCE_LAYOUT_TOLERANCE_MM.autotableRowOverhead;
 const INFO_BLOCK_LINE_HEIGHT_MM = 3.15;
 const INFO_BLOCK_BOTTOM_PADDING_MM = 1.5;
@@ -1518,16 +1519,18 @@ export function buildAttendancePrintLayoutPlan(args: BuildAttendancePrintLayoutA
   const summaryInfoHeightMm = summaryPageContents[summaryPageContents.length - 1]?.contentHeightMm ?? 0;
 
   if (useFullPage) {
+    const fullPageContentBottomMm =
+      tableEndYMm
+      + summaryInfoHeightMm
+      + (includeSignature && signatureMetrics ? shell.signatureGap + signatureMetrics.heightMm : 0);
     const resolvedFullPage = resolveReportPaperSize("full-page", {
       orientation: "landscape",
       requiredContentWidthMm: paper.pageWidthMm,
       requiredContentHeightMm:
-        tableEndYMm
-        + summaryInfoHeightMm
-        + (includeSignature && signatureMetrics ? shell.signatureGap + signatureMetrics.heightMm + 3 : 0)
+        fullPageContentBottomMm
         + paper.marginBottomMm
         + shell.footerBar
-        + shell.footerClearance,
+        + FULL_PAGE_BOTTOM_PADDING_MM,
     });
     paper = {
       ...paper,

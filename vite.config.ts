@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         // Exclude version.json from SW cache so it always fetches fresh
         navigateFallbackDenylist: [/\/version\.json/],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit
+        maximumFileSizeToCacheInBytes: 7 * 1024 * 1024, // Export styling increases the main offline chunk.
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

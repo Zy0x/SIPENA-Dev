@@ -174,6 +174,9 @@ interface ExportStudioDialogProps {
   triggerIcon?: LucideIcon;
   triggerClassName?: string;
   triggerDisabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (value: boolean) => void;
+  onTriggerClick?: () => void;
   formats: ExportStudioFormatOption[];
   selectedFormat: string;
   onFormatChange: (value: string) => void;
@@ -2640,6 +2643,9 @@ export function ExportStudioDialog({
   triggerIcon: TriggerIcon = Download,
   triggerClassName,
   triggerDisabled,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  onTriggerClick,
   formats,
   selectedFormat,
   onFormatChange,
@@ -2689,7 +2695,14 @@ export function ExportStudioDialog({
   };
 
   const { success, error: showError } = useEnhancedToast();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = useCallback((value: boolean) => {
+    if (controlledOpen === undefined) {
+      setInternalOpen(value);
+    }
+    controlledOnOpenChange?.(value);
+  }, [controlledOnOpenChange, controlledOpen]);
   const [activePanel, setActivePanel] = useState<ActivePanel>("format");
   const [previewZoom, setPreviewZoom] = useState(100);
   const [draft, setDraft] = useState<SignatureSettingsConfig>(createDefaultSignatureConfig());
@@ -4036,7 +4049,7 @@ export function ExportStudioDialog({
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)} className={cn("gap-1.5", triggerClassName)} disabled={triggerDisabled}>
+      <Button type="button" onClick={onTriggerClick ?? (() => setOpen(true))} className={cn("gap-1.5", triggerClassName)} disabled={triggerDisabled}>
         <TriggerIcon className="h-4 w-4" />
         {triggerLabel}
       </Button>
