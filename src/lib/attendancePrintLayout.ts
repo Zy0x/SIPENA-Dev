@@ -395,18 +395,25 @@ export function resolveAttendanceInlineAnnotationLayout({
   const heightPx = Math.max(1, mmToPreviewPx(heightMm));
 
   if (labelStyle === "rotate-90") {
-    const usableWidthPx = Math.max(8, widthPx - 5.5);
-    const usableHeightPx = Math.max(14, heightPx - 10);
-    const rawFontPx = Math.min(
-      usableWidthPx * 0.82,
-      usableHeightPx / Math.max(1, estimateInlineAnnotationTextUnits(normalizedText)),
-    );
-    const fontPx = clamp(rawFontPx, Math.min(8.5, rawFontPx), 17.5);
+    // After `rotate(-90deg)` the rendered text occupies:
+    //   • horizontal extent ≈ font line-box height (≈ 1.15 × fontPx incl. ascender/descender)
+    //   • vertical extent   ≈ natural text width (units × fontPx)
+    // We must therefore cap the font so the rotated glyph THICKNESS stays
+    // safely inside the column width (with breathing room on both sides),
+    // and the rotated text LENGTH stays inside the body height.
+    const sidePaddingPx = 2; // total horizontal breathing room (1px each side)
+    const usableWidthPx = Math.max(8, widthPx - sidePaddingPx);
+    const usableHeightPx = Math.max(14, heightPx - 8);
+    const lineBoxFactor = 1.18; // empirical: rendered glyph height ≈ 1.18 × fontPx
+    const fontFromWidth = usableWidthPx / lineBoxFactor;
+    const fontFromLength = usableHeightPx / Math.max(1, estimateInlineAnnotationTextUnits(normalizedText));
+    const rawFontPx = Math.min(fontFromWidth, fontFromLength);
+    const fontPx = clamp(rawFontPx, Math.min(7.5, rawFontPx), 14);
     return {
       text: normalizedText,
       stackedChars: getAttendanceInlineAnnotationStackedChars(normalizedText),
       fontPx: Number(fontPx.toFixed(2)),
-      lineHeightPx: Number((fontPx * 0.98).toFixed(2)),
+      lineHeightPx: Number((fontPx * 1).toFixed(2)),
       rotateBoxWidthPx: Number(usableHeightPx.toFixed(2)),
       rotateBoxHeightPx: Number(usableWidthPx.toFixed(2)),
     };

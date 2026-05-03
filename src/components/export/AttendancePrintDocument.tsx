@@ -810,7 +810,10 @@ function InlineAnnotationOverlay({
     + (plan.visibleColumnKeys.has("name") ? plan.table.nameWidthMm : 0)
     + (plan.visibleColumnKeys.has("nisn") ? plan.table.nisnWidthMm : 0)
   );
-  const bodyHeightMm = page.rowHeightsMm.reduce((sum, value) => sum + value, 0) + (page.hasSummaryRows ? plan.table.summaryRowHeightMm * 2 : 0);
+  // Match the PDF engine: the inline annotation overlay should cover ONLY the
+  // data rows (not TOTAL / PERSENTASE summary rows). Including summary rows
+  // here would stretch the dashed box and mis-center the rotated label.
+  const bodyHeightMm = page.rowHeightsMm.reduce((sum, value) => sum + value, 0);
 
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>

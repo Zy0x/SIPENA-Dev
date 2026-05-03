@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.0-p8",
+    version: "2.4.0",
+    title: "Studio Ekspor Presensi: Label Vertikal Libur/Acara Akurat & Sinkron",
+    description: "Posisi dan ukuran label 'Rotate -90°' untuk Keterangan Libur & Presensi kini presisi mengikuti wadah kolom — tidak lagi melenceng atau menjorok keluar baik di live preview maupun hasil ekspor PDF/PNG.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-05-03",
+    details: [
+      "Tinggi wadah label inline disinkronkan dengan PDF engine: hanya menutupi baris data, tidak lagi ikut menutupi baris TOTAL & PERSENTASE sehingga titik tengah label benar-benar pas.",
+      "Kalkulasi ukuran font rotate-90 diperbaiki menggunakan faktor line-box 1.18× agar ketebalan glyph (termasuk ascender/descender) tetap aman di dalam lebar kolom.",
+      "Padding internal kolom diperketat (1px per sisi) sehingga label tidak menabrak garis batas kolom kiri/kanan saat dirotasi.",
+      "Cap maksimum font diturunkan dari 17.5px → 14px untuk mencegah teks terasa terlalu besar dibanding lebar kolom sempit.",
+      "Hasil: WYSIWYG antara live preview dan PDF/PNG ekspor untuk semua label vertikal (Hari Minggu, Kenaikan Isa Al Masih, dll).",
+    ],
+  },
+  {
     id: "v2.4.0-p7",
     version: "2.4.0",
     title: "Cari Siswa AI: Phonetic Indonesia, Jaro-Winkler & Toleransi Typo Tingkat Lanjut",
