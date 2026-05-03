@@ -1,0 +1,15 @@
+{
+  "name": "@sipena/frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "echo \"Frontend E2E tests are not configured yet. See docs/testing.md.\""
+  }
+}

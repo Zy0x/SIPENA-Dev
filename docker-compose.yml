@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sipena
+      POSTGRES_USER: sipena
+      POSTGRES_PASSWORD: sipena
+    ports:
+      - "5432:5432"
+    volumes:
+      - sipena-postgres:/var/lib/postgresql/data
+
+volumes:
+  sipena-postgres:

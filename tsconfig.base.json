@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "paths": {
+      "@/*": ["apps/frontend/src/*"],
+      "@app/*": ["apps/frontend/src/app/*"],
+      "@features/*": ["apps/frontend/src/features/*"],
+      "@core/*": ["apps/frontend/src/core/*"],
+      "@infra/*": ["apps/frontend/src/infrastructure/*"],
+      "@components/*": ["apps/frontend/src/components/*"],
+      "@config/*": ["apps/frontend/src/config/*"],
+      "@utils/*": ["apps/frontend/src/utils/*"],
+      "@shared/*": ["packages/shared/src/*"],
+      "@ui/*": ["packages/ui/src/*"]
+    },
+    "skipLibCheck": true,
+    "strict": false,
+    "strictNullChecks": false
+  }
+}

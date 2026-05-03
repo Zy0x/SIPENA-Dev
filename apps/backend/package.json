@@ -1,0 +1,17 @@
+{
+  "name": "@sipena/backend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"Backend tests are not implemented yet. See docs/testing.md.\"",
+    "test:e2e": "echo \"Backend E2E tests are not implemented yet. See docs/testing.md.\""
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -1,0 +1,8 @@
+{
+  "apiBaseUrl": "",
+  "authProvider": "supabase",
+  "dataProvider": "supabase",
+  "storageProvider": "supabase",
+  "realtimeProvider": "supabase",
+  "maintenanceMode": false
+}

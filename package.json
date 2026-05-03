@@ -1,14 +1,24 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "sipena-monorepo",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "dev": "vite --config apps/frontend/vite.config.ts",
+    "build": "vite build --config apps/frontend/vite.config.ts",
+    "build:dev": "vite build --mode development --config apps/frontend/vite.config.ts",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "typecheck": "tsc -b tsconfig.json",
+    "test": "vitest run --config apps/frontend/vitest.config.ts",
+    "test:e2e": "echo \"E2E tests are not configured yet. See docs/testing.md.\"",
+    "format": "echo \"Formatter is not configured yet. See docs/conventions.md.\"",
+    "clean": "node scripts/clean.mjs",
+    "preview": "vite preview --config apps/frontend/vite.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
