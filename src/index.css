@@ -203,15 +203,15 @@
 
 @layer components {
   .app-page {
-    @apply mx-auto w-full max-w-7xl space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5 lg:px-8 lg:py-8;
+    @apply w-full max-w-none space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5 lg:px-8 lg:py-8;
   }
 
   .app-page-narrow {
-    @apply max-w-3xl;
+    @apply max-w-5xl;
   }
 
   .app-page-readable {
-    @apply max-w-5xl;
+    @apply max-w-7xl;
   }
 
   .app-page-wide {
