@@ -10,8 +10,8 @@
   ],
   "scripts": {
     "dev": "vite --config apps/frontend/vite.config.ts",
-    "build": "vite build --config apps/frontend/vite.config.ts",
-    "build:dev": "vite build --mode development --config apps/frontend/vite.config.ts",
+    "build": "vite build --config apps/frontend/vite.config.ts && node scripts/sync-root-dist.mjs",
+    "build:dev": "vite build --mode development --config apps/frontend/vite.config.ts && node scripts/sync-root-dist.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -b tsconfig.json",
     "test": "vitest run --config apps/frontend/vitest.config.ts",
