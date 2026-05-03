@@ -42,6 +42,24 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.0-p7",
+    version: "2.4.0",
+    title: "Cari Siswa AI: Phonetic Indonesia, Jaro-Winkler & Toleransi Typo Tingkat Lanjut",
+    description: "Engine pencarian siswa di-upgrade besar-besaran. Kini mengenali ejaan lama (Soeharto/Suharto), nama mirip secara fonetik (Fauzi/Pauzi, Khoirul/Choirul), typo karena keyboard QWERTY, transposisi huruf, dan kamus alias yang jauh lebih lengkap.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-05-03",
+    details: [
+      "Phonetic key ala Soundex untuk nama Indonesia: mengelompokkan konsonan berbunyi mirip (b/p/f/v/w, c/k/q/s/z, d/t, m/n) sehingga 'Fauzi' ≈ 'Pauzi' ≈ 'Phauzi'.",
+      "Transliterasi ejaan lama Belanda → modern (oe→u, dj→j, tj→c, sj/sh→sy, kh/ch→k, ph→f) — 'Soeharto' kini match dengan 'Suharto', 'Djoko' dengan 'Joko'.",
+      "Damerau-Levenshtein menggantikan Levenshtein klasik: typo karena huruf tertukar (mis. 'Ahamd' → 'Ahmad') terdeteksi dengan biaya 1.",
+      "Jaro-Winkler ditambahkan dengan bonus prefix — sangat efektif untuk nama yang awalannya benar tapi ekornya typo.",
+      "Skor pasangan token kini gabungan berbobot Jaro-Winkler (35%) + Levenshtein (30%) + bigram Dice (20%) + trigram Dice (15%) + bonus keyboard adjacency QWERTY untuk salah tekan tombol bersebelahan.",
+      "Kamus alias diperluas: Mochammad, Abdurrahman, Dzulkifli, Hassan, Ibrohim, Sulaiman/Soleman, Hussein, Mariam, dan banyak nama populer lain.",
+      "Match type baru 'phonetic' ditampilkan di dropdown sehingga pengguna paham mengapa hasil tetap muncul meski ejaan berbeda.",
+    ],
+  },
+  {
     id: "v2.4.0-p6",
     version: "2.4.0",
     title: "Input Nilai: Mesin 'Cari Siswa AI' Lebih Akurat & Filter Tabel Presisi",

@@ -163,6 +163,9 @@ export function SmartStudentSearch({
       case 'contains': return null;
       case 'fuzzy': return 'AI';
       case 'nickname': return 'Alias';
+      case 'phonetic': return 'Fonetik';
+      case 'nisn': return 'NISN';
+      default: return null;
     }
   };
 
