@@ -401,10 +401,10 @@ export function resolveAttendanceInlineAnnotationLayout({
     // We must therefore cap the font so the rotated glyph THICKNESS stays
     // safely inside the column width (with breathing room on both sides),
     // and the rotated text LENGTH stays inside the body height.
-    const sidePaddingPx = 7; // total horizontal breathing room for narrow single-day cells
+    const sidePaddingPx = 2; // total horizontal breathing room (1px each side)
     const usableWidthPx = Math.max(8, widthPx - sidePaddingPx);
     const usableHeightPx = Math.max(14, heightPx - 8);
-    const lineBoxFactor = 1.32; // empirical: rendered glyph height incl. ascender/descender
+    const lineBoxFactor = 1.18; // empirical: rendered glyph height ≈ 1.18 × fontPx
     const fontFromWidth = usableWidthPx / lineBoxFactor;
     const fontFromLength = usableHeightPx / Math.max(1, estimateInlineAnnotationTextUnits(normalizedText));
     const rawFontPx = Math.min(fontFromWidth, fontFromLength);

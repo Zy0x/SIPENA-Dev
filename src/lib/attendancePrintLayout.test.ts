@@ -421,7 +421,8 @@ describe("attendance print layout", () => {
       const fit = resolveAttendancePdfRotateInlineAnnotationFit(doc, item.text, item.widthMm, item.heightMm);
       expect(fit.textWidthMm).toBeLessThanOrEqual(fit.availableLengthMm + 0.05);
       expect(fit.lineBoxHeightMm).toBeLessThanOrEqual(fit.availableThicknessMm + 0.05);
-      expect((item.widthMm - fit.lineBoxHeightMm) / 2).toBeGreaterThanOrEqual(0.85);
+      expect((item.widthMm - fit.lineBoxHeightMm) / 2).toBeGreaterThanOrEqual(0.55);
+      expect(fit.glyphCenterOffsetMm).toBeLessThan(0);
       expect(fit.fontPt).toBeGreaterThanOrEqual(3.4);
     });
   });

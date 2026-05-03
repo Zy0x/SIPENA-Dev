@@ -40,6 +40,7 @@ export interface AttendancePdfRotateInlineAnnotationFit {
   lineBoxHeightMm: number;
   availableLengthMm: number;
   availableThicknessMm: number;
+  glyphCenterOffsetMm: number;
 }
 
 const COLORS = {
@@ -67,10 +68,9 @@ const STATUS_COLORS: Record<string, { fill: [number, number, number]; text: [num
 // planner (attendancePrintLayout.ts) always agree on every measurement.
 import { ATTENDANCE_SHELL_MM as SHELL_MM } from "@/lib/exportEngine/attendanceShellMetrics";
 
-const PDF_PT_TO_MM = 25.4 / 72;
-const ROTATE_90_LINE_BOX_FACTOR = 1.32;
 const ROTATE_90_LENGTH_SAFETY_MM = 2.4;
-const ROTATE_90_THICKNESS_SAFETY_MM = 1.8;
+const ROTATE_90_THICKNESS_SAFETY_MM = 1.2;
+const ROTATE_90_BASELINE_CENTER_FACTOR = 0.38;
 
 function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: AttendancePrintLayoutPlan, _page: AttendancePrintPage) {
   const docWithGState = doc as JsPdfWithGState;
@@ -483,7 +483,7 @@ export function resolveAttendancePdfRotateInlineAnnotationFit(
 
   doc.setFontSize(fontPt);
   let textWidthMm = doc.getTextWidth(normalizedText);
-  let lineBoxHeightMm = fontPt * PDF_PT_TO_MM * ROTATE_90_LINE_BOX_FACTOR;
+  let lineBoxHeightMm = doc.getTextDimensions(normalizedText).h;
   while (
     fontPt > minFontPt
     && (textWidthMm > availableLengthMm || lineBoxHeightMm > availableThicknessMm)
@@ -491,7 +491,7 @@ export function resolveAttendancePdfRotateInlineAnnotationFit(
     fontPt = Math.max(minFontPt, fontPt - 0.2);
     doc.setFontSize(fontPt);
     textWidthMm = doc.getTextWidth(normalizedText);
-    lineBoxHeightMm = fontPt * PDF_PT_TO_MM * ROTATE_90_LINE_BOX_FACTOR;
+    lineBoxHeightMm = doc.getTextDimensions(normalizedText).h;
   }
 
   return {
@@ -501,6 +501,7 @@ export function resolveAttendancePdfRotateInlineAnnotationFit(
     lineBoxHeightMm: Number(lineBoxHeightMm.toFixed(2)),
     availableLengthMm: Number(availableLengthMm.toFixed(2)),
     availableThicknessMm: Number(availableThicknessMm.toFixed(2)),
+    glyphCenterOffsetMm: Number((-lineBoxHeightMm * ROTATE_90_BASELINE_CENTER_FACTOR).toFixed(2)),
   };
 }
 
@@ -613,10 +614,9 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     }
 
     const rotateLayout = resolveAttendancePdfRotateInlineAnnotationFit(doc, annotation.text, widthMm, bodyHeightMm);
-    const { text, fontPt, textWidthMm } = rotateLayout;
+    const { text, fontPt, textWidthMm, glyphCenterOffsetMm } = rotateLayout;
     doc.setFontSize(fontPt);
-    doc.text(text, centerX, centerY - (textWidthMm / 2), {
-      baseline: "middle",
+    doc.text(text, centerX + glyphCenterOffsetMm, centerY - (textWidthMm / 2), {
       angle: -90,
     });
   });
