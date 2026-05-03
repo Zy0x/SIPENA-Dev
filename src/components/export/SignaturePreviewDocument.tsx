@@ -291,7 +291,7 @@ function SignatureBlock({
     signerBlockWidthsPx.reduce((sum, width) => sum + width, 0) + Math.max(0, signers.length - 1) * signerSpacingPx,
   );
   const spacerHeightPx = 17 * PX_PER_MM;
-  const lineSpacing = getSignatureLineSpacing(getSignatureLinePosition(draft));
+  const lineSpacing = getSignatureLineSpacing(getSignatureLinePosition(draft), draft.fontSize);
 
   return (
     <div
@@ -386,7 +386,7 @@ function SignatureBlock({
                         position: "absolute",
                         left: 0,
                         right: 0,
-                        top: "50%",
+                        top: `${Math.max(42, Math.min(68, (lineSpacing.nameToLineGapMm / lineSpacing.betweenNameAndNipZoneMm) * 100))}%`,
                         borderBottom: `1px solid ${COLORS.ink}`,
                         transform: "translateY(-50%)",
                       }}

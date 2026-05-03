@@ -131,7 +131,7 @@ export function computeSignatureHeight(signature: SignatureData): number {
   const signers = getSigners(signature);
   const hasSchool = signers.some((s, i) => i === 0 && s.school_name);
   const hasNip = signers.some(s => s.nip);
-  const spacing = getSignatureLineSpacing(getSignatureLinePosition(signature));
+  const spacing = getSignatureLineSpacing(getSignatureLinePosition(signature), signature.fontSize);
   const lineGapMm = signature.showSignatureLine === false
     ? (hasNip ? spacing.nameToNipGapMm : 0)
     : getSignatureLinePosition(signature) === "between-name-and-nip" && hasNip
@@ -231,7 +231,7 @@ export function addSignatureBlockPDF(
   const signers = getSigners(signature);
   const showLine = signature.showSignatureLine !== false;
   const linePosition = getSignatureLinePosition(signature);
-  const lineSpacing = getSignatureLineSpacing(linePosition);
+  const lineSpacing = getSignatureLineSpacing(linePosition, signature.fontSize);
   const spacingMm = signature.signatureSpacing || 20;
   const alignment = signature.signatureAlignment || 'right';
   const dateAlign: "left" | "center" | "right" = alignment === "left"
@@ -331,7 +331,7 @@ export function addSignatureBlockPDF(
     if (showLine && linePosition === "between-name-and-nip") {
       const halfLine = lineWidthMm / 2;
       const lineY = signer.nip
-        ? nameY + (lineSpacing.betweenNameAndNipBaselineGapMm / 2)
+        ? nameY + lineSpacing.nameToLineGapMm
         : nameY + 2.4 + lineSpacing.aboveNameLineGapMm;
       doc.setDrawColor(30, 30, 30);
       doc.setLineWidth(0.3);
@@ -362,7 +362,7 @@ export function generateSignatureHTML(signature: SignatureData): string {
   const spacing = signature.signatureSpacing || 20;
   const showLine = signature.showSignatureLine !== false;
   const linePosition = getSignatureLinePosition(signature);
-  const lineSpacing = getSignatureLineSpacing(linePosition);
+  const lineSpacing = getSignatureLineSpacing(linePosition, signature.fontSize);
   const alignment = signature.signatureAlignment || 'right';
   const offsetX = signature.signatureOffsetX || 0;
   const offsetY = signature.signatureOffsetY || 0;
@@ -390,7 +390,8 @@ export function generateSignatureHTML(signature: SignatureData): string {
     }
     html += `<div style="font-weight:700;line-height:1.05;">${sanitize(signer.name || "")}</div>`;
     if (showLine && linePosition === "between-name-and-nip" && signer.nip) {
-      html += `<div style="position:relative;width:${lineWidthPx}px;height:${Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78))}px;margin:0 auto;"><div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);border-bottom:1px solid #1e293b;"></div></div>`;
+      const lineTopPercent = Math.max(42, Math.min(68, (lineSpacing.nameToLineGapMm / lineSpacing.betweenNameAndNipZoneMm) * 100));
+      html += `<div style="position:relative;width:${lineWidthPx}px;height:${Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78))}px;margin:0 auto;"><div style="position:absolute;left:0;right:0;top:${lineTopPercent.toFixed(1)}%;transform:translateY(-50%);border-bottom:1px solid #1e293b;"></div></div>`;
     } else if (showLine && linePosition === "between-name-and-nip") {
       html += `<div style="border-bottom:1px solid #1e293b;margin:${Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78))}px auto 0;width:${lineWidthPx}px;"></div>`;
     }
@@ -415,7 +416,7 @@ export function generateSignatureHTMLInline(signature: SignatureData): string {
   const spacing = signature.signatureSpacing || 20;
   const showLine = signature.showSignatureLine !== false;
   const linePosition = getSignatureLinePosition(signature);
-  const lineSpacing = getSignatureLineSpacing(linePosition);
+  const lineSpacing = getSignatureLineSpacing(linePosition, signature.fontSize);
   const alignment = signature.signatureAlignment || 'right';
   const offsetX = signature.signatureOffsetX || 0;
 
@@ -441,7 +442,8 @@ export function generateSignatureHTMLInline(signature: SignatureData): string {
     }
     html += `<div style="font-weight:700;line-height:1.05;">${sanitize(signer.name || "")}</div>`;
     if (showLine && linePosition === "between-name-and-nip" && signer.nip) {
-      html += `<div style="position:relative;width:${lineWidthPx}px;height:${Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78))}px;margin:0 auto;"><div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);border-bottom:1px solid #1e293b;"></div></div>`;
+      const lineTopPercent = Math.max(42, Math.min(68, (lineSpacing.nameToLineGapMm / lineSpacing.betweenNameAndNipZoneMm) * 100));
+      html += `<div style="position:relative;width:${lineWidthPx}px;height:${Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78))}px;margin:0 auto;"><div style="position:absolute;left:0;right:0;top:${lineTopPercent.toFixed(1)}%;transform:translateY(-50%);border-bottom:1px solid #1e293b;"></div></div>`;
     } else if (showLine && linePosition === "between-name-and-nip") {
       html += `<div style="border-bottom:1px solid #1e293b;margin:${Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78))}px auto 0;width:${lineWidthPx}px;"></div>`;
     }

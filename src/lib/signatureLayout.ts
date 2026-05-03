@@ -1,12 +1,9 @@
 export type SignatureLinePositionLike = "above-name" | "between-name-and-nip";
 export type SignatureLineLengthModeLike = "fixed" | "name" | "nip";
 
-const SIGNATURE_NAME_LINE_GAP_MM = 0.9;
-const SIGNATURE_LINE_NIP_GAP_MM = 0.9;
 const SIGNATURE_NAME_NIP_GAP_MM = 0.45;
 const SIGNATURE_ABOVE_NAME_GAP_MM = 0.8;
 const SIGNATURE_NAME_NIP_LINE_ZONE_MM = 2.1;
-const SIGNATURE_NAME_NIP_BASELINE_GAP_MM = 3.8;
 
 export interface SignatureLineSpacing {
   linePosition: SignatureLinePositionLike;
@@ -83,14 +80,21 @@ export function resolveSignatureLinePositionLike(
 
 export function getSignatureLineSpacing(
   value?: SignatureLinePositionLike | null,
+  fontSizePt?: number | null,
 ): SignatureLineSpacing {
+  const fontSize = clamp(Number(fontSizePt || 10), 8, 14);
+  const fontSizeMm = fontSize * 0.3528;
+  const betweenNameAndNipBaselineGapMm = clamp(Number((fontSizeMm * 1.75).toFixed(2)), 5.8, 8.2);
+  const nameToLineGapMm = clamp(Number((fontSizeMm * 0.62).toFixed(2)), 2.05, 3.25);
+  const lineToNipGapMm = Number(Math.max(2.4, betweenNameAndNipBaselineGapMm - nameToLineGapMm).toFixed(2));
+
   return {
     linePosition: resolveSignatureLinePositionLike(value),
     aboveNameLineGapMm: SIGNATURE_ABOVE_NAME_GAP_MM,
-    nameToLineGapMm: SIGNATURE_NAME_LINE_GAP_MM,
-    lineToNipGapMm: SIGNATURE_LINE_NIP_GAP_MM,
+    nameToLineGapMm,
+    lineToNipGapMm,
     nameToNipGapMm: SIGNATURE_NAME_NIP_GAP_MM,
-    betweenNameAndNipZoneMm: SIGNATURE_NAME_NIP_LINE_ZONE_MM,
-    betweenNameAndNipBaselineGapMm: SIGNATURE_NAME_NIP_BASELINE_GAP_MM,
+    betweenNameAndNipZoneMm: Math.max(SIGNATURE_NAME_NIP_LINE_ZONE_MM, Number((betweenNameAndNipBaselineGapMm - 2.4).toFixed(2))),
+    betweenNameAndNipBaselineGapMm,
   };
 }

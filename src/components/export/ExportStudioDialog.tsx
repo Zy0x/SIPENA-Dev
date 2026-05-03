@@ -560,10 +560,11 @@ function GenericSignaturePreview({
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: Math.max(12, draft.signatureSpacing), flexWrap: "wrap" }}>
             {signers.map((signer, index) => {
-              const lineSpacing = getSignatureLineSpacing(getSignatureLinePosition(draft));
+              const lineSpacing = getSignatureLineSpacing(getSignatureLinePosition(draft), draft.fontSize);
               const betweenNameAndNipPx = Math.max(1, Math.round(lineSpacing.nameToNipGapMm * 3.35));
               const aboveNameLinePx = Math.max(2, Math.round(lineSpacing.aboveNameLineGapMm * 3.78));
               const betweenNameAndNipZonePx = Math.max(6, Math.round(lineSpacing.betweenNameAndNipZoneMm * 3.78));
+              const lineTopPercent = Math.max(42, Math.min(68, (lineSpacing.nameToLineGapMm / lineSpacing.betweenNameAndNipZoneMm) * 100));
               const signerLineWidthPx = Math.max(22, Math.round(getSignatureLineWidth(draft, signer) * 3.78));
               const signerBlockWidthPx = Math.max(96, Math.round(getSignatureSignerBlockWidth(draft, signer) * 3.78));
 
@@ -585,7 +586,7 @@ function GenericSignaturePreview({
                           position: "absolute",
                           left: 0,
                           right: 0,
-                          top: "50%",
+                          top: `${lineTopPercent}%`,
                           borderBottom: `1px solid ${PREVIEW_COLORS.ink}`,
                           transform: "translateY(-50%)",
                         }}

@@ -2687,7 +2687,7 @@ export default function Attendance() {
     setCurrentMonth(nextMonth);
     setSelectedDate(nextMonth);
     setShowExportMonthDialog(false);
-    window.setTimeout(() => setAttendanceStudioOpen(true), 0);
+    window.setTimeout(() => setAttendanceStudioOpen(true), 180);
   }, [exportPickerYear]);
   const handleToggleLock = async () => await toggleLock(!isLocked);
   const hasData = selectedClassId && students.length > 0;
