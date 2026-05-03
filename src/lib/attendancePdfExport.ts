@@ -33,6 +33,15 @@ type AutoTableSpanCell = {
   };
 };
 
+export interface AttendancePdfRotateInlineAnnotationFit {
+  text: string;
+  fontPt: number;
+  textWidthMm: number;
+  lineBoxHeightMm: number;
+  availableLengthMm: number;
+  availableThicknessMm: number;
+}
+
 const COLORS = {
   header: [37, 99, 235] as [number, number, number],
   headerDark: [29, 78, 216] as [number, number, number],
@@ -57,6 +66,11 @@ const STATUS_COLORS: Record<string, { fill: [number, number, number]; text: [num
 // Shared shell metrics — imported so the PDF renderer and the live preview
 // planner (attendancePrintLayout.ts) always agree on every measurement.
 import { ATTENDANCE_SHELL_MM as SHELL_MM } from "@/lib/exportEngine/attendanceShellMetrics";
+
+const PDF_PT_TO_MM = 25.4 / 72;
+const ROTATE_90_LINE_BOX_FACTOR = 1.22;
+const ROTATE_90_LENGTH_SAFETY_MM = 2.4;
+const ROTATE_90_THICKNESS_SAFETY_MM = 1.2;
 
 function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: AttendancePrintLayoutPlan, _page: AttendancePrintPage) {
   const docWithGState = doc as JsPdfWithGState;
@@ -448,6 +462,48 @@ function drawInfoBlock(
   return y + blockHeight + infoBlockGapMm;
 }
 
+export function resolveAttendancePdfRotateInlineAnnotationFit(
+  doc: jsPDF,
+  text: string,
+  widthMm: number,
+  heightMm: number,
+): AttendancePdfRotateInlineAnnotationFit {
+  const previewPxToPt = (value: number) => value * 0.75;
+  const layout = resolveAttendanceInlineAnnotationLayout({
+    text,
+    labelStyle: "rotate-90",
+    widthMm,
+    heightMm,
+  });
+  const normalizedText = layout.text.trim() || "-";
+  const availableLengthMm = Math.max(2, heightMm - ROTATE_90_LENGTH_SAFETY_MM);
+  const availableThicknessMm = Math.max(1.2, widthMm - ROTATE_90_THICKNESS_SAFETY_MM);
+  let fontPt = previewPxToPt(layout.fontPx);
+  const minFontPt = 3.4;
+
+  doc.setFontSize(fontPt);
+  let textWidthMm = doc.getTextWidth(normalizedText);
+  let lineBoxHeightMm = fontPt * PDF_PT_TO_MM * ROTATE_90_LINE_BOX_FACTOR;
+  while (
+    fontPt > minFontPt
+    && (textWidthMm > availableLengthMm || lineBoxHeightMm > availableThicknessMm)
+  ) {
+    fontPt = Math.max(minFontPt, fontPt - 0.2);
+    doc.setFontSize(fontPt);
+    textWidthMm = doc.getTextWidth(normalizedText);
+    lineBoxHeightMm = fontPt * PDF_PT_TO_MM * ROTATE_90_LINE_BOX_FACTOR;
+  }
+
+  return {
+    text: normalizedText,
+    fontPt: Number(fontPt.toFixed(2)),
+    textWidthMm: Number(textWidthMm.toFixed(2)),
+    lineBoxHeightMm: Number(lineBoxHeightMm.toFixed(2)),
+    availableLengthMm: Number(availableLengthMm.toFixed(2)),
+    availableThicknessMm: Number(availableThicknessMm.toFixed(2)),
+  };
+}
+
 function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page: AttendancePrintPage) {
   if (plan.annotationDisplayMode !== "inline-vertical" || plan.inlineAnnotations.length === 0) return;
 
@@ -469,28 +525,6 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
   const previewPxToMm = (value: number) => value / PX_PER_MM;
   const previewPxToPt = (value: number) => value * 0.75;
 
-  const resolveRotateFontPt = (text: string, widthMm: number, heightMm: number) => {
-    const layout = resolveAttendanceInlineAnnotationLayout({
-      text,
-      labelStyle: "rotate-90",
-      widthMm,
-      heightMm,
-    });
-    let fontPt = previewPxToPt(layout.fontPx);
-    const boxWidthMm = previewPxToMm(layout.rotateBoxWidthPx ?? heightMm * PX_PER_MM);
-    const boxHeightMm = previewPxToMm(layout.rotateBoxHeightPx ?? widthMm * PX_PER_MM);
-    doc.setFontSize(fontPt);
-    while (fontPt > 4.8 && doc.getTextWidth(layout.text) > Math.max(8, boxWidthMm - 1.8)) {
-      fontPt -= 0.2;
-      doc.setFontSize(fontPt);
-    }
-    return {
-      text: layout.text,
-      fontPt: Number(fontPt.toFixed(2)),
-      boxWidthMm: Number(boxWidthMm.toFixed(2)),
-      boxHeightMm: Number(boxHeightMm.toFixed(2)),
-    };
-  };
   const resolveStackedLayout = (text: string, widthMm: number, heightMm: number) => {
     const layout = resolveAttendanceInlineAnnotationLayout({
       text,
@@ -578,12 +612,10 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
       return;
     }
 
-    const rotateLayout = resolveRotateFontPt(annotation.text.trim(), widthMm, bodyHeightMm);
-    const { text, fontPt } = rotateLayout;
+    const rotateLayout = resolveAttendancePdfRotateInlineAnnotationFit(doc, annotation.text, widthMm, bodyHeightMm);
+    const { text, fontPt, textWidthMm } = rotateLayout;
     doc.setFontSize(fontPt);
-    doc.text(text.trim(), centerX, centerY, {
-      align: "center",
-      baseline: "middle",
+    doc.text(text, centerX, centerY - (textWidthMm / 2), {
       angle: -90,
     });
   });

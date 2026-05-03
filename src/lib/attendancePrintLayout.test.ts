@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
+import jsPDF from "jspdf";
 import { resolveReportPaperSize } from "@/lib/reportExportLayoutV2";
 import { computeAttendanceColumnLayout } from "@/lib/attendanceExport";
-import { buildAttendancePdfDocument } from "@/lib/attendancePdfExport";
+import {
+  buildAttendancePdfDocument,
+  resolveAttendancePdfRotateInlineAnnotationFit,
+} from "@/lib/attendancePdfExport";
 import { clampSignaturePlacementMm, convertPreviewDeltaPxToMm, resolveManualSignaturePercents } from "@/lib/attendancePdfPreview";
 import {
   buildAttendancePrintLayoutPlan,
@@ -400,6 +404,25 @@ describe("attendance print layout", () => {
     expect(layout.rotateBoxHeightPx).toBeDefined();
     expect(layout.rotateBoxWidthPx).toBeGreaterThan(layout.rotateBoxHeightPx ?? 0);
     expect(layout.text).toBe("Hari Raya");
+  });
+
+  it("fits rotate-90 PDF labels inside short page body cells", () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    doc.setFont("helvetica", "bold");
+    const cases = [
+      { text: "Hari Buruh Internasional", widthMm: 5.6, heightMm: 39 },
+      { text: "Hari Raya Idul Adha 1447 Hijriyah", widthMm: 5.6, heightMm: 39 },
+      { text: "Kenaikan Isa Al Masih", widthMm: 5.6, heightMm: 39 },
+      { text: "Hari Minggu", widthMm: 5.6, heightMm: 39 },
+      { text: "Hari Raya Waisak 2570", widthMm: 11.2, heightMm: 39 },
+    ];
+
+    cases.forEach((item) => {
+      const fit = resolveAttendancePdfRotateInlineAnnotationFit(doc, item.text, item.widthMm, item.heightMm);
+      expect(fit.textWidthMm).toBeLessThanOrEqual(fit.availableLengthMm + 0.05);
+      expect(fit.lineBoxHeightMm).toBeLessThanOrEqual(fit.availableThicknessMm + 0.05);
+      expect(fit.fontPt).toBeGreaterThanOrEqual(3.4);
+    });
   });
 
   it("builds pdf documents with the same page count as the layout plan", () => {
