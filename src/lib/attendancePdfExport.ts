@@ -68,9 +68,9 @@ const STATUS_COLORS: Record<string, { fill: [number, number, number]; text: [num
 import { ATTENDANCE_SHELL_MM as SHELL_MM } from "@/lib/exportEngine/attendanceShellMetrics";
 
 const PDF_PT_TO_MM = 25.4 / 72;
-const ROTATE_90_LINE_BOX_FACTOR = 1.22;
+const ROTATE_90_LINE_BOX_FACTOR = 1.32;
 const ROTATE_90_LENGTH_SAFETY_MM = 2.4;
-const ROTATE_90_THICKNESS_SAFETY_MM = 1.2;
+const ROTATE_90_THICKNESS_SAFETY_MM = 1.8;
 
 function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: AttendancePrintLayoutPlan, _page: AttendancePrintPage) {
   const docWithGState = doc as JsPdfWithGState;
@@ -616,6 +616,7 @@ function drawInlineAnnotations(doc: jsPDF, plan: AttendancePrintLayoutPlan, page
     const { text, fontPt, textWidthMm } = rotateLayout;
     doc.setFontSize(fontPt);
     doc.text(text, centerX, centerY - (textWidthMm / 2), {
+      baseline: "middle",
       angle: -90,
     });
   });

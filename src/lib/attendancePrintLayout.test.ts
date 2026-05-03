@@ -410,17 +410,18 @@ describe("attendance print layout", () => {
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     doc.setFont("helvetica", "bold");
     const cases = [
-      { text: "Hari Buruh Internasional", widthMm: 5.6, heightMm: 39 },
-      { text: "Hari Raya Idul Adha 1447 Hijriyah", widthMm: 5.6, heightMm: 39 },
-      { text: "Kenaikan Isa Al Masih", widthMm: 5.6, heightMm: 39 },
-      { text: "Hari Minggu", widthMm: 5.6, heightMm: 39 },
-      { text: "Hari Raya Waisak 2570", widthMm: 11.2, heightMm: 39 },
+      { text: "Hari Buruh Internasional", widthMm: 4.91, heightMm: 39 },
+      { text: "Hari Raya Idul Adha 1447 Hijriyah", widthMm: 4.91, heightMm: 39 },
+      { text: "Kenaikan Isa Al Masih", widthMm: 4.91, heightMm: 39 },
+      { text: "Hari Minggu", widthMm: 4.91, heightMm: 39 },
+      { text: "Hari Raya Waisak 2570", widthMm: 4.91, heightMm: 39 },
     ];
 
     cases.forEach((item) => {
       const fit = resolveAttendancePdfRotateInlineAnnotationFit(doc, item.text, item.widthMm, item.heightMm);
       expect(fit.textWidthMm).toBeLessThanOrEqual(fit.availableLengthMm + 0.05);
       expect(fit.lineBoxHeightMm).toBeLessThanOrEqual(fit.availableThicknessMm + 0.05);
+      expect((item.widthMm - fit.lineBoxHeightMm) / 2).toBeGreaterThanOrEqual(0.85);
       expect(fit.fontPt).toBeGreaterThanOrEqual(3.4);
     });
   });
