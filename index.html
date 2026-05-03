@@ -1,99 +1,16 @@
 <!doctype html>
-<html lang="id" class="">
+<html lang="id">
   <head>
-    <script>
-      // Inline script to prevent theme flash - Default to LIGHT mode
-      (function() {
-        const savedTheme = localStorage.getItem("theme");
-        // Only apply dark mode if explicitly saved as dark
-        if (savedTheme === "dark") {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
-      })();
-    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    
-    <!-- SEO -->
     <title>SIPENA - Sistem Informasi Penilaian Akademik</title>
-    <meta name="description" content="SIPENA - Sistem Informasi Penilaian Akademik untuk Guru Indonesia. Kelola nilai tugas, STS, SAS, dan rapor dengan mudah.">
-    <meta name="keywords" content="SIPENA, sistem penilaian, nilai siswa, manajemen nilai, guru, sekolah, rapor, STS, SAS" />
-    <meta name="author" content="SIPENA" />
-    <meta name="robots" content="index, follow" />
-    
-    <!-- Open Graph -->
-    
-    
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/og-image.png">
-    <meta property="og:locale" content="id_ID" />
-    
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    
-    
-    <meta name="twitter:image" content="/og-image.png">
-    
-    <!-- PWA -->
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#2563eb" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="SIPENA" />
-    
-    <!-- Icons -->
-    <link rel="icon" type="image/png" href="/icon.png">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    
-    <!-- Preconnect -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  <meta property="og:title" content="SIPENA - Sistem Informasi Penilaian Akademik">
-  <meta name="twitter:title" content="SIPENA - Sistem Informasi Penilaian Akademik">
-  <meta property="og:description" content="SIPENA - Sistem Informasi Penilaian Akademik untuk Guru Indonesia. Kelola nilai tugas, STS, SAS, dan rapor dengan mudah.">
-  <meta name="twitter:description" content="SIPENA - Sistem Informasi Penilaian Akademik untuk Guru Indonesia. Kelola nilai tugas, STS, SAS, dan rapor dengan mudah.">
-</head>
-
+    <meta
+      name="description"
+      content="SIPENA - Sistem Informasi Penilaian Akademik untuk Guru Indonesia."
+    />
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Early PWA install prompt capture for faster banner display
-      window.deferredPrompt = null;
-      window.addEventListener('beforeinstallprompt', function(e) {
-        e.preventDefault();
-        window.deferredPrompt = e;
-      });
-      // NOTE: Service worker registration is now handled exclusively by
-      // vite-plugin-pwa (registerSW in src/main.tsx). The previous manual
-      // registration of /sw.js conflicted with the virtual SW and caused
-      // update notifications to be missed when caches were stale.
-    </script>
   </body>
 </html>
