@@ -2,7 +2,23 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./index.html", "./src/**/*.{ts,tsx}", "../../packages/ui/src/**/*.{ts,tsx}"],
+  content: {
+    // Keep paths relative to this config file so root/Lovable builds and
+    // app-local builds scan the same source files.
+    relative: true,
+    files: [
+      // When Tailwind is resolved from apps/frontend.
+      "./index.html",
+      "./src/**/*.{ts,tsx}",
+      "../../src/**/*.{ts,tsx}",
+      "../../packages/ui/src/**/*.{ts,tsx}",
+      // When Tailwind is resolved through the root compatibility config.
+      "./apps/frontend/index.html",
+      "./apps/frontend/src/**/*.{ts,tsx}",
+      "./src/**/*.{ts,tsx}",
+      "./packages/ui/src/**/*.{ts,tsx}",
+    ],
+  },
   prefix: "",
   theme: {
     container: {
