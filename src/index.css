@@ -203,19 +203,19 @@
 
 @layer components {
   .app-page {
-    @apply w-full max-w-none space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5 lg:px-8 lg:py-8;
+    @apply box-border w-full min-w-0 max-w-none space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5 lg:px-8 lg:py-8;
   }
 
   .app-page-narrow {
-    @apply max-w-5xl;
+    @apply max-w-none;
   }
 
   .app-page-readable {
-    @apply max-w-7xl;
+    @apply max-w-none;
   }
 
   .app-page-wide {
-    @apply max-w-[1600px];
+    @apply max-w-none;
   }
 
   /* Glassmorphism */
