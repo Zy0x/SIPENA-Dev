@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
@@ -29,21 +29,48 @@ function versionJsonPlugin(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => ({
-  root: __dirname,
-  envDir: resolve(__dirname, "../.."),
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  define: {
-    __APP_BUILD_VERSION__: JSON.stringify(buildVersion),
-  },
-  plugins: [
-    react(),
-    mode === "development" && componentTagger(),
-    versionJsonPlugin(),
-    VitePWA({
+const envDir = resolve(__dirname, "../..");
+
+function validateProductionEnv(mode: string) {
+  if (mode !== "production") return;
+
+  const env = loadEnv(mode, envDir, "");
+  const missing = ["VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY"].filter((key) => !env[key]?.trim());
+
+  if (missing.length > 0) {
+    throw new Error(
+      `[config] Production build requires ${missing.join(", ")}. Set these variables in Netlify environment settings.`,
+    );
+  }
+
+  try {
+    const url = new URL(env.VITE_SUPABASE_URL);
+    if (!url.hostname.endsWith(".supabase.co")) {
+      throw new Error("URL must point to a Supabase project host");
+    }
+  } catch {
+    throw new Error("[config] VITE_SUPABASE_URL must be a valid Supabase project URL.");
+  }
+}
+
+export default defineConfig(({ mode }) => {
+  validateProductionEnv(mode);
+
+  return {
+    root: __dirname,
+    envDir,
+    server: {
+      host: "::",
+      port: 8080,
+    },
+    define: {
+      __APP_BUILD_VERSION__: JSON.stringify(buildVersion),
+    },
+    plugins: [
+      react(),
+      mode === "development" && componentTagger(),
+      versionJsonPlugin(),
+      VitePWA({
       registerType: "prompt",
       injectRegister: false,
       includeAssets: ["icon.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png"],
@@ -87,20 +114,21 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-    }),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@app": path.resolve(__dirname, "./src/app"),
-      "@features": path.resolve(__dirname, "./src/features"),
-      "@core": path.resolve(__dirname, "./src/core"),
-      "@infra": path.resolve(__dirname, "./src/infrastructure"),
-      "@components": path.resolve(__dirname, "./src/components"),
-      "@config": path.resolve(__dirname, "./src/config"),
-      "@utils": path.resolve(__dirname, "./src/utils"),
-      "@shared": path.resolve(__dirname, "../../packages/shared/src"),
-      "@ui": path.resolve(__dirname, "../../packages/ui/src"),
+      }),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+        "@app": path.resolve(__dirname, "./src/app"),
+        "@features": path.resolve(__dirname, "./src/features"),
+        "@core": path.resolve(__dirname, "./src/core"),
+        "@infra": path.resolve(__dirname, "./src/infrastructure"),
+        "@components": path.resolve(__dirname, "./src/components"),
+        "@config": path.resolve(__dirname, "./src/config"),
+        "@utils": path.resolve(__dirname, "./src/utils"),
+        "@shared": path.resolve(__dirname, "../../packages/shared/src"),
+        "@ui": path.resolve(__dirname, "../../packages/ui/src"),
+      },
     },
-  },
-}));
+  };
+});
