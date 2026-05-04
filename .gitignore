@@ -7,6 +7,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Local environment files. Commit only sanitized examples.
+.env
+.env.*
+!.env.example
+!.env.development.example
+!.env.production.example
+
 node_modules
 dist
 dist-ssr
@@ -23,5 +30,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.codex
-.lovable
+
+# Local tool state and scratch files. Keep these off GitHub.
+.codex/
+.lovable/
+tes
+apps/frontend/public/fonts/tes

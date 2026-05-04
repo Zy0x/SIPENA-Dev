@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import gsap from "gsap";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useThemes } from "@/hooks/useThemes";
 
 interface MiniProfilePopupProps {
   isOpen: boolean;
@@ -45,16 +46,17 @@ export function MiniProfilePopup({
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { success, error: showError } = useEnhancedToast();
+  const { isDark: darkMode, toggleDarkMode: persistDarkMode } = useThemes();
   const popupRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const menuItemsRef = useRef<HTMLDivElement[]>([]);
   const avatarRef = useRef<HTMLDivElement>(null);
   
-  const [darkMode, setDarkMode] = useState(false);
   const [position, setPosition] = useState({ top: 0, right: 0 });
   const [isMobile, setIsMobile] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isThemeSaving, setIsThemeSaving] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   
   const prefersReducedMotion = useReducedMotion();
@@ -68,13 +70,6 @@ export function MiniProfilePopup({
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // Initialize dark mode from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setDarkMode(savedTheme === "dark" || (!savedTheme && prefersDark));
   }, []);
 
   // Calculate position relative to trigger (desktop only)
@@ -220,17 +215,19 @@ export function MiniProfilePopup({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, onClose]);
 
-  const toggleDarkMode = useCallback(() => {
-    const newValue = !darkMode;
-    setDarkMode(newValue);
-    if (newValue) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
+  const toggleDarkMode = useCallback(async () => {
+    if (isThemeSaving) return;
+
+    setIsThemeSaving(true);
+    try {
+      await persistDarkMode();
+    } catch (error) {
+      console.error("Theme preference save error:", error);
+      showError("Gagal menyimpan tema", "Mode gelap diterapkan lokal, tetapi gagal disimpan ke database.");
+    } finally {
+      setIsThemeSaving(false);
     }
-  }, [darkMode]);
+  }, [isThemeSaving, persistDarkMode, showError]);
 
   const handleSignOut = useCallback(async () => {
     if (isLoggingOut) return;
@@ -373,16 +370,10 @@ export function MiniProfilePopup({
           </div>
           <Switch
             checked={darkMode}
+            disabled={isThemeSaving}
+            onClick={(e) => e.stopPropagation()}
             onCheckedChange={(checked) => {
-              // Direct handler for Switch component
-              setDarkMode(checked);
-              if (checked) {
-                document.documentElement.classList.add("dark");
-                localStorage.setItem("theme", "dark");
-              } else {
-                document.documentElement.classList.remove("dark");
-                localStorage.setItem("theme", "light");
-              }
+              if (checked !== darkMode) void toggleDarkMode();
             }}
           />
         </div>
