@@ -252,7 +252,10 @@ const Auth = () => {
         return true;
       }
       return false;
-    } catch { return false; }
+    } catch (error) {
+      console.error("[Auth] Admin login request failed:", error);
+      throw error;
+    }
   };
 
   // Field-level validation state
@@ -343,7 +346,13 @@ const Auth = () => {
         message: "Minimal 6 karakter dengan kombinasi huruf dan angka.",
       };
     }
-    if (msg.includes("network") || msg.includes("fetch")) {
+    if (
+      msg.includes("network") ||
+      msg.includes("fetch") ||
+      msg.includes("failed to fetch") ||
+      msg.includes("load failed") ||
+      msg.includes("authretryablefetcherror")
+    ) {
       return {
         title: "Koneksi terputus",
         message: "Periksa internet Anda dan coba lagi.",
@@ -363,11 +372,15 @@ const Auth = () => {
       // reCAPTCHA v3 — soft check, tidak hard-block user legitimate
       // Proteksi utama ada di: Supabase rate limit + RLS + loginAttempts tracker
       if (recaptchaConfigured) {
-        const captchaOk = await executeAndVerify("login");
-        if (!captchaOk) {
-          // Log untuk monitoring, tapi tetap izinkan login lanjut
-          // Hard-block hanya akan merugikan user legitimate dengan score rendah
-          console.warn("[reCAPTCHA] Score rendah terdeteksi saat login, melanjutkan dengan monitoring");
+        try {
+          const captchaOk = await executeAndVerify("login");
+          if (!captchaOk) {
+            // Log untuk monitoring, tapi tetap izinkan login lanjut
+            // Hard-block hanya akan merugikan user legitimate dengan score rendah
+            console.warn("[reCAPTCHA] Score rendah terdeteksi saat login, melanjutkan dengan monitoring");
+          }
+        } catch (captchaError) {
+          console.warn("[reCAPTCHA] Login check gagal, melanjutkan ke Supabase auth:", captchaError);
         }
       }
 
@@ -388,7 +401,12 @@ const Auth = () => {
         showSuccess("Berhasil!", "Selamat datang kembali"); 
         setTimeout(() => navigate("/dashboard"), 400); 
       }
-    } catch { animateFeedback(false); showError("📡 Koneksi Gagal", "Tidak dapat terhubung ke server. Periksa koneksi internet Anda."); }
+    } catch (error) {
+      console.error("[Auth] Login failed unexpectedly:", error);
+      animateFeedback(false);
+      const err = getAuthErrorMessage(error instanceof Error ? error.message : "", "login", loginForm.email);
+      showError(err.title, err.message);
+    }
     finally { setIsLoading(false); }
   };
 
@@ -416,9 +434,13 @@ const Auth = () => {
     try {
       // reCAPTCHA v3 — soft check untuk registrasi
       if (recaptchaConfigured) {
-        const captchaOk = await executeAndVerify("register");
-        if (!captchaOk) {
-          console.warn("[reCAPTCHA] Score rendah terdeteksi saat register, melanjutkan dengan monitoring");
+        try {
+          const captchaOk = await executeAndVerify("register");
+          if (!captchaOk) {
+            console.warn("[reCAPTCHA] Score rendah terdeteksi saat register, melanjutkan dengan monitoring");
+          }
+        } catch (captchaError) {
+          console.warn("[reCAPTCHA] Register check gagal, melanjutkan ke Supabase auth:", captchaError);
         }
       }
 
@@ -433,7 +455,12 @@ const Auth = () => {
         recaptchaV2.reset();
         setTimeout(() => { setActiveTab("login"); setLoginForm({ email: registerForm.email, password: "" }); }, 500);
       }
-    } catch { animateFeedback(false); showError("Koneksi Gagal", "Tidak dapat terhubung ke server. Periksa koneksi internet Anda."); }
+    } catch (error) {
+      console.error("[Auth] Register failed unexpectedly:", error);
+      animateFeedback(false);
+      const err = getAuthErrorMessage(error instanceof Error ? error.message : "", "register", registerForm.email);
+      showError(err.title, err.message);
+    }
     finally { setIsLoading(false); }
   };
 
