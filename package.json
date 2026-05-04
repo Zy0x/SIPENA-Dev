@@ -18,6 +18,7 @@
     "test:e2e": "echo \"E2E tests are not configured yet. See docs/testing.md.\"",
     "format": "echo \"Formatter is not configured yet. See docs/conventions.md.\"",
     "clean": "node scripts/clean.mjs",
+    "erapor:probe": "node scripts/erapor-automation.mjs --phase all",
     "preview": "vite preview --config apps/frontend/vite.config.ts"
   },
   "dependencies": {
