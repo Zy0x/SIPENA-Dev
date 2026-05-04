@@ -1,0 +1,2 @@
+[functions.predict-grades]
+verify_jwt = false

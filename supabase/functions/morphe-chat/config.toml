@@ -1,0 +1,2 @@
+[functions.morphe-chat]
+verify_jwt = false

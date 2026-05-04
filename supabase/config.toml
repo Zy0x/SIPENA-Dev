@@ -1,0 +1,34 @@
+project_id = "jdncrsmjvbweyxcbtnou"
+
+[functions.delete-semester-data]
+verify_jwt = false
+
+[functions.verify-recaptcha]
+verify_jwt = false
+
+[functions.verify-recaptcha-v2]
+verify_jwt = false
+
+[functions.morphe-chat]
+verify_jwt = false
+
+[functions.predict-grades]
+verify_jwt = false
+
+[functions.admin-auth]
+verify_jwt = false
+
+[functions.admin-database]
+verify_jwt = false
+
+[functions.admin-account-stats]
+verify_jwt = false
+
+[functions.delete-auth-user]
+verify_jwt = false
+
+[functions.process-account-deletion]
+verify_jwt = false
+
+[functions.send-otp-email]
+verify_jwt = false
