@@ -11,17 +11,23 @@ import type { Database } from './supabase.types';
 
 const EXTERNAL_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? "";
 const EXTERNAL_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
-const parsedProjectId = (() => {
+
+const parsedSupabaseUrl = (() => {
   try {
-    return new URL(EXTERNAL_SUPABASE_URL).hostname.split(".")[0] || "";
+    return EXTERNAL_SUPABASE_URL ? new URL(EXTERNAL_SUPABASE_URL) : null;
   } catch {
-    return "";
+    return null;
   }
 })();
+const hasSupabaseConfig = Boolean(parsedSupabaseUrl && EXTERNAL_SUPABASE_ANON_KEY);
+const parsedProjectId = parsedSupabaseUrl?.hostname.split(".")[0] || "";
 
-if (!EXTERNAL_SUPABASE_URL || !EXTERNAL_SUPABASE_ANON_KEY) {
+const CLIENT_SUPABASE_URL = parsedSupabaseUrl?.toString() ?? "https://missing-supabase-config.supabase.co";
+const CLIENT_SUPABASE_ANON_KEY = EXTERNAL_SUPABASE_ANON_KEY || "missing-supabase-publishable-key";
+
+if (!hasSupabaseConfig) {
   console.warn(
-    "[config] Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY. Supabase provider calls will fail until env is configured.",
+    "[config] Missing or invalid VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY. The app shell will render, but Supabase provider calls will fail until env is configured.",
   );
 }
 
@@ -30,8 +36,8 @@ if (!EXTERNAL_SUPABASE_URL || !EXTERNAL_SUPABASE_ANON_KEY) {
  * Gunakan client ini untuk semua operasi database
  */
 export const supabaseExternal = createClient<Database>(
-  EXTERNAL_SUPABASE_URL, 
-  EXTERNAL_SUPABASE_ANON_KEY, 
+  CLIENT_SUPABASE_URL,
+  CLIENT_SUPABASE_ANON_KEY,
   {
     auth: {
       storage: localStorage,
@@ -47,6 +53,7 @@ export const SUPABASE_EXTERNAL_URL = EXTERNAL_SUPABASE_URL;
 export const EDGE_FUNCTIONS_URL = EXTERNAL_SUPABASE_URL ? `${EXTERNAL_SUPABASE_URL}/functions/v1` : "";
 export const SUPABASE_EXTERNAL_PROJECT_ID = parsedProjectId;
 export const SUPABASE_EXTERNAL_ANON_KEY = EXTERNAL_SUPABASE_ANON_KEY;
+export const HAS_SUPABASE_CONFIG = hasSupabaseConfig;
 
 // ============================================================================
 // ADMIN AUTHENTICATION FUNCTIONS
