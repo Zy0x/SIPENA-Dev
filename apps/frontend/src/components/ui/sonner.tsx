@@ -1,14 +1,33 @@
-import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import { Toaster as Sonner, toast } from "sonner";
+import { readStoredThemePreference, THEME_PREFERENCE_EVENT } from "@/hooks/useThemes";
+import type { ThemePreference } from "@/hooks/useThemes";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+  const [theme, setTheme] = useState<ToasterProps["theme"]>(() => (
+    readStoredThemePreference().mode === "dark" ? "dark" : "light"
+  ));
+
+  useEffect(() => {
+    const syncTheme = () => {
+      setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
+    };
+
+    const handleThemePreference = (event: Event) => {
+      const preference = (event as CustomEvent<ThemePreference>).detail;
+      setTheme(preference?.mode === "dark" ? "dark" : "light");
+    };
+
+    syncTheme();
+    window.addEventListener(THEME_PREFERENCE_EVENT, handleThemePreference);
+    return () => window.removeEventListener(THEME_PREFERENCE_EVENT, handleThemePreference);
+  }, []);
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={theme}
       className="toaster group"
       toastOptions={{
         classNames: {

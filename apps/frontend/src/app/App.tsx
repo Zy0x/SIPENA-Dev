@@ -16,6 +16,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ExternalAuthOnboarding } from "@/components/onboarding/ExternalAuthOnboarding";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
+import { ThemePreferenceSync } from "@/components/theme/ThemePreferenceSync";
 
 // Pages
 import Index from "../pages/Index";
@@ -70,6 +71,7 @@ const App = () => {
         <ToastProvider>
           <AcademicYearProvider>
             <TooltipProvider delayDuration={0}>
+              <ThemePreferenceSync />
               <Toaster />
               <Sonner />
               <PWAManager />

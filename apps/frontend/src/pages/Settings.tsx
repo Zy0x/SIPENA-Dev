@@ -77,21 +77,42 @@ export default function Settings() {
     setTimeout(() => setSaveStatus("idle"), 2000);
   }, []);
 
-  const handleToggleDarkMode = useCallback(() => {
-    toggleThemeDarkMode();
-    showAutoSaveFeedback();
-  }, [toggleThemeDarkMode, showAutoSaveFeedback]);
+  const handleToggleDarkMode = useCallback(async () => {
+    setSaveStatus("saving");
+    try {
+      await toggleThemeDarkMode();
+      showAutoSaveFeedback();
+    } catch (err) {
+      setSaveStatus("idle");
+      console.error("Failed to save theme mode:", err);
+      showError("Gagal menyimpan tema", "Mode gelap sudah diterapkan lokal, tetapi gagal disimpan ke database.");
+    }
+  }, [toggleThemeDarkMode, showAutoSaveFeedback, showError]);
   
-  const handleSelectTheme = useCallback((themeId: string) => {
-    selectTheme(themeId);
-    showAutoSaveFeedback();
-  }, [selectTheme, showAutoSaveFeedback]);
+  const handleSelectTheme = useCallback(async (themeId: string) => {
+    setSaveStatus("saving");
+    try {
+      await selectTheme(themeId);
+      showAutoSaveFeedback();
+    } catch (err) {
+      setSaveStatus("idle");
+      console.error("Failed to save theme palette:", err);
+      showError("Gagal menyimpan tema", "Palet warna sudah diterapkan lokal, tetapi gagal disimpan ke database.");
+    }
+  }, [selectTheme, showAutoSaveFeedback, showError]);
   
-  const handleResetTheme = useCallback(() => {
-    resetToDefault();
-    showAutoSaveFeedback();
-    success("Tema Direset", "Tema dikembalikan ke default SIPENA");
-  }, [resetToDefault, showAutoSaveFeedback, success]);
+  const handleResetTheme = useCallback(async () => {
+    setSaveStatus("saving");
+    try {
+      await resetToDefault();
+      showAutoSaveFeedback();
+      success("Tema Direset", "Tema dikembalikan ke default SIPENA");
+    } catch (err) {
+      setSaveStatus("idle");
+      console.error("Failed to reset theme:", err);
+      showError("Gagal menyimpan tema", "Tema sudah direset lokal, tetapi gagal disimpan ke database.");
+    }
+  }, [resetToDefault, showAutoSaveFeedback, success, showError]);
 
   const toggleNotifications = useCallback((value: boolean) => {
     setNotifications(value);

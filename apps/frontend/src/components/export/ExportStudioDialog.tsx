@@ -257,11 +257,11 @@ function getRecommendedPaperCopy(formatId: string) {
 }
 
 function getFormatToneClasses(id: string) {
-  if (id === "pdf") return "border-red-200 bg-red-50/70 text-red-700";
-  if (id === "excel") return "border-emerald-200 bg-emerald-50/70 text-emerald-700";
-  if (id === "csv") return "border-slate-200 bg-slate-50/70 text-slate-700";
+  if (id === "pdf") return "border-red-200 bg-red-50/70 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200";
+  if (id === "excel") return "border-emerald-200 bg-emerald-50/70 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200";
+  if (id === "csv") return "border-slate-200 bg-slate-50/70 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200";
   if (id === "png-4k") return "border-primary/30 bg-primary/10 text-primary";
-  return "border-sky-200 bg-sky-50/70 text-sky-700";
+  return "border-sky-200 bg-sky-50/70 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200";
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -390,21 +390,21 @@ function StudioSubsection({
   children: ReactNode;
 }) {
   const toneClasses = {
-    slate: "border-slate-200/80 bg-slate-50/70",
-    sky: "border-sky-200/80 bg-sky-50/70",
-    emerald: "border-emerald-200/80 bg-emerald-50/70",
-    amber: "border-amber-200/80 bg-amber-50/70",
-    rose: "border-rose-200/80 bg-rose-50/70",
-    indigo: "border-indigo-200/80 bg-indigo-50/70",
+    slate: "border-slate-200/80 bg-slate-50/70 dark:border-slate-700/80 dark:bg-slate-900/70",
+    sky: "border-sky-200/80 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/30",
+    emerald: "border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30",
+    amber: "border-amber-200/80 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30",
+    rose: "border-rose-200/80 bg-rose-50/70 dark:border-rose-900/60 dark:bg-rose-950/30",
+    indigo: "border-indigo-200/80 bg-indigo-50/70 dark:border-indigo-900/60 dark:bg-indigo-950/30",
   } as const;
 
   const badgeClasses = {
-    slate: "border-slate-200/80 bg-white/90 text-slate-700",
-    sky: "border-sky-200/80 bg-white/90 text-sky-700",
-    emerald: "border-emerald-200/80 bg-white/90 text-emerald-700",
-    amber: "border-amber-200/80 bg-white/90 text-amber-700",
-    rose: "border-rose-200/80 bg-white/90 text-rose-700",
-    indigo: "border-indigo-200/80 bg-white/90 text-indigo-700",
+    slate: "border-slate-200/80 bg-white/90 text-slate-700 dark:border-slate-700/80 dark:bg-slate-950/80 dark:text-slate-200",
+    sky: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
+    emerald: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
+    amber: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
+    rose: "border-rose-200/80 bg-white/90 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/70 dark:text-rose-200",
+    indigo: "border-indigo-200/80 bg-white/90 text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200",
   } as const;
 
   return (
@@ -713,7 +713,7 @@ function SignerPanel({
           />
         </div>
 
-        <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-white/75 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-white/75 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/60 dark:bg-amber-950/25">
           <div>
             <Label className="text-[11px]">Tanggal custom</Label>
             <p className="text-[9px] text-muted-foreground">Aktifkan bila tanggal dokumen tidak ingin mengikuti hari ini.</p>
@@ -759,7 +759,7 @@ function SignerPanel({
       >
         <div className="space-y-2">
           {draft.signers.map((signer, index) => (
-            <div key={signer.id} className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-2 shadow-sm">
+            <div key={signer.id} className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-2 shadow-sm dark:border-indigo-900/60 dark:bg-indigo-950/25">
               <div className="flex items-center justify-between">
                 <p className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
                   <GripVertical className="h-3 w-3" />
@@ -1045,7 +1045,7 @@ function ExperimentalTypographyWindow({
           </Button>
         </div>
 
-        <div className={cn("flex flex-wrap items-center gap-2 border-b border-border px-3 py-2", isMobile && "bg-slate-50/90")}>
+        <div className={cn("flex flex-wrap items-center gap-2 border-b border-border px-3 py-2", isMobile && "bg-slate-50/90 dark:bg-slate-950/70")}>
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[11px] sm:text-xs" onClick={applySuggestions}>
               Saran Cerdas
@@ -1890,7 +1890,7 @@ function PositionPanel({
         tone="amber"
         badge={draft.showSignatureLine ? "Garis aktif" : "Tanpa garis"}
       >
-        <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 space-y-3">
+        <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 space-y-3 dark:border-amber-900/60 dark:bg-amber-950/25">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <Label className="text-[11px]">Ukuran font ({draft.fontSize.toFixed(2)}pt)</Label>
@@ -1993,7 +1993,7 @@ function PositionPanel({
             .replace("follow-content", "Ikut konten")
         }
       >
-        <div className="rounded-xl border border-sky-200/70 bg-white/80 p-3 space-y-3">
+        <div className="rounded-xl border border-sky-200/70 bg-white/80 p-3 space-y-3 dark:border-sky-900/60 dark:bg-sky-950/25">
           <div className="space-y-1.5">
             <Label className="text-[11px] font-semibold">Posisi awal</Label>
             <div
@@ -2075,7 +2075,7 @@ function PositionPanel({
           </Button>
         )}
       >
-        <div className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-3">
+        <div className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-3 dark:border-indigo-900/60 dark:bg-indigo-950/25">
           <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/60 p-3 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -2099,7 +2099,7 @@ function PositionPanel({
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-indigo-200/70 bg-white/90 p-3 space-y-3">
+          <div className="rounded-xl border border-indigo-200/70 bg-white/90 p-3 space-y-3 dark:border-indigo-900/60 dark:bg-indigo-950/25">
             <div className="space-y-1.5">
               <Label className="text-[11px]">Offset horizontal ({draft.signatureOffsetX}mm)</Label>
               <SliderWithButtons value={draft.signatureOffsetX} min={-120} max={120} step={1} onValueChange={(value) => applyPrecisionOverride((prev) => ({ ...prev, signatureOffsetX: value }))} />
@@ -2115,7 +2115,7 @@ function PositionPanel({
 
           <Separator />
 
-          <div className="rounded-xl border border-dashed border-indigo-200/80 bg-white/70 p-3">
+          <div className="rounded-xl border border-dashed border-indigo-200/80 bg-white/70 p-3 dark:border-indigo-900/60 dark:bg-indigo-950/20">
             <Label className="text-[11px] font-semibold">Kontrol presisi</Label>
             <div className="mt-3 flex flex-col items-center gap-1">
               <RepeatButton onTrigger={() => nudgePosition("y", -1)} aria-label="Geser ke atas">
@@ -2181,7 +2181,7 @@ function ColumnPanel({
           </Button>
         )}
       >
-        <div className="rounded-xl border border-emerald-200/70 bg-white/80 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
+        <div className="rounded-xl border border-emerald-200/70 bg-white/80 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground dark:border-emerald-900/60 dark:bg-emerald-950/25">
           Grup parent dipakai untuk memilih cepat. Buka detail bila ingin mengatur kolom anak satu per satu.
         </div>
       </StudioSubsection>
@@ -2236,7 +2236,7 @@ function ColumnPanel({
             </div>
 
             {hasChildren ? (
-              <div className="ml-6 rounded-xl border border-emerald-200/70 bg-white/75 p-3 space-y-3">
+              <div className="ml-6 rounded-xl border border-emerald-200/70 bg-white/75 p-3 space-y-3 dark:border-emerald-900/60 dark:bg-emerald-950/25">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-[10px] font-medium text-foreground">{detailTitle}</p>
@@ -2534,7 +2534,7 @@ function StylePanel({
               tone="sky"
               badge={autoFitOnePage ? "1 halaman" : "Manual"}
             >
-              <div className="flex flex-col gap-2 rounded-xl border border-sky-200/70 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2 rounded-xl border border-sky-200/70 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-sky-900/60 dark:bg-sky-950/25">
                 <div>
                   <Label className="text-[11px]">Optimalkan 1 halaman</Label>
                   <p className="text-[9px] text-muted-foreground">Sistem akan berusaha menjaga tabel tetap padat tanpa mengorbankan keterbacaan terlalu jauh.</p>
@@ -2555,7 +2555,7 @@ function StylePanel({
               { key: "tableHeaderFontSize", label: "Header tabel" },
               { key: "tableBodyFontSize", label: "Isi tabel" },
             ] as const).map((item) => (
-              <div key={item.key} className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-1.5">
+              <div key={item.key} className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-1.5 dark:border-indigo-900/60 dark:bg-indigo-950/25">
                 <div className="flex items-center justify-between gap-2">
                   <Label className="text-[11px]">{item.label} ({documentStyle[item.key].toFixed(2)}pt)</Label>
                   <Input
@@ -2604,7 +2604,7 @@ function StylePanel({
                 </Button>
               )}
             >
-              <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-white/80 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/60 dark:bg-amber-950/25">
                 <div className="min-w-0">
                   <Label className="text-[11px]">Aktifkan mode eksperimen</Label>
                   <p className="text-[9px] text-muted-foreground">
@@ -2620,12 +2620,12 @@ function StylePanel({
                 className="grid gap-2"
                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 12rem), 1fr))" }}
               >
-                <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 text-[10px] text-muted-foreground">
+                <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 text-[10px] text-muted-foreground dark:border-amber-900/60 dark:bg-amber-950/25">
                   {documentStyle.experimentalColumnTypographyEnabled
                     ? `Mode aktif untuk ${Object.keys(documentStyle.columnFontOverrides || {}).length || columnTypographyOptions.length} kolom.`
                     : "Mode belum aktif. Nyalakan mode lalu buka studio eksperimen untuk mengatur kolom satu per satu."}
                 </div>
-                <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 text-[10px] text-muted-foreground">
+                <div className="rounded-xl border border-amber-200/70 bg-white/80 p-3 text-[10px] text-muted-foreground dark:border-amber-900/60 dark:bg-amber-950/25">
                   Gunakan studio eksperimen untuk menyesuaikan kolom yang padat tanpa mengorbankan keterbacaan tabel utama.
                 </div>
               </div>
@@ -3300,17 +3300,17 @@ export function ExportStudioDialog({
     },
     {
       text: currentPaperLabel,
-      tone: "border-slate-200 bg-slate-50/80 text-slate-700",
+      tone: "border-slate-200 bg-slate-50/80 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200",
     },
     {
       text: canConfigureColumns ? `${activeColumnCount} kolom` : "Kolom tetap",
-      tone: "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+      tone: "border-emerald-200 bg-emerald-50/80 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200",
     },
     {
       text: experimentalModeActive ? "Eksperimen aktif" : "Eksperimen standar",
       tone: experimentalModeActive
-        ? "border-amber-200 bg-amber-50/80 text-amber-700"
-        : "border-slate-200 bg-slate-50/80 text-slate-700",
+        ? "border-amber-200 bg-amber-50/80 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
+        : "border-slate-200 bg-slate-50/80 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200",
     },
   ] as const;
   const renderStudioUtilityActions = (compact = false) => (

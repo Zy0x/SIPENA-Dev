@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from "@/contexts/AuthContext";
+import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 
 export interface ThemeColors {
   name: string;
@@ -154,17 +156,38 @@ export const themes: Record<string, ThemeColors> = {
   }
 };
 
+export type ThemeMode = "light" | "dark";
+
+export interface ThemePreference {
+  mode: ThemeMode;
+  palette: string;
+}
+
+interface UserThemePreferenceRow {
+  id?: string;
+  theme_mode?: string | null;
+  theme_palette?: string | null;
+}
+
+export const DEFAULT_THEME_PREFERENCE: ThemePreference = {
+  mode: "light",
+  palette: "default",
+};
+
+export const THEME_PREFERENCE_EVENT = "sipena:theme-preference";
+
 // Convert hex to HSL string for CSS variables
 function hexToHsl(hex: string): string {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return "0 0% 0%";
   
-  let r = parseInt(result[1], 16) / 255;
-  let g = parseInt(result[2], 16) / 255;
-  let b = parseInt(result[3], 16) / 255;
+  const r = parseInt(result[1], 16) / 255;
+  const g = parseInt(result[2], 16) / 255;
+  const b = parseInt(result[3], 16) / 255;
   
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0, l = (max + min) / 2;
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
 
   if (max !== min) {
     const d = max - min;
@@ -179,135 +202,212 @@ function hexToHsl(hex: string): string {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+function isBrowser() {
+  return typeof window !== "undefined" && typeof document !== "undefined";
+}
+
+export function normalizeThemePreference(preference?: Partial<ThemePreference> | null): ThemePreference {
+  const palette = preference?.palette && themes[preference.palette]
+    ? preference.palette
+    : DEFAULT_THEME_PREFERENCE.palette;
+  const mode: ThemeMode = preference?.mode === "dark" ? "dark" : "light";
+
+  return { mode, palette };
+}
+
+export function themePreferenceFromRow(row?: UserThemePreferenceRow | null): ThemePreference {
+  return normalizeThemePreference({
+    mode: row?.theme_mode === "dark" ? "dark" : "light",
+    palette: row?.theme_palette || DEFAULT_THEME_PREFERENCE.palette,
+  });
+}
+
+export function readStoredThemePreference(): ThemePreference {
+  if (!isBrowser()) return DEFAULT_THEME_PREFERENCE;
+
+  return normalizeThemePreference({
+    mode: localStorage.getItem("theme") === "dark" ? "dark" : "light",
+    palette: localStorage.getItem("colorTheme") || DEFAULT_THEME_PREFERENCE.palette,
+  });
+}
+
+function writeStoredThemePreference(preference: ThemePreference) {
+  if (!isBrowser()) return;
+
+  localStorage.setItem("colorTheme", preference.palette);
+  localStorage.setItem("theme", preference.mode);
+}
+
+function emitThemePreference(preference: ThemePreference) {
+  if (!isBrowser()) return;
+
+  window.dispatchEvent(
+    new CustomEvent<ThemePreference>(THEME_PREFERENCE_EVENT, {
+      detail: preference,
+    }),
+  );
+}
+
+export function applyThemePreference(
+  preference?: Partial<ThemePreference> | null,
+  options: { persist?: boolean; emit?: boolean } = {},
+): ThemePreference {
+  const { persist = true, emit = true } = options;
+  const appliedPreference = normalizeThemePreference(preference);
+
+  if (!isBrowser()) return appliedPreference;
+
+  const theme = themes[appliedPreference.palette] || themes.default;
+  const dark = appliedPreference.mode === "dark";
+  const mode = dark ? theme.dark : theme.light;
+  const root = document.documentElement;
+
+  // Apply custom CSS variables
+  root.style.setProperty('--custom-bg', hexToHsl(mode.bg));
+  root.style.setProperty('--custom-surface', hexToHsl(mode.surface));
+  root.style.setProperty('--custom-text', hexToHsl(mode.text));
+  root.style.setProperty('--custom-text-sec', hexToHsl(mode.sec));
+  root.style.setProperty('--custom-accent', hexToHsl(mode.accent));
+  root.style.setProperty('--custom-accent-hover', hexToHsl(mode.hover));
+  root.style.setProperty('--custom-header-start', hexToHsl(mode.h1));
+  root.style.setProperty('--custom-header-end', hexToHsl(mode.h2));
+
+  // For non-default themes, apply to main CSS variables
+  if (appliedPreference.palette !== "default") {
+    root.style.setProperty('--background', hexToHsl(mode.bg));
+    root.style.setProperty('--card', hexToHsl(mode.surface));
+    root.style.setProperty('--popover', hexToHsl(mode.surface));
+    root.style.setProperty('--foreground', hexToHsl(mode.text));
+    root.style.setProperty('--card-foreground', hexToHsl(mode.text));
+    root.style.setProperty('--popover-foreground', hexToHsl(mode.text));
+    root.style.setProperty('--muted-foreground', hexToHsl(mode.sec));
+    root.style.setProperty('--primary', hexToHsl(mode.accent));
+    root.style.setProperty('--accent', hexToHsl(mode.accent));
+  } else {
+    // Reset to default by removing inline styles
+    root.style.removeProperty('--background');
+    root.style.removeProperty('--card');
+    root.style.removeProperty('--popover');
+    root.style.removeProperty('--foreground');
+    root.style.removeProperty('--card-foreground');
+    root.style.removeProperty('--popover-foreground');
+    root.style.removeProperty('--muted-foreground');
+    root.style.removeProperty('--primary');
+    root.style.removeProperty('--accent');
+  }
+
+  root.classList.toggle("dark", dark);
+
+  if (persist) writeStoredThemePreference(appliedPreference);
+  if (emit) emitThemePreference(appliedPreference);
+
+  return appliedPreference;
+}
+
 export function useThemes() {
+  const { user } = useAuth();
   const [currentTheme, setCurrentTheme] = useState<string>("default");
   const [isDark, setIsDark] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize from localStorage - runs once on mount
+  const syncStateFromPreference = useCallback((preference: ThemePreference) => {
+    setCurrentTheme(preference.palette);
+    setIsDark(preference.mode === "dark");
+  }, []);
+
+  const applyAndSync = useCallback((preference: Partial<ThemePreference>) => {
+    const appliedPreference = applyThemePreference(preference);
+    syncStateFromPreference(appliedPreference);
+    return appliedPreference;
+  }, [syncStateFromPreference]);
+
+  const saveUserThemePreference = useCallback(async (preference: ThemePreference) => {
+    if (!user?.id) return;
+
+    const { error } = await supabase
+      .from("user_preferences")
+      .upsert({
+        user_id: user.id,
+        theme_mode: preference.mode,
+        theme_palette: preference.palette,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
+
+    if (error) throw error;
+  }, [user?.id]);
+
+  // Initialize from localStorage immediately, then let the database sync override it.
   useEffect(() => {
-    const savedTheme = localStorage.getItem("colorTheme") || "default";
-    const savedMode = localStorage.getItem("theme");
-    
-    // Default to light mode unless explicitly set to dark
-    const shouldBeDark = savedMode === "dark";
-    
-    setCurrentTheme(savedTheme);
-    setIsDark(shouldBeDark);
+    const storedPreference = applyThemePreference(readStoredThemePreference());
+    syncStateFromPreference(storedPreference);
     setIsInitialized(true);
-    
-    // Immediately apply theme on mount to prevent flash
-    const theme = themes[savedTheme];
-    if (theme) {
-      const mode = shouldBeDark ? theme.dark : theme.light;
-      const root = document.documentElement;
+  }, [syncStateFromPreference]);
 
-      // Apply custom CSS variables
-      root.style.setProperty('--custom-bg', hexToHsl(mode.bg));
-      root.style.setProperty('--custom-surface', hexToHsl(mode.surface));
-      root.style.setProperty('--custom-text', hexToHsl(mode.text));
-      root.style.setProperty('--custom-text-sec', hexToHsl(mode.sec));
-      root.style.setProperty('--custom-accent', hexToHsl(mode.accent));
-      root.style.setProperty('--custom-accent-hover', hexToHsl(mode.hover));
-      root.style.setProperty('--custom-header-start', hexToHsl(mode.h1));
-      root.style.setProperty('--custom-header-end', hexToHsl(mode.h2));
-
-      if (savedTheme !== "default") {
-        root.style.setProperty('--background', hexToHsl(mode.bg));
-        root.style.setProperty('--card', hexToHsl(mode.surface));
-        root.style.setProperty('--popover', hexToHsl(mode.surface));
-        root.style.setProperty('--foreground', hexToHsl(mode.text));
-        root.style.setProperty('--card-foreground', hexToHsl(mode.text));
-        root.style.setProperty('--popover-foreground', hexToHsl(mode.text));
-        root.style.setProperty('--muted-foreground', hexToHsl(mode.sec));
-        root.style.setProperty('--primary', hexToHsl(mode.accent));
-        root.style.setProperty('--accent', hexToHsl(mode.accent));
-      }
-
-      // Toggle dark class
-      if (shouldBeDark) {
-        root.classList.add("dark");
-      } else {
-        root.classList.remove("dark");
-      }
-    }
-  }, []);
-
-  // Apply theme to document
-  const applyTheme = useCallback((themeId: string, dark: boolean) => {
-    const theme = themes[themeId];
-    if (!theme) return;
-
-    const mode = dark ? theme.dark : theme.light;
-    const root = document.documentElement;
-
-    // Apply custom CSS variables
-    root.style.setProperty('--custom-bg', hexToHsl(mode.bg));
-    root.style.setProperty('--custom-surface', hexToHsl(mode.surface));
-    root.style.setProperty('--custom-text', hexToHsl(mode.text));
-    root.style.setProperty('--custom-text-sec', hexToHsl(mode.sec));
-    root.style.setProperty('--custom-accent', hexToHsl(mode.accent));
-    root.style.setProperty('--custom-accent-hover', hexToHsl(mode.hover));
-    root.style.setProperty('--custom-header-start', hexToHsl(mode.h1));
-    root.style.setProperty('--custom-header-end', hexToHsl(mode.h2));
-
-    // For non-default themes, apply to main CSS variables
-    if (themeId !== "default") {
-      root.style.setProperty('--background', hexToHsl(mode.bg));
-      root.style.setProperty('--card', hexToHsl(mode.surface));
-      root.style.setProperty('--popover', hexToHsl(mode.surface));
-      root.style.setProperty('--foreground', hexToHsl(mode.text));
-      root.style.setProperty('--card-foreground', hexToHsl(mode.text));
-      root.style.setProperty('--popover-foreground', hexToHsl(mode.text));
-      root.style.setProperty('--muted-foreground', hexToHsl(mode.sec));
-      root.style.setProperty('--primary', hexToHsl(mode.accent));
-      root.style.setProperty('--accent', hexToHsl(mode.accent));
-    } else {
-      // Reset to default by removing inline styles
-      root.style.removeProperty('--background');
-      root.style.removeProperty('--card');
-      root.style.removeProperty('--popover');
-      root.style.removeProperty('--foreground');
-      root.style.removeProperty('--card-foreground');
-      root.style.removeProperty('--popover-foreground');
-      root.style.removeProperty('--muted-foreground');
-      root.style.removeProperty('--primary');
-      root.style.removeProperty('--accent');
-    }
-
-    // Toggle dark class
-    if (dark) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-
-    localStorage.setItem("colorTheme", themeId);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-  }, []);
-
-  const selectTheme = useCallback((themeId: string) => {
-    setCurrentTheme(themeId);
-    applyTheme(themeId, isDark);
-  }, [isDark, applyTheme]);
-
-  const toggleDarkMode = useCallback(() => {
-    const newDark = !isDark;
-    setIsDark(newDark);
-    applyTheme(currentTheme, newDark);
-  }, [isDark, currentTheme, applyTheme]);
-
-  const resetToDefault = useCallback(() => {
-    setCurrentTheme("default");
-    applyTheme("default", isDark);
-  }, [isDark, applyTheme]);
-
-  // Only apply theme changes after initialization (not on initial mount)
+  // Keep hook state aligned when another component/tab applies a new theme.
   useEffect(() => {
-    if (isInitialized) {
-      applyTheme(currentTheme, isDark);
-    }
-  }, [currentTheme, isDark, applyTheme, isInitialized]);
+    const handlePreferenceChange = (event: Event) => {
+      const preference = (event as CustomEvent<ThemePreference>).detail;
+      syncStateFromPreference(normalizeThemePreference(preference));
+    };
+
+    window.addEventListener(THEME_PREFERENCE_EVENT, handlePreferenceChange);
+    return () => window.removeEventListener(THEME_PREFERENCE_EVENT, handlePreferenceChange);
+  }, [syncStateFromPreference]);
+
+  // Load database preference after login so every device follows the saved account setting.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let isMounted = true;
+
+    const loadUserThemePreference = async () => {
+      const { data, error } = await supabase
+        .from("user_preferences")
+        .select("theme_mode, theme_palette")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!isMounted || error || !data) return;
+
+      const preference = themePreferenceFromRow(data);
+      const appliedPreference = applyThemePreference(preference);
+      syncStateFromPreference(appliedPreference);
+    };
+
+    loadUserThemePreference();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [syncStateFromPreference, user?.id]);
+
+  const selectTheme = useCallback(async (themeId: string) => {
+    const preference = applyAndSync({
+      palette: themeId,
+      mode: isDark ? "dark" : "light",
+    });
+
+    await saveUserThemePreference(preference);
+  }, [applyAndSync, isDark, saveUserThemePreference]);
+
+  const toggleDarkMode = useCallback(async () => {
+    const preference = applyAndSync({
+      palette: currentTheme,
+      mode: isDark ? "light" : "dark",
+    });
+
+    await saveUserThemePreference(preference);
+  }, [applyAndSync, currentTheme, isDark, saveUserThemePreference]);
+
+  const resetToDefault = useCallback(async () => {
+    const preference = applyAndSync({
+      palette: "default",
+      mode: isDark ? "dark" : "light",
+    });
+
+    await saveUserThemePreference(preference);
+  }, [applyAndSync, isDark, saveUserThemePreference]);
+
 
   return {
     themes,

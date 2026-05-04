@@ -2780,17 +2780,17 @@ export default function Attendance() {
   ) : null;
   const attendanceStylePanelExtra = (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 p-3">
+      <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 p-3 dark:border-sky-900/60 dark:bg-sky-950/25">
         <p className="text-[11px] font-semibold text-foreground">Keterangan Libur & Presensi</p>
         <p className="mt-1 text-[10px] text-muted-foreground">
           Atur keterangan hari libur agar tetap menjadi kartu ringkasan atau ditulis vertikal di dalam kolom tanggal tabel.
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-sky-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-sky-700">
+          <span className="rounded-full border border-sky-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200">
             {attendanceAnnotationDisplayMode === "summary-card" ? "Mode aktif: Kartu Ringkasan" : "Mode aktif: Vertikal di Tabel"}
           </span>
           {attendanceAnnotationDisplayMode === "inline-vertical" ? (
-            <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700">
+            <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200">
               Style: {attendanceInlineLabelStyle === "rotate-90" ? "Rotate -90" : "Stacked Text"}
             </span>
           ) : null}
@@ -2818,7 +2818,7 @@ export default function Attendance() {
           </Button>
         </div>
         {attendanceAnnotationDisplayMode === "inline-vertical" ? (
-          <div className="mt-3 rounded-xl border border-indigo-200/80 bg-indigo-50/80 p-3">
+          <div className="mt-3 rounded-xl border border-indigo-200/80 bg-indigo-50/80 p-3 dark:border-indigo-900/60 dark:bg-indigo-950/25">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-[11px] font-semibold text-foreground">Style Label Vertikal</p>
@@ -2826,7 +2826,7 @@ export default function Attendance() {
                   Hanya tampil saat mode vertikal dipakai, agar pengaturan tetap satu konteks dan tidak membingungkan.
                 </p>
               </div>
-              <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700">
+              <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200">
                 Dalam 1 kartu
               </span>
             </div>
@@ -2854,23 +2854,23 @@ export default function Attendance() {
             </div>
           </div>
         ) : (
-          <div className="mt-3 rounded-xl border border-dashed border-sky-200/80 bg-white/70 p-3 text-[10px] leading-relaxed text-muted-foreground">
+          <div className="mt-3 rounded-xl border border-dashed border-sky-200/80 bg-white/70 p-3 text-[10px] leading-relaxed text-muted-foreground dark:border-sky-900/60 dark:bg-sky-950/20">
             Style Label Vertikal disembunyikan otomatis karena mode yang aktif adalah Kartu Ringkasan.
           </div>
         )}
       </div>
 
-      <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-3">
+      <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-3 dark:border-amber-900/60 dark:bg-amber-950/25">
         <p className="text-[11px] font-semibold text-foreground">Kegiatan Khusus</p>
         <p className="mt-1 text-[10px] text-muted-foreground">
           Pisahkan kegiatan khusus dari keterangan vertikal. Default tetap ringkasan, lalu masukkan ke tabel hanya bila memang dibutuhkan.
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-amber-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-amber-700">
+          <span className="rounded-full border border-amber-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200">
             {attendanceEventAnnotationDisplayMode === "summary-card" ? "Mode aktif: Kartu Ringkasan" : "Mode aktif: Masuk ke Tabel"}
           </span>
           {attendanceEventAnnotationDisplayMode === "inline-vertical" ? (
-            <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700">
+            <span className="rounded-full border border-indigo-200/80 bg-white/85 px-2 py-0.5 text-[9px] font-semibold text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200">
               Style mengikuti label vertikal: {attendanceInlineLabelStyle === "rotate-90" ? "Rotate -90" : "Stacked Text"}
             </span>
           ) : null}
@@ -2898,11 +2898,11 @@ export default function Attendance() {
           </Button>
         </div>
         {attendanceEventAnnotationDisplayMode === "inline-vertical" ? (
-          <div className="mt-3 rounded-xl border border-indigo-200/80 bg-white/80 p-3 text-[10px] leading-relaxed text-muted-foreground">
+          <div className="mt-3 rounded-xl border border-indigo-200/80 bg-white/80 p-3 text-[10px] leading-relaxed text-muted-foreground dark:border-indigo-900/60 dark:bg-indigo-950/25">
             Opsi cerdas aktif: kegiatan khusus ikut ditulis di tabel dan memakai style label vertikal yang sama agar hasil cetak tetap konsisten.
           </div>
         ) : (
-          <div className="mt-3 rounded-xl border border-dashed border-amber-200/80 bg-white/70 p-3 text-[10px] leading-relaxed text-muted-foreground">
+          <div className="mt-3 rounded-xl border border-dashed border-amber-200/80 bg-white/70 p-3 text-[10px] leading-relaxed text-muted-foreground dark:border-amber-900/60 dark:bg-amber-950/20">
             Kegiatan khusus tetap diringkas di kartu agar kolom tanggal tidak cepat penuh.
           </div>
         )}
