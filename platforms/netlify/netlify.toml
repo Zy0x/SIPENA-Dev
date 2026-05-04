@@ -3,6 +3,12 @@
   command = "npm run build"
   publish = "apps/frontend/dist"
 
+[build.environment]
+  NODE_VERSION = "22"
+  NPM_VERSION = "10"
+  NETLIFY_USE_YARN = "false"
+  VITE_APP_ENV = "production"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
