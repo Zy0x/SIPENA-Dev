@@ -14,4 +14,4 @@ export {
   supabaseExternal,
   validateAdminPassword,
   verifyAdminToken,
-} from "@/infrastructure/supabase/supabase.client.ts";
+} from "@/infrastructure/supabase/supabase-client";
