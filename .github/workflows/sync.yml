@@ -57,7 +57,7 @@ jobs:
           declare -a BLACKLIST_PATHS=(
             ".github/" 
             ".lovable/" 
-            "supabase/" 
+            "/supabase/" 
             "docs/" 
             "bun.lock"
             "bun.lockb"
