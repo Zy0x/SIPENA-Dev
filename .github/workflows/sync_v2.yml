@@ -101,15 +101,9 @@ jobs:
           declare -a BLACKLIST_PATHS=(
             ".github/"
             ".lovable/"
-            "/supabase/"
             "docs/"
-            "bun.lock"
-            "bun.lockb"
             ".env"
             "/*.md"
-            "node_modules/"
-            "secrets.env"
-            "logs/"
           )
 
           if [[ "$SYNC_MODE" == "whitelist" ]]; then
