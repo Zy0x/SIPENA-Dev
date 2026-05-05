@@ -495,3 +495,5 @@ GRANT EXECUTE ON FUNCTION public.guest_create_assignments(text, uuid, text[]) TO
 GRANT EXECUTE ON FUNCTION public.guest_update_assignment(text, uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.guest_delete_assignment(text, uuid) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.guest_upsert_grade(text, uuid, text, numeric, uuid) TO anon, authenticated;
+
+NOTIFY pgrst, 'reload schema';
