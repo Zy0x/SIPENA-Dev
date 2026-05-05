@@ -118,7 +118,7 @@ export function StudioActionFooter({
   return (
     <div
       className={cn(
-        "border-t border-border bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/88",
+        "border-t border-border bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/90",
         sticky && "sticky bottom-0 z-20",
         className,
       )}

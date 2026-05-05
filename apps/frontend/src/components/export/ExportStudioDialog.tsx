@@ -1908,7 +1908,7 @@ function PositionPanel({
             <SliderWithButtons value={draft.fontSize} min={1} max={40} step={0.25} buttonStep={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, fontSize: Number(value.toFixed(2)) }))} />
           </div>
 
-          <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/55 dark:bg-amber-950/20">
+          <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/60 dark:bg-amber-950/20">
             <div>
               <Label className="text-[11px]">Garis signature</Label>
               <p className="text-[9px] text-muted-foreground">Nonaktifkan bila ingin nama signer tampil tanpa garis signature.</p>
@@ -1965,7 +1965,7 @@ function PositionPanel({
                   <SliderWithButtons value={draft.signatureLineWidth} min={20} max={100} step={5} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureLineWidth: value }))} />
                 </div>
               ) : (
-                <p className="rounded-xl border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[9px] leading-snug text-muted-foreground dark:border-amber-900/55 dark:bg-amber-950/20">
+                <p className="rounded-xl border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[9px] leading-snug text-muted-foreground dark:border-amber-900/60 dark:bg-amber-950/20">
                   Panjang garis sekarang mengikuti {(draft.signatureLineLengthMode ?? "fixed") === "name" ? "teks nama" : "baris NIP"} secara otomatis. Slider mm disimpan sebagai fallback saat data signer belum lengkap.
                 </p>
               )}
@@ -2076,7 +2076,7 @@ function PositionPanel({
         )}
       >
         <div className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-3 dark:border-indigo-900/60 dark:bg-indigo-950/25">
-          <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/60 p-3 space-y-3 dark:border-indigo-900/55 dark:bg-indigo-950/20">
+          <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/60 p-3 space-y-3 dark:border-indigo-900/60 dark:bg-indigo-950/20">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <Label className="text-[11px]">Kunci tata letak signature</Label>
@@ -3117,36 +3117,36 @@ export function ExportStudioDialog({
   );
   const desktopPanelToneMap = {
     format: {
-      shell: "border-sky-200/80 bg-sky-50/30 dark:border-sky-900/55 dark:bg-sky-950/18",
-      card: "border-sky-200/80 bg-sky-50/45 dark:border-sky-900/55 dark:bg-sky-950/24",
+      shell: "border-sky-200/80 bg-sky-50/30 dark:border-sky-900/60 dark:bg-sky-950/20",
+      card: "border-sky-200/80 bg-sky-50/45 dark:border-sky-900/60 dark:bg-sky-950/25",
       activeTab: "border-sky-300 bg-sky-600 text-white hover:bg-sky-600 hover:text-white dark:bg-sky-500 dark:hover:bg-sky-500 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-sky-200/80 text-sky-700 hover:border-sky-300 hover:bg-sky-50/60 hover:text-sky-800 dark:border-sky-900/70 dark:text-sky-200 dark:hover:border-sky-700 dark:hover:bg-sky-950/40 dark:hover:text-sky-100",
       badge: "border-sky-200/80 bg-sky-100/80 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
     },
     columns: {
-      shell: "border-emerald-200/80 bg-emerald-50/30 dark:border-emerald-900/55 dark:bg-emerald-950/18",
-      card: "border-emerald-200/80 bg-emerald-50/45 dark:border-emerald-900/55 dark:bg-emerald-950/24",
+      shell: "border-emerald-200/80 bg-emerald-50/30 dark:border-emerald-900/60 dark:bg-emerald-950/20",
+      card: "border-emerald-200/80 bg-emerald-50/45 dark:border-emerald-900/60 dark:bg-emerald-950/25",
       activeTab: "border-emerald-300 bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white dark:bg-emerald-500 dark:hover:bg-emerald-500 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-emerald-200/80 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-800 dark:border-emerald-900/70 dark:text-emerald-200 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-100",
       badge: "border-emerald-200/80 bg-emerald-100/80 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
     },
     signature: {
-      shell: "border-amber-200/80 bg-amber-50/30 dark:border-amber-900/55 dark:bg-amber-950/18",
-      card: "border-amber-200/80 bg-amber-50/45 dark:border-amber-900/55 dark:bg-amber-950/24",
+      shell: "border-amber-200/80 bg-amber-50/30 dark:border-amber-900/60 dark:bg-amber-950/20",
+      card: "border-amber-200/80 bg-amber-50/45 dark:border-amber-900/60 dark:bg-amber-950/25",
       activeTab: "border-amber-300 bg-amber-500 text-white hover:bg-amber-500 hover:text-white dark:bg-amber-400 dark:hover:bg-amber-400 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-amber-200/80 text-amber-700 hover:border-amber-300 hover:bg-amber-50/60 hover:text-amber-800 dark:border-amber-900/70 dark:text-amber-200 dark:hover:border-amber-700 dark:hover:bg-amber-950/40 dark:hover:text-amber-100",
       badge: "border-amber-200/80 bg-amber-100/80 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
     },
     style: {
-      shell: "border-rose-200/80 bg-rose-50/30 dark:border-rose-900/55 dark:bg-rose-950/18",
-      card: "border-rose-200/80 bg-rose-50/45 dark:border-rose-900/55 dark:bg-rose-950/24",
+      shell: "border-rose-200/80 bg-rose-50/30 dark:border-rose-900/60 dark:bg-rose-950/20",
+      card: "border-rose-200/80 bg-rose-50/45 dark:border-rose-900/60 dark:bg-rose-950/25",
       activeTab: "border-rose-300 bg-rose-600 text-white hover:bg-rose-600 hover:text-white dark:bg-rose-500 dark:hover:bg-rose-500 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-rose-200/80 text-rose-700 hover:border-rose-300 hover:bg-rose-50/60 hover:text-rose-800 dark:border-rose-900/70 dark:text-rose-200 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:hover:text-rose-100",
       badge: "border-rose-200/80 bg-rose-100/80 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/70 dark:text-rose-200",
     },
     signatureStyle: {
-      shell: "border-indigo-200/80 bg-indigo-50/30 dark:border-indigo-900/55 dark:bg-indigo-950/18",
-      card: "border-indigo-200/80 bg-indigo-50/45 dark:border-indigo-900/55 dark:bg-indigo-950/24",
+      shell: "border-indigo-200/80 bg-indigo-50/30 dark:border-indigo-900/60 dark:bg-indigo-950/20",
+      card: "border-indigo-200/80 bg-indigo-50/45 dark:border-indigo-900/60 dark:bg-indigo-950/25",
       activeTab: "border-indigo-300 bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white dark:bg-indigo-500 dark:hover:bg-indigo-500 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-indigo-200/80 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-800 dark:border-indigo-900/70 dark:text-indigo-200 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-100",
       badge: "border-indigo-200/80 bg-indigo-100/80 text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200",
@@ -3501,41 +3501,41 @@ export function ExportStudioDialog({
   const mobileSetupSectionTone = {
     document: {
       icon: Sparkles,
-      card: "border-sky-200/70 bg-sky-50/55 dark:border-sky-900/55 dark:bg-sky-950/18",
+      card: "border-sky-200/70 bg-sky-50/50 dark:border-sky-900/60 dark:bg-sky-950/20",
       header: "bg-sky-50/80 hover:bg-sky-100/70 dark:bg-sky-950/30 dark:hover:bg-sky-950/40",
       iconWrap: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
       badge: "border-sky-200/80 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
-      content: "border-sky-100/80 bg-white/82 dark:border-sky-900/50 dark:bg-slate-950/32",
+      content: "border-sky-100/80 bg-white/80 dark:border-sky-900/50 dark:bg-slate-950/30",
       subCards: "[&_.rounded-lg.border]:border-sky-200/60 [&_.rounded-xl.border]:border-sky-200/60 [&_.border-dashed]:border-sky-200/60 dark:[&_.rounded-lg.border]:border-sky-900/45 dark:[&_.rounded-xl.border]:border-sky-900/45 dark:[&_.border-dashed]:border-sky-900/45",
       chevron: "text-sky-600 dark:text-sky-300",
     },
     data: {
       icon: Columns3,
-      card: "border-emerald-200/70 bg-emerald-50/55 dark:border-emerald-900/55 dark:bg-emerald-950/18",
+      card: "border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/20",
       header: "bg-emerald-50/80 hover:bg-emerald-100/70 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/40",
       iconWrap: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
       badge: "border-emerald-200/80 bg-white/90 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
-      content: "border-emerald-100/80 bg-white/82 dark:border-emerald-900/50 dark:bg-slate-950/32",
+      content: "border-emerald-100/80 bg-white/80 dark:border-emerald-900/50 dark:bg-slate-950/30",
       subCards: "[&_.rounded-lg.border]:border-emerald-200/60 [&_.rounded-xl.border]:border-emerald-200/60 [&_.border-dashed]:border-emerald-200/60 dark:[&_.rounded-lg.border]:border-emerald-900/45 dark:[&_.rounded-xl.border]:border-emerald-900/45 dark:[&_.border-dashed]:border-emerald-900/45",
       chevron: "text-emerald-600 dark:text-emerald-300",
     },
     signature: {
       icon: PenTool,
-      card: "border-amber-200/70 bg-amber-50/55 dark:border-amber-900/55 dark:bg-amber-950/18",
+      card: "border-amber-200/70 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/20",
       header: "bg-amber-50/80 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:hover:bg-amber-950/40",
       iconWrap: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
       badge: "border-amber-200/80 bg-white/90 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
-      content: "border-amber-100/80 bg-white/82 dark:border-amber-900/50 dark:bg-slate-950/32",
+      content: "border-amber-100/80 bg-white/80 dark:border-amber-900/50 dark:bg-slate-950/30",
       subCards: "[&_.rounded-lg.border]:border-amber-200/60 [&_.rounded-xl.border]:border-amber-200/60 [&_.border-dashed]:border-amber-200/60 dark:[&_.rounded-lg.border]:border-amber-900/45 dark:[&_.rounded-xl.border]:border-amber-900/45 dark:[&_.border-dashed]:border-amber-900/45",
       chevron: "text-amber-600 dark:text-amber-300",
     },
     signatureStyle: {
       icon: Move,
-      card: "border-indigo-200/70 bg-indigo-50/55 dark:border-indigo-900/55 dark:bg-indigo-950/18",
+      card: "border-indigo-200/70 bg-indigo-50/50 dark:border-indigo-900/60 dark:bg-indigo-950/20",
       header: "bg-indigo-50/80 hover:bg-indigo-100/70 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/40",
       iconWrap: "border-indigo-200/80 bg-white/90 text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200",
       badge: "border-indigo-200/80 bg-white/90 text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200",
-      content: "border-indigo-100/80 bg-white/82 dark:border-indigo-900/50 dark:bg-slate-950/32",
+      content: "border-indigo-100/80 bg-white/80 dark:border-indigo-900/50 dark:bg-slate-950/30",
       subCards: "[&_.rounded-lg.border]:border-indigo-200/60 [&_.rounded-xl.border]:border-indigo-200/60 [&_.border-dashed]:border-indigo-200/60 dark:[&_.rounded-lg.border]:border-indigo-900/45 dark:[&_.rounded-xl.border]:border-indigo-900/45 dark:[&_.border-dashed]:border-indigo-900/45",
       chevron: "text-indigo-600 dark:text-indigo-300",
     },
@@ -3856,7 +3856,7 @@ export function ExportStudioDialog({
       <div className="pointer-events-none absolute inset-0 z-[90]">
         <div
           ref={mobileOverlayCardRef}
-          className="pointer-events-auto absolute overflow-hidden rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
+          className="pointer-events-auto absolute overflow-hidden rounded-[22px] border border-border bg-background/95 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
           style={{
             left: `${mobileOverlayFrame.left}px`,
             top: `${mobileOverlayFrame.top}px`,
@@ -4288,7 +4288,7 @@ export function ExportStudioDialog({
             )}>
               <div
                 className={cn(
-                  "m-2 min-h-0 flex flex-1 flex-col overflow-hidden rounded-[28px] border border-border/80 bg-background/92 shadow-[0_28px_60px_-42px_rgba(15,23,42,0.82)]",
+                  "m-2 min-h-0 flex flex-1 flex-col overflow-hidden rounded-[28px] border border-border/80 bg-background/90 shadow-[0_28px_60px_-42px_rgba(15,23,42,0.82)]",
                   !isMobileLayout && "backdrop-blur",
                 )}
               >
@@ -4297,7 +4297,7 @@ export function ExportStudioDialog({
                   onOpenChange={handleStudioTopTrayExpandedChange}
                   className={cn(
                     "shrink-0 border-b border-border/70 px-2.5 sm:px-3",
-                    isMobileLayout ? "pt-1.5 pb-1.5" : "bg-background/94 pt-1.5 pb-1.5",
+                    isMobileLayout ? "pt-1.5 pb-1.5" : "bg-background/95 pt-1.5 pb-1.5",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -4375,7 +4375,7 @@ export function ExportStudioDialog({
                   </CollapsibleContent>
                 </Collapsible>
 
-                <div className={cn("shrink-0 border-b border-border/70 bg-background/88 px-2.5 sm:px-3", isMobileLayout ? "py-1.5" : "py-1.5")}>
+                <div className={cn("shrink-0 border-b border-border/70 bg-background/90 px-2.5 sm:px-3", isMobileLayout ? "py-1.5" : "py-1.5")}>
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center justify-between gap-1.5">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -4635,7 +4635,7 @@ export function ExportStudioDialog({
             <div className="pointer-events-none absolute inset-0 z-[90] lg:hidden">
               <div
                 ref={mobileOverlayCardRef}
-                className="pointer-events-auto absolute overflow-hidden rounded-[22px] border border-border bg-background/96 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
+                className="pointer-events-auto absolute overflow-hidden rounded-[22px] border border-border bg-background/95 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
                 style={{
                   left: `${mobileOverlayFrame.left}px`,
                   top: `${mobileOverlayFrame.top}px`,
