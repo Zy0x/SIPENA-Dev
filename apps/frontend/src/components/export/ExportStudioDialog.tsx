@@ -1908,7 +1908,7 @@ function PositionPanel({
             <SliderWithButtons value={draft.fontSize} min={1} max={40} step={0.25} buttonStep={1} onValueChange={(value) => setDraft((prev) => ({ ...prev, fontSize: Number(value.toFixed(2)) }))} />
           </div>
 
-          <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/55 dark:bg-amber-950/20">
             <div>
               <Label className="text-[11px]">Garis signature</Label>
               <p className="text-[9px] text-muted-foreground">Nonaktifkan bila ingin nama signer tampil tanpa garis signature.</p>
@@ -1965,7 +1965,7 @@ function PositionPanel({
                   <SliderWithButtons value={draft.signatureLineWidth} min={20} max={100} step={5} onValueChange={(value) => setDraft((prev) => ({ ...prev, signatureLineWidth: value }))} />
                 </div>
               ) : (
-                <p className="rounded-xl border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[9px] leading-snug text-muted-foreground">
+                <p className="rounded-xl border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-[9px] leading-snug text-muted-foreground dark:border-amber-900/55 dark:bg-amber-950/20">
                   Panjang garis sekarang mengikuti {(draft.signatureLineLengthMode ?? "fixed") === "name" ? "teks nama" : "baris NIP"} secara otomatis. Slider mm disimpan sebagai fallback saat data signer belum lengkap.
                 </p>
               )}
@@ -2076,7 +2076,7 @@ function PositionPanel({
         )}
       >
         <div className="rounded-xl border border-indigo-200/70 bg-white/80 p-3 space-y-3 dark:border-indigo-900/60 dark:bg-indigo-950/25">
-          <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/60 p-3 space-y-3">
+          <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/60 p-3 space-y-3 dark:border-indigo-900/55 dark:bg-indigo-950/20">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <Label className="text-[11px]">Kunci tata letak signature</Label>
@@ -3117,39 +3117,39 @@ export function ExportStudioDialog({
   );
   const desktopPanelToneMap = {
     format: {
-      shell: "border-sky-200/80 bg-sky-50/30",
-      card: "border-sky-200/80 bg-sky-50/45",
+      shell: "border-sky-200/80 bg-sky-50/30 dark:border-sky-900/55 dark:bg-sky-950/18",
+      card: "border-sky-200/80 bg-sky-50/45 dark:border-sky-900/55 dark:bg-sky-950/24",
       activeTab: "border-sky-300 bg-sky-600 text-white hover:bg-sky-600 hover:text-white dark:bg-sky-500 dark:hover:bg-sky-500 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-sky-200/80 text-sky-700 hover:border-sky-300 hover:bg-sky-50/60 hover:text-sky-800 dark:border-sky-900/70 dark:text-sky-200 dark:hover:border-sky-700 dark:hover:bg-sky-950/40 dark:hover:text-sky-100",
-      badge: "border-sky-200/80 bg-sky-100/80 text-sky-700",
+      badge: "border-sky-200/80 bg-sky-100/80 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/70 dark:text-sky-200",
     },
     columns: {
-      shell: "border-emerald-200/80 bg-emerald-50/30",
-      card: "border-emerald-200/80 bg-emerald-50/45",
+      shell: "border-emerald-200/80 bg-emerald-50/30 dark:border-emerald-900/55 dark:bg-emerald-950/18",
+      card: "border-emerald-200/80 bg-emerald-50/45 dark:border-emerald-900/55 dark:bg-emerald-950/24",
       activeTab: "border-emerald-300 bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white dark:bg-emerald-500 dark:hover:bg-emerald-500 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-emerald-200/80 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-800 dark:border-emerald-900/70 dark:text-emerald-200 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-100",
-      badge: "border-emerald-200/80 bg-emerald-100/80 text-emerald-700",
+      badge: "border-emerald-200/80 bg-emerald-100/80 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/70 dark:text-emerald-200",
     },
     signature: {
-      shell: "border-amber-200/80 bg-amber-50/30",
-      card: "border-amber-200/80 bg-amber-50/45",
+      shell: "border-amber-200/80 bg-amber-50/30 dark:border-amber-900/55 dark:bg-amber-950/18",
+      card: "border-amber-200/80 bg-amber-50/45 dark:border-amber-900/55 dark:bg-amber-950/24",
       activeTab: "border-amber-300 bg-amber-500 text-white hover:bg-amber-500 hover:text-white dark:bg-amber-400 dark:hover:bg-amber-400 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-amber-200/80 text-amber-700 hover:border-amber-300 hover:bg-amber-50/60 hover:text-amber-800 dark:border-amber-900/70 dark:text-amber-200 dark:hover:border-amber-700 dark:hover:bg-amber-950/40 dark:hover:text-amber-100",
-      badge: "border-amber-200/80 bg-amber-100/80 text-amber-700",
+      badge: "border-amber-200/80 bg-amber-100/80 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/70 dark:text-amber-200",
     },
     style: {
-      shell: "border-rose-200/80 bg-rose-50/30",
-      card: "border-rose-200/80 bg-rose-50/45",
+      shell: "border-rose-200/80 bg-rose-50/30 dark:border-rose-900/55 dark:bg-rose-950/18",
+      card: "border-rose-200/80 bg-rose-50/45 dark:border-rose-900/55 dark:bg-rose-950/24",
       activeTab: "border-rose-300 bg-rose-600 text-white hover:bg-rose-600 hover:text-white dark:bg-rose-500 dark:hover:bg-rose-500 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-rose-200/80 text-rose-700 hover:border-rose-300 hover:bg-rose-50/60 hover:text-rose-800 dark:border-rose-900/70 dark:text-rose-200 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:hover:text-rose-100",
-      badge: "border-rose-200/80 bg-rose-100/80 text-rose-700",
+      badge: "border-rose-200/80 bg-rose-100/80 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/70 dark:text-rose-200",
     },
     signatureStyle: {
-      shell: "border-indigo-200/80 bg-indigo-50/30",
-      card: "border-indigo-200/80 bg-indigo-50/45",
+      shell: "border-indigo-200/80 bg-indigo-50/30 dark:border-indigo-900/55 dark:bg-indigo-950/18",
+      card: "border-indigo-200/80 bg-indigo-50/45 dark:border-indigo-900/55 dark:bg-indigo-950/24",
       activeTab: "border-indigo-300 bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white dark:bg-indigo-500 dark:hover:bg-indigo-500 dark:text-slate-950 dark:hover:text-slate-950",
       idleTab: "border-indigo-200/80 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-50/60 hover:text-indigo-800 dark:border-indigo-900/70 dark:text-indigo-200 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-100",
-      badge: "border-indigo-200/80 bg-indigo-100/80 text-indigo-700",
+      badge: "border-indigo-200/80 bg-indigo-100/80 text-indigo-700 dark:border-indigo-900/70 dark:bg-indigo-950/70 dark:text-indigo-200",
     },
   } satisfies Record<ActivePanel, {
     shell: string;
@@ -3268,7 +3268,7 @@ export function ExportStudioDialog({
     } catch (error: unknown) {
       showError("Ekspor gagal", error instanceof Error ? error.message : "Terjadi kesalahan saat mengekspor file.");
     }
-  }, [autoFitOnePage, currentPaperSize, documentStyle, downloadPreviewPng, draft, includeSignature, onExport, saveCurrentSignature, selectedFormat, showError, supportsSignature]);
+  }, [autoFitOnePage, currentPaperSize, documentStyle, downloadPreviewPng, draft, includeSignature, onExport, saveCurrentSignature, selectedFormat, setOpen, showError, supportsSignature]);
   const mobileWizardSteps = useMemo(
     () => [
       { id: "format" as const, label: "Format" },
