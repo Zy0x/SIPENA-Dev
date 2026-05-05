@@ -172,10 +172,48 @@
   html {
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     scroll-behavior: smooth;
+    color-scheme: light;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--background) / 0.35);
+  }
+
+  .dark *::-webkit-scrollbar-track {
+    background: hsl(var(--background) / 0.7);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-color: hsl(var(--muted-foreground) / 0.35);
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.55);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
   }
 
   /* Focus styles for accessibility */
@@ -290,6 +328,14 @@
     scrollbar-width: none;
   }
   .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
 
