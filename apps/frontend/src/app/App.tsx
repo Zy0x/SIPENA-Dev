@@ -35,7 +35,6 @@ import Help from "../pages/Help";
 import About from "../pages/About";
 import NotFound from "../pages/NotFound";
 import GuestAccess from "../pages/GuestAccess";
-import GuestGrades from "../pages/GuestGrades";
 import Admin from "../pages/Admin";
 import Changelog from "../pages/Changelog";
 import ParentPortal from "../pages/ParentPortal";
@@ -90,7 +89,7 @@ const App = () => {
                     <Route path="/" element={<Index />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/share" element={<GuestAccess />} />
-                    <Route path="/guest/grades" element={<GuestGrades />} />
+                    <Route path="/guest/grades" element={<Grades mode="guest" />} />
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/changelog" element={<Changelog />} />
                     <Route path="/portal/:code" element={<PortalView />} />
