@@ -17,15 +17,19 @@ const students: RankingStudent[] = [
 const chapters: RankingChapter[] = [
   { id: "math-chapter-s1", subject_id: "math", semester_id: "sem-1" },
   { id: "math-chapter-s2", subject_id: "math", semester_id: "sem-2" },
+  { id: "math-legacy-chapter", subject_id: "math", semester_id: null },
   { id: "science-chapter-s1", subject_id: "science", semester_id: "sem-1" },
   { id: "science-chapter-s2", subject_id: "science", semester_id: "sem-2" },
+  { id: "legacy-chapter", subject_id: "legacy", semester_id: null },
 ];
 
 const assignments: RankingAssignment[] = [
   { id: "math-task-s1", chapter_id: "math-chapter-s1", semester_id: "sem-1" },
   { id: "math-task-s2", chapter_id: "math-chapter-s2", semester_id: "sem-2" },
+  { id: "math-legacy-task", chapter_id: "math-legacy-chapter", semester_id: null },
   { id: "science-task-s1", chapter_id: "science-chapter-s1", semester_id: "sem-1" },
   { id: "science-task-s2", chapter_id: "science-chapter-s2", semester_id: "sem-2" },
+  { id: "legacy-task", chapter_id: "legacy-chapter", semester_id: null },
 ];
 
 const grade = (
@@ -33,7 +37,7 @@ const grade = (
   subjectId: string,
   gradeType: "assignment" | "sts" | "sas",
   value: number | null,
-  semesterId: string,
+  semesterId: string | null,
   assignmentId: string | null = null,
 ): RankingGrade => ({
   student_id: studentId,
@@ -51,21 +55,65 @@ const grades: RankingGrade[] = [
   grade("student-a", "math", "assignment", 100, "sem-2", "math-task-s2"),
   grade("student-a", "math", "sts", 80, "sem-2"),
   grade("student-a", "math", "sas", 100, "sem-2"),
+  grade("student-a", "math", "assignment", 100, null, "math-legacy-task"),
+  grade("student-a", "math", "sts", 100, null),
+  grade("student-a", "math", "sas", 100, null),
   grade("student-b", "math", "assignment", 90, "sem-1", "math-task-s1"),
   grade("student-b", "math", "sts", 90, "sem-1"),
   grade("student-b", "math", "sas", 90, "sem-1"),
   grade("student-b", "math", "assignment", 90, "sem-2", "math-task-s2"),
   grade("student-b", "math", "sts", 90, "sem-2"),
   grade("student-b", "math", "sas", 90, "sem-2"),
+  grade("student-b", "math", "assignment", 100, null, "math-legacy-task"),
+  grade("student-b", "math", "sts", 100, null),
+  grade("student-b", "math", "sas", 100, null),
   grade("student-a", "science", "assignment", 70, "sem-1", "science-task-s1"),
   grade("student-a", "science", "sts", 70, "sem-1"),
   grade("student-a", "science", "sas", 70, "sem-1"),
   grade("student-b", "science", "assignment", 95, "sem-1", "science-task-s1"),
   grade("student-b", "science", "sts", 95, "sem-1"),
   grade("student-b", "science", "sas", 95, "sem-1"),
+  grade("student-a", "legacy", "assignment", 76, null, "legacy-task"),
+  grade("student-a", "legacy", "sts", 78, null),
+  grade("student-a", "legacy", "sas", 80, null),
 ];
 
 describe("ranking calculations", () => {
+  it("calculates per-subject averages from the selected semester only", () => {
+    const semester1Average = calculateRankingSubjectAverage({
+      studentId: "student-a",
+      subjectId: "math",
+      grades,
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+    const semester2Average = calculateRankingSubjectAverage({
+      studentId: "student-a",
+      subjectId: "math",
+      grades,
+      chapters,
+      assignments,
+      semesterIds: ["sem-2"],
+    });
+
+    expect(semester1Average).toBe(80);
+    expect(semester2Average).toBe(95);
+  });
+
+  it("uses legacy null-semester data only when selected-semester data is absent", () => {
+    const average = calculateRankingSubjectAverage({
+      studentId: "student-a",
+      subjectId: "legacy",
+      grades,
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(average).toBe(77.5);
+  });
+
   it("calculates combined-semester subject averages from semester report values", () => {
     const average = calculateRankingSubjectAverage({
       studentId: "student-a",
@@ -79,7 +127,23 @@ describe("ranking calculations", () => {
     expect(average).toBe(87.5);
   });
 
-  it("ranks per subject using the same combined-semester subject average", () => {
+  it("ranks per subject using the selected semester subject average", () => {
+    const rankings = buildSubjectRankings({
+      students,
+      subjectId: "math",
+      grades,
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(rankings.map((entry) => [entry.student.id, entry.overallAverage, entry.rank])).toEqual([
+      ["student-b", 90, 1],
+      ["student-a", 80, 2],
+    ]);
+  });
+
+  it("ranks per subject as yearly data only when all semesters are explicitly selected", () => {
     const rankings = buildSubjectRankings({
       students,
       subjectId: "math",

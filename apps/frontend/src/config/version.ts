@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.1";
+export const APP_VERSION = "2.4.2";
 export const VERSION_DATE = "2026-05-07";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.2": "Ranking per mata pelajaran dikunci mengikuti semester yang dipilih dan data legacy tanpa semester hanya dipakai sebagai fallback.",
   "2.4.1": "Perhitungan Ranking Siswa diperbaiki agar ranking keseluruhan dan ranking per mata pelajaran akurat pada filter mapel dan mode semua semester.",
   "2.4.0": "Rombakan Studio Ekspor Presensi: side panel dipadatkan, keterangan vertikal PDF kini benar-benar tampil sebagai cell merged, jarak garis pada Style Signature dipresisi, dan kontrol presisi TTD (drag + D-Pad) dirombak agar bekerja akurat di setiap zoom preview.",
   "2.3.100": "Sinkronisasi metrik layout ekspor dan loader latar belakang diperkuat agar preview, PDF, dan PNG tetap konsisten saat aplikasi berpindah fokus.",

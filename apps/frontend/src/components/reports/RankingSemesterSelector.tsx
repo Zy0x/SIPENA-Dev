@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ export function RankingSemesterSelector({
       case "2":
         return "Semester 2";
       case "all":
-        return "Semua Semester";
+        return "Ranking Tahunan / Semua Semester";
     }
   };
 
@@ -64,7 +65,7 @@ export function RankingSemesterSelector({
   const options = [
     { value: "1" as const, label: "Semester 1", description: "Ranking berdasarkan data semester ganjil" },
     { value: "2" as const, label: "Semester 2", description: "Ranking berdasarkan data semester genap" },
-    { value: "all" as const, label: "Semua Semester", description: "Ranking tahunan (rata-rata kedua semester)" },
+    { value: "all" as const, label: "Ranking Tahunan / Semua Semester", description: "Ranking tahunan eksplisit dari rata-rata kedua semester" },
   ];
 
   return (

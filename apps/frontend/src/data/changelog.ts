@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.2",
+    version: "2.4.2",
+    title: "Ranking Per Mapel: Dikunci Sesuai Semester Terpilih",
+    description: "Ranking per mata pelajaran kini memakai nilai rapor semester yang dipilih, sehingga hasilnya tidak tercampur dengan semester lain atau data legacy lama.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-07",
+    details: [
+      "Semester 1 dan Semester 2 kini dihitung sebagai scope terpisah untuk ranking per mapel, tabel, preview, dan export.",
+      "Data lama tanpa semester hanya dipakai sebagai fallback saat data semester spesifik untuk komponen tersebut belum ada.",
+      "Mode Semua Semester diberi label Ranking Tahunan / Semua Semester agar tidak tertukar dengan ranking semester.",
+      "Test regresi ditambah untuk memastikan ranking per mapel semester 1, semester 2, data legacy, dan mode tahunan tetap akurat.",
+    ],
+  },
+  {
     id: "v2.4.1",
     version: "2.4.1",
     title: "Ranking Siswa: Perhitungan Keseluruhan dan Per Mapel Lebih Akurat",

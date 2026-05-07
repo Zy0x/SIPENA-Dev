@@ -109,6 +109,8 @@ export default function StudentRankings() {
   const { showLoader, overlay: exportOverlay } = useExportLoader();
   const { activeYear } = useAcademicYear();
   const { semesterFilter, setSemesterFilter, isCombinedView } = useRankingSemesterFilter();
+  const rankingPeriodLabel = isCombinedView ? "Ranking Tahunan / Semua Semester" : `Semester ${semesterFilter}`;
+  const rankingPeriodShortLabel = isCombinedView ? "Ranking Tahunan" : `Sem ${semesterFilter}`;
   
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
@@ -288,7 +290,7 @@ export default function StudentRankings() {
       className: selectedClass.name,
       subjectName: subject.name,
       kkm: subject.kkm,
-      periodLabel: isCombinedView ? "Semua Semester" : `Semester ${semesterFilter}`,
+      periodLabel: rankingPeriodLabel,
       isCombinedView,
       columns,
       headerGroups: [{ label: "Ranking", colSpan: columns.length }],
@@ -312,7 +314,7 @@ export default function StudentRankings() {
         ],
         center: [
           { label: "KKM", value: subject.kkm },
-          { label: "Periode", value: isCombinedView ? "Semua Semester" : `Semester ${semesterFilter}` },
+          { label: "Periode", value: rankingPeriodLabel },
         ],
         right: [
           { label: "Tanggal", value: new Date().toLocaleDateString("id-ID") },
@@ -331,8 +333,8 @@ export default function StudentRankings() {
     includeSignature,
     isCombinedView,
     paperSize,
+    rankingPeriodLabel,
     selectedClass,
-    semesterFilter,
     signatureConfig,
     subjects,
   ]);
@@ -375,7 +377,7 @@ export default function StudentRankings() {
       className: selectedClass.name,
       subjectName: "Ranking Keseluruhan",
       kkm: classKkm,
-      periodLabel: isCombinedView ? "Semua Semester" : `Semester ${semesterFilter}`,
+      periodLabel: rankingPeriodLabel,
       isCombinedView,
       columns,
       headerGroups: [{ label: "Ranking Keseluruhan", colSpan: columns.length }],
@@ -399,7 +401,7 @@ export default function StudentRankings() {
         ],
         center: [
           { label: "Mapel", value: subjectsToUse.length },
-          { label: "Periode", value: isCombinedView ? "Semua Semester" : `Semester ${semesterFilter}` },
+          { label: "Periode", value: rankingPeriodLabel },
         ],
         right: [
           { label: "Tanggal", value: new Date().toLocaleDateString("id-ID") },
@@ -422,11 +424,11 @@ export default function StudentRankings() {
     mapRankingColumnType,
     overallRankings,
     paperSize,
+    rankingPeriodLabel,
     selectedClass,
     selectedExportColumnIds,
     selectedOverallColumns,
     selectedSubjectIds,
-    semesterFilter,
     signatureConfig,
     subjects,
   ]);
@@ -1003,7 +1005,7 @@ export default function StudentRankings() {
               )}
               <span className="text-muted-foreground text-[10px] sm:text-xs whitespace-nowrap">Data:</span>
               <Badge variant="secondary" className="font-medium text-[10px] sm:text-xs whitespace-nowrap">
-                {activeYear.name} • {isCombinedView ? "Semua Semester" : `Sem ${semesterFilter}`}
+                {activeYear.name} • {rankingPeriodShortLabel}
               </Badge>
             </div>
           </div>
