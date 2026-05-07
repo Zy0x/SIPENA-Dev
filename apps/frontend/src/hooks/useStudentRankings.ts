@@ -23,6 +23,31 @@ interface UseStudentRankingsOptions {
   overallSubjectIds?: string[];
 }
 
+const RANKING_QUERY_PAGE_SIZE = 1000;
+
+async function fetchAllRankingRows<T>(buildQuery: () => any): Promise<T[]> {
+  const rows: T[] = [];
+  let from = 0;
+
+  while (true) {
+    const to = from + RANKING_QUERY_PAGE_SIZE - 1;
+    const { data, error } = await buildQuery().range(from, to);
+
+    if (error) throw error;
+
+    const page = (data || []) as T[];
+    rows.push(...page);
+
+    if (page.length < RANKING_QUERY_PAGE_SIZE) {
+      break;
+    }
+
+    from += RANKING_QUERY_PAGE_SIZE;
+  }
+
+  return rows;
+}
+
 export function useStudentRankings({
   classId,
   semesterFilter,
@@ -48,7 +73,9 @@ export function useStudentRankings({
 
   const isCombinedView = resolvedSemesterFilter === "all";
   const subjectIds = useMemo(() => subjects.map((subject) => subject.id), [subjects]);
+  const studentIds = useMemo(() => students.map((student) => student.id), [students]);
   const subjectIdsKey = subjectIds.join(",");
+  const studentIdsKey = studentIds.join(",");
   const semesterIdsKey = semesterIds.join(",");
 
   const rankingDataQuery = useQuery({
@@ -59,10 +86,11 @@ export function useStudentRankings({
       activeYearId ?? "all",
       resolvedSemesterFilter,
       subjectIdsKey,
+      studentIdsKey,
       semesterIdsKey,
     ],
     queryFn: async () => {
-      if (!classId || !user || subjectIds.length === 0) {
+      if (!classId || !user || subjectIds.length === 0 || studentIds.length === 0) {
         return {
           grades: [] as RankingGrade[],
           chapters: [] as RankingChapter[],
@@ -71,40 +99,49 @@ export function useStudentRankings({
         };
       }
 
-      let gradesQuery = supabase
-        .from("grades")
-        .select("*")
-        .in("subject_id", subjectIds)
-        .eq("user_id", user.id);
+      const buildGradesQuery = () => {
+        let query = supabase
+          .from("grades")
+          .select("*")
+          .in("subject_id", subjectIds)
+          .in("student_id", studentIds)
+          .eq("user_id", user.id);
 
-      if (activeYearId) {
-        gradesQuery = gradesQuery.or(`academic_year_id.eq.${activeYearId},academic_year_id.is.null`);
-      }
+        if (activeYearId) {
+          query = query.or(`academic_year_id.eq.${activeYearId},academic_year_id.is.null`);
+        }
 
-      if (!isCombinedView && semesterIds.length > 0) {
-        const semesterFilterValue = semesterIds.map((id) => `semester_id.eq.${id}`).join(",");
-        gradesQuery = gradesQuery.or(`${semesterFilterValue},semester_id.is.null`);
-      }
+        if (!isCombinedView && semesterIds.length > 0) {
+          const semesterFilterValue = semesterIds.map((id) => `semester_id.eq.${id}`).join(",");
+          query = query.or(`${semesterFilterValue},semester_id.is.null`);
+        }
 
-      let chaptersQuery = supabase
-        .from("chapters")
-        .select("*")
-        .in("subject_id", subjectIds)
-        .eq("user_id", user.id);
+        return query;
+      };
 
-      const effectiveSemesterIds = isCombinedView ? semestersForActiveYear.map((semester) => semester.id) : semesterIds;
-      if (effectiveSemesterIds.length > 0) {
-        const semesterFilterValue = effectiveSemesterIds.map((id) => `semester_id.eq.${id}`).join(",");
-        chaptersQuery = chaptersQuery.or(`${semesterFilterValue},semester_id.is.null`);
-      }
+      const buildChaptersQuery = () => {
+        let query = supabase
+          .from("chapters")
+          .select("*")
+          .in("subject_id", subjectIds)
+          .eq("user_id", user.id);
+
+        const effectiveSemesterIds = isCombinedView ? semestersForActiveYear.map((semester) => semester.id) : semesterIds;
+        if (effectiveSemesterIds.length > 0) {
+          const semesterFilterValue = effectiveSemesterIds.map((id) => `semester_id.eq.${id}`).join(",");
+          query = query.or(`${semesterFilterValue},semester_id.is.null`);
+        }
+
+        return query;
+      };
 
       const [
-        { data: gradesData, error: gradesError },
-        { data: chaptersData, error: chaptersError },
+        gradesData,
+        chaptersData,
         { data: formulaData, error: formulaError },
       ] = await Promise.all([
-        gradesQuery,
-        chaptersQuery,
+        fetchAllRankingRows<RankingGrade>(buildGradesQuery),
+        fetchAllRankingRows<RankingChapter>(buildChaptersQuery),
         (supabase as any)
           .from("grade_formula_settings")
           .select("subject_id, formula")
@@ -112,8 +149,6 @@ export function useStudentRankings({
           .eq("user_id", user.id),
       ]);
 
-      if (gradesError) throw gradesError;
-      if (chaptersError) throw chaptersError;
       if (formulaError) console.warn("[StudentRankings] Formula query error:", formulaError.message);
 
       const formulasBySubject = Object.fromEntries(
@@ -123,40 +158,44 @@ export function useStudentRankings({
         }),
       ) as Record<string, CustomFormula>;
 
-      const chapters = (chaptersData || []) as RankingChapter[];
+      const chapters = chaptersData;
       const chapterIds = chapters.map((chapter) => chapter.id);
 
       if (chapterIds.length === 0) {
         return {
-          grades: (gradesData || []) as RankingGrade[],
+          grades: gradesData,
           chapters,
           assignments: [] as RankingAssignment[],
           formulasBySubject,
         };
       }
 
-      let assignmentsQuery = supabase
-        .from("assignments")
-        .select("*")
-        .in("chapter_id", chapterIds)
-        .eq("user_id", user.id);
+      const effectiveSemesterIds = isCombinedView ? semestersForActiveYear.map((semester) => semester.id) : semesterIds;
+      const buildAssignmentsQuery = () => {
+        let query = supabase
+          .from("assignments")
+          .select("*")
+          .in("chapter_id", chapterIds)
+          .eq("user_id", user.id);
 
-      if (effectiveSemesterIds.length > 0) {
-        const semesterFilterValue = effectiveSemesterIds.map((id) => `semester_id.eq.${id}`).join(",");
-        assignmentsQuery = assignmentsQuery.or(`${semesterFilterValue},semester_id.is.null`);
-      }
+        if (effectiveSemesterIds.length > 0) {
+          const semesterFilterValue = effectiveSemesterIds.map((id) => `semester_id.eq.${id}`).join(",");
+          query = query.or(`${semesterFilterValue},semester_id.is.null`);
+        }
 
-      const { data: assignmentsData, error: assignmentsError } = await assignmentsQuery;
-      if (assignmentsError) throw assignmentsError;
+        return query;
+      };
+
+      const assignmentsData = await fetchAllRankingRows<RankingAssignment>(buildAssignmentsQuery);
 
       return {
-        grades: (gradesData || []) as RankingGrade[],
+        grades: gradesData,
         chapters,
-        assignments: (assignmentsData || []) as RankingAssignment[],
+        assignments: assignmentsData,
         formulasBySubject,
       };
     },
-    enabled: !!classId && !!user,
+    enabled: !!classId && !!user && !studentsLoading,
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
