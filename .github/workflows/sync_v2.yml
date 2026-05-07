@@ -4,16 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       target_repo_name:
-        description: 'Nama repo di Organization'
+        description: "Nama repo di Organization Web-Modder"
         required: true
       target_branch:
-        description: 'Branch di Organization'
+        description: "Branch di Organization"
         required: true
-        default: 'main'
+        default: "main"
       sync_mode:
-        description: 'Mode sinkronisasi'
+        description: "Mode sinkronisasi"
         required: true
-        default: 'whitelist'
+        default: "blacklist"
         type: choice
         options:
           - whitelist
@@ -30,68 +30,120 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repo utama (SIPENA-Dev)
-      - name: Checkout Proyek Utama
-        uses: actions/checkout@v5
+      - name: Checkout proyek utama
+        uses: actions/checkout@v4
         with:
           path: main-project
+          fetch-depth: 0
 
-      # 2. Load config (AUTO)
-      - name: Load config (auto)
+      - name: Load config otomatis
         if: github.event_name == 'repository_dispatch'
+        shell: bash
         run: |
+          set -euo pipefail
+
           CONFIG_FILE="main-project/sync"
 
           if [ ! -f "$CONFIG_FILE" ]; then
-            echo "❌ Config tidak ditemukan: $CONFIG_FILE"
+            echo "Config tidak ditemukan: $CONFIG_FILE"
             exit 1
           fi
 
-          echo "📄 Isi config:"
-          cat "$CONFIG_FILE"
+          read_config() {
+            local key="$1"
+            local value
+            value="$(grep -E "^${key}=" "$CONFIG_FILE" | tail -n 1 | cut -d '=' -f 2- | tr -d '\r' | xargs)"
+            printf "%s" "$value"
+          }
 
-          source "$CONFIG_FILE"
+          TARGET_REPO="$(read_config TARGET_REPO)"
+          TARGET_BRANCH="$(read_config TARGET_BRANCH)"
+          SYNC_MODE="$(read_config SYNC_MODE)"
 
-          echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> $GITHUB_ENV
-          echo "SYNC_MODE=$SYNC_MODE" >> $GITHUB_ENV
+          if [ -z "$TARGET_REPO" ]; then
+            echo "TARGET_REPO kosong di file sync"
+            exit 1
+          fi
 
-      # 3. Load manual input
-      - name: Load manual input
+          if [ -z "$TARGET_BRANCH" ]; then
+            echo "TARGET_BRANCH kosong di file sync"
+            exit 1
+          fi
+
+          if [ -z "$SYNC_MODE" ]; then
+            echo "SYNC_MODE kosong di file sync"
+            exit 1
+          fi
+
+          if [[ "$SYNC_MODE" != "whitelist" && "$SYNC_MODE" != "blacklist" ]]; then
+            echo "SYNC_MODE tidak valid: $SYNC_MODE"
+            exit 1
+          fi
+
+          echo "TARGET_REPO=$TARGET_REPO" >> "$GITHUB_ENV"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          echo "SYNC_MODE=$SYNC_MODE" >> "$GITHUB_ENV"
+
+      - name: Load input manual
         if: github.event_name == 'workflow_dispatch'
+        shell: bash
         run: |
-          echo "TARGET_REPO=${{ github.event.inputs.target_repo_name }}" >> $GITHUB_ENV
-          echo "TARGET_BRANCH=${{ github.event.inputs.target_branch }}" >> $GITHUB_ENV
-          echo "SYNC_MODE=${{ github.event.inputs.sync_mode }}" >> $GITHUB_ENV
+          set -euo pipefail
 
-      # 4. Debug config
-      - name: Debug config
+          TARGET_REPO="${{ github.event.inputs.target_repo_name }}"
+          TARGET_BRANCH="${{ github.event.inputs.target_branch }}"
+          SYNC_MODE="${{ github.event.inputs.sync_mode }}"
+
+          if [ -z "$TARGET_REPO" ] || [ -z "$TARGET_BRANCH" ] || [ -z "$SYNC_MODE" ]; then
+            echo "Input manual tidak lengkap"
+            exit 1
+          fi
+
+          if [[ "$SYNC_MODE" != "whitelist" && "$SYNC_MODE" != "blacklist" ]]; then
+            echo "SYNC_MODE tidak valid: $SYNC_MODE"
+            exit 1
+          fi
+
+          echo "TARGET_REPO=$TARGET_REPO" >> "$GITHUB_ENV"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          echo "SYNC_MODE=$SYNC_MODE" >> "$GITHUB_ENV"
+
+      - name: Validasi token
+        shell: bash
         run: |
+          set -euo pipefail
+
+          if [ -z "${{ secrets.SYNC_PROJECT_WEB_PAT }}" ]; then
+            echo "Secret SYNC_PROJECT_WEB_PAT belum dikonfigurasi"
+            exit 1
+          fi
+
+      - name: Debug config
+        shell: bash
+        run: |
+          set -euo pipefail
+
           echo "===== CONFIG ====="
-          echo "Repo   : $TARGET_REPO"
-          echo "Branch : $TARGET_BRANCH"
-          echo "Mode   : $SYNC_MODE"
+          echo "Source : Web-Modder/${TARGET_REPO}"
+          echo "Branch : ${TARGET_BRANCH}"
+          echo "Mode   : ${SYNC_MODE}"
+          echo "Target : ${GITHUB_REPOSITORY}"
           echo "=================="
 
-      # 5. Checkout repo organization
-      - name: Checkout Repo Organization
-        uses: actions/checkout@v5
+      - name: Checkout repo organization
+        uses: actions/checkout@v4
         with:
           repository: Web-Modder/${{ env.TARGET_REPO }}
           token: ${{ secrets.SYNC_PROJECT_WEB_PAT }}
           path: org-source
           ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 1
 
-      # 6. Debug isi repo source
-      - name: Debug source
-        run: |
-          echo "===== ORG SOURCE ====="
-          ls -la org-source
-          echo "======================"
-
-      # 7. Sinkronisasi
       - name: Sinkronisasi
+        shell: bash
         run: |
+          set -euo pipefail
+
           cd main-project
 
           declare -a WHITELIST_PATHS=(
@@ -99,42 +151,62 @@ jobs:
           )
 
           declare -a BLACKLIST_PATHS=(
+            ".git/"
             ".github/"
             ".lovable/"
+            ".netlify/"
             "docs/"
+            "node_modules/"
+            "dist/"
+            "build/"
             ".env"
+            ".env.*"
+            "**/.env"
+            "**/.env.*"
             "/*.md"
           )
 
           if [[ "$SYNC_MODE" == "whitelist" ]]; then
-            echo "📋 WHITELIST mode"
+            echo "Mode whitelist"
+
             for path in "${WHITELIST_PATHS[@]}"; do
-              rsync -a --checksum "../org-source/$path" "$path"
+              if [ -e "../org-source/$path" ]; then
+                mkdir -p "$(dirname "$path")"
+                rsync -a --checksum --delete "../org-source/$path" "$path"
+              else
+                echo "Path whitelist tidak ditemukan di source: $path"
+              fi
             done
           else
-            echo "🚫 BLACKLIST mode"
+            echo "Mode blacklist"
+
             EXCLUDE_ARGS=(--exclude='.git')
+
             for p in "${BLACKLIST_PATHS[@]}"; do
               EXCLUDE_ARGS+=(--exclude "$p")
             done
 
-            rsync -a --checksum "${EXCLUDE_ARGS[@]}" ../org-source/ .
+            rsync -a --checksum --delete "${EXCLUDE_ARGS[@]}" ../org-source/ .
           fi
 
-      # 8. Commit & push
-      - name: Commit & Push
+      - name: Commit dan push
+        shell: bash
         run: |
+          set -euo pipefail
+
           cd main-project
 
           git config user.name "github-actions[bot]"
-          git config user.email "actions@github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add -A
 
           if git diff --cached --quiet; then
-            echo "✅ Tidak ada perubahan"
-          else
-            git commit -m "chore: auto sync (${TARGET_REPO})"
-            git push
-            echo "🚀 Sync berhasil"
+            echo "Tidak ada perubahan untuk disinkronkan"
+            exit 0
           fi
+
+          git status --short
+          git commit -m "chore: auto sync from Web-Modder/${TARGET_REPO}"
+          git push
+          echo "Sync berhasil"
