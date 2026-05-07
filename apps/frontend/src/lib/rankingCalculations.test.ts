@@ -378,4 +378,39 @@ describe("ranking calculations", () => {
       ["Bima", 1],
     ]);
   });
+
+  it("sorts tied rounded averages by student name", () => {
+    const tiedStudents: RankingStudent[] = [
+      { id: "student-z", name: "Zaki", nisn: "003" },
+      { id: "student-a", name: "Alya", nisn: "001" },
+    ];
+    const tiedChapters: RankingChapter[] = [
+      { id: "tie-chapter", subject_id: "math", semester_id: "sem-1" },
+    ];
+    const tiedAssignments: RankingAssignment[] = [
+      { id: "tie-task", chapter_id: "tie-chapter", semester_id: "sem-1" },
+    ];
+    const tiedGrades: RankingGrade[] = [
+      grade("student-z", "math", "assignment", 90.04, "sem-1", "tie-task"),
+      grade("student-z", "math", "sts", 90.04, "sem-1"),
+      grade("student-z", "math", "sas", 90.04, "sem-1"),
+      grade("student-a", "math", "assignment", 90.01, "sem-1", "tie-task"),
+      grade("student-a", "math", "sts", 90.01, "sem-1"),
+      grade("student-a", "math", "sas", 90.01, "sem-1"),
+    ];
+
+    const rankings = buildSubjectRankings({
+      students: tiedStudents,
+      subjectId: "math",
+      grades: tiedGrades,
+      chapters: tiedChapters,
+      assignments: tiedAssignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(rankings.map((entry) => [entry.student.name, entry.rank])).toEqual([
+      ["Alya", 1],
+      ["Zaki", 1],
+    ]);
+  });
 });

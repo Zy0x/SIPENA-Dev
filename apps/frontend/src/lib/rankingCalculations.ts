@@ -91,6 +91,17 @@ export function applyDenseRank(sorted: StudentRankingEntry[]): StudentRankingEnt
   });
 }
 
+function getRoundedRankingAverage(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function compareRankingEntries(left: StudentRankingEntry, right: StudentRankingEntry): number {
+  return (
+    getRoundedRankingAverage(right.overallAverage) - getRoundedRankingAverage(left.overallAverage) ||
+    left.student.name.localeCompare(right.student.name)
+  );
+}
+
 function normalizeRankingScore(value: number | null): number {
   return value ?? 0;
 }
@@ -145,11 +156,7 @@ export function buildOverallRankings({
         gradedSubjectCount: subjectIds.length,
       } satisfies StudentRankingEntry;
     })
-    .sort(
-      (left, right) =>
-        right.overallAverage - left.overallAverage ||
-        left.student.name.localeCompare(right.student.name),
-    );
+    .sort(compareRankingEntries);
 
   return applyDenseRank(rankings);
 }
@@ -193,11 +200,7 @@ export function buildSubjectRankings({
         gradedSubjectCount: 1,
       } satisfies StudentRankingEntry;
     })
-    .sort(
-      (left, right) =>
-        right.overallAverage - left.overallAverage ||
-        left.student.name.localeCompare(right.student.name),
-    );
+    .sort(compareRankingEntries);
 
   return applyDenseRank(rankings);
 }
