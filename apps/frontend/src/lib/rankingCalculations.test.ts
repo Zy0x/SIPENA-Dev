@@ -140,6 +140,53 @@ describe("ranking calculations", () => {
     expect(average).toBe(87.5);
   });
 
+  it("matches the grade input report formula when SAS is still empty", () => {
+    const semester2 = "sem-2";
+    const subjectId = "indonesian";
+    const subjectChapters: RankingChapter[] = [
+      { id: "indo-chapter-5", subject_id: subjectId, semester_id: semester2 },
+      { id: "indo-chapter-6", subject_id: subjectId, semester_id: semester2 },
+      { id: "indo-chapter-7", subject_id: subjectId, semester_id: semester2 },
+      { id: "indo-chapter-8", subject_id: subjectId, semester_id: semester2 },
+    ];
+    const subjectAssignments: RankingAssignment[] = [
+      { id: "indo-5-a", chapter_id: "indo-chapter-5", semester_id: semester2 },
+      { id: "indo-5-b", chapter_id: "indo-chapter-5", semester_id: semester2 },
+      { id: "indo-6-a", chapter_id: "indo-chapter-6", semester_id: semester2 },
+      { id: "indo-6-b", chapter_id: "indo-chapter-6", semester_id: semester2 },
+      { id: "indo-7-a", chapter_id: "indo-chapter-7", semester_id: semester2 },
+      { id: "indo-7-b", chapter_id: "indo-chapter-7", semester_id: semester2 },
+      { id: "indo-7-c", chapter_id: "indo-chapter-7", semester_id: semester2 },
+      { id: "indo-8-a", chapter_id: "indo-chapter-8", semester_id: semester2 },
+      { id: "indo-8-b", chapter_id: "indo-chapter-8", semester_id: semester2 },
+      { id: "indo-8-c", chapter_id: "indo-chapter-8", semester_id: semester2 },
+    ];
+    const subjectGrades: RankingGrade[] = [
+      grade("student-a", subjectId, "assignment", 80, semester2, "indo-5-a"),
+      grade("student-a", subjectId, "assignment", 80, semester2, "indo-5-b"),
+      grade("student-a", subjectId, "assignment", 100, semester2, "indo-6-a"),
+      grade("student-a", subjectId, "assignment", 100, semester2, "indo-6-b"),
+      grade("student-a", subjectId, "assignment", 100, semester2, "indo-7-a"),
+      grade("student-a", subjectId, "assignment", 100, semester2, "indo-7-b"),
+      grade("student-a", subjectId, "assignment", 100, semester2, "indo-7-c"),
+      grade("student-a", subjectId, "assignment", 80, semester2, "indo-8-a"),
+      grade("student-a", subjectId, "assignment", 100, semester2, "indo-8-b"),
+      grade("student-a", subjectId, "assignment", 100, semester2, "indo-8-c"),
+      grade("student-a", subjectId, "sts", 73, semester2),
+    ];
+
+    const average = calculateRankingSubjectAverage({
+      studentId: "student-a",
+      subjectId,
+      grades: subjectGrades,
+      chapters: subjectChapters,
+      assignments: subjectAssignments,
+      semesterIds: [semester2],
+    });
+
+    expect(average).toBeCloseTo(64.9167, 4);
+  });
+
   it("ranks per subject using the selected semester subject average", () => {
     const rankings = buildSubjectRankings({
       students,

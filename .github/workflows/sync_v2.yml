@@ -39,15 +39,15 @@ jobs:
       - name: Load config otomatis
         if: github.event_name == 'repository_dispatch'
         shell: bash
+        env:
+          PAYLOAD_SOURCE_REPOSITORY: ${{ github.event.client_payload.source_repo_full_name }}
+          PAYLOAD_TARGET_REPO_NAME: ${{ github.event.client_payload.target_repo_name }}
+          PAYLOAD_TARGET_BRANCH: ${{ github.event.client_payload.target_branch }}
+          PAYLOAD_SYNC_MODE: ${{ github.event.client_payload.sync_mode }}
         run: |
           set -euo pipefail
 
           CONFIG_FILE="main-project/sync"
-
-          if [ ! -f "$CONFIG_FILE" ]; then
-            echo "Config tidak ditemukan: $CONFIG_FILE"
-            exit 1
-          fi
 
           read_config() {
             local key="$1"
@@ -56,9 +56,22 @@ jobs:
             printf "%s" "$value"
           }
 
-          TARGET_REPO="$(read_config TARGET_REPO)"
-          TARGET_BRANCH="$(read_config TARGET_BRANCH)"
-          SYNC_MODE="$(read_config SYNC_MODE)"
+          if [ -n "${PAYLOAD_SOURCE_REPOSITORY}" ]; then
+            SOURCE_REPOSITORY="${PAYLOAD_SOURCE_REPOSITORY}"
+            TARGET_REPO="${PAYLOAD_TARGET_REPO_NAME}"
+            TARGET_BRANCH="${PAYLOAD_TARGET_BRANCH}"
+            SYNC_MODE="${PAYLOAD_SYNC_MODE:-blacklist}"
+          else
+            if [ ! -f "$CONFIG_FILE" ]; then
+              echo "Payload source_repo_full_name kosong dan config tidak ditemukan: $CONFIG_FILE"
+              exit 1
+            fi
+
+            TARGET_REPO="$(read_config TARGET_REPO)"
+            TARGET_BRANCH="$(read_config TARGET_BRANCH)"
+            SYNC_MODE="$(read_config SYNC_MODE)"
+            SOURCE_REPOSITORY="Web-Modder/${TARGET_REPO}"
+          fi
 
           if [ -z "$TARGET_REPO" ]; then
             echo "TARGET_REPO kosong di file sync"
@@ -83,6 +96,7 @@ jobs:
           echo "TARGET_REPO=$TARGET_REPO" >> "$GITHUB_ENV"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           echo "SYNC_MODE=$SYNC_MODE" >> "$GITHUB_ENV"
+          echo "SOURCE_REPOSITORY=$SOURCE_REPOSITORY" >> "$GITHUB_ENV"
 
       - name: Load input manual
         if: github.event_name == 'workflow_dispatch'
@@ -93,6 +107,7 @@ jobs:
           TARGET_REPO="${{ github.event.inputs.target_repo_name }}"
           TARGET_BRANCH="${{ github.event.inputs.target_branch }}"
           SYNC_MODE="${{ github.event.inputs.sync_mode }}"
+          SOURCE_REPOSITORY="Web-Modder/${TARGET_REPO}"
 
           if [ -z "$TARGET_REPO" ] || [ -z "$TARGET_BRANCH" ] || [ -z "$SYNC_MODE" ]; then
             echo "Input manual tidak lengkap"
@@ -107,6 +122,7 @@ jobs:
           echo "TARGET_REPO=$TARGET_REPO" >> "$GITHUB_ENV"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           echo "SYNC_MODE=$SYNC_MODE" >> "$GITHUB_ENV"
+          echo "SOURCE_REPOSITORY=$SOURCE_REPOSITORY" >> "$GITHUB_ENV"
 
       - name: Validasi token
         shell: bash
@@ -124,7 +140,7 @@ jobs:
           set -euo pipefail
 
           echo "===== CONFIG ====="
-          echo "Source : Web-Modder/${TARGET_REPO}"
+          echo "Source : ${SOURCE_REPOSITORY}"
           echo "Branch : ${TARGET_BRANCH}"
           echo "Mode   : ${SYNC_MODE}"
           echo "Target : ${GITHUB_REPOSITORY}"
@@ -133,7 +149,7 @@ jobs:
       - name: Checkout repo organization
         uses: actions/checkout@v4
         with:
-          repository: Web-Modder/${{ env.TARGET_REPO }}
+          repository: ${{ env.SOURCE_REPOSITORY }}
           token: ${{ secrets.SYNC_PROJECT_WEB_PAT }}
           path: org-source
           ref: ${{ env.TARGET_BRANCH }}
@@ -207,6 +223,6 @@ jobs:
           fi
 
           git status --short
-          git commit -m "chore: auto sync from Web-Modder/${TARGET_REPO}"
+          git commit -m "chore: auto sync from ${SOURCE_REPOSITORY}"
           git push
           echo "Sync berhasil"

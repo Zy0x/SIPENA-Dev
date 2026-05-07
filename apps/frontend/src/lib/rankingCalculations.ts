@@ -3,6 +3,7 @@ import {
   calculateReportGrade,
   type CustomFormula,
 } from "@/components/grades/FormulaSettings";
+import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 
 export type RankingSemesterValue = "1" | "2" | "all";
 
@@ -51,26 +52,6 @@ interface CalculateSubjectAverageInput {
   formula?: CustomFormula;
 }
 
-const getGradeValue = (
-  grades: RankingGrade[],
-  gradeType: string,
-  targetSemesterId?: string,
-  assignmentId?: string,
-): number | null => {
-  const gradeCandidates = grades.filter(
-    (item) =>
-      item.grade_type === gradeType &&
-      (assignmentId ? item.assignment_id === assignmentId : !item.assignment_id),
-  );
-
-  const grade = targetSemesterId
-    ? gradeCandidates.find((item) => item.semester_id === targetSemesterId) ??
-      gradeCandidates.find((item) => !item.semester_id)
-    : gradeCandidates[0];
-
-  return grade?.value ?? null;
-};
-
 const calculateSingleScopeSubjectAverage = (
   subjectGrades: RankingGrade[],
   subjectChapters: RankingChapter[],
@@ -101,7 +82,11 @@ const calculateSingleScopeSubjectAverage = (
 
     let assignmentSum = 0;
     chapterAssignments.forEach((assignment) => {
-      const value = getGradeValue(subjectGrades, "assignment", targetSemesterId, assignment.id);
+      const value = getScopedGradeValue(subjectGrades, {
+        gradeType: "assignment",
+        assignmentId: assignment.id,
+        semesterId: targetSemesterId,
+      });
       assignmentSum += value ?? 0;
     });
 
@@ -110,8 +95,14 @@ const calculateSingleScopeSubjectAverage = (
   });
 
   const chaptersAverage = chapterCount > 0 ? chapterSum / chapterCount : null;
-  const stsRaw = getGradeValue(subjectGrades, "sts", targetSemesterId);
-  const sasRaw = getGradeValue(subjectGrades, "sas", targetSemesterId);
+  const stsRaw = getScopedGradeValue(subjectGrades, {
+    gradeType: "sts",
+    semesterId: targetSemesterId,
+  });
+  const sasRaw = getScopedGradeValue(subjectGrades, {
+    gradeType: "sas",
+    semesterId: targetSemesterId,
+  });
 
   if (chaptersAverage === null && stsRaw === null && sasRaw === null) {
     return null;

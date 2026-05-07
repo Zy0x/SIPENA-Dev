@@ -3,6 +3,7 @@ import { supabaseExternal as supabase } from "@/core/repositories/supabase-compa
 import { useAuth } from "@/contexts/AuthContext";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
+import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 
 export interface Grade {
   id: string;
@@ -346,14 +347,15 @@ export function useGrades(
   // Helper function to get grade value for a student
   const getGradeValue = (studentId: string, gradeType: string, assignmentId?: string): number | null => {
     const grades = gradesQuery.data || [];
-    
-    const grade = grades.find(
-      (g) =>
-        g.student_id === studentId &&
-        g.grade_type === gradeType &&
-        (assignmentId ? g.assignment_id === assignmentId : !g.assignment_id)
+
+    return getScopedGradeValue(
+      grades.filter((grade) => grade.student_id === studentId),
+      {
+        gradeType,
+        assignmentId,
+        semesterId: filterBySemester ? effectiveSemesterId : null,
+      },
     );
-    return grade?.value ?? null;
   };
 
   // Helper to get grade value as number (treats null as 0 for calculations)

@@ -32,9 +32,11 @@ import { useAssignments, useAllAssignments, type Assignment } from "@/hooks/useA
 import type { Student } from "@/hooks/useStudents";
 import type { Class } from "@/hooks/useClasses";
 import type { Subject } from "@/hooks/useSubjects";
+import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { fuzzySearchStudents } from "@/lib/fuzzySearch";
+import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -275,6 +277,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
+  const { activeSemesterId } = useAcademicYear();
   const { success, error: showError } = useEnhancedToast();
   const { shouldShowTours } = useUserPreferences();
 
@@ -491,15 +494,16 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const getGradeValue = useCallback(
     (studentId: string, gradeType: string, assignmentId?: string) => {
-      const grade = grades.find(
-        (g) =>
-          g.student_id === studentId &&
-          g.grade_type === gradeType &&
-          (assignmentId ? g.assignment_id === assignmentId : !g.assignment_id)
+      return getScopedGradeValue(
+        grades.filter((grade) => grade.student_id === studentId),
+        {
+          gradeType,
+          assignmentId,
+          semesterId: isGuestMode ? selectedClass?.semester_id : activeSemesterId,
+        },
       );
-      return grade?.value ?? null;
     },
-    [grades]
+    [activeSemesterId, grades, isGuestMode, selectedClass?.semester_id]
   );
 
   const studentAverages = useMemo(() => {
