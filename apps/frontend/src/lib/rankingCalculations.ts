@@ -126,6 +126,32 @@ const calculateSingleScopeSubjectAverage = (
   );
 };
 
+const isLegacySemester = (semesterId: string | null | undefined) => !semesterId;
+
+const filterSemesterGrades = (
+  grades: RankingGrade[],
+  targetSemesterId?: string,
+): RankingGrade[] => {
+  if (!targetSemesterId) {
+    return grades;
+  }
+
+  const semesterGrades = grades.filter((grade) => grade.semester_id === targetSemesterId);
+  return semesterGrades.length > 0 ? semesterGrades : grades.filter((grade) => isLegacySemester(grade.semester_id));
+};
+
+const filterSemesterChapters = (
+  chapters: RankingChapter[],
+  targetSemesterId?: string,
+): RankingChapter[] => {
+  if (!targetSemesterId) {
+    return chapters;
+  }
+
+  const semesterChapters = chapters.filter((chapter) => chapter.semester_id === targetSemesterId);
+  return semesterChapters.length > 0 ? semesterChapters : chapters.filter((chapter) => isLegacySemester(chapter.semester_id));
+};
+
 export function calculateRankingSubjectAverage({
   studentId,
   subjectId,
@@ -142,12 +168,8 @@ export function calculateRankingSubjectAverage({
 
   if (semesterIds.length <= 1) {
     const targetSemesterId = semesterIds[0];
-    const scopedGrades = targetSemesterId
-      ? baseGrades.filter((grade) => !grade.semester_id || grade.semester_id === targetSemesterId)
-      : baseGrades;
-    const scopedChapters = targetSemesterId
-      ? baseChapters.filter((chapter) => !chapter.semester_id || chapter.semester_id === targetSemesterId)
-      : baseChapters;
+    const scopedGrades = filterSemesterGrades(baseGrades, targetSemesterId);
+    const scopedChapters = filterSemesterChapters(baseChapters, targetSemesterId);
     const scopedChapterIds = new Set(scopedChapters.map((chapter) => chapter.id));
     const scopedAssignments = assignments.filter((assignment) => scopedChapterIds.has(assignment.chapter_id));
 
@@ -156,8 +178,8 @@ export function calculateRankingSubjectAverage({
 
   const semesterAverages = semesterIds
     .map((semesterId) => {
-      const scopedGrades = baseGrades.filter((grade) => !grade.semester_id || grade.semester_id === semesterId);
-      const scopedChapters = baseChapters.filter((chapter) => !chapter.semester_id || chapter.semester_id === semesterId);
+      const scopedGrades = filterSemesterGrades(baseGrades, semesterId);
+      const scopedChapters = filterSemesterChapters(baseChapters, semesterId);
       const scopedChapterIds = new Set(scopedChapters.map((chapter) => chapter.id));
       const scopedAssignments = assignments.filter((assignment) => scopedChapterIds.has(assignment.chapter_id));
 
