@@ -71,22 +71,6 @@ const getGradeValue = (
   return grade?.value ?? null;
 };
 
-const selectSemesterScopedItems = <T extends { semester_id?: string | null }>(
-  items: T[],
-  targetSemesterId?: string,
-): T[] => {
-  if (!targetSemesterId) {
-    return items;
-  }
-
-  const semesterItems = items.filter((item) => item.semester_id === targetSemesterId);
-  if (semesterItems.length > 0) {
-    return semesterItems;
-  }
-
-  return items.filter((item) => !item.semester_id);
-};
-
 const calculateSingleScopeSubjectAverage = (
   subjectGrades: RankingGrade[],
   subjectChapters: RankingChapter[],
@@ -97,10 +81,9 @@ const calculateSingleScopeSubjectAverage = (
   const assignmentsByChapter: Record<string, RankingAssignment[]> = {};
 
   subjectChapters.forEach((chapter) => {
-    const chapterAssignments = assignments.filter(
+    assignmentsByChapter[chapter.id] = assignments.filter(
       (assignment) => assignment.chapter_id === chapter.id,
     );
-    assignmentsByChapter[chapter.id] = selectSemesterScopedItems(chapterAssignments, targetSemesterId);
   });
 
   const hasChapters = subjectChapters.some(
@@ -162,7 +145,9 @@ export function calculateRankingSubjectAverage({
     const scopedGrades = targetSemesterId
       ? baseGrades.filter((grade) => !grade.semester_id || grade.semester_id === targetSemesterId)
       : baseGrades;
-    const scopedChapters = selectSemesterScopedItems(baseChapters, targetSemesterId);
+    const scopedChapters = targetSemesterId
+      ? baseChapters.filter((chapter) => !chapter.semester_id || chapter.semester_id === targetSemesterId)
+      : baseChapters;
     const scopedChapterIds = new Set(scopedChapters.map((chapter) => chapter.id));
     const scopedAssignments = assignments.filter((assignment) => scopedChapterIds.has(assignment.chapter_id));
 
@@ -172,7 +157,7 @@ export function calculateRankingSubjectAverage({
   const semesterAverages = semesterIds
     .map((semesterId) => {
       const scopedGrades = baseGrades.filter((grade) => !grade.semester_id || grade.semester_id === semesterId);
-      const scopedChapters = selectSemesterScopedItems(baseChapters, semesterId);
+      const scopedChapters = baseChapters.filter((chapter) => !chapter.semester_id || chapter.semester_id === semesterId);
       const scopedChapterIds = new Set(scopedChapters.map((chapter) => chapter.id));
       const scopedAssignments = assignments.filter((assignment) => scopedChapterIds.has(assignment.chapter_id));
 

@@ -79,7 +79,7 @@ const grades: RankingGrade[] = [
 ];
 
 describe("ranking calculations", () => {
-  it("calculates per-subject averages from the selected semester only", () => {
+  it("calculates per-subject averages from the selected semester query scope", () => {
     const semester1Average = calculateRankingSubjectAverage({
       studentId: "student-a",
       subjectId: "math",
@@ -97,21 +97,21 @@ describe("ranking calculations", () => {
       semesterIds: ["sem-2"],
     });
 
-    expect(semester1Average).toBe(80);
+    expect(semester1Average).toBe(85);
     expect(semester2Average).toBe(95);
   });
 
-  it("uses legacy null-semester data only when selected-semester data is absent", () => {
+  it("keeps legacy null-semester chapters in the selected semester like grade input", () => {
     const average = calculateRankingSubjectAverage({
       studentId: "student-a",
-      subjectId: "legacy",
+      subjectId: "math",
       grades,
       chapters,
       assignments,
       semesterIds: ["sem-1"],
     });
 
-    expect(average).toBe(77.5);
+    expect(average).toBe(85);
   });
 
   it("calculates combined-semester subject averages from semester report values", () => {
@@ -124,7 +124,7 @@ describe("ranking calculations", () => {
       semesterIds: ["sem-1", "sem-2"],
     });
 
-    expect(average).toBe(87.5);
+    expect(average).toBe(90);
   });
 
   it("ranks per subject using the selected semester subject average", () => {
@@ -138,8 +138,8 @@ describe("ranking calculations", () => {
     });
 
     expect(rankings.map((entry) => [entry.student.id, entry.overallAverage, entry.rank])).toEqual([
-      ["student-b", 90, 1],
-      ["student-a", 80, 2],
+      ["student-b", 92.5, 1],
+      ["student-a", 85, 2],
     ]);
   });
 
@@ -154,8 +154,8 @@ describe("ranking calculations", () => {
     });
 
     expect(rankings.map((entry) => [entry.student.id, entry.overallAverage, entry.rank])).toEqual([
-      ["student-b", 90, 1],
-      ["student-a", 87.5, 2],
+      ["student-b", 92.5, 1],
+      ["student-a", 90, 2],
     ]);
   });
 
