@@ -209,7 +209,6 @@ export default function StudentRankings() {
   };
 
   const formatGrade = (value: number): string => {
-    if (value === 0) return "-";
     return Math.round(value * 10) / 10 + "";
   };
 
@@ -338,7 +337,15 @@ export default function StudentRankings() {
     subjects,
   ]);
 
-  const selectedOverallColumns = useMemo(() => exportColumns.filter((column) => selectedExportColumnIds.includes(column.id)), [exportColumns, selectedExportColumnIds]);
+  const selectedOverallColumns = useMemo(() => {
+    const subjectsToUse = selectedSubjectIds.length > 0 ? new Set(selectedSubjectIds) : null;
+
+    return exportColumns.filter((column) => {
+      if (!selectedExportColumnIds.includes(column.id)) return false;
+      if (column.category !== "grades" || !subjectsToUse) return true;
+      return !!column.subjectId && subjectsToUse.has(column.subjectId);
+    });
+  }, [exportColumns, selectedExportColumnIds, selectedSubjectIds]);
 
   const overallExportConfig = useMemo<ExportConfig | null>(() => {
     if (!selectedClass) return null;
@@ -350,10 +357,16 @@ export default function StudentRankings() {
       label: column.label,
       type: mapRankingColumnType(column),
     }));
+    const exportColumnsToUse = selectedSubjectIds.length > 0
+      ? exportColumns.filter((column) => column.category !== "grades" || !column.subjectId || selectedSubjectIds.includes(column.subjectId))
+      : exportColumns;
+    const selectedColumnIdsToUse = selectedExportColumnIds.filter((columnId) =>
+      exportColumnsToUse.some((column) => column.id === columnId)
+    );
     const data = buildRankingExportData(
       overallRankings,
-      exportColumns,
-      selectedExportColumnIds,
+      exportColumnsToUse,
+      selectedColumnIdsToUse,
       classKkm,
       formatGrade,
     );
@@ -562,7 +575,7 @@ export default function StudentRankings() {
 
   // Enhanced Subject Ranking Carousel Component with improved touch/mouse scroll
   const SubjectRankingCarousel = ({ subjectId, subject }: { subjectId: string; subject: { id: string; name: string; kkm: number } }) => {
-    const rankings = useMemo(() => getSubjectRanking(subjectId), [getSubjectRanking, subjectId]);
+    const rankings = getSubjectRanking(subjectId);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
     const [highlightedIndex, setHighlightedIndex] = useState(0);

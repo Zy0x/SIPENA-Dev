@@ -5,67 +5,22 @@ import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useStudents } from "@/hooks/useStudents";
 import { useSubjects } from "@/hooks/useSubjects";
-import { DEFAULT_FORMULA, calculateReportGrade } from "@/components/grades/FormulaSettings";
+import {
+  buildOverallRankings,
+  buildSubjectRankings,
+  type RankingAssignment,
+  type RankingChapter,
+  type RankingGrade,
+  type RankingSemesterValue,
+} from "@/lib/rankingCalculations";
 
-type RankingSemesterValue = "1" | "2" | "all";
-
-interface Grade {
-  id: string;
-  student_id: string;
-  subject_id: string;
-  assignment_id: string | null;
-  grade_type: string;
-  value: number | null;
-  semester_id?: string | null;
-}
-
-interface Chapter {
-  id: string;
-  subject_id: string;
-  semester_id?: string | null;
-}
-
-interface Assignment {
-  id: string;
-  chapter_id: string;
-  semester_id?: string | null;
-}
-
-export interface StudentRankingEntry {
-  student: {
-    id: string;
-    name: string;
-    nisn: string;
-  };
-  subjectGrades: Record<string, number>;
-  overallAverage: number;
-  rank: number;
-  gradedSubjectCount: number;
-}
+export type { StudentRankingEntry } from "@/lib/rankingCalculations";
 
 interface UseStudentRankingsOptions {
   classId?: string;
   semesterFilter?: RankingSemesterValue;
   overallSubjectIds?: string[];
 }
-
-const applyDenseRank = (sorted: StudentRankingEntry[]): StudentRankingEntry[] => {
-  let currentRank = 0;
-  let previousAverage: number | null = null;
-
-  return sorted.map((entry) => {
-    const roundedAverage = Math.round(entry.overallAverage * 10) / 10;
-    if (roundedAverage !== previousAverage) {
-      currentRank += 1;
-      previousAverage = roundedAverage;
-    }
-
-    return {
-      ...entry,
-      rank: currentRank,
-    };
-  });
-};
 
 export function useStudentRankings({
   classId,
@@ -108,9 +63,9 @@ export function useStudentRankings({
     queryFn: async () => {
       if (!classId || !user || subjectIds.length === 0) {
         return {
-          grades: [] as Grade[],
-          chapters: [] as Chapter[],
-          assignments: [] as Assignment[],
+          grades: [] as RankingGrade[],
+          chapters: [] as RankingChapter[],
+          assignments: [] as RankingAssignment[],
         };
       }
 
@@ -149,14 +104,14 @@ export function useStudentRankings({
       if (gradesError) throw gradesError;
       if (chaptersError) throw chaptersError;
 
-      const chapters = (chaptersData || []) as Chapter[];
+      const chapters = (chaptersData || []) as RankingChapter[];
       const chapterIds = chapters.map((chapter) => chapter.id);
 
       if (chapterIds.length === 0) {
         return {
-          grades: (gradesData || []) as Grade[],
+          grades: (gradesData || []) as RankingGrade[],
           chapters,
-          assignments: [] as Assignment[],
+          assignments: [] as RankingAssignment[],
         };
       }
 
@@ -175,9 +130,9 @@ export function useStudentRankings({
       if (assignmentsError) throw assignmentsError;
 
       return {
-        grades: (gradesData || []) as Grade[],
+        grades: (gradesData || []) as RankingGrade[],
         chapters,
-        assignments: (assignmentsData || []) as Assignment[],
+        assignments: (assignmentsData || []) as RankingAssignment[],
       };
     },
     enabled: !!classId && !!user,
@@ -208,127 +163,32 @@ export function useStudentRankings({
     };
   }, [queryClient, user]);
 
-  const grades = rankingDataQuery.data?.grades || [];
-  const chapters = rankingDataQuery.data?.chapters || [];
-  const assignments = rankingDataQuery.data?.assignments || [];
-
-  const calculateSubjectAverage = useCallback((studentId: string, subjectId: string): number | null => {
-    const studentGrades = grades.filter(
-      (grade) => grade.student_id === studentId && grade.subject_id === subjectId
-    );
-
-    const subjectChapters = chapters.filter((chapter) => chapter.subject_id === subjectId);
-    const assignmentsByChapter: Record<string, Assignment[]> = {};
-
-    subjectChapters.forEach((chapter) => {
-      assignmentsByChapter[chapter.id] = assignments.filter((assignment) => assignment.chapter_id === chapter.id);
-    });
-
-    const hasChapters = subjectChapters.length > 0 && subjectChapters.some(
-      (chapter) => (assignmentsByChapter[chapter.id]?.length || 0) > 0
-    );
-
-    let chapterSum = 0;
-    let chapterCount = 0;
-
-    subjectChapters.forEach((chapter) => {
-      const chapterAssignments = assignmentsByChapter[chapter.id] || [];
-      if (chapterAssignments.length === 0) {
-        return;
-      }
-
-      let assignmentSum = 0;
-      chapterAssignments.forEach((assignment) => {
-        const grade = studentGrades.find(
-          (studentGrade) =>
-            studentGrade.grade_type === "assignment" && studentGrade.assignment_id === assignment.id
-        );
-        assignmentSum += grade?.value ?? 0;
-      });
-
-      chapterSum += assignmentSum / chapterAssignments.length;
-      chapterCount += 1;
-    });
-
-    const chaptersAverage = chapterCount > 0 ? chapterSum / chapterCount : null;
-    const stsRaw = studentGrades.find((grade) => grade.grade_type === "sts" && !grade.assignment_id)?.value ?? null;
-    const sasRaw = studentGrades.find((grade) => grade.grade_type === "sas" && !grade.assignment_id)?.value ?? null;
-
-    if (stsRaw === null && sasRaw === null && chaptersAverage === null) {
-      return null;
-    }
-
-    return calculateReportGrade(
-      DEFAULT_FORMULA,
-      chaptersAverage ?? 0,
-      stsRaw ?? 0,
-      sasRaw ?? 0,
-      hasChapters
-    );
-  }, [assignments, chapters, grades]);
+  const grades = useMemo(() => rankingDataQuery.data?.grades || [], [rankingDataQuery.data?.grades]);
+  const chapters = useMemo(() => rankingDataQuery.data?.chapters || [], [rankingDataQuery.data?.chapters]);
+  const assignments = useMemo(() => rankingDataQuery.data?.assignments || [], [rankingDataQuery.data?.assignments]);
 
   const buildOverallRanking = useCallback((selectedSubjectIds: string[]) => {
     const subjectsToUse = selectedSubjectIds.length > 0 ? selectedSubjectIds : subjectIds;
-
-    const rankings = students
-      .map((student) => {
-        const subjectGrades: Record<string, number> = {};
-        let totalScore = 0;
-        let gradedSubjectCount = 0;
-
-        subjectsToUse.forEach((subjectId) => {
-          const average = calculateSubjectAverage(student.id, subjectId);
-          subjectGrades[subjectId] = average ?? 0;
-
-          if (average !== null) {
-            totalScore += average;
-            gradedSubjectCount += 1;
-          }
-        });
-
-        if (gradedSubjectCount === 0) {
-          return null;
-        }
-
-        return {
-          student,
-          subjectGrades,
-          overallAverage: totalScore / gradedSubjectCount,
-          rank: 0,
-          gradedSubjectCount,
-        } satisfies StudentRankingEntry;
-      })
-      .filter((entry) => entry !== null)
-      .sort((left, right) =>
-        right!.overallAverage - left!.overallAverage || left!.student.name.localeCompare(right!.student.name)
-      ) as StudentRankingEntry[];
-
-    return applyDenseRank(rankings);
-  }, [calculateSubjectAverage, students, subjectIds]);
+    return buildOverallRankings({
+      students,
+      subjectIds: subjectsToUse,
+      grades,
+      chapters,
+      assignments,
+      semesterIds,
+    });
+  }, [assignments, chapters, grades, semesterIds, students, subjectIds]);
 
   const getSubjectRanking = useCallback((subjectId: string) => {
-    const rankings = students
-      .map((student) => {
-        const average = calculateSubjectAverage(student.id, subjectId);
-        if (average === null) {
-          return null;
-        }
-
-        return {
-          student,
-          subjectGrades: { [subjectId]: average },
-          overallAverage: average,
-          rank: 0,
-          gradedSubjectCount: 1,
-        } satisfies StudentRankingEntry;
-      })
-      .filter((entry) => entry !== null)
-      .sort((left, right) =>
-        right!.overallAverage - left!.overallAverage || left!.student.name.localeCompare(right!.student.name)
-      ) as StudentRankingEntry[];
-
-    return applyDenseRank(rankings);
-  }, [calculateSubjectAverage, students]);
+    return buildSubjectRankings({
+      students,
+      subjectId,
+      grades,
+      chapters,
+      assignments,
+      semesterIds,
+    });
+  }, [assignments, chapters, grades, semesterIds, students]);
 
   const overallRankings = useMemo(
     () => buildOverallRanking(overallSubjectIds),

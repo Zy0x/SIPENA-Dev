@@ -12,7 +12,7 @@ interface StudentRankingEntry {
     name: string;
     nisn: string;
   };
-  subjectGrades: Record<string, number>;
+  subjectGrades: Record<string, number | null>;
   overallAverage: number;
   rank: number;
   gradedSubjectCount: number;
@@ -123,7 +123,8 @@ export function buildRankingExportData(
       } else if (column.id.startsWith("subject_")) {
         const subjectId = column.subjectId;
         if (subjectId) {
-          row[column.key] = formatGrade(ranking.subjectGrades[subjectId] || 0);
+          const value = ranking.subjectGrades[subjectId];
+          row[column.key] = value === null || value === undefined ? "-" : formatGrade(value);
         }
       } else if (column.id === "average") {
         row[column.key] = formatGrade(ranking.overallAverage);

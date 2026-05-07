@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.1",
+    version: "2.4.1",
+    title: "Ranking Siswa: Perhitungan Keseluruhan dan Per Mapel Lebih Akurat",
+    description: "Ranking Siswa kini menghitung nilai per semester secara benar sebelum digabung, sehingga ranking keseluruhan dan ranking per mata pelajaran konsisten dengan filter mapel dan periode laporan.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-07",
+    details: [
+      "Mode Semua Semester kini menghitung nilai rapor per semester terlebih dahulu, lalu merata-ratakan semester yang memiliki data agar STS/SAS tidak tertukar atau tercampur lintas semester.",
+      "Ranking Keseluruhan kini hanya memakai mata pelajaran yang dipilih pada filter, termasuk saat ekspor dari Studio Ekspor.",
+      "Nilai 0 kini tetap ditampilkan sebagai 0, sedangkan data yang benar-benar kosong ditampilkan sebagai tanda kosong agar tidak menyamarkan nilai asli.",
+      "Ditambahkan test regresi untuk ranking gabungan semester, ranking per mapel, dan ranking keseluruhan berdasarkan mapel yang dicentang.",
+    ],
+  },
+  {
     id: "v2.4.0-p8",
     version: "2.4.0",
     title: "Studio Ekspor Presensi: Label Vertikal Libur/Acara Akurat & Sinkron",
