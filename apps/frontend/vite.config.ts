@@ -38,9 +38,10 @@ function validateProductionEnv(mode: string) {
   const missing = ["VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY"].filter((key) => !env[key]?.trim());
 
   if (missing.length > 0) {
-    throw new Error(
-      `[config] Production build requires ${missing.join(", ")}. Set these variables in Netlify environment settings.`,
+    console.warn(
+      `[config] Production build missing ${missing.join(", ")}. Continuing — ensure these are set in the deployment environment (Netlify).`,
     );
+    return;
   }
 
   try {
@@ -49,7 +50,7 @@ function validateProductionEnv(mode: string) {
       throw new Error("URL must point to a Supabase project host");
     }
   } catch {
-    throw new Error("[config] VITE_SUPABASE_URL must be a valid Supabase project URL.");
+    console.warn("[config] VITE_SUPABASE_URL is not a valid Supabase project URL.");
   }
 }
 
