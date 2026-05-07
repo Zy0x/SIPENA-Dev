@@ -50,6 +50,8 @@ import { createDefaultReportDocumentStyle, getNaturalColumnWidthMmV2, type Repor
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import { useSignatureSettings } from "@/hooks/useSignatureSettings";
+import { useGradeFormulaSettings } from "@/hooks/useGradeFormulaSettings";
+import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
 import { UnifiedExportStudio, type ExportColumnTypographyOption, type ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
 import { ExportPreviewRenderer } from "@/components/export/ExportPreviewRenderer";
 
@@ -129,6 +131,7 @@ interface Assignment {
   name: string;
   chapter_id: string;
   order_index?: number;
+  semester_id?: string | null;
 }
 
 interface Grade {
@@ -198,6 +201,7 @@ export default function GradeReports() {
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const selectedSubject = subjects.find((s) => s.id === selectedSubjectId);
   const kkm = selectedSubject?.kkm || 75;
+  const { formula } = useGradeFormulaSettings(selectedSubjectId);
 
   // Query grades with correct semester filter - with refetch capabilities
   const { data: allGrades = [], refetch: refetchGrades } = useQuery({
@@ -231,7 +235,7 @@ export default function GradeReports() {
       
       const targetSemester = semestersForActiveYear.find(s => s.number === parseInt(semesterFilter));
       if (targetSemester) {
-        return grades.filter(g => g.semester_id === targetSemester.id);
+        return grades.filter(g => g.semester_id === targetSemester.id || !g.semester_id);
       }
       
       return grades;
@@ -269,7 +273,7 @@ export default function GradeReports() {
       
       const targetSemester = semestersForActiveYear.find(s => s.number === parseInt(semesterFilter));
       if (targetSemester) {
-        return chapters.filter(c => c.semester_id === targetSemester.id);
+        return chapters.filter(c => c.semester_id === targetSemester.id || !c.semester_id);
       }
       
       return chapters;
@@ -383,62 +387,41 @@ export default function GradeReports() {
     );
   }, [students, searchQuery]);
 
-  const getGradeValue = (studentId: string, gradeType: string, assignmentId?: string, targetSemesterId?: string) => {
-    let gradesPool = allGrades;
-    
-    if (targetSemesterId) {
-      gradesPool = allGrades.filter(g => g.semester_id === targetSemesterId);
-    }
-    
-    const grade = gradesPool.find(
-      g => g.student_id === studentId && 
-          g.grade_type === gradeType && 
-          (assignmentId ? g.assignment_id === assignmentId : !g.assignment_id)
-    );
-    return grade?.value ?? null;
-  };
-
   // Calculate semester data for a student
-  const calculateSemesterData = (student: Student, chapters: Chapter[], semesterId?: string) => {
-    const assignmentGrades: Record<string, number | null> = {};
-    const chapterAverages: Record<string, number> = {};
-    
-    chapters.forEach((chapter) => {
-      const chapterAssignments = assignmentsByChapter[chapter.id] || [];
-      chapterAssignments.forEach(assignment => {
-        assignmentGrades[assignment.id] = getGradeValue(student.id, "assignment", assignment.id, semesterId);
-      });
-      
-      const values = chapterAssignments.map((assignment) => {
-        return assignmentGrades[assignment.id] ?? 0;
-      });
-      chapterAverages[chapter.id] = values.length > 0 
-        ? values.reduce((sum, val) => sum + val, 0) / values.length 
-        : 0;
+  const calculateSemesterData = (student: Student, semesterId?: string) => {
+    const report = calculateStudentSubjectReport({
+      studentId: student.id,
+      subjectId: selectedSubjectId,
+      grades: allGrades,
+      chapters: allChapters,
+      assignments: allAssignments,
+      semesterId,
+      formula,
     });
 
-    const sts = getGradeValue(student.id, "sts", undefined, semesterId) ?? 0;
-    const sas = getGradeValue(student.id, "sas", undefined, semesterId) ?? 0;
+    const chapterAverages = Object.fromEntries(
+      Object.entries(report.chapterDetails).map(([chapterId, value]) => [chapterId, value ?? 0]),
+    );
 
-    const chapterValues = Object.values(chapterAverages);
-    const grandAvg = chapterValues.length > 0
-      ? chapterValues.reduce((sum, val) => sum + val, 0) / chapterValues.length
-      : 0;
-
-    const stsSasAvg = (sts + sas) / 2;
-    const rapor = chapters.length === 0 ? stsSasAvg : (grandAvg + stsSasAvg) / 2;
-
-    return { assignmentGrades, chapterAverages, sts, sas, grandAvg, rapor };
+    return {
+      assignmentGrades: report.assignmentGrades,
+      chapterAverages,
+      sts: report.stsAvg ?? 0,
+      sas: report.sasAvg ?? 0,
+      grandAvg: report.chaptersAvg ?? 0,
+      rapor: report.final ?? 0,
+      raporValue: report.final,
+    };
   };
 
   // Calculate student grades with multi-semester support
   const studentGrades = useMemo(() => {
     return filteredStudents.map((student) => {
       if (isCombinedView) {
-        const sem1Data = calculateSemesterData(student, chaptersBySemester.sem1, semester1?.id);
-        const sem2Data = calculateSemesterData(student, chaptersBySemester.sem2, semester2?.id);
+        const sem1Data = calculateSemesterData(student, semester1?.id);
+        const sem2Data = calculateSemesterData(student, semester2?.id);
         
-        const validRapors = [sem1Data.rapor, sem2Data.rapor].filter(r => r > 0);
+        const validRapors = [sem1Data.raporValue, sem2Data.raporValue].filter((value): value is number => value !== null);
         const avgRapor = validRapors.length > 0 
           ? validRapors.reduce((sum, v) => sum + v, 0) / validRapors.length 
           : 0;
@@ -451,7 +434,8 @@ export default function GradeReports() {
           isCombined: true,
         };
       } else {
-        const data = calculateSemesterData(student, allChapters);
+        const targetSemester = semestersForActiveYear.find(s => s.number === parseInt(semesterFilter));
+        const data = calculateSemesterData(student, targetSemester?.id);
         return {
           student,
           ...data,
@@ -460,7 +444,7 @@ export default function GradeReports() {
         };
       }
     });
-  }, [filteredStudents, allGrades, allChapters, allAssignments, isCombinedView, chaptersBySemester, semester1?.id, semester2?.id]);
+  }, [filteredStudents, allGrades, allChapters, allAssignments, isCombinedView, semester1?.id, semester2?.id, semestersForActiveYear, semesterFilter, selectedSubjectId, formula]);
 
   const getStatusColor = (value: number) => {
     if (value < kkm) return "text-grade-fail bg-grade-fail/10";

@@ -25,6 +25,7 @@ const USER_DATA_TABLES = [
   "chapters",
   "assignments",
   "grades",
+  "grade_formula_settings",
   "user_preferences",
   "shared_links",
   "activity_logs",

@@ -13,6 +13,7 @@ import {
   type RankingGrade,
   type RankingSemesterValue,
 } from "@/lib/rankingCalculations";
+import { DEFAULT_FORMULA, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
 
 export type { StudentRankingEntry } from "@/lib/rankingCalculations";
 
@@ -66,6 +67,7 @@ export function useStudentRankings({
           grades: [] as RankingGrade[],
           chapters: [] as RankingChapter[],
           assignments: [] as RankingAssignment[],
+          formulasBySubject: {} as Record<string, CustomFormula>,
         };
       }
 
@@ -96,13 +98,30 @@ export function useStudentRankings({
         chaptersQuery = chaptersQuery.or(`${semesterFilterValue},semester_id.is.null`);
       }
 
-      const [{ data: gradesData, error: gradesError }, { data: chaptersData, error: chaptersError }] = await Promise.all([
+      const [
+        { data: gradesData, error: gradesError },
+        { data: chaptersData, error: chaptersError },
+        { data: formulaData, error: formulaError },
+      ] = await Promise.all([
         gradesQuery,
         chaptersQuery,
+        (supabase as any)
+          .from("grade_formula_settings")
+          .select("subject_id, formula")
+          .in("subject_id", subjectIds)
+          .eq("user_id", user.id),
       ]);
 
       if (gradesError) throw gradesError;
       if (chaptersError) throw chaptersError;
+      if (formulaError) console.warn("[StudentRankings] Formula query error:", formulaError.message);
+
+      const formulasBySubject = Object.fromEntries(
+        subjectIds.map((subjectId) => {
+          const row = (formulaData || []).find((item: any) => item.subject_id === subjectId);
+          return [subjectId, normalizeFormula(row?.formula ?? DEFAULT_FORMULA)];
+        }),
+      ) as Record<string, CustomFormula>;
 
       const chapters = (chaptersData || []) as RankingChapter[];
       const chapterIds = chapters.map((chapter) => chapter.id);
@@ -112,6 +131,7 @@ export function useStudentRankings({
           grades: (gradesData || []) as RankingGrade[],
           chapters,
           assignments: [] as RankingAssignment[],
+          formulasBySubject,
         };
       }
 
@@ -133,6 +153,7 @@ export function useStudentRankings({
         grades: (gradesData || []) as RankingGrade[],
         chapters,
         assignments: (assignmentsData || []) as RankingAssignment[],
+        formulasBySubject,
       };
     },
     enabled: !!classId && !!user,
@@ -154,6 +175,7 @@ export function useStudentRankings({
       .on("postgres_changes", { event: "*", schema: "public", table: "grades", filter: `user_id=eq.${user.id}` }, invalidateRankings)
       .on("postgres_changes", { event: "*", schema: "public", table: "chapters", filter: `user_id=eq.${user.id}` }, invalidateRankings)
       .on("postgres_changes", { event: "*", schema: "public", table: "assignments", filter: `user_id=eq.${user.id}` }, invalidateRankings)
+      .on("postgres_changes", { event: "*", schema: "public", table: "grade_formula_settings", filter: `user_id=eq.${user.id}` }, invalidateRankings)
       .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${user.id}` }, invalidateRankings)
       .on("postgres_changes", { event: "*", schema: "public", table: "subjects", filter: `user_id=eq.${user.id}` }, invalidateRankings)
       .subscribe();
@@ -166,6 +188,10 @@ export function useStudentRankings({
   const grades = useMemo(() => rankingDataQuery.data?.grades || [], [rankingDataQuery.data?.grades]);
   const chapters = useMemo(() => rankingDataQuery.data?.chapters || [], [rankingDataQuery.data?.chapters]);
   const assignments = useMemo(() => rankingDataQuery.data?.assignments || [], [rankingDataQuery.data?.assignments]);
+  const formulasBySubject = useMemo(
+    () => rankingDataQuery.data?.formulasBySubject || {},
+    [rankingDataQuery.data?.formulasBySubject],
+  );
 
   const buildOverallRanking = useCallback((selectedSubjectIds: string[]) => {
     const subjectsToUse = selectedSubjectIds.length > 0 ? selectedSubjectIds : subjectIds;
@@ -176,8 +202,9 @@ export function useStudentRankings({
       chapters,
       assignments,
       semesterIds,
+      formulasBySubject,
     });
-  }, [assignments, chapters, grades, semesterIds, students, subjectIds]);
+  }, [assignments, chapters, formulasBySubject, grades, semesterIds, students, subjectIds]);
 
   const getSubjectRanking = useCallback((subjectId: string) => {
     return buildSubjectRankings({
@@ -187,8 +214,9 @@ export function useStudentRankings({
       chapters,
       assignments,
       semesterIds,
+      formulasBySubject,
     });
-  }, [assignments, chapters, grades, semesterIds, students]);
+  }, [assignments, chapters, formulasBySubject, grades, semesterIds, students]);
 
   const overallRankings = useMemo(
     () => buildOverallRanking(overallSubjectIds),

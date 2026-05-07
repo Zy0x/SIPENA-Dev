@@ -307,6 +307,41 @@ export type Database = {
           },
         ]
       }
+      grade_formula_settings: {
+        Row: {
+          created_at: string
+          formula: Json
+          id: string
+          subject_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          formula?: Json
+          id?: string
+          subject_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          formula?: Json
+          id?: string
+          subject_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grade_formula_settings_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_audit_logs: {
         Row: {
           action: string

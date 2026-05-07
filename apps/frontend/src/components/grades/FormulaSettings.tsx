@@ -10,34 +10,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-
-export interface FormulaComponent {
-  id: string;
-  name: string;
-  enabled: boolean;
-  weight: number;
-}
-
-export interface CustomFormula {
-  enabled: boolean;
-  components: FormulaComponent[];
-}
-
-export const DEFAULT_FORMULA: CustomFormula = {
-  enabled: false,
-  components: [
-    { id: "grandAvg", name: "Rata-rata BAB", enabled: true, weight: 50 },
-    { id: "sts", name: "Nilai STS", enabled: true, weight: 25 },
-    { id: "sas", name: "Nilai SAS", enabled: true, weight: 25 },
-  ],
-};
+export {
+  DEFAULT_FORMULA,
+  calculateReportGrade,
+  type CustomFormula,
+  type FormulaComponent,
+} from "@/lib/gradeFormula";
+import type { CustomFormula } from "@/lib/gradeFormula";
 
 interface FormulaSettingsProps {
   formula: CustomFormula;
   onFormulaChange: (formula: CustomFormula) => void;
   hasChapters: boolean;
 }
-
 export function FormulaSettings({ formula, onFormulaChange, hasChapters }: FormulaSettingsProps) {
   const totalWeight = formula.components
     .filter(c => c.enabled)
@@ -198,47 +183,4 @@ export function FormulaSettings({ formula, onFormulaChange, hasChapters }: Formu
       </PopoverContent>
     </Popover>
   );
-}
-
-// Calculate report grade with formula
-export function calculateReportGrade(
-  formula: CustomFormula,
-  grandAvg: number,
-  sts: number,
-  sas: number,
-  hasChapters: boolean
-): number {
-  if (formula.enabled) {
-    const enabledComponents = formula.components.filter(c => c.enabled);
-    const totalWeight = enabledComponents.reduce((sum, c) => sum + c.weight, 0);
-    
-    if (totalWeight === 0) return 0;
-    
-    let result = 0;
-    enabledComponents.forEach((component) => {
-      const normalizedWeight = component.weight / totalWeight;
-      switch (component.id) {
-        case "grandAvg":
-          result += grandAvg * normalizedWeight;
-          break;
-        case "sts":
-          result += sts * normalizedWeight;
-          break;
-        case "sas":
-          result += sas * normalizedWeight;
-          break;
-      }
-    });
-    
-    return result;
-  }
-  
-  // Default formula
-  const stsSasAvg = (sts + sas) / 2;
-  
-  if (!hasChapters) {
-    return stsSasAvg;
-  }
-  
-  return (grandAvg + stsSasAvg) / 2;
 }

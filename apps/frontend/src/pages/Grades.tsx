@@ -37,6 +37,9 @@ import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { fuzzySearchStudents } from "@/lib/fuzzySearch";
 import { getScopedGradeValue } from "@/lib/gradeValueSelection";
+import { useGradeFormulaSettings, type GradeFormulaSetting } from "@/hooks/useGradeFormulaSettings";
+import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
+import { DEFAULT_FORMULA, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,9 +75,6 @@ import { SpreadsheetTable } from "@/components/grades/SpreadsheetTable";
 import { EmptyStudentsState } from "@/components/grades/EmptyStudentsState";
 import {
   FormulaSettings,
-  CustomFormula,
-  DEFAULT_FORMULA,
-  calculateReportGrade,
 } from "@/components/grades/FormulaSettings";
 import ImportGradesDialog from "@/components/import/ImportGradesDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
@@ -123,6 +123,7 @@ interface GuestGradeInputData {
   access: GradeInputAccess;
   classInfo: Class;
   subjectInfo: Subject;
+  formulaSetting: GradeFormulaSetting | null;
   students: Student[];
   chapters: Chapter[];
   assignments: Assignment[];
@@ -147,6 +148,7 @@ interface GuestRawGradeInputData {
   };
   classInfo?: Class;
   subjectInfo?: Subject;
+  formulaSetting?: GradeFormulaSetting | null;
   students?: Student[];
   chapters?: Chapter[];
   assignments?: Assignment[];
@@ -253,6 +255,7 @@ function normalizeGuestGradeInputData(raw: unknown, session: GuestSession): Gues
     },
     classInfo: data.classInfo as Class,
     subjectInfo: data.subjectInfo as Subject,
+    formulaSetting: data.formulaSetting || null,
     students: data.students || [],
     chapters: data.chapters || [],
     assignments: data.assignments || [],
@@ -297,7 +300,6 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [lockedStudentId, setLockedStudentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("input");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [formula, setFormula] = useState<CustomFormula>(DEFAULT_FORMULA);
   const [showImportGrades, setShowImportGrades] = useState(false);
   const [showOCRGrades, setShowOCRGrades] = useState(false);
   const [showGuestKkmDialog, setShowGuestKkmDialog] = useState(false);
@@ -370,6 +372,16 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const guestData = guestQuery.data;
   const classId = isGuestMode ? guestData?.access.classId || "" : selectedClassId;
   const subjectId = isGuestMode ? guestData?.access.subjectId || "" : selectedSubjectId;
+  const {
+    formula: ownerFormula,
+    saveFormula,
+    isLoading: formulaLoading,
+    isSaving: formulaSaving,
+  } = useGradeFormulaSettings(isGuestMode ? undefined : subjectId);
+  const formula = useMemo(
+    () => (isGuestMode ? normalizeFormula(guestData?.formulaSetting?.formula ?? DEFAULT_FORMULA) : ownerFormula),
+    [guestData?.formulaSetting?.formula, isGuestMode, ownerFormula],
+  );
   const students = useMemo(
     () => (isGuestMode ? guestData?.students || [] : ownerStudents),
     [guestData?.students, isGuestMode, ownerStudents]
@@ -508,62 +520,44 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const studentAverages = useMemo(() => {
     const averages: Record<string, StudentAverage> = {};
-    const hasChapters = chapters.length > 0 && chapters.some(
-      (chapter) => (assignmentsByChapter[chapter.id]?.length || 0) > 0
-    );
+    const semesterId = isGuestMode ? selectedClass?.semester_id : activeSemesterId;
 
     students.forEach((student) => {
-      const chapterDetails: Record<string, number | null> = {};
-      let chapterSum = 0;
-      let chapterCount = 0;
-      let hasEmptyValues = false;
-
-      chapters.forEach((chapter) => {
-        const chapterAssignments = assignmentsByChapter[chapter.id] || [];
-        if (chapterAssignments.length === 0) {
-          chapterDetails[chapter.id] = null;
-          return;
-        }
-
-        let assignmentSum = 0;
-        chapterAssignments.forEach((assignment) => {
-          const value = getGradeValue(student.id, "assignment", assignment.id);
-          if (value === null) hasEmptyValues = true;
-          assignmentSum += value ?? 0;
-        });
-
-        const chapterAvg = assignmentSum / chapterAssignments.length;
-        chapterDetails[chapter.id] = chapterAvg;
-        chapterSum += chapterAvg;
-        chapterCount++;
+      const report = calculateStudentSubjectReport({
+        studentId: student.id,
+        subjectId,
+        grades,
+        chapters,
+        assignments: allAssignments,
+        semesterId,
+        formula,
       });
 
-      const chaptersAvg = chapterCount > 0 ? chapterSum / chapterCount : null;
-      const stsRaw = getGradeValue(student.id, "sts");
-      const sasRaw = getGradeValue(student.id, "sas");
-
-      if (stsRaw === null || sasRaw === null) hasEmptyValues = true;
-
-      const final = calculateReportGrade(
-        formula,
-        chaptersAvg ?? 0,
-        stsRaw ?? 0,
-        sasRaw ?? 0,
-        hasChapters
-      );
-
       averages[student.id] = {
-        chaptersAvg,
-        stsAvg: stsRaw,
-        sasAvg: sasRaw,
-        final: stsRaw !== null || sasRaw !== null || chaptersAvg !== null ? final : null,
-        chapterDetails,
-        hasEmptyValues,
+        chaptersAvg: report.chaptersAvg,
+        stsAvg: report.stsAvg,
+        sasAvg: report.sasAvg,
+        final: report.final,
+        chapterDetails: report.chapterDetails,
+        hasEmptyValues: report.hasEmptyValues,
       };
     });
 
     return averages;
-  }, [students, chapters, assignmentsByChapter, getGradeValue, formula]);
+  }, [activeSemesterId, allAssignments, chapters, formula, grades, isGuestMode, selectedClass?.semester_id, students, subjectId]);
+
+  const handleFormulaChange = useCallback(
+    async (nextFormula: CustomFormula) => {
+      if (isGuestMode) return;
+      try {
+        await saveFormula(nextFormula);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Rumus gagal disimpan";
+        showError("Gagal menyimpan rumus", message);
+      }
+    },
+    [isGuestMode, saveFormula, showError],
+  );
 
   const invalidateGuestData = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["guest_grade_input", token] });
@@ -751,7 +745,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const isLoading = isGuestMode
     ? !guestSessionChecked || guestQuery.isLoading
-    : classesLoading || studentsLoading || subjectsLoading || gradesLoading || chaptersLoading || assignmentsLoading;
+    : classesLoading || studentsLoading || subjectsLoading || gradesLoading || chaptersLoading || assignmentsLoading || formulaLoading;
   const hasNoClasses = !isGuestMode && !classesLoading && classes.length === 0;
   const hasNoChapters = !chaptersLoading && chapters.length === 0 && subjectId;
   const kkm = selectedSubject?.kkm || 70;
@@ -794,9 +788,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       </DropdownMenu>
       <FormulaSettings
         formula={formula}
-        onFormulaChange={setFormula}
+        onFormulaChange={handleFormulaChange}
         hasChapters={hasChaptersWithAssignments}
       />
+      {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
       {searchAction}
     </>
   ) : null;

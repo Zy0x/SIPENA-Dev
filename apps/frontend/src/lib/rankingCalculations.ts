@@ -1,32 +1,19 @@
+import { DEFAULT_FORMULA, type CustomFormula } from "@/lib/gradeFormula";
 import {
-  DEFAULT_FORMULA,
-  calculateReportGrade,
-  type CustomFormula,
-} from "@/components/grades/FormulaSettings";
-import { getScopedGradeValue } from "@/lib/gradeValueSelection";
+  calculateStudentSubjectReport,
+  calculateStudentSubjectReportAcrossSemesters,
+  type ReportAssignmentRecord,
+  type ReportChapterRecord,
+  type ReportGradeRecord,
+} from "@/lib/gradeReportEngine";
 
 export type RankingSemesterValue = "1" | "2" | "all";
 
-export interface RankingGrade {
-  student_id: string;
-  subject_id: string;
-  assignment_id: string | null;
-  grade_type: string;
-  value: number | null;
-  semester_id?: string | null;
-}
+export interface RankingGrade extends ReportGradeRecord {}
 
-export interface RankingChapter {
-  id: string;
-  subject_id: string;
-  semester_id?: string | null;
-}
+export interface RankingChapter extends ReportChapterRecord {}
 
-export interface RankingAssignment {
-  id: string;
-  chapter_id: string;
-  semester_id?: string | null;
-}
+export interface RankingAssignment extends ReportAssignmentRecord {}
 
 export interface RankingStudent {
   id: string;
@@ -52,97 +39,6 @@ interface CalculateSubjectAverageInput {
   formula?: CustomFormula;
 }
 
-const calculateSingleScopeSubjectAverage = (
-  subjectGrades: RankingGrade[],
-  subjectChapters: RankingChapter[],
-  assignments: RankingAssignment[],
-  formula: CustomFormula,
-  targetSemesterId?: string,
-): number | null => {
-  const assignmentsByChapter: Record<string, RankingAssignment[]> = {};
-
-  subjectChapters.forEach((chapter) => {
-    assignmentsByChapter[chapter.id] = assignments.filter(
-      (assignment) => assignment.chapter_id === chapter.id,
-    );
-  });
-
-  const hasChapters = subjectChapters.some(
-    (chapter) => (assignmentsByChapter[chapter.id]?.length || 0) > 0,
-  );
-
-  let chapterSum = 0;
-  let chapterCount = 0;
-
-  subjectChapters.forEach((chapter) => {
-    const chapterAssignments = assignmentsByChapter[chapter.id] || [];
-    if (chapterAssignments.length === 0) {
-      return;
-    }
-
-    let assignmentSum = 0;
-    chapterAssignments.forEach((assignment) => {
-      const value = getScopedGradeValue(subjectGrades, {
-        gradeType: "assignment",
-        assignmentId: assignment.id,
-        semesterId: targetSemesterId,
-      });
-      assignmentSum += value ?? 0;
-    });
-
-    chapterSum += assignmentSum / chapterAssignments.length;
-    chapterCount += 1;
-  });
-
-  const chaptersAverage = chapterCount > 0 ? chapterSum / chapterCount : null;
-  const stsRaw = getScopedGradeValue(subjectGrades, {
-    gradeType: "sts",
-    semesterId: targetSemesterId,
-  });
-  const sasRaw = getScopedGradeValue(subjectGrades, {
-    gradeType: "sas",
-    semesterId: targetSemesterId,
-  });
-
-  if (chaptersAverage === null && stsRaw === null && sasRaw === null) {
-    return null;
-  }
-
-  return calculateReportGrade(
-    formula,
-    chaptersAverage ?? 0,
-    stsRaw ?? 0,
-    sasRaw ?? 0,
-    hasChapters,
-  );
-};
-
-const isLegacySemester = (semesterId: string | null | undefined) => !semesterId;
-
-const filterSemesterGrades = (
-  grades: RankingGrade[],
-  targetSemesterId?: string,
-): RankingGrade[] => {
-  if (!targetSemesterId) {
-    return grades;
-  }
-
-  const semesterGrades = grades.filter((grade) => grade.semester_id === targetSemesterId);
-  return semesterGrades.length > 0 ? semesterGrades : grades.filter((grade) => isLegacySemester(grade.semester_id));
-};
-
-const filterSemesterChapters = (
-  chapters: RankingChapter[],
-  targetSemesterId?: string,
-): RankingChapter[] => {
-  if (!targetSemesterId) {
-    return chapters;
-  }
-
-  const semesterChapters = chapters.filter((chapter) => chapter.semester_id === targetSemesterId);
-  return semesterChapters.length > 0 ? semesterChapters : chapters.filter((chapter) => isLegacySemester(chapter.semester_id));
-};
-
 export function calculateRankingSubjectAverage({
   studentId,
   subjectId,
@@ -152,37 +48,29 @@ export function calculateRankingSubjectAverage({
   semesterIds = [],
   formula = DEFAULT_FORMULA,
 }: CalculateSubjectAverageInput): number | null {
-  const baseGrades = grades.filter(
-    (grade) => grade.student_id === studentId && grade.subject_id === subjectId,
-  );
-  const baseChapters = chapters.filter((chapter) => chapter.subject_id === subjectId);
+  const baseGrades = grades.filter((grade) => grade.subject_id === subjectId);
 
   if (semesterIds.length <= 1) {
-    const targetSemesterId = semesterIds[0];
-    const scopedGrades = filterSemesterGrades(baseGrades, targetSemesterId);
-    const scopedChapters = filterSemesterChapters(baseChapters, targetSemesterId);
-    const scopedChapterIds = new Set(scopedChapters.map((chapter) => chapter.id));
-    const scopedAssignments = assignments.filter((assignment) => scopedChapterIds.has(assignment.chapter_id));
-
-    return calculateSingleScopeSubjectAverage(scopedGrades, scopedChapters, scopedAssignments, formula, targetSemesterId);
+    return calculateStudentSubjectReport({
+      studentId,
+      subjectId,
+      grades: baseGrades,
+      chapters,
+      assignments,
+      semesterId: semesterIds[0],
+      formula,
+    }).final;
   }
 
-  const semesterAverages = semesterIds
-    .map((semesterId) => {
-      const scopedGrades = filterSemesterGrades(baseGrades, semesterId);
-      const scopedChapters = filterSemesterChapters(baseChapters, semesterId);
-      const scopedChapterIds = new Set(scopedChapters.map((chapter) => chapter.id));
-      const scopedAssignments = assignments.filter((assignment) => scopedChapterIds.has(assignment.chapter_id));
-
-      return calculateSingleScopeSubjectAverage(scopedGrades, scopedChapters, scopedAssignments, formula, semesterId);
-    })
-    .filter((average): average is number => average !== null);
-
-  if (semesterAverages.length > 0) {
-    return semesterAverages.reduce((sum, average) => sum + average, 0) / semesterAverages.length;
-  }
-
-  return null;
+  return calculateStudentSubjectReportAcrossSemesters({
+    studentId,
+    subjectId,
+    grades: baseGrades,
+    chapters,
+    assignments,
+    semesterIds,
+    formula,
+  }).final;
 }
 
 export function applyDenseRank(sorted: StudentRankingEntry[]): StudentRankingEntry[] {
@@ -210,6 +98,7 @@ export function buildOverallRankings({
   chapters,
   assignments,
   semesterIds = [],
+  formulasBySubject = {},
 }: {
   students: RankingStudent[];
   subjectIds: string[];
@@ -217,6 +106,7 @@ export function buildOverallRankings({
   chapters: RankingChapter[];
   assignments: RankingAssignment[];
   semesterIds?: string[];
+  formulasBySubject?: Record<string, CustomFormula | null | undefined>;
 }): StudentRankingEntry[] {
   const rankings = students
     .map((student) => {
@@ -232,6 +122,7 @@ export function buildOverallRankings({
           chapters,
           assignments,
           semesterIds,
+          formula: formulasBySubject[subjectId] || DEFAULT_FORMULA,
         });
 
         subjectGrades[subjectId] = average;
@@ -271,6 +162,7 @@ export function buildSubjectRankings({
   chapters,
   assignments,
   semesterIds = [],
+  formulasBySubject = {},
 }: {
   students: RankingStudent[];
   subjectId: string;
@@ -278,6 +170,7 @@ export function buildSubjectRankings({
   chapters: RankingChapter[];
   assignments: RankingAssignment[];
   semesterIds?: string[];
+  formulasBySubject?: Record<string, CustomFormula | null | undefined>;
 }): StudentRankingEntry[] {
   const rankings = students
     .map((student) => {
@@ -288,6 +181,7 @@ export function buildSubjectRankings({
         chapters,
         assignments,
         semesterIds,
+        formula: formulasBySubject[subjectId] || DEFAULT_FORMULA,
       });
 
       if (average === null) {

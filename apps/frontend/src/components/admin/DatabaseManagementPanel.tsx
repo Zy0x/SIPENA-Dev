@@ -25,7 +25,7 @@ import { EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositor
 // Icons for known tables
 const TABLE_ICONS: Record<string, string> = {
   academic_years: "📅", semesters: "📆", classes: "🏫", students: "👨‍🎓",
-  subjects: "📚", chapters: "📖", assignments: "📝", grades: "💯",
+  subjects: "📚", chapters: "📖", assignments: "📝", grades: "💯", grade_formula_settings: "Fx",
   attendance: "📋", user_preferences: "⚙️", profiles: "👤", user_roles: "🔐",
   guest_users: "👥", shared_links: "🔗", guest_audit_logs: "📊",
   activity_logs: "📋", notifications: "🔔", password_reset_tokens: "🔑",
@@ -36,7 +36,7 @@ const TABLE_ICONS: Record<string, string> = {
 const TABLE_LABELS: Record<string, string> = {
   academic_years: "Tahun Akademik", semesters: "Semester", classes: "Kelas",
   students: "Siswa", subjects: "Mata Pelajaran", chapters: "Bab/Chapter",
-  assignments: "Tugas", grades: "Nilai", attendance: "Presensi",
+  assignments: "Tugas", grades: "Nilai", grade_formula_settings: "Rumus Nilai", attendance: "Presensi",
   user_preferences: "Preferensi User", profiles: "Profil", user_roles: "Role User",
   guest_users: "Pengguna Tamu", shared_links: "Link Berbagi",
   guest_audit_logs: "Log Audit Tamu", activity_logs: "Log Aktivitas",

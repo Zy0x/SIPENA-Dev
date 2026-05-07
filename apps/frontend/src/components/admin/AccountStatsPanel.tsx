@@ -29,6 +29,7 @@ interface AccountStat {
     students: number;
     subjects: number;
     grades: number;
+    grade_formula_settings?: number;
     assignments: number;
     total: number;
   };
@@ -49,6 +50,7 @@ const DATA_CATEGORIES = [
   { key: "chapters", label: "Bab/Chapter", icon: "📖" },
   { key: "assignments", label: "Tugas", icon: "📝" },
   { key: "grades", label: "Nilai", icon: "💯" },
+  { key: "grade_formula_settings", label: "Rumus Nilai", icon: "Fx" },
   { key: "user_preferences", label: "Preferensi", icon: "⚙️" },
   { key: "shared_links", label: "Link Berbagi", icon: "🔗" },
   { key: "activity_logs", label: "Log Aktivitas", icon: "📊" },

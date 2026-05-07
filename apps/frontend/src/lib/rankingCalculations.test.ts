@@ -8,6 +8,7 @@ import {
   type RankingGrade,
   type RankingStudent,
 } from "./rankingCalculations";
+import type { CustomFormula } from "@/lib/gradeFormula";
 
 const students: RankingStudent[] = [
   { id: "student-a", name: "Alya", nisn: "001" },
@@ -187,6 +188,51 @@ describe("ranking calculations", () => {
     expect(average).toBeCloseTo(64.9167, 4);
   });
 
+  it("uses the selected subject custom formula when provided", () => {
+    const formula: CustomFormula = {
+      enabled: true,
+      components: [
+        { id: "grandAvg", name: "Rata-rata BAB", enabled: true, weight: 60 },
+        { id: "sts", name: "Nilai STS", enabled: true, weight: 40 },
+        { id: "sas", name: "Nilai SAS", enabled: false, weight: 0 },
+      ],
+    };
+
+    const average = calculateRankingSubjectAverage({
+      studentId: "student-a",
+      subjectId: "math",
+      grades,
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+      formula,
+    });
+
+    expect(average).toBe(76);
+  });
+
+  it("does not fall back to legacy grades for one blank student when the subject has selected-semester data", () => {
+    const scopedGrades = [
+      grade("student-a", "math", "assignment", 80, "sem-1", "math-task-s1"),
+      grade("student-a", "math", "sts", 80, "sem-1"),
+      grade("student-a", "math", "sas", 80, "sem-1"),
+      grade("student-b", "math", "assignment", 100, null, "math-legacy-task"),
+      grade("student-b", "math", "sts", 100, null),
+      grade("student-b", "math", "sas", 100, null),
+    ];
+
+    const average = calculateRankingSubjectAverage({
+      studentId: "student-b",
+      subjectId: "math",
+      grades: scopedGrades,
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(average).toBe(0);
+  });
+
   it("ranks per subject using the selected semester subject average", () => {
     const rankings = buildSubjectRankings({
       students,
@@ -232,6 +278,29 @@ describe("ranking calculations", () => {
     expect(rankings.map((entry) => [entry.student.id, entry.overallAverage, entry.gradedSubjectCount])).toEqual([
       ["student-b", 95, 1],
       ["student-a", 70, 1],
+    ]);
+  });
+
+  it("uses dense ranks for tied rounded averages", () => {
+    const rankings = buildOverallRankings({
+      students,
+      subjectIds: ["math"],
+      grades: [
+        grade("student-a", "math", "assignment", 90, "sem-1", "math-task-s1"),
+        grade("student-a", "math", "sts", 90, "sem-1"),
+        grade("student-a", "math", "sas", 90, "sem-1"),
+        grade("student-b", "math", "assignment", 90, "sem-1", "math-task-s1"),
+        grade("student-b", "math", "sts", 90, "sem-1"),
+        grade("student-b", "math", "sas", 90, "sem-1"),
+      ],
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(rankings.map((entry) => [entry.student.name, entry.rank])).toEqual([
+      ["Alya", 1],
+      ["Bima", 1],
     ]);
   });
 });

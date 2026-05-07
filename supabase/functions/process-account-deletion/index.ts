@@ -314,56 +314,63 @@ async function deleteUserData(supabase: any, userId: string) {
       .eq("user_id", userId);
     results.shared_links = { deleted: !sharedLinksError };
 
-    // 5. Delete subjects
+    // 5. Delete grade formula settings
+    const { error: gradeFormulaSettingsError } = await supabase
+      .from("grade_formula_settings")
+      .delete()
+      .eq("user_id", userId);
+    results.grade_formula_settings = { deleted: !gradeFormulaSettingsError };
+
+    // 6. Delete subjects
     const { error: subjectsError } = await supabase
       .from("subjects")
       .delete()
       .eq("user_id", userId);
     results.subjects = { deleted: !subjectsError };
 
-    // 6. Delete students
+    // 7. Delete students
     const { error: studentsError } = await supabase
       .from("students")
       .delete()
       .eq("user_id", userId);
     results.students = { deleted: !studentsError };
 
-    // 7. Delete classes
+    // 8. Delete classes
     const { error: classesError } = await supabase
       .from("classes")
       .delete()
       .eq("user_id", userId);
     results.classes = { deleted: !classesError };
 
-    // 8. Delete semesters
+    // 9. Delete semesters
     const { error: semestersError } = await supabase
       .from("semesters")
       .delete()
       .eq("user_id", userId);
     results.semesters = { deleted: !semestersError };
 
-    // 9. Delete academic_years
+    // 10. Delete academic_years
     const { error: academicYearsError } = await supabase
       .from("academic_years")
       .delete()
       .eq("user_id", userId);
     results.academic_years = { deleted: !academicYearsError };
 
-    // 10. Delete activity_logs
+    // 11. Delete activity_logs
     const { error: activityLogsError } = await supabase
       .from("activity_logs")
       .delete()
       .eq("user_id", userId);
     results.activity_logs = { deleted: !activityLogsError };
 
-    // 11. Delete notifications
+    // 12. Delete notifications
     const { error: notificationsError } = await supabase
       .from("notifications")
       .delete()
       .eq("user_id", userId);
     results.notifications = { deleted: !notificationsError };
 
-    // 12. Delete user_preferences
+    // 13. Delete user_preferences
     const { error: preferencesError } = await supabase
       .from("user_preferences")
       .delete()
