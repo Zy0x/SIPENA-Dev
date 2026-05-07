@@ -8,6 +8,7 @@ import {
   type RankingGrade,
   type RankingStudent,
 } from "./rankingCalculations";
+import { calculateStudentSubjectReport } from "./gradeReportEngine";
 import type { CustomFormula } from "@/lib/gradeFormula";
 
 const students: RankingStudent[] = [
@@ -213,7 +214,7 @@ describe("ranking calculations", () => {
     expect(average).toBe(76);
   });
 
-  it("does not rank one blank student by legacy grades when the subject has selected-semester data", () => {
+  it("matches the grade input fallback when selected-semester component values are blank", () => {
     const scopedGrades = [
       grade("student-a", "math", "assignment", 80, "sem-1", "math-task-s1"),
       grade("student-a", "math", "sts", 80, "sem-1"),
@@ -232,7 +233,7 @@ describe("ranking calculations", () => {
       semesterIds: ["sem-1"],
     });
 
-    expect(average).toBeNull();
+    expect(average).toBe(50);
   });
 
   it("uses the newest duplicate grade row for the same component", () => {
@@ -271,6 +272,27 @@ describe("ranking calculations", () => {
     ]);
   });
 
+  it("uses the same report grade as the grade input page for per-subject ranking", () => {
+    const report = calculateStudentSubjectReport({
+      studentId: "student-a",
+      subjectId: "math",
+      grades: grades.filter((item) => item.subject_id === "math"),
+      chapters,
+      assignments,
+      semesterId: "sem-1",
+    });
+    const rankings = buildSubjectRankings({
+      students,
+      subjectId: "math",
+      grades,
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(rankings.find((entry) => entry.student.id === "student-a")?.overallAverage).toBe(report.final);
+  });
+
   it("ranks per subject as yearly data only when all semesters are explicitly selected", () => {
     const rankings = buildSubjectRankings({
       students,
@@ -300,6 +322,37 @@ describe("ranking calculations", () => {
     expect(rankings.map((entry) => [entry.student.id, entry.overallAverage, entry.gradedSubjectCount])).toEqual([
       ["student-b", 95, 1],
       ["student-a", 70, 1],
+    ]);
+  });
+
+  it("counts blank report grades as zero in the overall denominator", () => {
+    const rankings = buildOverallRankings({
+      students: [students[0]],
+      subjectIds: ["math", "science"],
+      grades: grades.filter((item) => item.student_id === "student-a" && item.subject_id === "math"),
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(rankings.map((entry) => [entry.student.id, entry.overallAverage, entry.gradedSubjectCount])).toEqual([
+      ["student-a", 40, 2],
+    ]);
+    expect(rankings[0].subjectGrades).toEqual({ math: 80, science: 0 });
+  });
+
+  it("divides selected multi-subject ranking by the number of selected subjects", () => {
+    const rankings = buildOverallRankings({
+      students: [students[0]],
+      subjectIds: ["math", "science", "legacy"],
+      grades: grades.filter((item) => item.student_id === "student-a" && item.subject_id !== "legacy"),
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(rankings.map((entry) => [entry.student.id, entry.overallAverage, entry.gradedSubjectCount])).toEqual([
+      ["student-a", 50, 3],
     ]);
   });
 

@@ -91,6 +91,10 @@ export function applyDenseRank(sorted: StudentRankingEntry[]): StudentRankingEnt
   });
 }
 
+function normalizeRankingScore(value: number | null): number {
+  return value ?? 0;
+}
+
 export function buildOverallRankings({
   students,
   subjectIds,
@@ -108,11 +112,14 @@ export function buildOverallRankings({
   semesterIds?: string[];
   formulasBySubject?: Record<string, CustomFormula | null | undefined>;
 }): StudentRankingEntry[] {
+  if (subjectIds.length === 0) {
+    return [];
+  }
+
   const rankings = students
     .map((student) => {
       const subjectGrades: Record<string, number | null> = {};
       let totalScore = 0;
-      let gradedSubjectCount = 0;
 
       subjectIds.forEach((subjectId) => {
         const average = calculateRankingSubjectAverage({
@@ -125,27 +132,19 @@ export function buildOverallRankings({
           formula: formulasBySubject[subjectId] || DEFAULT_FORMULA,
         });
 
-        subjectGrades[subjectId] = average;
-
-        if (average !== null) {
-          totalScore += average;
-          gradedSubjectCount += 1;
-        }
+        const rankingScore = normalizeRankingScore(average);
+        subjectGrades[subjectId] = rankingScore;
+        totalScore += rankingScore;
       });
-
-      if (gradedSubjectCount === 0) {
-        return null;
-      }
 
       return {
         student,
         subjectGrades,
-        overallAverage: totalScore / gradedSubjectCount,
+        overallAverage: totalScore / subjectIds.length,
         rank: 0,
-        gradedSubjectCount,
+        gradedSubjectCount: subjectIds.length,
       } satisfies StudentRankingEntry;
     })
-    .filter((entry): entry is StudentRankingEntry => entry !== null)
     .sort(
       (left, right) =>
         right.overallAverage - left.overallAverage ||
@@ -184,19 +183,16 @@ export function buildSubjectRankings({
         formula: formulasBySubject[subjectId] || DEFAULT_FORMULA,
       });
 
-      if (average === null) {
-        return null;
-      }
+      const rankingScore = normalizeRankingScore(average);
 
       return {
         student,
-        subjectGrades: { [subjectId]: average },
-        overallAverage: average,
+        subjectGrades: { [subjectId]: rankingScore },
+        overallAverage: rankingScore,
         rank: 0,
         gradedSubjectCount: 1,
       } satisfies StudentRankingEntry;
     })
-    .filter((entry): entry is StudentRankingEntry => entry !== null)
     .sort(
       (left, right) =>
         right.overallAverage - left.overallAverage ||
