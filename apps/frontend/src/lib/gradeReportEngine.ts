@@ -8,6 +8,8 @@ export interface ReportGradeRecord {
   grade_type: string;
   value: number | null;
   semester_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface ReportChapterRecord {
@@ -94,6 +96,7 @@ export function calculateStudentSubjectReport({
   const assignmentGrades: Record<string, number | null> = {};
   const chapterDetails: Record<string, number | null> = {};
   const hasChapters = scopedChapters.some((chapter) => (assignmentsByChapter[chapter.id]?.length || 0) > 0);
+  let hasAssignmentValue = false;
   let hasEmptyValues = false;
   let chapterSum = 0;
   let chapterCount = 0;
@@ -112,6 +115,7 @@ export function calculateStudentSubjectReport({
         assignmentId: assignment.id,
       });
       assignmentGrades[assignment.id] = value;
+      if (value !== null) hasAssignmentValue = true;
       if (value === null) hasEmptyValues = true;
       assignmentSum += value ?? 0;
     });
@@ -130,7 +134,7 @@ export function calculateStudentSubjectReport({
     hasEmptyValues = true;
   }
 
-  const hasAnyComponent = hasChapters || stsRaw !== null || sasRaw !== null;
+  const hasAnyComponent = hasAssignmentValue || stsRaw !== null || sasRaw !== null;
   const final = hasAnyComponent
     ? calculateReportGrade(formula, chaptersAvg ?? 0, stsRaw ?? 0, sasRaw ?? 0, hasChapters)
     : null;

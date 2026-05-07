@@ -40,6 +40,7 @@ const grade = (
   value: number | null,
   semesterId: string | null,
   assignmentId: string | null = null,
+  updatedAt?: string,
 ): RankingGrade => ({
   student_id: studentId,
   subject_id: subjectId,
@@ -47,6 +48,7 @@ const grade = (
   value,
   semester_id: semesterId,
   assignment_id: assignmentId,
+  updated_at: updatedAt,
 });
 
 const grades: RankingGrade[] = [
@@ -211,7 +213,7 @@ describe("ranking calculations", () => {
     expect(average).toBe(76);
   });
 
-  it("does not fall back to legacy grades for one blank student when the subject has selected-semester data", () => {
+  it("does not rank one blank student by legacy grades when the subject has selected-semester data", () => {
     const scopedGrades = [
       grade("student-a", "math", "assignment", 80, "sem-1", "math-task-s1"),
       grade("student-a", "math", "sts", 80, "sem-1"),
@@ -230,7 +232,27 @@ describe("ranking calculations", () => {
       semesterIds: ["sem-1"],
     });
 
-    expect(average).toBe(0);
+    expect(average).toBeNull();
+  });
+
+  it("uses the newest duplicate grade row for the same component", () => {
+    const average = calculateRankingSubjectAverage({
+      studentId: "student-a",
+      subjectId: "math",
+      grades: [
+        grade("student-a", "math", "assignment", 40, "sem-1", "math-task-s1", "2026-01-01T00:00:00Z"),
+        grade("student-a", "math", "assignment", 90, "sem-1", "math-task-s1", "2026-01-02T00:00:00Z"),
+        grade("student-a", "math", "sts", 40, "sem-1", null, "2026-01-01T00:00:00Z"),
+        grade("student-a", "math", "sts", 90, "sem-1", null, "2026-01-02T00:00:00Z"),
+        grade("student-a", "math", "sas", 40, "sem-1", null, "2026-01-01T00:00:00Z"),
+        grade("student-a", "math", "sas", 90, "sem-1", null, "2026-01-02T00:00:00Z"),
+      ],
+      chapters,
+      assignments,
+      semesterIds: ["sem-1"],
+    });
+
+    expect(average).toBe(90);
   });
 
   it("ranks per subject using the selected semester subject average", () => {

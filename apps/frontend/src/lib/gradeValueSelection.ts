@@ -3,6 +3,8 @@ export interface GradeValueRecord {
   assignment_id?: string | null;
   semester_id?: string | null;
   value: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 interface GetScopedGradeValueOptions {
@@ -25,10 +27,16 @@ export function getScopedGradeValue(
     return null;
   }
 
+  const byNewest = (left: GradeValueRecord, right: GradeValueRecord) => {
+    const leftTime = Date.parse(left.updated_at || left.created_at || "");
+    const rightTime = Date.parse(right.updated_at || right.created_at || "");
+    return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
+  };
+
   const selected = semesterId
-    ? candidates.find((grade) => grade.semester_id === semesterId) ??
-      candidates.find((grade) => !grade.semester_id)
-    : candidates[0];
+    ? [...candidates.filter((grade) => grade.semester_id === semesterId)].sort(byNewest)[0] ??
+      [...candidates.filter((grade) => !grade.semester_id)].sort(byNewest)[0]
+    : [...candidates].sort(byNewest)[0];
 
   return selected?.value ?? null;
 }
