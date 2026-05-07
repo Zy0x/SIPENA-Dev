@@ -79,9 +79,13 @@ export function calculateStudentSubjectReport({
   semesterId,
   formula = DEFAULT_FORMULA,
 }: CalculateStudentSubjectReportInput): StudentSubjectReport {
-  const subjectGradePool = grades.filter((grade) => grade.subject_id === subjectId);
-  const scopedSubjectGrades = scopeBySemester(subjectGradePool, semesterId, (grade) => grade.semester_id);
-  const studentGrades = scopedSubjectGrades.filter((grade) => grade.student_id === studentId);
+  // IMPORTANT: Resolve grade values via getScopedGradeValue (with semesterId) so the
+  // ranking/report calculations match the "Rapor" value shown on the Input Nilai page.
+  // Using strict scopeBySemester on grades drops legacy rows (semester_id IS NULL),
+  // which produced ranking values that diverged from what the teacher sees on Grades.
+  const studentGrades = grades.filter(
+    (grade) => grade.subject_id === subjectId && grade.student_id === studentId,
+  );
 
   const subjectChapters = chapters.filter((chapter) => chapter.subject_id === subjectId);
   const scopedChapters = scopeBySemester(subjectChapters, semesterId, (chapter) => chapter.semester_id);
@@ -113,6 +117,7 @@ export function calculateStudentSubjectReport({
       const value = getScopedGradeValue(studentGrades, {
         gradeType: "assignment",
         assignmentId: assignment.id,
+        semesterId: semesterId ?? assignment.semester_id ?? null,
       });
       assignmentGrades[assignment.id] = value;
       if (value !== null) hasAssignmentValue = true;
@@ -127,8 +132,8 @@ export function calculateStudentSubjectReport({
   });
 
   const chaptersAvg = chapterCount > 0 ? chapterSum / chapterCount : null;
-  const stsRaw = getScopedGradeValue(studentGrades, { gradeType: "sts" });
-  const sasRaw = getScopedGradeValue(studentGrades, { gradeType: "sas" });
+  const stsRaw = getScopedGradeValue(studentGrades, { gradeType: "sts", semesterId: semesterId ?? null });
+  const sasRaw = getScopedGradeValue(studentGrades, { gradeType: "sas", semesterId: semesterId ?? null });
 
   if (stsRaw === null || sasRaw === null) {
     hasEmptyValues = true;
