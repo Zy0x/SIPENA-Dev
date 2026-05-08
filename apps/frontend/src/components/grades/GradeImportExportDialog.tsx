@@ -78,6 +78,17 @@ type ImportMode = "official" | "smart";
 type ExportMode = "official" | "current" | "backup";
 type ImportExecutionState = "idle" | "analyzing" | "ready" | "failed" | "importing" | "success";
 type ColumnResolutionKind = "existing_assignment" | "create_assignment" | "create_chapter_and_assignment" | "sts" | "sas" | "ignore";
+type ImportUiErrorCode =
+  | "IMPORT_FILE_TOO_LARGE"
+  | "IMPORT_UNSUPPORTED_FILE_TYPE"
+  | "IMPORT_WORKBOOK_READ_FAILED"
+  | "IMPORT_CONTEXT_MISMATCH"
+  | "IMPORT_DUPLICATE_STUDENT_MAPPING"
+  | "IMPORT_DUPLICATE_COLUMN_TARGET"
+  | "IMPORT_INVALID_GRADE_VALUE"
+  | "IMPORT_NO_VALID_SHEET"
+  | "IMPORT_SHEET_EMPTY"
+  | "IMPORT_FILE_EMPTY";
 
 interface ColumnResolution {
   kind: ColumnResolutionKind;
@@ -128,6 +139,7 @@ const emptyResolverState: ImportResolverState = {
 };
 
 const importSteps = ["Upload", "Analisis", "Pemetaan", "Konflik", "Preview", "Import"];
+const maxImportFileBytes = 20 * 1024 * 1024;
 
 const sourceLabels: Record<ImportSourceType, string> = {
   official_exact: "Template resmi cocok",
@@ -160,6 +172,62 @@ const exportSheetsByMode: Record<ExportMode, string[]> = {
   current: ["Panduan", "Nilai"],
   backup: ["Panduan", "Nilai", "_manifest", "_students", "_structure", "_grades"],
 };
+
+const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message: string }> = {
+  IMPORT_FILE_TOO_LARGE: {
+    title: "IMPORT_FILE_TOO_LARGE",
+    message: "File terlalu besar. Gunakan file maksimal 20 MB atau pecah workbook menjadi beberapa file.",
+  },
+  IMPORT_UNSUPPORTED_FILE_TYPE: {
+    title: "IMPORT_UNSUPPORTED_FILE_TYPE",
+    message: "Format file tidak didukung. Gunakan .xlsx, .xls, atau .csv.",
+  },
+  IMPORT_WORKBOOK_READ_FAILED: {
+    title: "IMPORT_WORKBOOK_READ_FAILED",
+    message: "Workbook gagal dibaca. Coba simpan ulang dari Excel lalu upload kembali.",
+  },
+  IMPORT_CONTEXT_MISMATCH: {
+    title: "IMPORT_CONTEXT_MISMATCH",
+    message: "Template berbeda dengan kelas, mapel, semester, atau tahun ajaran aktif. Pilih konteks yang sesuai atau download template baru.",
+  },
+  IMPORT_DUPLICATE_STUDENT_MAPPING: {
+    title: "IMPORT_DUPLICATE_STUDENT_MAPPING",
+    message: "Ada lebih dari satu baris Excel yang menuju siswa web yang sama. Pilih satu baris atau abaikan duplikat.",
+  },
+  IMPORT_DUPLICATE_COLUMN_TARGET: {
+    title: "IMPORT_DUPLICATE_COLUMN_TARGET",
+    message: "Ada lebih dari satu kolom menuju target nilai yang sama. Pilih kolom yang dipakai sebelum import.",
+  },
+  IMPORT_INVALID_GRADE_VALUE: {
+    title: "IMPORT_INVALID_GRADE_VALUE",
+    message: "Ada nilai invalid. Nilai harus berupa angka 0 sampai 100.",
+  },
+  IMPORT_NO_VALID_SHEET: {
+    title: "IMPORT_NO_VALID_SHEET",
+    message: "Workbook tidak memiliki sheet valid. Pastikan file berisi sheet nilai.",
+  },
+  IMPORT_SHEET_EMPTY: {
+    title: "IMPORT_SHEET_EMPTY",
+    message: "Sheet yang dibaca kosong. Pilih file dengan data siswa dan kolom nilai.",
+  },
+  IMPORT_FILE_EMPTY: {
+    title: "IMPORT_FILE_EMPTY",
+    message: "File kosong dan tidak bisa dianalisis.",
+  },
+};
+
+function normalizeImportErrorCode(code?: string): ImportUiErrorCode | null {
+  if (!code) return null;
+  if (code === "IMPORT_SEMESTER_MISMATCH" || code === "IMPORT_CONTEXT_MISMATCH_BLOCKED") return "IMPORT_CONTEXT_MISMATCH";
+  if (code === "STUDENT_DUPLICATE_EXCEL_MATCH") return "IMPORT_DUPLICATE_STUDENT_MAPPING";
+  if (code === "IMPORT_INVALID_VALUE_STRICT" || code === "GRADE_VALUE_INVALID") return "IMPORT_INVALID_GRADE_VALUE";
+  if (code in importUiErrorMessages) return code as ImportUiErrorCode;
+  return null;
+}
+
+function getImportErrorMessage(code: ImportUiErrorCode | null, fallback?: string) {
+  return code ? importUiErrorMessages[code] : { title: "IMPORT_WORKBOOK_READ_FAILED", message: fallback || "File gagal dianalisis. Coba periksa format workbook." };
+}
 
 function sourceTone(sourceType: ImportSourceType): StatusBadgeTone {
   if (sourceType === "official_exact") return "success";
@@ -569,10 +637,22 @@ function AnalysisStep({ plan }: { plan: ImportPlan | null }) {
         </div>
       </div>
 
+      {(plan.summary.gradeColumnCount || 0) === 0 ? (
+        <RiskAlert title="Tidak ada kolom nilai" tone="blocked">
+          IMPORT_NO_GRADE_COLUMNS: Pastikan workbook memiliki kolom nilai seperti BAB 1 - Tugas 1, STS, atau SAS.
+        </RiskAlert>
+      ) : null}
+
+      {hasBlockedConflicts(plan) ? (
+        <RiskAlert title="ImportPlan blocked" tone="blocked">
+          IMPORT_PLAN_BLOCKED: Masuk ke step Konflik dan selesaikan item berstatus Diblokir sebelum import.
+        </RiskAlert>
+      ) : null}
+
       <div className="space-y-2">
         {getTopWarnings(plan).length ? getTopWarnings(plan).map((item, index) => (
-          <RiskAlert key={`${item.code}-${index}`} title={item.code} tone="warning">
-            {item.message}
+          <RiskAlert key={`${item.code}-${index}`} title={normalizeImportErrorCode(item.code) || item.code} tone="warning">
+            {getImportErrorMessage(normalizeImportErrorCode(item.code), item.message).message}
           </RiskAlert>
         )) : (
           <RiskAlert title="Tidak ada warning utama" tone="safe">
@@ -585,15 +665,18 @@ function AnalysisStep({ plan }: { plan: ImportPlan | null }) {
 }
 
 function StudentMappingCard({ mapping }: { mapping: StudentMapping }) {
+  const excelLabel = mapping.excelName || mapping.excelNisn || `Baris ${mapping.rowIndex}`;
+  const webLabel = `Web: ${mapping.webName || "Belum cocok"} ${mapping.webNisn ? `(${mapping.webNisn})` : ""}`.trim();
+
   return (
     <div className="rounded-2xl border border-border bg-white p-3 dark:bg-slate-950">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50">
-            {mapping.excelName || mapping.excelNisn || `Baris ${mapping.rowIndex}`}
+          <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={excelLabel}>
+            {excelLabel}
           </p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            Web: {mapping.webName || "Belum cocok"} {mapping.webNisn ? `(${mapping.webNisn})` : ""}
+          <p className="mt-1 truncate text-xs text-muted-foreground" title={webLabel}>
+            {webLabel}
           </p>
         </div>
         <StatusBadge tone={statusTone(mapping.status)}>{mapping.status}</StatusBadge>
@@ -616,8 +699,8 @@ function ColumnMappingCard({ mapping }: { mapping: ColumnMapping }) {
     <div className="rounded-2xl border border-border bg-white p-3 dark:bg-slate-950">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50">{mapping.rawHeader || `Kolom ${mapping.columnIndex}`}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">Target: {target || "Belum dipetakan"}</p>
+          <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={mapping.rawHeader || `Kolom ${mapping.columnIndex}`}>{mapping.rawHeader || `Kolom ${mapping.columnIndex}`}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground" title={target || "Belum dipetakan"}>Target: {target || "Belum dipetakan"}</p>
         </div>
         <StatusBadge tone={statusTone(mapping.status)}>{mapping.status}</StatusBadge>
       </div>
@@ -643,7 +726,9 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
           <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Mapping Siswa</h3>
         </div>
         <div className="grid gap-3 md:hidden">
-          {plan.studentMappings.slice(0, 24).map((mapping) => <StudentMappingCard key={mapping.rowIndex} mapping={mapping} />)}
+          {plan.studentMappings.length ? plan.studentMappings.slice(0, 24).map((mapping) => <StudentMappingCard key={mapping.rowIndex} mapping={mapping} />) : (
+            <EmptyPanel title="Belum ada siswa" description="Workbook tidak memuat baris siswa yang bisa dipetakan. Pastikan ada kolom Nama Siswa atau NISN." />
+          )}
         </div>
         <div className="hidden overflow-x-auto rounded-[24px] border border-border bg-white dark:bg-slate-950 md:block">
           <table className="w-full min-w-[720px] text-sm">
@@ -660,8 +745,8 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
               {plan.studentMappings.map((mapping) => (
                 <tr key={mapping.rowIndex} className="border-t border-border">
                   <td className="px-4 py-3">{mapping.rowIndex}</td>
-                  <td className="px-4 py-3">{mapping.excelName || "-"}<span className="block text-xs text-muted-foreground">{mapping.excelNisn || ""}</span></td>
-                  <td className="px-4 py-3">{mapping.webName || "-"}<span className="block text-xs text-muted-foreground">{mapping.webNisn || ""}</span></td>
+                  <td className="max-w-[220px] px-4 py-3"><span className="block truncate" title={mapping.excelName || "-"}>{mapping.excelName || "-"}</span><span className="block truncate text-xs text-muted-foreground" title={mapping.excelNisn || ""}>{mapping.excelNisn || ""}</span></td>
+                  <td className="max-w-[220px] px-4 py-3"><span className="block truncate" title={mapping.webName || "-"}>{mapping.webName || "-"}</span><span className="block truncate text-xs text-muted-foreground" title={mapping.webNisn || ""}>{mapping.webNisn || ""}</span></td>
                   <td className="px-4 py-3"><StatusBadge tone={statusTone(mapping.status)}>{mapping.status}</StatusBadge></td>
                   <td className="px-4 py-3">{mapping.confidence}%</td>
                 </tr>
@@ -677,9 +762,11 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
           <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Mapping Kolom/BAB/Tugas</h3>
         </div>
         <div className="grid gap-3 md:hidden">
-          {plan.columnMappings.filter((mapping) => !mapping.parsedHeader.reserved && !mapping.parsedHeader.derived).map((mapping) => (
+          {plan.columnMappings.filter((mapping) => !mapping.parsedHeader.reserved && !mapping.parsedHeader.derived).length ? plan.columnMappings.filter((mapping) => !mapping.parsedHeader.reserved && !mapping.parsedHeader.derived).map((mapping) => (
             <ColumnMappingCard key={mapping.columnIndex} mapping={mapping} />
-          ))}
+          )) : (
+            <EmptyPanel title="Tidak ada kolom nilai" description="Tambahkan kolom seperti BAB 1 - Tugas 1, STS, atau SAS agar import dapat dipetakan." />
+          )}
         </div>
         <div className="hidden overflow-x-auto rounded-[24px] border border-border bg-white dark:bg-slate-950 md:block">
           <table className="w-full min-w-[780px] text-sm">
@@ -700,8 +787,8 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
                 return (
                   <tr key={mapping.columnIndex} className="border-t border-border">
                     <td className="px-4 py-3">{mapping.columnIndex}</td>
-                    <td className="px-4 py-3">{mapping.rawHeader}</td>
-                    <td className="px-4 py-3">{target || "-"}</td>
+                    <td className="max-w-[260px] px-4 py-3"><span className="block truncate" title={mapping.rawHeader}>{mapping.rawHeader}</span></td>
+                    <td className="max-w-[260px] px-4 py-3"><span className="block truncate" title={target || "-"}>{target || "-"}</span></td>
                     <td className="px-4 py-3"><StatusBadge tone={statusTone(mapping.status)}>{mapping.status}</StatusBadge></td>
                     <td className="px-4 py-3">{mapping.confidence}%</td>
                   </tr>
@@ -1016,12 +1103,16 @@ function ConflictStep({
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold">{item.code}</p>
+                      <p className="max-w-full truncate text-sm font-semibold" title={normalizeImportErrorCode(item.code) || item.code}>
+                        {normalizeImportErrorCode(item.code) || item.code}
+                      </p>
                       <StatusBadge tone={item.severity === "blocked" ? "warning" : "info"}>
                         {item.severity === "blocked" ? "Diblokir" : item.severity === "warning" ? "Perlu Dicek" : "Aman"}
                       </StatusBadge>
                     </div>
-                    <p className="mt-1 text-xs leading-5 opacity-85">{item.message}</p>
+                    <p className="mt-1 text-xs leading-5 opacity-85">
+                      {getImportErrorMessage(normalizeImportErrorCode(item.code), item.message).message}
+                    </p>
                     <p className="mt-1 text-xs opacity-70">
                       {item.rowIndex ? `Baris ${item.rowIndex}` : ""} {item.columnIndex ? `Kolom ${item.columnIndex}` : ""}
                     </p>
@@ -1057,9 +1148,16 @@ function PreviewStep({
   const visibleOperations = plan.gradeOperations
     .filter((operation) => operation.value !== null || operation.action !== "skip_empty")
     .slice(0, 80);
+  const isBlocked = hasBlockedConflicts(plan);
 
   return (
     <div className="space-y-4">
+      {isBlocked ? (
+        <RiskAlert title="ImportPlan blocked" tone="blocked">
+          IMPORT_PLAN_BLOCKED: Preview ini masih memiliki konflik Diblokir. Tombol import tetap nonaktif sampai konflik diselesaikan.
+        </RiskAlert>
+      ) : null}
+
       <section className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
         <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Update Mode</h3>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -1099,8 +1197,8 @@ function PreviewStep({
             <div key={operation.id} className="rounded-2xl border border-border bg-slate-50 p-3 dark:bg-slate-900/55">
               <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50">{targetLabel(operation)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={targetLabel(operation)}>{targetLabel(operation)}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     Baris {operation.rowIndex} / Kolom {operation.columnIndex} / Nilai {operation.value ?? "-"}
                     {operation.existingValue !== undefined ? ` / Lama ${operation.existingValue ?? "kosong"}` : ""}
                   </p>
@@ -1356,6 +1454,7 @@ export default function GradeImportExportDialog({
   const [executionSummary, setExecutionSummary] = useState<ImportExecutionSummary | null>(null);
   const [executionProgress, setExecutionProgress] = useState<ImportExecutionProgress>({ current: 0, total: 0 });
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisErrorCode, setAnalysisErrorCode] = useState<ImportUiErrorCode | null>(null);
 
   useEffect(() => {
     if (open) setTab(activeTab);
@@ -1374,6 +1473,7 @@ export default function GradeImportExportDialog({
       setExecutionSummary(null);
       setExecutionProgress({ current: 0, total: 0 });
       setAnalysisError(null);
+      setAnalysisErrorCode(null);
     }
   }, [open]);
 
@@ -1559,17 +1659,30 @@ export default function GradeImportExportDialog({
     setPlan(null);
     setResolverState(emptyResolverState);
     setAnalysisError(null);
+    setAnalysisErrorCode(null);
     setExecutionSummary(null);
     setExecutionProgress({ current: 0, total: 0 });
     setExecutionState("analyzing");
 
     try {
+      if (file.size > maxImportFileBytes) {
+        const fileTooLarge = getImportErrorMessage("IMPORT_FILE_TOO_LARGE");
+        setAnalysisError(fileTooLarge.message);
+        setAnalysisErrorCode("IMPORT_FILE_TOO_LARGE");
+        setExecutionState("failed");
+        showError(fileTooLarge.title, fileTooLarge.message);
+        return;
+      }
+
       const workbook = await readWorkbookFile(file);
       if (!workbook.ok) {
         const readError = "error" in workbook ? workbook.error : { message: "Workbook tidak bisa dibaca." };
-        setAnalysisError(readError.message);
+        const code = normalizeImportErrorCode("code" in readError ? readError.code : undefined);
+        const displayError = getImportErrorMessage(code, readError.message);
+        setAnalysisError(displayError.message);
+        setAnalysisErrorCode(code);
         setExecutionState("failed");
-        showError("File gagal dibaca", readError.message);
+        showError(displayError.title, displayError.message);
         return;
       }
 
@@ -1589,12 +1702,14 @@ export default function GradeImportExportDialog({
       setImportMode(isOfficial ? "official" : "smart");
       setStepIndex(1);
       setExecutionState("ready");
+      setAnalysisErrorCode(null);
       success("ImportPlan siap", "File sudah dianalisis sebagai preview. Belum ada data yang disimpan.");
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "File gagal dianalisis.";
       setAnalysisError(message);
+      setAnalysisErrorCode("IMPORT_WORKBOOK_READ_FAILED");
       setExecutionState("failed");
-      showError("Analisis gagal", message);
+      showError("IMPORT_WORKBOOK_READ_FAILED", message);
     }
   }, [importContext, showError, success, updateMode]);
 
@@ -1752,20 +1867,20 @@ export default function GradeImportExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[calc(100dvh-1rem)] max-h-[860px] w-[calc(100vw-1rem)] max-w-[1120px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-white/80 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(92dvh,860px)] sm:w-[calc(100vw-2rem)]">
-        <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-white/95 px-4 py-4 backdrop-blur dark:bg-slate-950/95 sm:px-6">
-          <div className="flex min-w-0 items-start gap-3 pr-8">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/70">
+      <DialogContent className="flex h-[calc(100dvh-0.5rem)] max-h-[860px] w-[calc(100vw-0.5rem)] max-w-[1120px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-white/80 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(92dvh,860px)] sm:w-[calc(100vw-2rem)]">
+        <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-950/95 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-start gap-3 pr-10">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/70 sm:h-12 sm:w-12">
               <FileSpreadsheet className="h-6 w-6" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <DialogTitle className="text-lg font-semibold tracking-normal text-slate-950 dark:text-slate-50">
+                <DialogTitle className="text-base font-semibold tracking-normal text-slate-950 dark:text-slate-50 sm:text-lg">
                   Export/Import Nilai SIPENA
                 </DialogTitle>
                 <StatusBadge tone="safe">Mode aman aktif</StatusBadge>
               </div>
-              <DialogDescription className="mt-1 truncate text-sm text-muted-foreground">
+              <DialogDescription className="mt-1 max-w-full truncate text-sm text-muted-foreground" title={contextLabel || undefined}>
                 {contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu"}
               </DialogDescription>
             </div>
@@ -1774,7 +1889,7 @@ export default function GradeImportExportDialog({
 
         <Tabs value={tab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="shrink-0 border-b border-border bg-white px-4 py-3 dark:bg-slate-950 sm:px-6">
-            <TabsList className="grid h-11 w-full max-w-md grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900">
+            <TabsList aria-label="Mode export dan import nilai" className="grid h-11 w-full max-w-md grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900">
               <TabsTrigger value="import" className="h-9 rounded-full text-xs sm:text-sm">
                 Import Nilai
               </TabsTrigger>
@@ -1784,8 +1899,8 @@ export default function GradeImportExportDialog({
             </TabsList>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-slate-50/70 px-4 py-4 dark:bg-slate-950 sm:px-6">
-            <TabsContent value="import" className="m-0 min-w-0">
+          <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-4 py-4 dark:bg-slate-950 sm:px-6">
+            <TabsContent value="import" className="m-0 min-w-0 focus-visible:ring-0 focus-visible:ring-offset-0">
               <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <main className="min-w-0 space-y-4">
                   <section className="min-w-0 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
@@ -1824,12 +1939,27 @@ export default function GradeImportExportDialog({
                       ) : null}
 
                       {analysisError ? (
-                        <RiskAlert title="Analisis gagal" tone="blocked">
+                        <RiskAlert title={getImportErrorMessage(analysisErrorCode, analysisError).title} tone="blocked">
                           {analysisError}
                         </RiskAlert>
                       ) : null}
 
                       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+                        {studentCount === 0 ? (
+                          <RiskAlert title="Belum ada siswa" tone="warning">
+                            Tambahkan siswa pada kelas aktif sebelum import nilai agar mapping siswa bisa dibuat.
+                          </RiskAlert>
+                        ) : null}
+                        {chapterCount === 0 || assignmentCount === 0 ? (
+                          <RiskAlert title="Belum ada BAB/tugas" tone="warning">
+                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di step Konflik sebelum import.
+                          </RiskAlert>
+                        ) : null}
+                        {importMode === "smart" ? (
+                          <RiskAlert title="AI tidak tersedia" tone="info">
+                            Smart Import tahap ini memakai analyzer workbook lokal. Data ambigu tetap perlu dipilih manual.
+                          </RiskAlert>
+                        ) : null}
                         <RiskAlert title="Data tidak akan ditimpa tanpa konfirmasi" tone="safe">
                           Default import adalah isi nilai kosong saja. Nilai lama akan muncul sebagai konflik sebelum tahap simpan.
                         </RiskAlert>
@@ -1867,7 +1997,7 @@ export default function GradeImportExportDialog({
               </div>
             </TabsContent>
 
-            <TabsContent value="export" className="m-0 min-w-0">
+            <TabsContent value="export" className="m-0 min-w-0 focus-visible:ring-0 focus-visible:ring-offset-0">
               <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                 <main className="min-w-0 space-y-3">
                   <ExportOptionCard
@@ -1931,12 +2061,12 @@ export default function GradeImportExportDialog({
               <ShieldCheck className="h-4 w-4 shrink-0 text-blue-600" />
               <span className="truncate">Data tidak akan ditimpa tanpa konfirmasi.</span>
             </div>
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {tab === "import" && stepIndex > 0 ? (
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 w-full rounded-full sm:h-10 sm:w-auto"
+                  className="min-h-11 w-full rounded-full sm:min-h-10 sm:w-auto"
                   onClick={handleBack}
                 >
                   Kembali
@@ -1946,7 +2076,7 @@ export default function GradeImportExportDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 w-full rounded-full sm:h-10 sm:w-auto"
+                  className="min-h-11 w-full rounded-full sm:min-h-10 sm:w-auto"
                   onClick={onOpenLegacyImport}
                 >
                   Import lama
@@ -1955,7 +2085,7 @@ export default function GradeImportExportDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 w-full rounded-full sm:h-10 sm:w-auto"
+                className="min-h-11 w-full rounded-full sm:min-h-10 sm:w-auto"
                 onClick={handleClose}
               >
                 Tutup
@@ -1967,7 +2097,7 @@ export default function GradeImportExportDialog({
                   || importPrimaryDisabled
                 }
                 className={cn(
-                  "h-11 w-full gap-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:h-10 sm:w-auto",
+                  "min-h-11 w-full min-w-0 gap-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:min-h-10 sm:w-auto",
                   tab === "import" && importMode === "smart" && "bg-violet-600 hover:bg-violet-700",
                 )}
                 onClick={handlePrimaryAction}

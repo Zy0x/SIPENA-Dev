@@ -11,6 +11,7 @@ interface ImportDropzoneProps {
 export function ImportDropzone({ fileName, onFileSelected }: ImportDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const descriptionId = "sipena-grade-import-dropzone-description";
 
   const handleFile = useCallback((file?: File) => {
     if (file) onFileSelected(file);
@@ -19,6 +20,8 @@ export function ImportDropzone({ fileName, onFileSelected }: ImportDropzoneProps
   return (
     <button
       type="button"
+      aria-label="Pilih file nilai untuk dianalisis"
+      aria-describedby={descriptionId}
       onClick={() => inputRef.current?.click()}
       onDragEnter={(event) => {
         event.preventDefault();
@@ -41,16 +44,17 @@ export function ImportDropzone({ fileName, onFileSelected }: ImportDropzoneProps
         ref={inputRef}
         type="file"
         accept=".xlsx,.xls,.csv"
-        className="hidden"
+        aria-label="File nilai Excel atau CSV"
+        className="sr-only"
         onChange={(event) => handleFile(event.target.files?.[0])}
       />
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm ring-1 ring-emerald-100 dark:bg-slate-950 dark:ring-emerald-900/70">
         {fileName ? <FileSpreadsheet className="h-7 w-7" /> : <UploadCloud className="h-7 w-7" />}
       </div>
-      <p className="text-base font-semibold text-slate-950 dark:text-slate-50">
+      <p className="max-w-full truncate text-base font-semibold text-slate-950 dark:text-slate-50" title={fileName || undefined}>
         {fileName || "Letakkan file nilai di sini"}
       </p>
-      <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+      <p id={descriptionId} className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
         File akan dianalisis dulu menjadi preview. Data tidak akan ditimpa tanpa konfirmasi.
       </p>
     </button>

@@ -33,13 +33,13 @@ export function StatusBadge({ children, tone = "info", className }: StatusBadgeP
   return (
     <span
       className={cn(
-        "inline-flex min-h-7 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold",
+        "inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold",
         toneClass[tone],
         className,
       )}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" />
-      <span className="truncate">{children}</span>
+      <span className="min-w-0 truncate">{children}</span>
     </span>
   );
 }
