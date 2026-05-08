@@ -144,6 +144,16 @@ export interface ImportPlan {
     safeOperations: number;
     blockedOperations: number;
     needsConfirmation: number;
+    matchedStudentCount?: number;
+    ambiguousStudentCount?: number;
+    missingStudentCount?: number;
+    gradeColumnCount?: number;
+    conflictCount?: number;
+    newAssignmentCount?: number;
+    newChapterCount?: number;
+    invalidValueCount?: number;
+    readyImportCount?: number;
+    skippedValueCount?: number;
   };
 }
 

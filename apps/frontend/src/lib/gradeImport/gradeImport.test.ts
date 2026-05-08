@@ -3,6 +3,8 @@ import * as XLSX from "xlsx";
 
 import {
   analyzeOfficialTemplateWorkbook,
+  analyzeFreeExcelWorkbook,
+  buildImportPlan,
   buildOfficialGradeTemplateWorkbook,
   getOfficialGradeTemplateFileName,
   matchColumns,
@@ -534,5 +536,97 @@ describe("SIPENA column matcher", () => {
 
     expect(result.mappings[0]).toMatchObject({ targetType: "unresolved", status: "needs_confirmation" });
     expect(result.warnings.map((item) => item.code)).toContain("COLUMN_METADATA_INVALID_HEADER_CLEAR");
+  });
+});
+
+describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
+  const students = [
+    { id: "student-1", name: "Siti Aminah", nisn: "0012345678" },
+    { id: "student-2", name: "Muhammad Rizki", nisn: "1234567890" },
+  ];
+  const chapters = [{ id: "chapter-1", name: "BAB 1", order_index: 1 }];
+  const assignments = [{ id: "assignment-1", chapter_id: "chapter-1", name: "Tugas 1", order_index: 1 }];
+
+  function workbookResult(sheets: Record<string, unknown[][]>) {
+    const workbook = XLSX.utils.book_new();
+    Object.entries(sheets).forEach(([name, rows]) => {
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), name);
+    });
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+    return readWorkbookBuffer(buffer, "nilai.xlsx");
+  }
+
+  it("scores the best free Excel sheet and ignores footer rows", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Catatan: [["Bukan nilai"]],
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1", "STS"],
+        [1, "0012345678", "Siti Aminah", 90, 88],
+        [2, "1234567890", "Muhammad Rizki", 0, 75],
+        ["Rata-rata", "", "", 45, 81.5],
+        ["Mengetahui", "", "", "", ""],
+      ],
+    }));
+
+    expect(analysis.sourceType).toBe("free_structured");
+    expect(analysis.bestRegion?.sheetName).toBe("Nilai");
+    expect(analysis.bestRegion?.dataRows).toHaveLength(2);
+    expect(analysis.bestRegion?.gradeColumns.map((column) => column.rawHeader)).toEqual(["BAB 1 - Tugas 1", "STS"]);
+  });
+
+  it("supports simple multi-row headers and warns about multi-region workbooks", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai1: [
+        ["", "", "", "BAB 1", "BAB 1"],
+        ["No", "NISN", "Nama Siswa", "Tugas 1", "Tugas 2"],
+        [1, "0012345678", "Siti Aminah", 80, 81],
+      ],
+      Nilai2: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "1234567890", "Muhammad Rizki", 75],
+      ],
+    }));
+
+    expect(analysis.bestRegion?.headerRowCount).toBe(2);
+    expect(analysis.bestRegion?.gradeColumns[0].rawHeader).toBe("BAB 1 - Tugas 1");
+    expect(analysis.warnings.map((item) => item.code)).toContain("FREE_EXCEL_MULTI_REGION_DETECTED");
+  });
+
+  it("builds a safe preview plan and skips existing values by default", () => {
+    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1", "STS"],
+        [1, "0012345678", "Siti Aminah", 90, 88],
+        [2, "1234567890", "Muhammad Rizki", 0, ""],
+      ],
+    }));
+    const plan = buildImportPlan(freeAnalysis, {
+      students,
+      chapters,
+      assignments,
+      existingGrades: [{ student_id: "student-1", grade_type: "assignment", assignment_id: "assignment-1", value: 80 }],
+    });
+
+    expect(plan.sourceType).toBe("free_structured");
+    expect(plan.summary.matchedStudentCount).toBe(2);
+    expect(plan.summary.gradeColumnCount).toBe(2);
+    expect(plan.gradeOperations.find((operation) => operation.studentId === "student-1" && operation.target.assignmentId === "assignment-1")?.action).toBe("skip_existing");
+    expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2" && operation.target.assignmentId === "assignment-1")?.value).toBe(0);
+  });
+
+  it("blocks new BAB/task suggestions and invalid values in strict mode", () => {
+    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 2 - Proyek", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 90, "#N/A"],
+      ],
+    }));
+    const plan = buildImportPlan(freeAnalysis, { students, chapters, assignments });
+
+    expect(plan.structureSuggestions[0]).toMatchObject({ type: "create_chapter_and_assignment" });
+    expect(plan.conflicts.map((item) => item.code)).toEqual(
+      expect.arrayContaining(["IMPORT_NEW_STRUCTURE_NOT_CONFIRMED", "IMPORT_INVALID_VALUE_STRICT"]),
+    );
+    expect(plan.summary.invalidValueCount).toBeGreaterThan(0);
   });
 });

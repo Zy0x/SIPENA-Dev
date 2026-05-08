@@ -250,7 +250,11 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
   // Delete
   const toggleTable = (key: string) => {
     const s = new Set(selectedTables);
-    s.has(key) ? s.delete(key) : s.add(key);
+    if (s.has(key)) {
+      s.delete(key);
+    } else {
+      s.add(key);
+    }
     setSelectedTables(s);
   };
 

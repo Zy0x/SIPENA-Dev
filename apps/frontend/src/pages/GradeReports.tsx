@@ -122,6 +122,7 @@ interface ExportOptions {
 interface Chapter {
   id: string;
   name: string;
+  subject_id: string;
   order_index: number;
   semester_id?: string | null;
 }
