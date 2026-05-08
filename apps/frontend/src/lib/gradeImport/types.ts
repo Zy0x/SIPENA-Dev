@@ -18,7 +18,15 @@ export type ParsedHeaderType = GradeType | "reserved" | "derived" | "unknown";
 
 export type ImportSeverity = "info" | "warning" | "blocked";
 
-export type MappingStatus = "safe" | "warning" | "needs_confirmation" | "ambiguous" | "missing" | "blocked";
+export type MappingStatus =
+  | "safe"
+  | "warning"
+  | "needs_confirmation"
+  | "ambiguous"
+  | "missing"
+  | "missing_in_web"
+  | "missing_in_excel"
+  | "blocked";
 
 export interface ImportWarning {
   code: string;

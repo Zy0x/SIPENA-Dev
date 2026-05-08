@@ -5,6 +5,9 @@ import {
   analyzeOfficialTemplateWorkbook,
   buildOfficialGradeTemplateWorkbook,
   getOfficialGradeTemplateFileName,
+  matchColumns,
+  matchStudents,
+  matchStudentsFromWorkbookRows,
   normalizeName,
   normalizeNisn,
   normalizeRomanNumeralChapter,
@@ -357,5 +360,179 @@ describe("official SIPENA template reader", () => {
 
     expect(result.sourceType).toBe("official_damaged");
     expect(result.warnings.map((item) => item.code)).toContain("IMPORT_METADATA_SHEET_MISSING");
+  });
+});
+
+describe("SIPENA student matcher", () => {
+  const students = [
+    { id: "student-1", name: "Siti Aminah", nisn: "0012345678" },
+    { id: "student-2", name: "Muhammad Rizki", nisn: "1234567890" },
+    { id: "student-3", name: "Ahmad Fauzi", nisn: "5555555555" },
+  ];
+
+  it("matches student_id exact and warns when name or NISN changed", () => {
+    const result = matchStudents([
+      { rowIndex: 2, studentId: "student-1", name: "Siti Berubah", nisn: "0099999999" },
+    ], students);
+
+    expect(result.mappings[0]).toMatchObject({
+      studentId: "student-1",
+      status: "warning",
+      matchedBy: "student_id",
+    });
+    expect(result.mappings[0].warnings.map((item) => item.code)).toEqual(
+      expect.arrayContaining(["STUDENT_ID_NAME_CHANGED", "STUDENT_ID_NISN_CHANGED"]),
+    );
+  });
+
+  it("matches by NISN exact and normalized", () => {
+    const exact = matchStudents([{ rowIndex: 2, name: "Siti", nisn: "0012345678" }], students);
+    expect(exact.mappings[0]).toMatchObject({ studentId: "student-1", status: "safe", matchedBy: "nisn_exact" });
+
+    const normalized = matchStudents([{ rowIndex: 2, name: "Muhammad Rizki", nisn: "1234567890.0" }], students);
+    expect(normalized.mappings[0]).toMatchObject({ studentId: "student-2", status: "warning", matchedBy: "nisn_normalized" });
+  });
+
+  it("does not safe-match duplicate web NISN or duplicate normalized names", () => {
+    const duplicateNisn = matchStudents([{ rowIndex: 2, name: "A", nisn: "123" }], [
+      { id: "a", name: "Siswa A", nisn: "123" },
+      { id: "b", name: "Siswa B", nisn: "123" },
+    ]);
+    expect(duplicateNisn.mappings[0].status).toBe("ambiguous");
+
+    const duplicateName = matchStudents([{ rowIndex: 2, name: "Muh Rizki" }], [
+      { id: "a", name: "Muh. Rizki", nisn: "1" },
+      { id: "b", name: "Muh Rizki", nisn: "2" },
+    ]);
+    expect(duplicateName.mappings[0].status).toBe("ambiguous");
+  });
+
+  it("blocks duplicate Excel rows matched to one web student", () => {
+    const result = matchStudents([
+      { rowIndex: 2, name: "Siti Aminah", nisn: "0012345678" },
+      { rowIndex: 3, name: "Siti Aminah", nisn: "0012345678" },
+    ], students);
+
+    expect(result.mappings.filter((mapping) => mapping.status === "blocked")).toHaveLength(2);
+    expect(result.conflicts.map((item) => item.code)).toContain("STUDENT_DUPLICATE_EXCEL_MATCH");
+  });
+
+  it("reports missing_in_web and missing_in_excel without auto-creating students", () => {
+    const result = matchStudents([{ rowIndex: 2, name: "Siswa Baru", nisn: "777" }], students);
+
+    expect(result.mappings.find((mapping) => mapping.rowIndex === 2)?.status).toBe("missing_in_web");
+    expect(result.mappings.filter((mapping) => mapping.status === "missing_in_excel")).toHaveLength(students.length);
+  });
+
+  it("extracts workbook rows and matches students", () => {
+    const result = matchStudentsFromWorkbookRows([
+      ["No", "NISN", "Nama Siswa"],
+      [1, "0012345678", "Siti Aminah"],
+    ], students);
+
+    expect(result.mappings[0]).toMatchObject({ rowIndex: 2, studentId: "student-1", status: "safe" });
+  });
+});
+
+describe("SIPENA column matcher", () => {
+  const chapters = [
+    { id: "chapter-1", name: "BAB 1", order_index: 1 },
+    { id: "chapter-2", name: "BAB 2", order_index: 2 },
+  ];
+  const assignments = [
+    { id: "assignment-1", chapter_id: "chapter-1", name: "Tugas 1", order_index: 1 },
+    { id: "assignment-2", chapter_id: "chapter-1", name: "Tugas 2", order_index: 2 },
+    { id: "assignment-3", chapter_id: "chapter-2", name: "Tugas 1", order_index: 1 },
+  ];
+
+  it("maps explicit BAB and task headers to existing assignments", () => {
+    const result = matchColumns([{ columnIndex: 4, rawHeader: "BAB 1 - Tugas 2" }], chapters, assignments);
+
+    expect(result.mappings[0]).toMatchObject({
+      targetType: "existing_assignment",
+      status: "safe",
+      target: { assignmentId: "assignment-2", chapterId: "chapter-1" },
+    });
+  });
+
+  it("maps STS/SAS aliases and ignores reserved/derived columns", () => {
+    const result = matchColumns([
+      { columnIndex: 1, rawHeader: "Nama Siswa" },
+      { columnIndex: 2, rawHeader: "Rapor" },
+      { columnIndex: 3, rawHeader: "UTS" },
+      { columnIndex: 4, rawHeader: "PAS" },
+    ], chapters, assignments);
+
+    expect(result.mappings.map((mapping) => mapping.targetType)).toEqual(["ignore", "ignore", "sts", "sas"]);
+  });
+
+  it("suggests create_assignment when BAB exists but task is new", () => {
+    const result = matchColumns([{ columnIndex: 4, rawHeader: "BAB 1 - Proyek" }], chapters, assignments);
+
+    expect(result.mappings[0]).toMatchObject({ targetType: "create_assignment", status: "needs_confirmation" });
+    expect(result.structureSuggestions[0]).toMatchObject({ type: "create_assignment", chapterName: "BAB 1", assignmentName: "Proyek" });
+  });
+
+  it("suggests create_chapter_and_assignment when BAB is new", () => {
+    const result = matchColumns([{ columnIndex: 4, rawHeader: "BAB 3 - Proyek" }], chapters, assignments);
+
+    expect(result.mappings[0]).toMatchObject({ targetType: "create_chapter_and_assignment", status: "needs_confirmation" });
+    expect(result.structureSuggestions[0]).toMatchObject({ type: "create_chapter_and_assignment", chapterName: "BAB 3", assignmentName: "Proyek" });
+  });
+
+  it("requires confirmation for similar task or chapter names", () => {
+    const task = matchColumns([{ columnIndex: 4, rawHeader: "BAB 1 - Tugas 22" }], chapters, assignments);
+    expect(task.mappings[0]).toMatchObject({ targetType: "existing_assignment", status: "needs_confirmation" });
+
+    const chapter = matchColumns([{ columnIndex: 4, rawHeader: "BAB I - Tugas 2" }], chapters, assignments);
+    expect(chapter.mappings[0].targetType).toBe("existing_assignment");
+  });
+
+  it("marks assignment-only headers as ambiguous when found in many chapters", () => {
+    const result = matchColumns([{ columnIndex: 4, rawHeader: "Tugas 1" }], chapters, assignments);
+
+    expect(result.mappings[0]).toMatchObject({ targetType: "unresolved", status: "ambiguous" });
+    expect(result.conflicts.map((item) => item.code)).toContain("COLUMN_ASSIGNMENT_AMBIGUOUS");
+  });
+
+  it("uses valid official metadata and warns when header changed", () => {
+    const result = matchColumns([
+      {
+        columnIndex: 4,
+        rawHeader: "Header Diubah",
+        metadata: {
+          columnIndex: 4,
+          visibleHeader: "BAB 1 - Tugas 1",
+          gradeType: "assignment",
+          chapterId: "chapter-1",
+          assignmentId: "assignment-1",
+        },
+      },
+    ], chapters, assignments);
+
+    expect(result.mappings[0]).toMatchObject({
+      targetType: "existing_assignment",
+      status: "warning",
+      target: { assignmentId: "assignment-1" },
+    });
+    expect(result.warnings.map((item) => item.code)).toContain("COLUMN_METADATA_VS_HEADER_CHANGED");
+  });
+
+  it("falls back to clear header when official metadata is invalid", () => {
+    const result = matchColumns([
+      {
+        columnIndex: 4,
+        rawHeader: "BAB 1 - Tugas 2",
+        metadata: {
+          columnIndex: 4,
+          visibleHeader: "BAB 1 - Tugas 2",
+          gradeType: "assignment",
+          assignmentId: "missing-assignment",
+        },
+      },
+    ], chapters, assignments);
+
+    expect(result.mappings[0]).toMatchObject({ targetType: "unresolved", status: "needs_confirmation" });
+    expect(result.warnings.map((item) => item.code)).toContain("COLUMN_METADATA_INVALID_HEADER_CLEAR");
   });
 });
