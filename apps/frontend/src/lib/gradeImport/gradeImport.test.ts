@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import * as XLSX from "xlsx";
 
 import {
+  analyzeOfficialTemplateWorkbook,
   buildOfficialGradeTemplateWorkbook,
   getOfficialGradeTemplateFileName,
   normalizeName,
@@ -10,6 +12,7 @@ import {
   normalizeWhitespace,
   parseGradeHeader,
   parseGradeValue,
+  readWorkbookBuffer,
   removeZeroWidthChars,
 } from "./index";
 
@@ -223,5 +226,136 @@ describe("official SIPENA grade template exporter", () => {
 
   it("creates production-safe SIPENA filename", () => {
     expect(getOfficialGradeTemplateFileName(context)).toBe("Template_Nilai_SIPENA_Kelas_5_A_Matematika_Semester_1.xlsx");
+  });
+});
+
+describe("gradeImport workbook reader", () => {
+  it("reads xlsx sheets as primitive rows and keeps zero values", () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ["Nama", "Nilai"],
+      ["Aisyah", 0],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, sheet, "Nilai");
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+
+    const result = readWorkbookBuffer(buffer, "nilai.xlsx");
+
+    expect(result.ok).toBe(true);
+    expect(result.sheetNames).toEqual(["Nilai"]);
+    expect(result.sheets[0].rows[1][1]).toBe(0);
+  });
+
+  it("reads csv input when extension is csv", () => {
+    const buffer = new TextEncoder().encode("No,NISN,Nama Siswa\n1,0012345678,Siti").buffer;
+    const result = readWorkbookBuffer(buffer, "nilai.csv");
+
+    expect(result.ok).toBe(true);
+    expect(result.sheets[0].rows[0]).toEqual(["No", "NISN", "Nama Siswa"]);
+  });
+
+  it("returns clear errors for empty and unsupported files", () => {
+    expect(readWorkbookBuffer(new ArrayBuffer(0), "nilai.xlsx")).toMatchObject({
+      ok: false,
+      error: { code: "IMPORT_FILE_EMPTY" },
+    });
+    expect(readWorkbookBuffer(new TextEncoder().encode("abc").buffer, "nilai.txt")).toMatchObject({
+      ok: false,
+      error: { code: "IMPORT_UNSUPPORTED_FILE_TYPE" },
+    });
+  });
+
+  it("returns sheet empty error without crashing", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([]), "Kosong");
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+    const result = readWorkbookBuffer(buffer, "kosong.xlsx");
+
+    expect(result.ok).toBe(false);
+    expect("error" in result ? result.error.code : undefined).toBe("IMPORT_SHEET_EMPTY");
+    expect(result.sheetNames).toEqual(["Kosong"]);
+  });
+});
+
+describe("official SIPENA template reader", () => {
+  const context = {
+    classId: "class-1",
+    subjectId: "subject-1",
+    semesterId: "semester-1",
+    academicYearId: "year-1",
+  };
+  const templateContext = {
+    ...context,
+    className: "Kelas 5 A",
+    subjectName: "Matematika",
+    semesterName: "Semester 1",
+    generatedAt: "2026-05-08T00:00:00.000Z",
+    students: [{ id: "student-1", name: "Siti Aminah", nisn: "0012345678" }],
+    chapters: [{ id: "chapter-1", name: "BAB 1", order_index: 1 }],
+    assignments: [{ id: "assignment-1", chapter_id: "chapter-1", name: "Tugas 1", order_index: 1 }],
+  };
+
+  function readTemplate(workbook: XLSX.WorkBook) {
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+    return readWorkbookBuffer(buffer, "template.xlsx");
+  }
+
+  it("detects official exact template and unsigned warning", () => {
+    const result = analyzeOfficialTemplateWorkbook(readTemplate(buildOfficialGradeTemplateWorkbook(templateContext)), context);
+
+    expect(result.sourceType).toBe("official_exact");
+    expect(result.manifest?.app).toBe("SIPENA");
+    expect(result.sheetPresence).toMatchObject({ input: true, manifest: true, students: true, structure: true, columnMap: true });
+    expect(result.warnings.map((item) => item.code)).toContain("IMPORT_UNSIGNED_TEMPLATE");
+  });
+
+  it("detects context mismatch and classifies as official modified", () => {
+    const result = analyzeOfficialTemplateWorkbook(readTemplate(buildOfficialGradeTemplateWorkbook(templateContext)), {
+      ...context,
+      semesterId: "semester-2",
+    });
+
+    expect(result.sourceType).toBe("official_modified");
+    expect(result.warnings.map((item) => item.code)).toContain("IMPORT_SEMESTER_MISMATCH");
+  });
+
+  it("detects added grade headers in official templates", () => {
+    const workbook = buildOfficialGradeTemplateWorkbook(templateContext);
+    const sheet = workbook.Sheets["Isi_Nilai"];
+    sheet.G1 = { t: "s", v: "BAB 3 - Proyek" };
+    sheet["!ref"] = "A1:G2";
+    const result = analyzeOfficialTemplateWorkbook(readTemplate(workbook), context);
+
+    expect(result.sourceType).toBe("official_modified");
+    expect(result.headers.find((header) => header.rawHeader === "BAB 3 - Proyek")?.status).toBe("added");
+    expect(result.warnings.map((item) => item.code)).toContain("IMPORT_ADDED_HEADER_DETECTED");
+  });
+
+  it("falls back to free structured when manifest is missing but input shape matches", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 2"],
+      [1, "0012345678", "Siti Aminah", 90],
+    ]), "Isi_Nilai");
+    const result = analyzeOfficialTemplateWorkbook(readTemplate(workbook), context);
+
+    expect(result.sourceType).toBe("free_structured");
+    expect(result.warnings.map((item) => item.code)).toContain("IMPORT_MANIFEST_MISSING");
+  });
+
+  it("detects damaged official metadata", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["key", "value"],
+      ["app", "SIPENA"],
+    ]), "_manifest");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+      [1, "0012345678", "Siti Aminah", ""],
+    ]), "Isi_Nilai");
+    const result = analyzeOfficialTemplateWorkbook(readTemplate(workbook), context);
+
+    expect(result.sourceType).toBe("official_damaged");
+    expect(result.warnings.map((item) => item.code)).toContain("IMPORT_METADATA_SHEET_MISSING");
   });
 });
