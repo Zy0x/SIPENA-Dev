@@ -27,6 +27,7 @@ import {
   readWorkbookFile,
   type ColumnMapping,
   type GradeOperation,
+  type GradeTarget,
   type ImportConflict,
   type ImportPlan,
   type ImportPlanContext,
@@ -70,6 +71,34 @@ interface GradeImportExportDialogProps {
 type ImportMode = "official" | "smart";
 type ExportMode = "official" | "current" | "backup";
 type ImportExecutionState = "idle" | "analyzing" | "ready" | "failed" | "importing" | "success";
+type ColumnResolutionKind = "existing_assignment" | "create_assignment" | "create_chapter_and_assignment" | "sts" | "sas" | "ignore";
+
+interface ColumnResolution {
+  kind: ColumnResolutionKind;
+  assignmentId?: string;
+  chapterId?: string;
+  chapterName?: string;
+  assignmentName?: string;
+  confirmed?: boolean;
+}
+
+interface ImportResolverState {
+  ignoredRows: number[];
+  unresolvedRows: number[];
+  studentOverrides: Record<string, string>;
+  ignoredColumns: number[];
+  columnOverrides: Record<string, ColumnResolution>;
+  resolvedConflictKeys: string[];
+}
+
+const emptyResolverState: ImportResolverState = {
+  ignoredRows: [],
+  unresolvedRows: [],
+  studentOverrides: {},
+  ignoredColumns: [],
+  columnOverrides: {},
+  resolvedConflictKeys: [],
+};
 
 const importSteps = ["Upload", "Analisis", "Pemetaan", "Konflik", "Preview", "Import"];
 
@@ -141,6 +170,298 @@ function hasBlockedConflicts(plan: ImportPlan | null): boolean {
 
 function getTopWarnings(plan: ImportPlan | null): ImportWarning[] {
   return (plan?.warnings || []).slice(0, 5);
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values)).filter(Boolean);
+}
+
+function uniqueNumbersForState(values: number[]): number[] {
+  return Array.from(new Set(values)).filter((value) => Number.isFinite(value));
+}
+
+function conflictKey(conflict: ImportConflict): string {
+  return [
+    conflict.type,
+    conflict.code,
+    conflict.rowIndex ?? "",
+    conflict.columnIndex ?? "",
+    conflict.message,
+  ].join(":");
+}
+
+function targetKey(target: GradeTarget | undefined): string {
+  if (!target) return "";
+  if (target.gradeType === "assignment") {
+    return `assignment:${target.assignmentId || ""}:${target.chapterId || ""}:${target.chapterName || ""}:${target.assignmentName || ""}`;
+  }
+  return `special:${target.gradeType}`;
+}
+
+function buildTargetFromColumnResolution(resolution: ColumnResolution, context: ImportPlanContext): GradeTarget | undefined {
+  if (resolution.kind === "ignore") return undefined;
+  if (resolution.kind === "sts" || resolution.kind === "sas") return { gradeType: resolution.kind };
+
+  if (resolution.kind === "existing_assignment" && resolution.assignmentId) {
+    const assignment = context.assignments.find((item) => item.id === resolution.assignmentId);
+    const chapter = assignment ? context.chapters.find((item) => item.id === assignment.chapter_id) : undefined;
+    if (!assignment) return undefined;
+    return {
+      gradeType: "assignment",
+      chapterId: chapter?.id || assignment.chapter_id,
+      chapterName: chapter?.name,
+      assignmentId: assignment.id,
+      assignmentName: assignment.name,
+    };
+  }
+
+  if (resolution.kind === "create_assignment") {
+    const chapter = context.chapters.find((item) => item.id === resolution.chapterId);
+    return {
+      gradeType: "assignment",
+      chapterId: resolution.chapterId || chapter?.id,
+      chapterName: resolution.chapterName || chapter?.name,
+      assignmentName: resolution.assignmentName,
+    };
+  }
+
+  return {
+    gradeType: "assignment",
+    chapterName: resolution.chapterName,
+    assignmentName: resolution.assignmentName,
+  };
+}
+
+function operationActionAfterResolution(operation: GradeOperation, updateMode: UpdateMode): GradeOperation["action"] {
+  if (operation.conflicts.length) return "blocked";
+  if (operation.value === null) return "skip_empty";
+  if (operation.existingValue !== null && operation.existingValue !== undefined) {
+    if (updateMode === "overwrite_existing" || updateMode === "overwrite_selected_columns") return "overwrite";
+    return "skip_existing";
+  }
+  return "fill_empty";
+}
+
+function recalculateSummary(plan: ImportPlan): ImportPlan["summary"] {
+  const readyOperations = plan.gradeOperations.filter((operation) => ["fill_empty", "overwrite"].includes(operation.action));
+  const skippedOperations = plan.gradeOperations.filter((operation) => ["skip_empty", "skip_existing"].includes(operation.action));
+  const invalidValues = plan.gradeOperations.filter((operation) =>
+    operation.conflicts.some((item) => item.code === "IMPORT_INVALID_VALUE_STRICT" || item.type === "grade_value"),
+  ).length;
+  const newChapterSuggestions = plan.structureSuggestions.filter((item) => item.type === "create_chapter" || item.type === "create_chapter_and_assignment").length;
+  const newAssignmentSuggestions = plan.structureSuggestions.filter((item) => item.type === "create_assignment" || item.type === "create_chapter_and_assignment").length;
+
+  return {
+    ...plan.summary,
+    matchedStudents: plan.studentMappings.filter((mapping) => mapping.studentId && ["safe", "warning"].includes(mapping.status)).length,
+    mappedColumns: plan.columnMappings.filter((mapping) => mapping.target && ["safe", "warning"].includes(mapping.status)).length,
+    safeOperations: readyOperations.length,
+    blockedOperations: plan.gradeOperations.filter((operation) => operation.action === "blocked").length,
+    needsConfirmation: plan.gradeOperations.filter((operation) => operation.action === "needs_confirmation").length,
+    matchedStudentCount: plan.studentMappings.filter((mapping) => mapping.studentId && ["safe", "warning"].includes(mapping.status)).length,
+    ambiguousStudentCount: plan.studentMappings.filter((mapping) => mapping.status === "ambiguous").length,
+    missingStudentCount: plan.studentMappings.filter((mapping) => mapping.status === "missing_in_web" || mapping.status === "missing_in_excel").length,
+    gradeColumnCount: plan.columnMappings.filter((mapping) => !mapping.parsedHeader.reserved && !mapping.parsedHeader.derived && mapping.status !== "missing").length,
+    conflictCount: plan.conflicts.length,
+    newAssignmentCount: newAssignmentSuggestions,
+    newChapterCount: newChapterSuggestions,
+    invalidValueCount: invalidValues,
+    readyImportCount: readyOperations.length,
+    skippedValueCount: skippedOperations.length,
+  };
+}
+
+function applyResolverToPlan(
+  basePlan: ImportPlan,
+  resolver: ImportResolverState,
+  context: ImportPlanContext,
+  updateMode: UpdateMode,
+): ImportPlan {
+  const ignoredRows = new Set(resolver.ignoredRows);
+  const unresolvedRows = new Set(resolver.unresolvedRows);
+  const ignoredColumns = new Set(resolver.ignoredColumns);
+  const resolvedKeys = new Set(resolver.resolvedConflictKeys);
+
+  const studentsById = new Map(context.students.map((student) => [student.id, student]));
+  const columnOverrides = new Map(
+    Object.entries(resolver.columnOverrides).map(([columnIndex, resolution]) => [Number(columnIndex), resolution]),
+  );
+
+  const studentMappings = basePlan.studentMappings.map((mapping) => {
+    const overrideStudent = resolver.studentOverrides[String(mapping.rowIndex)]
+      ? studentsById.get(resolver.studentOverrides[String(mapping.rowIndex)])
+      : undefined;
+
+    if (ignoredRows.has(mapping.rowIndex)) {
+      return {
+        ...mapping,
+        status: "warning" as const,
+        warnings: uniqueStrings([...mapping.warnings.map((item) => item.code), "STUDENT_ROW_IGNORED_BY_USER"]).map((code) => (
+          mapping.warnings.find((item) => item.code === code) || {
+            code,
+            severity: "warning" as const,
+            message: "Baris Excel diabaikan untuk import.",
+            rowIndex: mapping.rowIndex,
+          }
+        )),
+        conflicts: [],
+      };
+    }
+
+    if (unresolvedRows.has(mapping.rowIndex)) {
+      return {
+        ...mapping,
+        status: "blocked" as const,
+        conflicts: [{
+          code: "STUDENT_MARKED_UNRESOLVED",
+          severity: "blocked" as const,
+          type: "student" as const,
+          rowIndex: mapping.rowIndex,
+          message: "Baris siswa ditandai unresolved oleh user.",
+        }],
+      };
+    }
+
+    if (overrideStudent) {
+      return {
+        ...mapping,
+        studentId: overrideStudent.id,
+        webName: overrideStudent.name,
+        webNisn: overrideStudent.nisn || undefined,
+        matchedBy: "manual" as const,
+        confidence: 100,
+        status: "safe" as const,
+        conflicts: [],
+      };
+    }
+
+    return mapping;
+  });
+
+  const columnMappings = basePlan.columnMappings.map((mapping) => {
+    const resolution = columnOverrides.get(mapping.columnIndex);
+
+    if (ignoredColumns.has(mapping.columnIndex) || resolution?.kind === "ignore") {
+      return {
+        ...mapping,
+        target: undefined,
+        confidence: 100,
+        status: "safe" as const,
+        conflicts: [],
+        warnings: [{
+          code: "COLUMN_IGNORED_BY_USER",
+          severity: "warning" as const,
+          message: "Kolom Excel diabaikan untuk import.",
+          columnIndex: mapping.columnIndex,
+        }],
+      };
+    }
+
+    if (resolution) {
+      const target = buildTargetFromColumnResolution(resolution, context);
+      const needsStructureConfirmation = ["create_assignment", "create_chapter_and_assignment"].includes(resolution.kind) && !resolution.confirmed;
+      return {
+        ...mapping,
+        target,
+        confidence: resolution.kind === "existing_assignment" || resolution.kind === "sts" || resolution.kind === "sas" ? 100 : 92,
+        status: needsStructureConfirmation ? "needs_confirmation" as const : "safe" as const,
+        conflicts: needsStructureConfirmation
+          ? [{
+              code: "STRUCTURE_CONFIRMATION_REQUIRED",
+              severity: "blocked" as const,
+              type: "structure" as const,
+              columnIndex: mapping.columnIndex,
+              message: "BAB/tugas baru belum dikonfirmasi.",
+            }]
+          : [],
+        warnings: resolution.kind === "create_assignment" || resolution.kind === "create_chapter_and_assignment"
+          ? [{
+              code: "STRUCTURE_CREATION_CONFIRMED_IN_PREVIEW",
+              severity: "warning" as const,
+              message: "Struktur baru hanya dikonfirmasi untuk preview, belum dibuat di database.",
+              columnIndex: mapping.columnIndex,
+            }]
+          : mapping.warnings,
+      };
+    }
+
+    return mapping;
+  });
+
+  const studentByRow = new Map(studentMappings.map((mapping) => [mapping.rowIndex, mapping]));
+  const columnByIndex = new Map(columnMappings.map((mapping) => [mapping.columnIndex, mapping]));
+
+  const gradeOperations = basePlan.gradeOperations.map((operation) => {
+    const student = studentByRow.get(operation.rowIndex);
+    const column = columnByIndex.get(operation.columnIndex);
+    const ignored = ignoredRows.has(operation.rowIndex) || ignoredColumns.has(operation.columnIndex) || column?.target === undefined;
+    const unresolved = unresolvedRows.has(operation.rowIndex);
+    const studentSafe = Boolean(student?.studentId && ["safe", "warning"].includes(student.status));
+    const columnSafe = Boolean(column?.target && ["safe", "warning"].includes(column.status));
+
+    let conflicts = operation.conflicts.filter((item) => {
+      if (resolvedKeys.has(conflictKey(item))) return false;
+      if (ignored) return false;
+      if (item.type === "student" && studentSafe) return false;
+      if ((item.type === "column" || item.type === "structure") && columnSafe) return false;
+      return true;
+    });
+
+    if (unresolved) {
+      conflicts = [{
+        code: "STUDENT_MARKED_UNRESOLVED",
+        severity: "blocked" as const,
+        type: "student" as const,
+        rowIndex: operation.rowIndex,
+        columnIndex: operation.columnIndex,
+        message: "Baris siswa ditandai unresolved oleh user.",
+      }];
+    }
+
+    const nextOperation: GradeOperation = {
+      ...operation,
+      studentId: student?.studentId,
+      target: column?.target || operation.target,
+      updateMode,
+      conflicts,
+      action: ignored ? "skip_existing" : operation.action,
+    };
+    nextOperation.action = ignored ? "skip_existing" : operationActionAfterResolution(nextOperation, updateMode);
+    return nextOperation;
+  });
+
+  const operationConflicts = gradeOperations.flatMap((operation) => operation.conflicts);
+  const planConflicts = basePlan.conflicts.filter((item) => {
+    if (resolvedKeys.has(conflictKey(item))) return false;
+    if (item.rowIndex && ignoredRows.has(item.rowIndex)) return false;
+    if (item.columnIndex && ignoredColumns.has(item.columnIndex)) return false;
+    if (item.type === "student" && item.rowIndex) {
+      const mapping = studentByRow.get(item.rowIndex);
+      return !(mapping?.studentId && ["safe", "warning"].includes(mapping.status));
+    }
+    if ((item.type === "column" || item.type === "structure") && item.columnIndex) {
+      const mapping = columnByIndex.get(item.columnIndex);
+      return !(mapping?.target && ["safe", "warning"].includes(mapping.status));
+    }
+    return true;
+  });
+
+  const nextPlan: ImportPlan = {
+    ...basePlan,
+    updateMode,
+    studentMappings,
+    columnMappings,
+    gradeOperations,
+    conflicts: [...planConflicts, ...operationConflicts],
+  };
+
+  return {
+    ...nextPlan,
+    conflicts: nextPlan.conflicts.filter((item, index, all) =>
+      all.findIndex((candidate) => conflictKey(candidate) === conflictKey(item)) === index,
+    ),
+    summary: recalculateSummary(nextPlan),
+  };
 }
 
 function MetricCard({
@@ -351,7 +672,248 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
   );
 }
 
-function ConflictStep({ plan }: { plan: ImportPlan | null }) {
+interface ConflictResolutionActions {
+  onUseCurrentStudent: (rowIndex: number, studentId: string) => void;
+  onChooseStudent: (rowIndex: number, studentId: string) => void;
+  onIgnoreRow: (rowIndex: number) => void;
+  onMarkRowUnresolved: (rowIndex: number) => void;
+  onUseExistingAssignment: (columnIndex: number, assignmentId: string) => void;
+  onConfirmCreateAssignment: (columnIndex: number, chapterId: string, assignmentName: string) => void;
+  onConfirmCreateChapterAndAssignment: (columnIndex: number, chapterName: string, assignmentName: string) => void;
+  onSetSpecialColumn: (columnIndex: number, kind: "sts" | "sas") => void;
+  onIgnoreColumn: (columnIndex: number) => void;
+  onResolveConflict: (conflict: ImportConflict) => void;
+  onKeepDuplicateColumn: (conflict: ImportConflict, keepColumnIndex: number) => void;
+  onBulkIgnoreDerived: () => void;
+  onBulkUseSafeMappings: () => void;
+  onBulkTrustStudentIdWarnings: () => void;
+  onUpdateModeChange: (mode: UpdateMode) => void;
+}
+
+function ResolutionButton({
+  children,
+  onClick,
+  tone = "default",
+}: {
+  children: string;
+  onClick: () => void;
+  tone?: "default" | "safe" | "warning";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "min-h-9 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+        tone === "safe" && "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/35 dark:text-blue-100",
+        tone === "warning" && "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-900/60 dark:bg-orange-950/35 dark:text-orange-100",
+        tone === "default" && "border-border bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function StructureResolutionControls({
+  conflict,
+  mapping,
+  context,
+  actions,
+}: {
+  conflict: ImportConflict;
+  mapping?: ColumnMapping;
+  context: ImportPlanContext;
+  actions: ConflictResolutionActions;
+}) {
+  const suggestedChapterName = mapping?.target?.chapterName || mapping?.target?.sourceChapterName || "";
+  const suggestedAssignmentName = mapping?.target?.assignmentName || mapping?.target?.sourceAssignmentName || mapping?.rawHeader || "";
+  const [chapterName, setChapterName] = useState(suggestedChapterName);
+  const [assignmentName, setAssignmentName] = useState(suggestedAssignmentName);
+  const [chapterId, setChapterId] = useState(mapping?.target?.chapterId || context.chapters[0]?.id || "");
+
+  return (
+    <div className="mt-3 grid gap-2 rounded-2xl border border-orange-100 bg-white/70 p-3 dark:border-orange-900/50 dark:bg-slate-950/40">
+      <label className="grid gap-1 text-xs font-medium">
+        BAB
+        <input
+          value={chapterName}
+          onChange={(event) => setChapterName(event.target.value)}
+          className="min-h-9 rounded-xl border border-border bg-white px-3 text-sm dark:bg-slate-950"
+          placeholder="Nama BAB"
+        />
+      </label>
+      <label className="grid gap-1 text-xs font-medium">
+        Tugas
+        <input
+          value={assignmentName}
+          onChange={(event) => setAssignmentName(event.target.value)}
+          className="min-h-9 rounded-xl border border-border bg-white px-3 text-sm dark:bg-slate-950"
+          placeholder="Nama tugas"
+        />
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {context.chapters.length ? (
+          <select
+            value={chapterId}
+            onChange={(event) => setChapterId(event.target.value)}
+            className="min-h-9 max-w-full rounded-full border border-border bg-white px-3 text-xs dark:bg-slate-950"
+          >
+            {context.chapters.map((chapter) => (
+              <option key={chapter.id} value={chapter.id}>{chapter.name}</option>
+            ))}
+          </select>
+        ) : null}
+        <ResolutionButton
+          tone="warning"
+          onClick={() => {
+            if (!conflict.columnIndex || !chapterId || !assignmentName.trim()) return;
+            actions.onConfirmCreateAssignment(conflict.columnIndex, chapterId, assignmentName.trim());
+          }}
+        >
+          Konfirmasi tugas baru
+        </ResolutionButton>
+        <ResolutionButton
+          tone="warning"
+          onClick={() => {
+            if (!conflict.columnIndex || !chapterName.trim() || !assignmentName.trim()) return;
+            actions.onConfirmCreateChapterAndAssignment(conflict.columnIndex, chapterName.trim(), assignmentName.trim());
+          }}
+        >
+          Konfirmasi BAB + tugas
+        </ResolutionButton>
+      </div>
+    </div>
+  );
+}
+
+function ConflictActionPanel({
+  conflict,
+  plan,
+  context,
+  actions,
+}: {
+  conflict: ImportConflict;
+  plan: ImportPlan;
+  context: ImportPlanContext;
+  actions: ConflictResolutionActions;
+}) {
+  const studentMapping = conflict.rowIndex ? plan.studentMappings.find((mapping) => mapping.rowIndex === conflict.rowIndex) : undefined;
+  const columnMapping = conflict.columnIndex ? plan.columnMappings.find((mapping) => mapping.columnIndex === conflict.columnIndex) : undefined;
+  const chapterById = new Map(context.chapters.map((chapter) => [chapter.id, chapter]));
+
+  if (conflict.type === "student" && conflict.rowIndex) {
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {studentMapping?.studentId ? (
+          <ResolutionButton tone="safe" onClick={() => actions.onUseCurrentStudent(conflict.rowIndex!, studentMapping.studentId!)}>
+            Gunakan siswa web ini
+          </ResolutionButton>
+        ) : null}
+        <select
+          value=""
+          onChange={(event) => {
+            if (event.target.value) actions.onChooseStudent(conflict.rowIndex!, event.target.value);
+          }}
+          className="min-h-9 max-w-full rounded-full border border-border bg-white px-3 text-xs dark:bg-slate-950"
+        >
+          <option value="">Pilih siswa lain</option>
+          {context.students.map((student) => (
+            <option key={student.id} value={student.id}>{student.name} {student.nisn ? `(${student.nisn})` : ""}</option>
+          ))}
+        </select>
+        <ResolutionButton onClick={() => actions.onIgnoreRow(conflict.rowIndex!)}>Abaikan baris Excel</ResolutionButton>
+        <ResolutionButton tone="warning" onClick={() => actions.onMarkRowUnresolved(conflict.rowIndex!)}>Tandai unresolved</ResolutionButton>
+      </div>
+    );
+  }
+
+  if ((conflict.type === "column" || conflict.type === "structure") && conflict.columnIndex) {
+    const duplicateOptionColumns = conflict.code === "IMPORT_DUPLICATE_COLUMN_TARGET"
+      ? (conflict.options || [])
+          .map((header) => plan.columnMappings.find((mapping) => mapping.rawHeader === header))
+          .filter(Boolean) as ColumnMapping[]
+      : [];
+
+    return (
+      <div className="mt-3 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <select
+            value=""
+            onChange={(event) => {
+              if (event.target.value) actions.onUseExistingAssignment(conflict.columnIndex!, event.target.value);
+            }}
+            className="min-h-9 max-w-full rounded-full border border-border bg-white px-3 text-xs dark:bg-slate-950"
+          >
+            <option value="">Gunakan tugas existing</option>
+            {context.assignments.map((assignment) => (
+              <option key={assignment.id} value={assignment.id}>
+                {[chapterById.get(assignment.chapter_id)?.name, assignment.name].filter(Boolean).join(" - ")}
+              </option>
+            ))}
+          </select>
+          <ResolutionButton tone="safe" onClick={() => actions.onSetSpecialColumn(conflict.columnIndex!, "sts")}>Jadikan STS</ResolutionButton>
+          <ResolutionButton tone="safe" onClick={() => actions.onSetSpecialColumn(conflict.columnIndex!, "sas")}>Jadikan SAS</ResolutionButton>
+          <ResolutionButton onClick={() => actions.onIgnoreColumn(conflict.columnIndex!)}>Abaikan kolom</ResolutionButton>
+          {conflict.code === "IMPORT_DUPLICATE_COLUMN_TARGET" ? (
+            <ResolutionButton tone="safe" onClick={() => actions.onKeepDuplicateColumn(conflict, conflict.columnIndex!)}>
+              Gunakan kolom ini
+            </ResolutionButton>
+          ) : null}
+          {duplicateOptionColumns[0] ? (
+            <ResolutionButton tone="safe" onClick={() => actions.onKeepDuplicateColumn(conflict, duplicateOptionColumns[0].columnIndex)}>
+              Gunakan kolom pertama
+            </ResolutionButton>
+          ) : null}
+          {duplicateOptionColumns[1] ? (
+            <ResolutionButton tone="safe" onClick={() => actions.onKeepDuplicateColumn(conflict, duplicateOptionColumns[1].columnIndex)}>
+              Gunakan kolom kedua
+            </ResolutionButton>
+          ) : null}
+        </div>
+        {conflict.type === "structure" ? (
+          <StructureResolutionControls conflict={conflict} mapping={columnMapping} context={context} actions={actions} />
+        ) : null}
+      </div>
+    );
+  }
+
+  if (conflict.type === "overwrite") {
+    return (
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {(Object.keys(updateModeLabels) as UpdateMode[]).map((mode) => (
+          <ResolutionButton key={mode} tone={mode === "overwrite_existing" ? "warning" : "safe"} onClick={() => actions.onUpdateModeChange(mode)}>
+            {updateModeLabels[mode]}
+          </ResolutionButton>
+        ))}
+      </div>
+    );
+  }
+
+  if (conflict.severity === "blocked") {
+    return (
+      <div className="mt-3 rounded-2xl border border-red-100 bg-white/70 p-3 text-xs leading-5 dark:border-red-900/50 dark:bg-slate-950/40">
+        Konflik ini tetap diblokir sampai file atau pemetaan sumber diperbaiki. Tidak ada auto-map untuk data ambigu.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <ResolutionButton onClick={() => actions.onResolveConflict(conflict)}>Tandai dicek</ResolutionButton>
+    </div>
+  );
+}
+
+function ConflictStep({
+  plan,
+  context,
+  actions,
+}: {
+  plan: ImportPlan | null;
+  context: ImportPlanContext;
+  actions: ConflictResolutionActions;
+}) {
   if (!plan) {
     return <EmptyPanel title="Konflik belum tersedia" description="Konflik akan muncul setelah file dianalisis." />;
   }
@@ -364,6 +926,36 @@ function ConflictStep({ plan }: { plan: ImportPlan | null }) {
 
   return (
     <div className="space-y-3">
+      <section className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Bulk action aman</h3>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Action ini hanya mengubah preview resolver. Tidak ada data yang disimpan.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan semua derived columns</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={actions.onBulkUseSafeMappings}>Gunakan semua mapping safe</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data web untuk warning student_id</ResolutionButton>
+          </div>
+        </div>
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">Existing value conflict policy</p>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(updateModeLabels) as UpdateMode[]).map((mode) => (
+              <ResolutionButton
+                key={mode}
+                tone={plan.updateMode === mode ? "safe" : mode === "overwrite_existing" ? "warning" : "default"}
+                onClick={() => actions.onUpdateModeChange(mode)}
+              >
+                {updateModeLabels[mode]}
+              </ResolutionButton>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {!plan.conflicts.length ? (
         <RiskAlert title="Tidak ada konflik blocking" tone="safe">
           ImportPlan tidak menemukan konflik utama. Lanjutkan ke preview untuk melihat operasi yang akan terjadi.
@@ -379,12 +971,18 @@ function ConflictStep({ plan }: { plan: ImportPlan | null }) {
               <div key={`${item.code}-${index}`} className="rounded-2xl border border-red-100 bg-red-50/80 p-3 text-red-950 dark:border-red-900/60 dark:bg-red-950/25 dark:text-red-100">
                 <div className="flex min-w-0 items-start gap-2">
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">{item.code}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold">{item.code}</p>
+                      <StatusBadge tone={item.severity === "blocked" ? "warning" : "info"}>
+                        {item.severity === "blocked" ? "Diblokir" : item.severity === "warning" ? "Perlu Dicek" : "Aman"}
+                      </StatusBadge>
+                    </div>
                     <p className="mt-1 text-xs leading-5 opacity-85">{item.message}</p>
                     <p className="mt-1 text-xs opacity-70">
                       {item.rowIndex ? `Baris ${item.rowIndex}` : ""} {item.columnIndex ? `Kolom ${item.columnIndex}` : ""}
                     </p>
+                    <ConflictActionPanel conflict={item} plan={plan} context={context} actions={actions} />
                   </div>
                 </div>
               </div>
@@ -521,8 +1119,10 @@ export default function GradeImportExportDialog({
   const [fileName, setFileName] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [analysis, setAnalysis] = useState<ImportPlanInputAnalysis | null>(null);
+  const [basePlan, setBasePlan] = useState<ImportPlan | null>(null);
   const [plan, setPlan] = useState<ImportPlan | null>(null);
   const [updateMode, setUpdateMode] = useState<UpdateMode>("fill_empty_only");
+  const [resolverState, setResolverState] = useState<ImportResolverState>(emptyResolverState);
   const [executionState, setExecutionState] = useState<ImportExecutionState>("idle");
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
@@ -535,8 +1135,10 @@ export default function GradeImportExportDialog({
       setStepIndex(0);
       setFileName(null);
       setAnalysis(null);
+      setBasePlan(null);
       setPlan(null);
       setUpdateMode("fill_empty_only");
+      setResolverState(emptyResolverState);
       setExecutionState("idle");
       setAnalysisError(null);
     }
@@ -544,14 +1146,158 @@ export default function GradeImportExportDialog({
 
   useEffect(() => {
     if (!analysis) return;
-    setPlan(buildImportPlan(analysis, importContext, { updateMode }));
-  }, [analysis, importContext, updateMode]);
+    const nextBasePlan = buildImportPlan(analysis, importContext, { updateMode });
+    setBasePlan(nextBasePlan);
+    setPlan(applyResolverToPlan(nextBasePlan, resolverState, importContext, updateMode));
+  }, [analysis, importContext, resolverState, updateMode]);
 
   const contextLabel = useMemo(() => (
     [classNameLabel, subjectName, semesterName || "Semester aktif"].filter(Boolean).join(" / ")
   ), [classNameLabel, semesterName, subjectName]);
 
-  const hasPlan = Boolean(plan);
+  const updateResolver = useCallback((updater: (current: ImportResolverState) => ImportResolverState) => {
+    setResolverState((current) => updater(current));
+  }, []);
+
+  const resolverActions = useMemo<ConflictResolutionActions>(() => ({
+    onUseCurrentStudent: (rowIndex, studentId) => updateResolver((current) => ({
+      ...current,
+      ignoredRows: current.ignoredRows.filter((item) => item !== rowIndex),
+      unresolvedRows: current.unresolvedRows.filter((item) => item !== rowIndex),
+      studentOverrides: { ...current.studentOverrides, [rowIndex]: studentId },
+    })),
+    onChooseStudent: (rowIndex, studentId) => updateResolver((current) => ({
+      ...current,
+      ignoredRows: current.ignoredRows.filter((item) => item !== rowIndex),
+      unresolvedRows: current.unresolvedRows.filter((item) => item !== rowIndex),
+      studentOverrides: { ...current.studentOverrides, [rowIndex]: studentId },
+    })),
+    onIgnoreRow: (rowIndex) => updateResolver((current) => {
+      const { [rowIndex]: _removed, ...studentOverrides } = current.studentOverrides;
+      return {
+        ...current,
+        ignoredRows: uniqueNumbersForState([...current.ignoredRows, rowIndex]),
+        unresolvedRows: current.unresolvedRows.filter((item) => item !== rowIndex),
+        studentOverrides,
+      };
+    }),
+    onMarkRowUnresolved: (rowIndex) => updateResolver((current) => {
+      const { [rowIndex]: _removed, ...studentOverrides } = current.studentOverrides;
+      return {
+        ...current,
+        ignoredRows: current.ignoredRows.filter((item) => item !== rowIndex),
+        unresolvedRows: uniqueNumbersForState([...current.unresolvedRows, rowIndex]),
+        studentOverrides,
+      };
+    }),
+    onUseExistingAssignment: (columnIndex, assignmentId) => updateResolver((current) => ({
+      ...current,
+      ignoredColumns: current.ignoredColumns.filter((item) => item !== columnIndex),
+      columnOverrides: {
+        ...current.columnOverrides,
+        [columnIndex]: { kind: "existing_assignment", assignmentId },
+      },
+    })),
+    onConfirmCreateAssignment: (columnIndex, chapterId, assignmentName) => updateResolver((current) => {
+      const chapter = importContext.chapters.find((item) => item.id === chapterId);
+      return {
+        ...current,
+        ignoredColumns: current.ignoredColumns.filter((item) => item !== columnIndex),
+        columnOverrides: {
+          ...current.columnOverrides,
+          [columnIndex]: {
+            kind: "create_assignment",
+            chapterId,
+            chapterName: chapter?.name,
+            assignmentName,
+            confirmed: true,
+          },
+        },
+      };
+    }),
+    onConfirmCreateChapterAndAssignment: (columnIndex, chapterName, assignmentName) => updateResolver((current) => ({
+      ...current,
+      ignoredColumns: current.ignoredColumns.filter((item) => item !== columnIndex),
+      columnOverrides: {
+        ...current.columnOverrides,
+        [columnIndex]: {
+          kind: "create_chapter_and_assignment",
+          chapterName,
+          assignmentName,
+          confirmed: true,
+        },
+      },
+    })),
+    onSetSpecialColumn: (columnIndex, kind) => updateResolver((current) => ({
+      ...current,
+      ignoredColumns: current.ignoredColumns.filter((item) => item !== columnIndex),
+      columnOverrides: {
+        ...current.columnOverrides,
+        [columnIndex]: { kind },
+      },
+    })),
+    onIgnoreColumn: (columnIndex) => updateResolver((current) => ({
+      ...current,
+      ignoredColumns: uniqueNumbersForState([...current.ignoredColumns, columnIndex]),
+      columnOverrides: Object.fromEntries(Object.entries(current.columnOverrides).filter(([key]) => Number(key) !== columnIndex)),
+    })),
+    onResolveConflict: (conflict) => updateResolver((current) => ({
+      ...current,
+      resolvedConflictKeys: uniqueStrings([...current.resolvedConflictKeys, conflictKey(conflict)]),
+    })),
+    onKeepDuplicateColumn: (conflict, keepColumnIndex) => updateResolver((current) => {
+      const optionHeaders = new Set(conflict.options || []);
+      const duplicateColumns = (plan?.columnMappings || [])
+        .filter((mapping) => optionHeaders.has(mapping.rawHeader) && mapping.columnIndex !== keepColumnIndex)
+        .map((mapping) => mapping.columnIndex);
+      return {
+        ...current,
+        ignoredColumns: uniqueNumbersForState([...current.ignoredColumns, ...duplicateColumns]),
+        resolvedConflictKeys: uniqueStrings([
+          ...current.resolvedConflictKeys,
+          ...(plan?.conflicts || [])
+            .filter((item) => item.code === "IMPORT_DUPLICATE_COLUMN_TARGET" && (item.options || []).join("|") === (conflict.options || []).join("|"))
+            .map(conflictKey),
+        ]),
+      };
+    }),
+    onBulkIgnoreDerived: () => updateResolver((current) => ({
+      ...current,
+      ignoredColumns: uniqueNumbersForState([
+        ...current.ignoredColumns,
+        ...(plan?.columnMappings || [])
+          .filter((mapping) => mapping.parsedHeader.derived)
+          .map((mapping) => mapping.columnIndex),
+      ]),
+    })),
+    onBulkUseSafeMappings: () => updateResolver((current) => ({
+      ...current,
+      resolvedConflictKeys: uniqueStrings([
+        ...current.resolvedConflictKeys,
+        ...(plan?.conflicts || []).filter((item) => {
+          if (!["student", "column", "structure"].includes(item.type)) return false;
+          const student = item.rowIndex ? plan?.studentMappings.find((mapping) => mapping.rowIndex === item.rowIndex) : undefined;
+          const column = item.columnIndex ? plan?.columnMappings.find((mapping) => mapping.columnIndex === item.columnIndex) : undefined;
+          return Boolean(
+            (student && ["safe", "warning"].includes(student.status))
+            || (column && ["safe", "warning"].includes(column.status)),
+          );
+        }).map(conflictKey),
+      ]),
+    })),
+    onBulkTrustStudentIdWarnings: () => updateResolver((current) => ({
+      ...current,
+      studentOverrides: {
+        ...current.studentOverrides,
+        ...Object.fromEntries((plan?.studentMappings || [])
+          .filter((mapping) => mapping.matchedBy === "student_id" && mapping.status === "warning" && mapping.studentId)
+          .map((mapping) => [String(mapping.rowIndex), mapping.studentId as string])),
+      },
+    })),
+    onUpdateModeChange: setUpdateMode,
+  }), [importContext.chapters, plan, updateResolver]);
+
+  const hasPlan = Boolean(plan || basePlan);
   const blocked = hasBlockedConflicts(plan);
   const unsupported = plan?.sourceType === "unsupported";
   const canGoNext = useMemo(() => {
@@ -576,7 +1322,9 @@ export default function GradeImportExportDialog({
     setFileName(file.name);
     setStepIndex(0);
     setAnalysis(null);
+    setBasePlan(null);
     setPlan(null);
+    setResolverState(emptyResolverState);
     setAnalysisError(null);
     setExecutionState("analyzing");
 
@@ -601,7 +1349,8 @@ export default function GradeImportExportDialog({
       const nextPlan = buildImportPlan(nextAnalysis, importContext, { updateMode });
 
       setAnalysis(nextAnalysis);
-      setPlan(nextPlan);
+      setBasePlan(nextPlan);
+      setPlan(applyResolverToPlan(nextPlan, emptyResolverState, importContext, updateMode));
       setImportMode(isOfficial ? "official" : "smart");
       setStepIndex(1);
       setExecutionState("ready");
@@ -773,7 +1522,7 @@ export default function GradeImportExportDialog({
 
                   {stepIndex === 1 ? <AnalysisStep plan={plan} /> : null}
                   {stepIndex === 2 ? <MappingStep plan={plan} /> : null}
-                  {stepIndex === 3 ? <ConflictStep plan={plan} /> : null}
+                  {stepIndex === 3 ? <ConflictStep plan={plan} context={importContext} actions={resolverActions} /> : null}
                   {stepIndex === 4 ? <PreviewStep plan={plan} updateMode={updateMode} onUpdateModeChange={setUpdateMode} /> : null}
                   {stepIndex === 5 ? <ImportStep state={executionState} plan={plan} /> : null}
                 </main>
