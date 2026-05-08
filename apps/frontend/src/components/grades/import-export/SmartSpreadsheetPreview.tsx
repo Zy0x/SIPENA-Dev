@@ -28,8 +28,8 @@ function previewStatusClass(status: string): string {
 
 function stickyStyle(index: number): CSSProperties | undefined {
   if (index === 0) return { left: 0 };
-  if (index === 1) return { left: 44 };
-  if (index === 2) return { left: 130 };
+  if (index === 1) return { left: 52 };
+  if (index === 2) return { left: 164 };
   return undefined;
 }
 
@@ -92,7 +92,7 @@ export function SmartSpreadsheetPreview({
       />
       <PreviewLegend />
 
-      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1fr)_340px]">
         <section className="sipena-preview-grid-wrap">
           <div className="sipena-preview-scroll">
             <table className="sipena-preview-table">
@@ -109,7 +109,7 @@ export function SmartSpreadsheetPreview({
                     >
                       <button
                         type="button"
-                        className="block max-w-[180px] truncate text-left"
+                        className="block max-w-[220px] truncate text-left"
                         title={column.targetLabel || column.header}
                         onClick={() => setSelection({ kind: "column", column })}
                       >

@@ -284,7 +284,7 @@
   border-right: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
   padding: 8px 10px;
-  min-width: 96px;
+  min-width: 124px;
   height: 42px;
   vertical-align: middle;
   background: #ffffff;
@@ -292,20 +292,20 @@
 
 .sipena-preview-table th:nth-child(1),
 .sipena-preview-table td:nth-child(1) {
-  min-width: 44px;
-  width: 44px;
+  min-width: 52px;
+  width: 52px;
 }
 
 .sipena-preview-table th:nth-child(2),
 .sipena-preview-table td:nth-child(2) {
-  min-width: 86px;
-  width: 86px;
+  min-width: 112px;
+  width: 112px;
 }
 
 .sipena-preview-table th:nth-child(3),
 .sipena-preview-table td:nth-child(3) {
-  min-width: 160px;
-  width: 160px;
+  min-width: 220px;
+  width: 220px;
 }
 
 .sipena-preview-table th {
@@ -475,7 +475,7 @@
 
   .sipena-preview-table th,
   .sipena-preview-table td {
-    min-width: 88px;
+    min-width: 104px;
     height: 40px;
     padding: 7px 8px;
     font-size: 11px;
