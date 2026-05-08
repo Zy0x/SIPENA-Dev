@@ -1,5 +1,7 @@
 import { BarChart3, CheckCircle2, FileWarning, Users } from "lucide-react";
 
+import type { ImportPlan } from "@/lib/gradeImport";
+
 import { StatusBadge } from "./StatusBadge";
 
 interface ImportSummaryPanelProps {
@@ -7,6 +9,8 @@ interface ImportSummaryPanelProps {
   chapterCount: number;
   assignmentCount: number;
   fileName?: string | null;
+  plan?: ImportPlan | null;
+  currentStep?: string;
 }
 
 const metrics = [
@@ -15,12 +19,20 @@ const metrics = [
   { key: "assignments", label: "Tugas", icon: CheckCircle2 },
 ] as const;
 
-export function ImportSummaryPanel({ studentCount, chapterCount, assignmentCount, fileName }: ImportSummaryPanelProps) {
+export function ImportSummaryPanel({
+  studentCount,
+  chapterCount,
+  assignmentCount,
+  fileName,
+  plan,
+  currentStep,
+}: ImportSummaryPanelProps) {
   const values = {
     students: studentCount,
     chapters: chapterCount,
     assignments: assignmentCount,
   };
+  const blockedCount = plan?.conflicts.filter((item) => item.severity === "blocked").length || 0;
 
   return (
     <aside className="min-w-0 space-y-3 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950 lg:sticky lg:top-4">
@@ -28,7 +40,7 @@ export function ImportSummaryPanel({ studentCount, chapterCount, assignmentCount
         <StatusBadge tone="safe">Mode aman aktif</StatusBadge>
         <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Ringkasan Import</h3>
         <p className="text-xs leading-5 text-muted-foreground">
-          Preview akan menampilkan siswa, kolom, dan konflik sebelum ada perubahan data.
+          {currentStep ? `Step aktif: ${currentStep}. ` : ""}Preview akan menampilkan siswa, kolom, dan konflik sebelum ada perubahan data.
         </p>
       </div>
       <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
@@ -49,7 +61,9 @@ export function ImportSummaryPanel({ studentCount, chapterCount, assignmentCount
         <div className="flex gap-2">
           <FileWarning className="mt-0.5 h-4 w-4 shrink-0" />
           <p className="text-xs leading-5">
-            {fileName ? "File sudah siap dianalisis sebagai preview." : "Upload file untuk melihat rencana import."}
+            {plan
+              ? `${plan.summary.readyImportCount || 0} nilai siap import, ${blockedCount} konflik blocking.`
+              : fileName ? "File sudah siap dianalisis sebagai preview." : "Upload file untuk melihat rencana import."}
           </p>
         </div>
       </div>

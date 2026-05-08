@@ -42,7 +42,7 @@ import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 import { useGradeFormulaSettings, type GradeFormulaSetting } from "@/hooks/useGradeFormulaSettings";
 import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
 import { DEFAULT_FORMULA, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
-import { downloadOfficialGradeTemplate } from "@/lib/gradeImport";
+import { downloadOfficialGradeTemplate, type ImportPlanContext } from "@/lib/gradeImport";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -412,6 +412,48 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const selectedSubject = isGuestMode
     ? guestData?.subjectInfo
     : subjects.find((s) => s.id === selectedSubjectId);
+  const gradeImportContext = useMemo<ImportPlanContext>(() => ({
+    students: students.map((student) => ({
+      id: student.id,
+      name: student.name,
+      nisn: student.nisn,
+    })),
+    chapters: chapters.map((chapter) => ({
+      id: chapter.id,
+      name: chapter.name,
+      order_index: chapter.order_index,
+    })),
+    assignments: allAssignments.map((assignment) => ({
+      id: assignment.id,
+      chapter_id: assignment.chapter_id,
+      name: assignment.name,
+      order_index: assignment.order_index,
+    })),
+    existingGrades: grades
+      .filter((grade) => ["assignment", "sts", "sas"].includes(grade.grade_type))
+      .map((grade) => ({
+        student_id: grade.student_id,
+        grade_type: grade.grade_type as "assignment" | "sts" | "sas",
+        assignment_id: grade.assignment_id,
+        value: grade.value,
+        semester_id: grade.semester_id,
+      })),
+    classId,
+    subjectId,
+    semesterId: activeSemesterId,
+    academicYearId: activeYear?.id || selectedClass?.academic_year_id || selectedSubject?.academic_year_id || null,
+  }), [
+    activeSemesterId,
+    activeYear?.id,
+    allAssignments,
+    chapters,
+    classId,
+    grades,
+    selectedClass?.academic_year_id,
+    selectedSubject?.academic_year_id,
+    students,
+    subjectId,
+  ]);
   const handleDownloadOfficialTemplate = useCallback(() => {
     if (!selectedClass || !selectedSubject) {
       showError("Template belum siap", "Pilih kelas dan mata pelajaran terlebih dahulu.");
@@ -1212,6 +1254,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           canDownloadOfficialTemplate={Boolean(selectedClass && selectedSubject)}
           isDownloadingTemplate={isDownloadingOfficialTemplate}
           onDownloadOfficialTemplate={handleDownloadOfficialTemplate}
+          importContext={gradeImportContext}
           onOpenLegacyImport={() => {
             setShowGradeImportExport(false);
             setShowImportGrades(true);
