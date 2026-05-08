@@ -42,7 +42,13 @@ import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 import { useGradeFormulaSettings, type GradeFormulaSetting } from "@/hooks/useGradeFormulaSettings";
 import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
 import { DEFAULT_FORMULA, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
-import { downloadOfficialGradeTemplate, type ImportPlanContext } from "@/lib/gradeImport";
+import {
+  downloadCurrentGradesExport,
+  downloadFullGradeBackup,
+  downloadOfficialGradeTemplate,
+  type GradeExportContext,
+  type ImportPlanContext,
+} from "@/lib/gradeImport";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -286,7 +292,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [searchParams] = useSearchParams();
   const { activeYear, activeSemester, activeSemesterId } = useAcademicYear();
   const { user } = useAuth();
-  const { success, error: showError } = useEnhancedToast();
+  const { success, error: showError, warning: showWarning } = useEnhancedToast();
   const { shouldShowTours } = useUserPreferences();
 
   const token = searchParams.get("token") || "";
@@ -308,6 +314,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [showGradeImportExport, setShowGradeImportExport] = useState(false);
   const [gradeImportExportTab, setGradeImportExportTab] = useState<GradeImportExportTab>("import");
   const [isDownloadingOfficialTemplate, setIsDownloadingOfficialTemplate] = useState(false);
+  const [isExportingCurrentGrades, setIsExportingCurrentGrades] = useState(false);
+  const [isExportingGradeBackup, setIsExportingGradeBackup] = useState(false);
   const [showImportGrades, setShowImportGrades] = useState(false);
   const [showOCRGrades, setShowOCRGrades] = useState(false);
   const [showGuestKkmDialog, setShowGuestKkmDialog] = useState(false);
@@ -454,6 +462,63 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     students,
     subjectId,
   ]);
+
+  const buildGradeExportContext = useCallback((): GradeExportContext | null => {
+    if (!selectedClass || !selectedSubject) {
+      return null;
+    }
+
+    return {
+      classId: selectedClass.id,
+      className: selectedClass.name,
+      subjectId: selectedSubject.id,
+      subjectName: selectedSubject.name,
+      semesterId: activeSemester?.id || selectedClass.semester_id || null,
+      semesterName: activeSemester?.name || null,
+      academicYearId: activeYear?.id || selectedClass.academic_year_id || selectedSubject.academic_year_id || null,
+      students: students.map((student) => ({
+        id: student.id,
+        name: student.name,
+        nisn: student.nisn,
+      })),
+      chapters: chapters.map((chapter) => ({
+        id: chapter.id,
+        name: chapter.name,
+        order_index: chapter.order_index,
+      })),
+      assignments: allAssignments.map((assignment) => ({
+        id: assignment.id,
+        chapter_id: assignment.chapter_id,
+        name: assignment.name,
+        order_index: assignment.order_index,
+      })),
+      grades: grades
+        .filter((grade) => ["assignment", "sts", "sas"].includes(grade.grade_type))
+        .map((grade) => ({
+          id: grade.id,
+          student_id: grade.student_id,
+          subject_id: grade.subject_id,
+          assignment_id: grade.assignment_id,
+          grade_type: grade.grade_type,
+          value: grade.value,
+          semester_id: grade.semester_id,
+          academic_year_id: grade.academic_year_id,
+          created_at: grade.created_at,
+          updated_at: grade.updated_at,
+        })),
+    };
+  }, [
+    activeSemester?.id,
+    activeSemester?.name,
+    activeYear?.id,
+    allAssignments,
+    chapters,
+    grades,
+    selectedClass,
+    selectedSubject,
+    students,
+  ]);
+
   const handleDownloadOfficialTemplate = useCallback(() => {
     if (!selectedClass || !selectedSubject) {
       showError("Template belum siap", "Pilih kelas dan mata pelajaran terlebih dahulu.");
@@ -508,6 +573,55 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     success,
     user?.email,
   ]);
+
+  const handleDownloadCurrentGrades = useCallback(() => {
+    const exportContext = buildGradeExportContext();
+    if (!exportContext) {
+      showError("Export belum siap", "Pilih kelas dan mata pelajaran terlebih dahulu.");
+      return;
+    }
+
+    setIsExportingCurrentGrades(true);
+    try {
+      downloadCurrentGradesExport(exportContext);
+      success("Export berhasil dibuat", "Export Nilai Saat Ini SIPENA sudah diunduh.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal membuat workbook export nilai.";
+      showError("Gagal membuat export", message);
+    } finally {
+      setIsExportingCurrentGrades(false);
+    }
+  }, [buildGradeExportContext, showError, success]);
+
+  const handleDownloadGradeBackup = useCallback(() => {
+    const exportContext = buildGradeExportContext();
+    if (!exportContext) {
+      showError("Backup belum siap", "Pilih kelas dan mata pelajaran terlebih dahulu.");
+      return;
+    }
+
+    setIsExportingGradeBackup(true);
+    try {
+      downloadFullGradeBackup(exportContext);
+      const incomplete = !exportContext.classId
+        || !exportContext.subjectId
+        || !exportContext.academicYearId
+        || exportContext.students.length === 0
+        || exportContext.chapters.length === 0
+        || exportContext.assignments.length === 0;
+      if (incomplete) {
+        showWarning("Backup dibuat dengan catatan", "Sebagian data belum tersedia untuk export lengkap.");
+      } else {
+        success("Backup berhasil dibuat", "Backup Lengkap Nilai SIPENA sudah diunduh.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal membuat workbook backup.";
+      showError("Gagal membuat backup", message);
+    } finally {
+      setIsExportingGradeBackup(false);
+    }
+  }, [buildGradeExportContext, showError, showWarning, success]);
+
   const access: GradeInputAccess = isGuestMode
     ? guestData?.access || {
         mode: "guest",
@@ -1254,6 +1368,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           canDownloadOfficialTemplate={Boolean(selectedClass && selectedSubject)}
           isDownloadingTemplate={isDownloadingOfficialTemplate}
           onDownloadOfficialTemplate={handleDownloadOfficialTemplate}
+          isExportingCurrentGrades={isExportingCurrentGrades}
+          isExportingBackup={isExportingGradeBackup}
+          onDownloadCurrentGrades={handleDownloadCurrentGrades}
+          onDownloadBackup={handleDownloadGradeBackup}
           onSaveGrade={handleSaveGrade}
           onImportComplete={() => {
             queryClient.invalidateQueries({ queryKey: ["grades"] });

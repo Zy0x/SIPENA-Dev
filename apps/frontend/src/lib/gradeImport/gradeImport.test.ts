@@ -5,6 +5,8 @@ import {
   analyzeOfficialTemplateWorkbook,
   analyzeFreeExcelWorkbook,
   buildImportPlan,
+  buildCurrentGradesExportWorkbook,
+  buildFullGradeBackupWorkbook,
   buildOfficialGradeTemplateWorkbook,
   getOfficialGradeTemplateFileName,
   matchColumns,
@@ -19,7 +21,46 @@ import {
   parseGradeValue,
   readWorkbookBuffer,
   removeZeroWidthChars,
+  type GradeExportContext,
 } from "./index";
+
+const exportContext: GradeExportContext = {
+  classId: "class-1",
+  className: "Kelas 7A",
+  subjectId: "subject-1",
+  subjectName: "Matematika",
+  semesterId: "semester-1",
+  semesterName: "Semester 1",
+  academicYearId: "year-1",
+  students: [
+    { id: "student-1", name: "Ahmad", nisn: "00123" },
+    { id: "student-2", name: "Budi", nisn: "00456" },
+  ],
+  chapters: [{ id: "chapter-1", name: "BAB 1", order_index: 1 }],
+  assignments: [{ id: "assignment-1", chapter_id: "chapter-1", name: "Tugas 1", order_index: 1 }],
+  grades: [
+    {
+      id: "grade-1",
+      student_id: "student-1",
+      subject_id: "subject-1",
+      assignment_id: "assignment-1",
+      grade_type: "assignment",
+      value: 85,
+      semester_id: "semester-1",
+      academic_year_id: "year-1",
+    },
+    {
+      id: "grade-2",
+      student_id: "student-1",
+      subject_id: "subject-1",
+      assignment_id: null,
+      grade_type: "sts",
+      value: 90,
+      semester_id: "semester-1",
+      academic_year_id: "year-1",
+    },
+  ],
+};
 
 describe("gradeImport text normalizer", () => {
   it("normalizes whitespace, punctuation, non-breaking spaces, and zero-width chars", () => {
@@ -231,6 +272,29 @@ describe("official SIPENA grade template exporter", () => {
 
   it("creates production-safe SIPENA filename", () => {
     expect(getOfficialGradeTemplateFileName(context)).toBe("Template_Nilai_SIPENA_Kelas_5_A_Matematika_Semester_1.xlsx");
+  });
+});
+
+describe("SIPENA current grades and backup exporters", () => {
+  it("exports current grades with guide and visible Nilai sheet only", () => {
+    const workbook = buildCurrentGradesExportWorkbook(exportContext);
+    const nilaiRows = XLSX.utils.sheet_to_json(workbook.Sheets.Nilai, { header: 1 }) as unknown[][];
+
+    expect(workbook.SheetNames).toEqual(["Panduan", "Nilai"]);
+    expect(nilaiRows[0]).toEqual(["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1", "STS", "SAS"]);
+    expect(nilaiRows[1]).toEqual([1, "00123", "Ahmad", 85, 90, ""]);
+    expect(nilaiRows[2]).toEqual([2, "00456", "Budi", "", "", ""]);
+  });
+
+  it("exports full backup sheets with hidden metadata and available grade rows", () => {
+    const workbook = buildFullGradeBackupWorkbook(exportContext);
+    const hiddenSheets = workbook.Workbook?.Sheets?.filter((sheet) => sheet.Hidden === 1).map((sheet) => sheet.name);
+    const gradeRows = XLSX.utils.sheet_to_json(workbook.Sheets._grades, { header: 1 }) as unknown[][];
+
+    expect(workbook.SheetNames).toEqual(["Panduan", "Nilai", "_manifest", "_students", "_structure", "_grades"]);
+    expect(hiddenSheets).toEqual(["_manifest", "_students", "_structure", "_grades"]);
+    expect(gradeRows[0]).toEqual(["grade_id", "student_id", "subject_id", "assignment_id", "grade_type", "value", "semester_id", "academic_year_id"]);
+    expect(gradeRows[1]).toContain("grade-1");
   });
 });
 

@@ -10,9 +10,9 @@ interface WorkbookPreviewPanelProps {
   chapterCount: number;
   assignmentCount: number;
   modeLabel: string;
+  sheetNames: string[];
+  warning?: string | null;
 }
-
-const sheets = ["Panduan", "Isi_Nilai", "_manifest", "_students", "_structure", "_column_map"];
 
 export function WorkbookPreviewPanel({
   classNameLabel,
@@ -22,6 +22,8 @@ export function WorkbookPreviewPanel({
   chapterCount,
   assignmentCount,
   modeLabel,
+  sheetNames,
+  warning,
 }: WorkbookPreviewPanelProps) {
   return (
     <section className="min-w-0 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
@@ -59,13 +61,19 @@ export function WorkbookPreviewPanel({
           Sheet workbook
         </div>
         <div className="grid gap-2 p-3 sm:grid-cols-2">
-          {sheets.map((sheet) => (
+          {sheetNames.map((sheet) => (
             <div key={sheet} className="truncate rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
               {sheet}
             </div>
           ))}
         </div>
       </div>
+
+      {warning ? (
+        <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 p-3 text-xs leading-5 text-orange-950 dark:border-orange-900/60 dark:bg-orange-950/20 dark:text-orange-100">
+          {warning}
+        </div>
+      ) : null}
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <PreviewMetric label="Siswa" value={studentCount} />

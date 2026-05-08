@@ -64,6 +64,10 @@ interface GradeImportExportDialogProps {
   canDownloadOfficialTemplate?: boolean;
   isDownloadingTemplate?: boolean;
   onDownloadOfficialTemplate?: () => void | Promise<void>;
+  isExportingCurrentGrades?: boolean;
+  isExportingBackup?: boolean;
+  onDownloadCurrentGrades?: () => void | Promise<void>;
+  onDownloadBackup?: () => void | Promise<void>;
   onOpenLegacyImport?: () => void;
   onSaveGrade?: (studentId: string, gradeType: "assignment" | "sts" | "sas", value: number, assignmentId?: string) => void | Promise<void>;
   onImportComplete?: () => void | Promise<void>;
@@ -149,6 +153,12 @@ const conflictTypeLabels: Record<ImportConflict["type"], string> = {
   context: "Konteks",
   overwrite: "Overwrite",
   unsupported: "Format",
+};
+
+const exportSheetsByMode: Record<ExportMode, string[]> = {
+  official: ["Panduan", "Isi_Nilai", "_manifest", "_students", "_structure", "_column_map"],
+  current: ["Panduan", "Nilai"],
+  backup: ["Panduan", "Nilai", "_manifest", "_students", "_structure", "_grades"],
 };
 
 function sourceTone(sourceType: ImportSourceType): StatusBadgeTone {
@@ -1322,6 +1332,10 @@ export default function GradeImportExportDialog({
   canDownloadOfficialTemplate = true,
   isDownloadingTemplate = false,
   onDownloadOfficialTemplate,
+  isExportingCurrentGrades = false,
+  isExportingBackup = false,
+  onDownloadCurrentGrades,
+  onDownloadBackup,
   onOpenLegacyImport,
   onSaveGrade,
   onImportComplete,
@@ -1652,10 +1666,18 @@ export default function GradeImportExportDialog({
       await onDownloadOfficialTemplate();
       return;
     }
+    if (exportMode === "current" && onDownloadCurrentGrades) {
+      await onDownloadCurrentGrades();
+      return;
+    }
+    if (exportMode === "backup" && onDownloadBackup) {
+      await onDownloadBackup();
+      return;
+    }
 
     showPlaceholder(
       exportMode === "current" ? "Export nilai saat ini belum dijalankan" : "Backup lengkap belum dijalankan",
-      "Tahap berikutnya akan menambahkan export nilai terisi dan backup lengkap tanpa mengganggu input nilai manual.",
+      "Pilih kelas dan mata pelajaran yang valid sebelum membuat workbook export.",
     );
   }, [
     blocked,
@@ -1664,6 +1686,8 @@ export default function GradeImportExportDialog({
     exportMode,
     handleClose,
     onDownloadOfficialTemplate,
+    onDownloadBackup,
+    onDownloadCurrentGrades,
     onImportComplete,
     onSaveGrade,
     plan,
@@ -1685,19 +1709,45 @@ export default function GradeImportExportDialog({
     : exportMode === "current"
       ? "Export Nilai Saat Ini"
       : "Backup Lengkap";
+  const backupIncompleteWarning = exportMode === "backup" && (
+    !importContext.classId
+    || !importContext.subjectId
+    || !importContext.academicYearId
+    || studentCount === 0
+    || chapterCount === 0
+    || assignmentCount === 0
+  )
+    ? "Sebagian data belum tersedia untuk export lengkap."
+    : null;
+  const exportActionLoading = exportMode === "official"
+    ? isDownloadingTemplate
+    : exportMode === "current"
+      ? isExportingCurrentGrades
+      : isExportingBackup;
 
   const primaryLabel = useMemo(() => {
-    if (tab === "export") return exportMode === "official" ? (isDownloadingTemplate ? "Menyiapkan..." : "Download Template Resmi") : "Siapkan Export";
+    if (tab === "export") {
+      if (exportActionLoading) return "Menyiapkan...";
+      if (exportMode === "official") return "Download Template Resmi";
+      if (exportMode === "current") return "Download Export Nilai";
+      return "Download Backup";
+    }
     if (stepIndex === 0) return executionState === "analyzing" ? "Menganalisis..." : "Upload File Dulu";
     if (stepIndex === 5 && executionState === "success") return "Selesai";
     if (stepIndex === 5) return executionState === "importing" ? "Memproses..." : "Mulai Import Aman";
     return "Lanjut";
-  }, [executionState, exportMode, isDownloadingTemplate, stepIndex, tab]);
+  }, [executionState, exportActionLoading, exportMode, stepIndex, tab]);
   const importPrimaryDisabled = tab === "import" && (
     executionState === "analyzing"
     || executionState === "importing"
     || (stepIndex > 0 && stepIndex < 5 && !canGoNext)
     || (stepIndex === 5 && blocked)
+  );
+  const exportPrimaryDisabled = tab === "export" && (
+    exportActionLoading
+    || (exportMode === "official" && (!canDownloadOfficialTemplate || !onDownloadOfficialTemplate))
+    || (exportMode === "current" && !onDownloadCurrentGrades)
+    || (exportMode === "backup" && !onDownloadBackup)
   );
 
   return (
@@ -1832,7 +1882,7 @@ export default function GradeImportExportDialog({
                   <ExportOptionCard
                     title="Export Nilai Saat Ini"
                     description="Membawa nilai yang sedang tersimpan agar guru dapat mengecek atau melengkapi data."
-                    meta="Termasuk STS dan SAS"
+                    meta="Sheet Panduan dan Nilai"
                     selected={exportMode === "current"}
                     tone="current"
                     icon={<Download className="h-5 w-5" />}
@@ -1848,9 +1898,15 @@ export default function GradeImportExportDialog({
                     onClick={() => setExportMode("backup")}
                   />
 
-                  <RiskAlert title="Export tahap ini masih placeholder" tone="info">
-                    Template Resmi SIPENA sudah dapat diunduh. Export nilai saat ini dan backup lengkap akan masuk tahap berikutnya.
-                  </RiskAlert>
+                  {backupIncompleteWarning ? (
+                    <RiskAlert title="Export lengkap belum membawa semua konteks" tone="warning">
+                      {backupIncompleteWarning} Workbook tetap akan dibuat dari siswa, struktur, dan nilai yang tersedia saat ini.
+                    </RiskAlert>
+                  ) : (
+                    <RiskAlert title="Export aman aktif" tone="safe">
+                      Nilai kosong tetap kosong. Export tidak mengubah nilai di Input Nilai dan tidak menyimpan data baru.
+                    </RiskAlert>
+                  )}
                 </main>
 
                 <WorkbookPreviewPanel
@@ -1861,6 +1917,8 @@ export default function GradeImportExportDialog({
                   chapterCount={chapterCount}
                   assignmentCount={assignmentCount}
                   modeLabel={modeLabel}
+                  sheetNames={exportSheetsByMode[exportMode]}
+                  warning={backupIncompleteWarning}
                 />
               </div>
             </TabsContent>
@@ -1905,7 +1963,7 @@ export default function GradeImportExportDialog({
               <Button
                 type="button"
                 disabled={
-                  (tab === "export" && exportMode === "official" && (!canDownloadOfficialTemplate || isDownloadingTemplate))
+                  exportPrimaryDisabled
                   || importPrimaryDisabled
                 }
                 className={cn(
@@ -1921,12 +1979,12 @@ export default function GradeImportExportDialog({
                   </>
                 ) : exportMode === "official" ? (
                   <>
-                    <Download className="h-4 w-4" />
+                    {exportActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                     {primaryLabel}
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" />
+                    {exportActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {primaryLabel}
                   </>
                 )}
