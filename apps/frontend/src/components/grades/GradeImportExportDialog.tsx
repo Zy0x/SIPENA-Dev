@@ -25,6 +25,7 @@ import {
   analyzeFreeExcelWorkbook,
   analyzeOfficialTemplateWorkbook,
   buildImportPlan,
+  buildSpreadsheetPreviewModel,
   getSimplifiedConflictSourceId,
   readWorkbookFile,
   simplifyImportConflicts,
@@ -38,6 +39,10 @@ import {
   type ImportPlanInputAnalysis,
   type ImportSourceType,
   type ImportWarning,
+  type SpreadsheetPreviewCell,
+  type SpreadsheetPreviewColumn,
+  type SpreadsheetPreviewModel,
+  type SpreadsheetPreviewRow,
   type StudentMapping,
   type UpdateMode,
 } from "@/lib/gradeImport";
@@ -54,6 +59,7 @@ import { RiskAlert } from "./import-export/RiskAlert";
 import { SmartFixGroupCard } from "./import-export/SmartFixGroupCard";
 import { SmartFixItemCard } from "./import-export/SmartFixItemCard";
 import { SmartFixSummary } from "./import-export/SmartFixSummary";
+import { SmartSpreadsheetPreview } from "./import-export/SmartSpreadsheetPreview";
 import { StatusBadge, type StatusBadgeTone } from "./import-export/StatusBadge";
 import { WorkbookPreviewPanel } from "./import-export/WorkbookPreviewPanel";
 
@@ -113,6 +119,7 @@ interface ImportResolverState {
   unresolvedRows: number[];
   studentOverrides: Record<string, string>;
   ignoredColumns: number[];
+  ignoredCells: string[];
   columnOverrides: Record<string, ColumnResolution>;
   resolvedConflictKeys: string[];
 }
@@ -143,11 +150,12 @@ const emptyResolverState: ImportResolverState = {
   unresolvedRows: [],
   studentOverrides: {},
   ignoredColumns: [],
+  ignoredCells: [],
   columnOverrides: {},
   resolvedConflictKeys: [],
 };
 
-const importSteps = ["Upload", "Analisis", "Pemetaan", "Cek & Perbaiki", "Preview", "Import"];
+const importSteps = ["Upload", "Analisis", "Pemetaan", "Preview & Perbaiki", "Konfirmasi", "Import"];
 const maxImportFileBytes = 20 * 1024 * 1024;
 
 const sourceLabels: Record<ImportSourceType, string> = {
@@ -228,7 +236,7 @@ const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message:
 const importNoticeMessages: Record<string, { title: string; message: string }> = {
   IMPORT_PLAN_BLOCKED: {
     title: "Import belum bisa dilanjutkan",
-    message: "Masih ada pilihan yang perlu diselesaikan. Buka bagian Cek & Perbaiki, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
+    message: "Masih ada pilihan yang perlu diselesaikan. Buka bagian Preview & Perbaiki, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
   },
   IMPORT_NO_GRADE_COLUMNS: {
     title: "Kolom nilai belum ditemukan",
@@ -646,6 +654,7 @@ function applyResolverToPlan(
   const ignoredRows = new Set(resolver.ignoredRows);
   const unresolvedRows = new Set(resolver.unresolvedRows);
   const ignoredColumns = new Set(resolver.ignoredColumns);
+  const ignoredCells = new Set(resolver.ignoredCells);
   const resolvedKeys = new Set(resolver.resolvedConflictKeys);
 
   const studentsById = new Map(context.students.map((student) => [student.id, student]));
@@ -761,13 +770,14 @@ function applyResolverToPlan(
     const student = studentByRow.get(operation.rowIndex);
     const column = columnByIndex.get(operation.columnIndex);
     const ignored = ignoredRows.has(operation.rowIndex) || ignoredColumns.has(operation.columnIndex) || column?.target === undefined;
+    const ignoredCell = ignoredCells.has(`${operation.rowIndex}:${operation.columnIndex}`);
     const unresolved = unresolvedRows.has(operation.rowIndex);
     const studentSafe = Boolean(student?.studentId && ["safe", "warning"].includes(student.status));
     const columnSafe = Boolean(column?.target && ["safe", "warning"].includes(column.status));
 
     let conflicts = operation.conflicts.filter((item) => {
       if (resolvedKeys.has(conflictKey(item))) return false;
-      if (ignored) return false;
+      if (ignored || ignoredCell) return false;
       if (item.type === "student" && studentSafe) return false;
       if ((item.type === "column" || item.type === "structure") && columnSafe) return false;
       return true;
@@ -790,9 +800,9 @@ function applyResolverToPlan(
       target: column?.target || operation.target,
       updateMode,
       conflicts,
-      action: ignored ? "skip_existing" : operation.action,
+      action: ignored || ignoredCell ? "skip_existing" : operation.action,
     };
-    nextOperation.action = ignored ? "skip_existing" : operationActionAfterResolution(nextOperation, updateMode);
+    nextOperation.action = ignored || ignoredCell ? "skip_existing" : operationActionAfterResolution(nextOperation, updateMode);
     return nextOperation;
   });
 
@@ -1070,6 +1080,7 @@ interface ConflictResolutionActions {
   onConfirmCreateChapterAndAssignment: (columnIndex: number, chapterName: string, assignmentName: string) => void;
   onSetSpecialColumn: (columnIndex: number, kind: "sts" | "sas") => void;
   onIgnoreColumn: (columnIndex: number) => void;
+  onIgnoreCell: (rowIndex: number, columnIndex: number) => void;
   onResolveConflict: (conflict: ImportConflict) => void;
   onResetConflictChoice: (conflict: ImportConflict) => void;
   onKeepDuplicateColumn: (conflict: ImportConflict, keepColumnIndex: number) => void;
@@ -1639,6 +1650,87 @@ function SmartFixStep({
   );
 }
 
+function previewColumnIndex(column: SpreadsheetPreviewColumn): number | null {
+  if (!column.id.startsWith("excel-col-")) return null;
+  const value = Number(column.id.replace("excel-col-", ""));
+  return Number.isFinite(value) ? value : null;
+}
+
+function previewRowIndex(row: SpreadsheetPreviewRow): number {
+  return row.rowIndex;
+}
+
+function previewCellPosition(cell: SpreadsheetPreviewCell): { rowIndex: number; columnIndex: number } | null {
+  const rowIndex = Number(cell.rowId.replace("row-", ""));
+  const columnIndex = Number(cell.columnId.replace("excel-col-", ""));
+  if (!Number.isFinite(rowIndex) || !Number.isFinite(columnIndex)) return null;
+  return { rowIndex, columnIndex };
+}
+
+function SpreadsheetPreviewStep({
+  plan,
+  model,
+  actions,
+  updateMode,
+}: {
+  plan: ImportPlan | null;
+  model: SpreadsheetPreviewModel | null;
+  actions: ConflictResolutionActions;
+  updateMode: UpdateMode;
+}) {
+  if (!plan || !model) {
+    return <EmptyPanel title="Preview & Perbaiki belum tersedia" description="Preview spreadsheet akan muncul setelah file dianalisis." />;
+  }
+
+  const approveColumn = (column: SpreadsheetPreviewColumn) => {
+    const columnIndex = previewColumnIndex(column);
+    if (!columnIndex) return;
+    const mapping = plan.columnMappings.find((item) => item.columnIndex === columnIndex);
+    if (!mapping?.target) return;
+
+    if (mapping.target.gradeType === "sts") {
+      actions.onSetSpecialColumn(columnIndex, "sts");
+      return;
+    }
+    if (mapping.target.gradeType === "sas") {
+      actions.onSetSpecialColumn(columnIndex, "sas");
+      return;
+    }
+    if (mapping.target.assignmentId) {
+      actions.onUseExistingAssignment(columnIndex, mapping.target.assignmentId);
+      return;
+    }
+    if (mapping.target.chapterId && mapping.target.assignmentName) {
+      actions.onConfirmCreateAssignment(columnIndex, mapping.target.chapterId, mapping.target.assignmentName);
+      return;
+    }
+    if (mapping.target.chapterName && mapping.target.assignmentName) {
+      actions.onConfirmCreateChapterAndAssignment(columnIndex, mapping.target.chapterName, mapping.target.assignmentName);
+    }
+  };
+
+  return (
+    <SmartSpreadsheetPreview
+      model={model}
+      updateMode={updateMode}
+      onUpdateModeChange={actions.onUpdateModeChange}
+      onApplySafeFixes={actions.onApplySafeFixes}
+      onApproveSuggestions={actions.onApproveSipenaSuggestions}
+      onIgnoreNonGradeColumns={actions.onBulkIgnoreDerived}
+      onApproveColumn={approveColumn}
+      onIgnoreColumn={(column) => {
+        const columnIndex = previewColumnIndex(column);
+        if (columnIndex) actions.onIgnoreColumn(columnIndex);
+      }}
+      onIgnoreCell={(cell) => {
+        const position = previewCellPosition(cell);
+        if (position) actions.onIgnoreCell(position.rowIndex, position.columnIndex);
+      }}
+      onIgnoreRow={(row) => actions.onIgnoreRow(previewRowIndex(row))}
+    />
+  );
+}
+
 function PreviewStep({
   plan,
   updateMode,
@@ -2066,6 +2158,10 @@ export default function GradeImportExportDialog({
       ignoredColumns: uniqueNumbersForState([...current.ignoredColumns, columnIndex]),
       columnOverrides: Object.fromEntries(Object.entries(current.columnOverrides).filter(([key]) => Number(key) !== columnIndex)),
     })),
+    onIgnoreCell: (rowIndex, columnIndex) => updateResolver((current) => ({
+      ...current,
+      ignoredCells: uniqueStrings([...current.ignoredCells, `${rowIndex}:${columnIndex}`]),
+    })),
     onResolveConflict: (conflict) => updateResolver((current) => ({
       ...current,
       resolvedConflictKeys: uniqueStrings([...current.resolvedConflictKeys, conflictKey(conflict)]),
@@ -2085,6 +2181,9 @@ export default function GradeImportExportDialog({
         unresolvedRows: rowIndex ? current.unresolvedRows.filter((item) => item !== rowIndex) : current.unresolvedRows,
         studentOverrides,
         ignoredColumns: columnIndex ? current.ignoredColumns.filter((item) => item !== columnIndex) : current.ignoredColumns,
+        ignoredCells: rowIndex && columnIndex
+          ? current.ignoredCells.filter((item) => item !== `${rowIndex}:${columnIndex}`)
+          : current.ignoredCells,
         columnOverrides,
         resolvedConflictKeys: current.resolvedConflictKeys.filter((item) => item !== conflictKey(conflict)),
       };
@@ -2281,13 +2380,16 @@ export default function GradeImportExportDialog({
   const smartFixResult = useMemo(() => (
     plan ? simplifyImportConflicts({ plan, resolverState, updateMode }) : null
   ), [plan, resolverState, updateMode]);
+  const spreadsheetPreview = useMemo<SpreadsheetPreviewModel | null>(() => (
+    plan ? buildSpreadsheetPreviewModel({ plan, resolverState, updateMode }) : null
+  ), [plan, resolverState, updateMode]);
   const canGoNext = useMemo(() => {
     if (stepIndex === 0) return hasPlan && !unsupported;
     if (stepIndex === 1) return hasPlan && !unsupported;
-    if (stepIndex === 3) return hasPlan && Boolean(smartFixResult?.isReadyForPreview);
+    if (stepIndex === 3) return hasPlan && (spreadsheetPreview?.summary.manualRequired || 0) === 0;
     if (stepIndex >= importSteps.length - 1) return false;
     return hasPlan;
-  }, [hasPlan, smartFixResult?.isReadyForPreview, stepIndex, unsupported]);
+  }, [hasPlan, spreadsheetPreview?.summary.manualRequired, stepIndex, unsupported]);
 
   const handleTabChange = useCallback((value: string) => {
     const nextTab = value === "export" ? "export" : "import";
@@ -2373,8 +2475,8 @@ export default function GradeImportExportDialog({
           return;
         }
 
-        if (blocked || !smartFixResult?.isReadyForPreview) {
-          showWarning("Import belum siap", "Selesaikan pilihan di Cek & Perbaiki sebelum proses simpan dijalankan.");
+        if (blocked || (spreadsheetPreview?.summary.manualRequired || 0) > 0) {
+          showWarning("Import belum siap", `Selesaikan ${spreadsheetPreview?.summary.manualRequired || 0} bagian merah sebelum proses simpan dijalankan.`);
           return;
         }
         if (!plan) {
@@ -2413,12 +2515,12 @@ export default function GradeImportExportDialog({
 
       if (!canGoNext) {
         const smartFixMessage = smartFixResult?.manualRequiredCount
-          ? `Import belum siap - selesaikan ${smartFixResult.manualRequiredCount} pilihan manual terlebih dahulu.`
-          : smartFixResult?.needsConfirmationCount
-            ? "Masih ada saran yang perlu dikonfirmasi."
+          ? `Import belum siap - selesaikan ${spreadsheetPreview?.summary.manualRequired || smartFixResult.manualRequiredCount} bagian merah.`
+          : (spreadsheetPreview?.summary.needsCheck || smartFixResult?.needsConfirmationCount || 0) > 0
+            ? "Bisa lanjut dengan mode aman, atau setujui saran SIPENA terlebih dahulu."
             : "Upload file yang valid dulu untuk membuat preview import.";
         showWarning(
-          stepIndex === 3 ? "Cek & Perbaiki belum selesai" : "Preview import belum siap",
+          stepIndex === 3 ? "Preview & Perbaiki belum selesai" : "Preview import belum siap",
           stepIndex === 3 ? smartFixMessage : "Upload file yang valid dulu untuk membuat preview import.",
         );
         return;
@@ -2459,6 +2561,7 @@ export default function GradeImportExportDialog({
     plan,
     resolverState.columnOverrides,
     smartFixResult,
+    spreadsheetPreview,
     showError,
     showPlaceholder,
     showWarning,
@@ -2493,17 +2596,17 @@ export default function GradeImportExportDialog({
       : isExportingBackup;
   const importReadinessMessage = useMemo(() => {
     if (tab !== "import") return "Data tidak akan ditimpa tanpa konfirmasi.";
-    if (stepIndex === 3 && smartFixResult?.manualRequiredCount) {
-      return `Import belum siap - selesaikan ${smartFixResult.manualRequiredCount} pilihan manual terlebih dahulu.`;
+    if (stepIndex === 3 && spreadsheetPreview?.summary.manualRequired) {
+      return `Import belum siap - selesaikan ${spreadsheetPreview.summary.manualRequired} bagian merah.`;
     }
-    if (stepIndex === 3 && smartFixResult?.needsConfirmationCount) {
-      return "Masih ada saran yang perlu dikonfirmasi.";
+    if (stepIndex === 3 && spreadsheetPreview?.summary.needsCheck) {
+      return "Bisa lanjut dengan mode aman, atau setujui saran SIPENA terlebih dahulu.";
     }
-    if (stepIndex >= 4 && smartFixResult?.isReadyForPreview) {
+    if (stepIndex >= 4 && (spreadsheetPreview?.summary.manualRequired || 0) === 0) {
       return "Siap import - mode aman aktif.";
     }
     return "Mode aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
-  }, [smartFixResult, stepIndex, tab]);
+  }, [spreadsheetPreview, stepIndex, tab]);
 
   const primaryLabel = useMemo(() => {
     if (tab === "export") {
@@ -2521,7 +2624,7 @@ export default function GradeImportExportDialog({
     executionState === "analyzing"
     || executionState === "importing"
     || (stepIndex > 0 && stepIndex < 5 && !canGoNext)
-    || (stepIndex === 5 && (blocked || !smartFixResult?.isReadyForPreview))
+    || (stepIndex === 5 && (blocked || (spreadsheetPreview?.summary.manualRequired || 0) > 0))
   );
   const exportPrimaryDisabled = tab === "export" && (
     exportActionLoading
@@ -2617,7 +2720,7 @@ export default function GradeImportExportDialog({
                         ) : null}
                         {chapterCount === 0 || assignmentCount === 0 ? (
                           <RiskAlert title="Belum ada BAB/tugas" tone="warning">
-                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di step Cek & Perbaiki sebelum import.
+                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di step Preview & Perbaiki sebelum import.
                           </RiskAlert>
                         ) : null}
                         {importMode === "smart" ? (
@@ -2638,14 +2741,11 @@ export default function GradeImportExportDialog({
                   {stepIndex === 1 ? <AnalysisStep plan={plan} /> : null}
                   {stepIndex === 2 ? <MappingStep plan={plan} /> : null}
                   {stepIndex === 3 ? (
-                    <SmartFixStep
+                    <SpreadsheetPreviewStep
                       plan={plan}
-                      result={smartFixResult}
-                      context={importContext}
+                      model={spreadsheetPreview}
                       actions={resolverActions}
                       updateMode={updateMode}
-                      onBackToMapping={() => setStepIndex(2)}
-                      onRestartUpload={() => setStepIndex(0)}
                     />
                   ) : null}
                   {stepIndex === 4 ? <PreviewStep plan={plan} updateMode={updateMode} onUpdateModeChange={setUpdateMode} /> : null}

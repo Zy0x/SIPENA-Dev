@@ -6,6 +6,7 @@ export * from "./freeExcelAnalyzer";
 export * from "./headerParser";
 export * from "./importPlanBuilder";
 export * from "./officialTemplateReader";
+export * from "./spreadsheetPreviewBuilder";
 export * from "./studentMatcher";
 export * from "./templateExporter";
 export * from "./textNormalizer";

@@ -164,6 +164,347 @@
   }
 }
 
+.sipena-preview-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sipena-preview-banner {
+  border: 1px solid #dbeafe;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border-radius: 18px;
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.sipena-preview-banner-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sipena-preview-banner-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.sipena-preview-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sipena-preview-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 6px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.sipena-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sipena-preview-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 4px;
+  scrollbar-width: none;
+}
+
+.sipena-preview-legend::-webkit-scrollbar {
+  display: none;
+}
+
+.sipena-preview-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.sipena-preview-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.sipena-preview-grid-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.sipena-preview-scroll {
+  width: 100%;
+  max-height: min(54dvh, 480px);
+  overflow: auto;
+  position: relative;
+}
+
+.sipena-preview-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+.sipena-preview-table th,
+.sipena-preview-table td {
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  min-width: 96px;
+  height: 42px;
+  vertical-align: middle;
+  background: #ffffff;
+}
+
+.sipena-preview-table th:nth-child(1),
+.sipena-preview-table td:nth-child(1) {
+  min-width: 44px;
+  width: 44px;
+}
+
+.sipena-preview-table th:nth-child(2),
+.sipena-preview-table td:nth-child(2) {
+  min-width: 86px;
+  width: 86px;
+}
+
+.sipena-preview-table th:nth-child(3),
+.sipena-preview-table td:nth-child(3) {
+  min-width: 160px;
+  width: 160px;
+}
+
+.sipena-preview-table th {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+  text-align: left;
+}
+
+.sipena-preview-table .sipena-preview-sticky-left {
+  position: sticky;
+  z-index: 3;
+  background: inherit;
+}
+
+.sipena-preview-table th.sipena-preview-sticky-left {
+  z-index: 5;
+  background: #f8fafc;
+}
+
+.sipena-preview-cell {
+  position: relative;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.sipena-preview-cell:hover {
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.28);
+}
+
+.sipena-preview-cell--unchanged {
+  background: #ffffff !important;
+  color: #0f172a;
+}
+
+.sipena-preview-cell--new-value {
+  background: #ecfdf5 !important;
+  color: #166534;
+  box-shadow: inset 0 0 0 1px #22c55e;
+}
+
+.sipena-preview-cell--changed {
+  background: #fef3c7 !important;
+  color: #92400e;
+  box-shadow: inset 0 0 0 1px #f59e0b;
+}
+
+.sipena-preview-cell--new-column {
+  background: #eef2ff !important;
+  color: #3730a3;
+  box-shadow: inset 0 0 0 1px #6366f1;
+}
+
+.sipena-preview-cell--needs-check {
+  background: #fff7ed !important;
+  color: #9a3412;
+  box-shadow: inset 0 0 0 1px #fb923c;
+}
+
+.sipena-preview-cell--manual-required {
+  background: #fef2f2 !important;
+  color: #991b1b;
+  box-shadow: inset 0 0 0 2px #ef4444;
+}
+
+.sipena-preview-cell--ignored {
+  background: repeating-linear-gradient(
+    135deg,
+    #f1f5f9 0,
+    #f1f5f9 6px,
+    #e2e8f0 6px,
+    #e2e8f0 8px
+  ) !important;
+  color: #64748b;
+}
+
+.sipena-preview-cell--invalid {
+  background: #ffe4e6 !important;
+  color: #9f1239;
+  box-shadow: inset 0 0 0 2px #e11d48;
+}
+
+.sipena-preview-cell-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sipena-preview-cell-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sipena-preview-cell-badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid currentColor;
+}
+
+.sipena-preview-fix-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+.sipena-preview-fix-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sipena-preview-fix-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.sipena-preview-fix-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.sipena-preview-advanced {
+  margin-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+@media (max-width: 899px) {
+  .sipena-preview-banner {
+    flex-direction: column;
+  }
+
+  .sipena-preview-actions {
+    width: 100%;
+  }
+
+  .sipena-preview-actions > * {
+    flex: 1 1 160px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sipena-preview-banner {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .sipena-preview-scroll {
+    max-height: min(58dvh, 460px);
+  }
+
+  .sipena-preview-table th,
+  .sipena-preview-table td {
+    min-width: 88px;
+    height: 40px;
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  .sipena-preview-table th:nth-child(1),
+  .sipena-preview-table td:nth-child(1) {
+    min-width: 44px;
+  }
+
+  .sipena-preview-table th:nth-child(2),
+  .sipena-preview-table td:nth-child(2) {
+    min-width: 86px;
+  }
+
+  .sipena-preview-table th:nth-child(3),
+  .sipena-preview-table td:nth-child(3) {
+    min-width: 132px;
+  }
+
+  .sipena-preview-fix-panel {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    border-radius: 18px 18px 0 0;
+    margin: 0 -14px -14px;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
