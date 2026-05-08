@@ -38,6 +38,9 @@ interface GradeImportExportDialogProps {
   studentCount: number;
   chapterCount: number;
   assignmentCount: number;
+  canDownloadOfficialTemplate?: boolean;
+  isDownloadingTemplate?: boolean;
+  onDownloadOfficialTemplate?: () => void | Promise<void>;
   onOpenLegacyImport?: () => void;
 }
 
@@ -57,6 +60,9 @@ export default function GradeImportExportDialog({
   studentCount,
   chapterCount,
   assignmentCount,
+  canDownloadOfficialTemplate = true,
+  isDownloadingTemplate = false,
+  onDownloadOfficialTemplate,
   onOpenLegacyImport,
 }: GradeImportExportDialogProps) {
   const { info } = useEnhancedToast();
@@ -93,6 +99,23 @@ export default function GradeImportExportDialog({
   const handleClose = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
+
+  const handlePrimaryAction = useCallback(async () => {
+    if (tab === "import") {
+      showPlaceholder("ImportPlan belum dijalankan", "Tahap berikutnya akan menambahkan parser, preview konflik, dan konfirmasi final.");
+      return;
+    }
+
+    if (exportMode === "official" && onDownloadOfficialTemplate) {
+      await onDownloadOfficialTemplate();
+      return;
+    }
+
+    showPlaceholder(
+      exportMode === "current" ? "Export nilai saat ini belum dijalankan" : "Backup lengkap belum dijalankan",
+      "Tahap berikutnya akan menambahkan export nilai terisi dan backup lengkap tanpa mengganggu input nilai manual.",
+    );
+  }, [exportMode, onDownloadOfficialTemplate, showPlaceholder, tab]);
 
   const modeLabel = exportMode === "official"
     ? "Template Resmi SIPENA"
@@ -216,7 +239,7 @@ export default function GradeImportExportDialog({
                   />
 
                   <RiskAlert title="Export tahap ini masih placeholder" tone="info">
-                    UI sudah siap. Engine workbook resmi akan ditambahkan pada tahap berikutnya tanpa mengganggu input nilai manual.
+                    Template Resmi SIPENA sudah dapat diunduh. Export nilai saat ini dan backup lengkap akan masuk tahap berikutnya.
                   </RiskAlert>
                 </main>
 
@@ -261,22 +284,22 @@ export default function GradeImportExportDialog({
               </Button>
               <Button
                 type="button"
+                disabled={tab === "export" && exportMode === "official" && (!canDownloadOfficialTemplate || isDownloadingTemplate)}
                 className={cn(
                   "h-11 w-full gap-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:h-10 sm:w-auto",
                   tab === "import" && importMode === "smart" && "bg-violet-600 hover:bg-violet-700",
                 )}
-                onClick={() => {
-                  if (tab === "import") {
-                    showPlaceholder("ImportPlan belum dijalankan", "Tahap berikutnya akan menambahkan parser, preview konflik, dan konfirmasi final.");
-                  } else {
-                    showPlaceholder("Export belum dijalankan", "Tahap berikutnya akan membuat workbook resmi SIPENA.");
-                  }
-                }}
+                onClick={handlePrimaryAction}
               >
                 {tab === "import" ? (
                   <>
                     <UploadCloud className="h-4 w-4" />
                     Lanjut Preview
+                  </>
+                ) : exportMode === "official" ? (
+                  <>
+                    <Download className="h-4 w-4" />
+                    {isDownloadingTemplate ? "Menyiapkan..." : "Download Template Resmi"}
                   </>
                 ) : (
                   <>

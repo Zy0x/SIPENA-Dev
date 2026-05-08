@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildOfficialGradeTemplateWorkbook,
+  getOfficialGradeTemplateFileName,
   normalizeName,
   normalizeNisn,
   normalizeRomanNumeralChapter,
@@ -148,5 +150,78 @@ describe("gradeImport value parser", () => {
     expect(parsed.status).toBe("textual");
     expect(parsed.value).toBeNull();
     expect(parsed.conflicts.map((item) => item.code)).toContain("GRADE_VALUE_TEXTUAL_BLOCKED");
+  });
+});
+
+describe("official SIPENA grade template exporter", () => {
+  const context = {
+    classId: "class-1",
+    className: "Kelas 5 A",
+    subjectId: "subject-1",
+    subjectName: "Matematika",
+    semesterId: "semester-1",
+    semesterName: "Semester 1",
+    academicYearId: "year-1",
+    generatedBy: "guru@example.com",
+    generatedAt: "2026-05-08T00:00:00.000Z",
+    students: [
+      { id: "student-1", name: "Muh. Rizki", nisn: "0012345678" },
+      { id: "student-2", name: "Siti Aminah", nisn: "9876543210" },
+    ],
+    chapters: [
+      { id: "chapter-2", name: "BAB 2", order_index: 2 },
+      { id: "chapter-1", name: "BAB I", order_index: 1 },
+    ],
+    assignments: [
+      { id: "assignment-2", chapter_id: "chapter-1", name: "Tugas 2", order_index: 2 },
+      { id: "assignment-1", chapter_id: "chapter-1", name: "Tugas 1", order_index: 1 },
+      { id: "assignment-3", chapter_id: "chapter-2", name: "LKPD", order_index: 1 },
+    ],
+  };
+
+  it("builds official workbook sheets and hides metadata sheets", () => {
+    const workbook = buildOfficialGradeTemplateWorkbook(context);
+
+    expect(workbook.SheetNames).toEqual(["Panduan", "Isi_Nilai", "_manifest", "_students", "_structure", "_column_map"]);
+    expect(workbook.Workbook?.Sheets?.filter((sheet) => sheet.Hidden === 1).map((sheet) => sheet.name)).toEqual([
+      "_manifest",
+      "_students",
+      "_structure",
+      "_column_map",
+    ]);
+  });
+
+  it("creates Isi_Nilai headers from web structure plus STS and SAS", () => {
+    const workbook = buildOfficialGradeTemplateWorkbook(context);
+    const sheet = workbook.Sheets["Isi_Nilai"];
+
+    expect(sheet.A1?.v).toBe("No");
+    expect(sheet.B1?.v).toBe("NISN");
+    expect(sheet.C1?.v).toBe("Nama Siswa");
+    expect(sheet.D1?.v).toBe("BAB 1 - Tugas 1");
+    expect(sheet.E1?.v).toBe("BAB 1 - Tugas 2");
+    expect(sheet.F1?.v).toBe("BAB 2 - LKPD");
+    expect(sheet.G1?.v).toBe("STS");
+    expect(sheet.H1?.v).toBe("SAS");
+    expect(sheet.B2?.v).toBe("0012345678");
+    expect(sheet.C2?.v).toBe("Muh. Rizki");
+    expect(sheet.D2?.v ?? "").toBe("");
+  });
+
+  it("stores manifest hashes and unsigned template status", () => {
+    const workbook = buildOfficialGradeTemplateWorkbook(context);
+    const manifest = workbook.Sheets._manifest;
+
+    expect(manifest.A2?.v).toBe("app");
+    expect(manifest.B2?.v).toBe("SIPENA");
+    expect(manifest.A16?.v).toBe("signature_status");
+    expect(manifest.B16?.v).toBe("unsigned_client_template");
+    expect(String(manifest.B13?.v)).toMatch(/^fnv1a32:/);
+    expect(String(manifest.B14?.v)).toMatch(/^fnv1a32:/);
+    expect(String(manifest.B15?.v)).toMatch(/^fnv1a32:/);
+  });
+
+  it("creates production-safe SIPENA filename", () => {
+    expect(getOfficialGradeTemplateFileName(context)).toBe("Template_Nilai_SIPENA_Kelas_5_A_Matematika_Semester_1.xlsx");
   });
 });

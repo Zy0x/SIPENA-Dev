@@ -34,6 +34,7 @@ import type { Student } from "@/hooks/useStudents";
 import type { Class } from "@/hooks/useClasses";
 import type { Subject } from "@/hooks/useSubjects";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { fuzzySearchStudents } from "@/lib/fuzzySearch";
@@ -41,6 +42,7 @@ import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 import { useGradeFormulaSettings, type GradeFormulaSetting } from "@/hooks/useGradeFormulaSettings";
 import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
 import { DEFAULT_FORMULA, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
+import { downloadOfficialGradeTemplate } from "@/lib/gradeImport";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -282,7 +284,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const { activeSemester, activeSemesterId } = useAcademicYear();
+  const { activeYear, activeSemester, activeSemesterId } = useAcademicYear();
+  const { user } = useAuth();
   const { success, error: showError } = useEnhancedToast();
   const { shouldShowTours } = useUserPreferences();
 
@@ -304,6 +307,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGradeImportExport, setShowGradeImportExport] = useState(false);
   const [gradeImportExportTab, setGradeImportExportTab] = useState<GradeImportExportTab>("import");
+  const [isDownloadingOfficialTemplate, setIsDownloadingOfficialTemplate] = useState(false);
   const [showImportGrades, setShowImportGrades] = useState(false);
   const [showOCRGrades, setShowOCRGrades] = useState(false);
   const [showGuestKkmDialog, setShowGuestKkmDialog] = useState(false);
@@ -408,6 +412,60 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const selectedSubject = isGuestMode
     ? guestData?.subjectInfo
     : subjects.find((s) => s.id === selectedSubjectId);
+  const handleDownloadOfficialTemplate = useCallback(() => {
+    if (!selectedClass || !selectedSubject) {
+      showError("Template belum siap", "Pilih kelas dan mata pelajaran terlebih dahulu.");
+      return;
+    }
+
+    setIsDownloadingOfficialTemplate(true);
+    try {
+      downloadOfficialGradeTemplate({
+        classId: selectedClass.id,
+        className: selectedClass.name,
+        subjectId: selectedSubject.id,
+        subjectName: selectedSubject.name,
+        semesterId: activeSemester?.id || selectedClass.semester_id || null,
+        semesterName: activeSemester?.name || null,
+        academicYearId: activeYear?.id || selectedClass.academic_year_id || selectedSubject.academic_year_id || null,
+        generatedBy: user?.email || null,
+        students: students.map((student) => ({
+          id: student.id,
+          name: student.name,
+          nisn: student.nisn,
+        })),
+        chapters: chapters.map((chapter) => ({
+          id: chapter.id,
+          name: chapter.name,
+          order_index: chapter.order_index,
+        })),
+        assignments: allAssignments.map((assignment) => ({
+          id: assignment.id,
+          chapter_id: assignment.chapter_id,
+          name: assignment.name,
+          order_index: assignment.order_index,
+        })),
+      });
+      success("Template berhasil dibuat", "Template Resmi SIPENA sudah diunduh.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal membuat workbook template.";
+      showError("Gagal membuat template", message);
+    } finally {
+      setIsDownloadingOfficialTemplate(false);
+    }
+  }, [
+    activeSemester?.id,
+    activeSemester?.name,
+    activeYear?.id,
+    allAssignments,
+    chapters,
+    selectedClass,
+    selectedSubject,
+    showError,
+    students,
+    success,
+    user?.email,
+  ]);
   const access: GradeInputAccess = isGuestMode
     ? guestData?.access || {
         mode: "guest",
@@ -1151,6 +1209,9 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           studentCount={students.length}
           chapterCount={chapters.length}
           assignmentCount={allAssignments.length}
+          canDownloadOfficialTemplate={Boolean(selectedClass && selectedSubject)}
+          isDownloadingTemplate={isDownloadingOfficialTemplate}
+          onDownloadOfficialTemplate={handleDownloadOfficialTemplate}
           onOpenLegacyImport={() => {
             setShowGradeImportExport(false);
             setShowImportGrades(true);
