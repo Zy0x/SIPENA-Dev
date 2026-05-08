@@ -40,7 +40,7 @@ export function ImportSummaryPanel({
         <StatusBadge tone="safe">Mode aman aktif</StatusBadge>
         <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Ringkasan Import</h3>
         <p className="text-xs leading-5 text-muted-foreground">
-          {currentStep ? `Step aktif: ${currentStep}. ` : ""}Preview akan menampilkan siswa, kolom, dan konflik sebelum ada perubahan data.
+          {currentStep ? `Step aktif: ${currentStep}. ` : ""}Preview akan menampilkan siswa, kolom, dan item yang perlu dicek sebelum ada perubahan data.
         </p>
       </div>
       <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
@@ -62,7 +62,7 @@ export function ImportSummaryPanel({
           <FileWarning className="mt-0.5 h-4 w-4 shrink-0" />
           <p className="text-xs leading-5">
             {plan
-              ? `${plan.summary.readyImportCount || 0} nilai siap import, ${blockedCount} konflik blocking.`
+              ? `${plan.summary.readyImportCount || 0} nilai siap import, ${blockedCount} item wajib dipilih.`
               : fileName ? "File sudah siap dianalisis sebagai preview." : "Upload file untuk melihat rencana import."}
           </p>
         </div>

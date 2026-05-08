@@ -1,5 +1,6 @@
 export * from "./columnMatcher";
 export * from "./constants";
+export * from "./conflictSimplifier";
 export * from "./currentGradesExporter";
 export * from "./freeExcelAnalyzer";
 export * from "./headerParser";

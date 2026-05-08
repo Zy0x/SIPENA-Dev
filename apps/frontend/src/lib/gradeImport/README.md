@@ -1,0 +1,18 @@
+# SIPENA Grade Import Engine
+
+## ConflictSimplifier
+
+`conflictSimplifier.ts` menjembatani engine import yang detail dengan UI guru yang lebih sederhana. Engine tetap menyimpan kode teknis, tetapi UI memakai tiga kategori:
+
+- `auto_fixable`: aman diterapkan sekaligus, misalnya kolom Rapor/Ranking/Rata-rata diabaikan, UTS/PTS dibaca sebagai STS, UAS/PAS dibaca sebagai SAS, `student_id` cocok tetapi nama/NISN Excel berbeda, dan mode `fill_empty_only`.
+- `needs_confirmation`: SIPENA punya saran kuat tetapi tetap butuh persetujuan, misalnya membuat tugas baru dari header `BAB 1 - Tugas 2`, membuat BAB dan tugas baru dari header eksplisit, atau nama siswa mirip dengan satu kandidat kuat.
+- `manual_required`: wajib dipilih manual karena berisiko, misalnya siswa ambigu, dua baris menuju siswa yang sama, dua kolom menuju tugas yang sama, file beda kelas/mapel/semester, nilai invalid, atau header tugas tanpa BAB yang cocok ke banyak BAB.
+
+Bulk apply hanya boleh untuk item yang aman:
+
+- Abaikan kolom yang bukan nilai.
+- Pakai alias STS/SAS yang jelas.
+- Gunakan data siswa dari web saat `student_id` cocok.
+- Pertahankan `fill_empty_only`.
+
+Bulk apply tidak boleh membuat BAB/tugas berisiko, memilih siswa ambigu, resolve duplicate target, atau menimpa nilai lama. Mode overwrite disembunyikan di opsi lanjutan dan harus dikonfirmasi dengan teks `TIMPA`.

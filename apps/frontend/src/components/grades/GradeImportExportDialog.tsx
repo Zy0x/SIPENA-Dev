@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Archive,
@@ -24,8 +25,11 @@ import {
   analyzeFreeExcelWorkbook,
   analyzeOfficialTemplateWorkbook,
   buildImportPlan,
+  getSimplifiedConflictSourceId,
   readWorkbookFile,
+  simplifyImportConflicts,
   type ColumnMapping,
+  type ConflictSimplifierResult,
   type GradeOperation,
   type GradeTarget,
   type ImportConflict,
@@ -40,11 +44,16 @@ import {
 import { cn } from "@/lib/utils";
 
 import { ExportOptionCard } from "./import-export/ExportOptionCard";
+import { AdvancedImportOptions } from "./import-export/AdvancedImportOptions";
 import { ImportDropzone } from "./import-export/ImportDropzone";
 import { ImportModeCard } from "./import-export/ImportModeCard";
 import { ImportStepper } from "./import-export/ImportStepper";
 import { ImportSummaryPanel } from "./import-export/ImportSummaryPanel";
+import { ManualChoiceCard } from "./import-export/ManualChoiceCard";
 import { RiskAlert } from "./import-export/RiskAlert";
+import { SmartFixGroupCard } from "./import-export/SmartFixGroupCard";
+import { SmartFixItemCard } from "./import-export/SmartFixItemCard";
+import { SmartFixSummary } from "./import-export/SmartFixSummary";
 import { StatusBadge, type StatusBadgeTone } from "./import-export/StatusBadge";
 import { WorkbookPreviewPanel } from "./import-export/WorkbookPreviewPanel";
 
@@ -138,7 +147,7 @@ const emptyResolverState: ImportResolverState = {
   resolvedConflictKeys: [],
 };
 
-const importSteps = ["Upload", "Analisis", "Pemetaan", "Konflik", "Preview", "Import"];
+const importSteps = ["Upload", "Analisis", "Pemetaan", "Cek & Perbaiki", "Preview", "Import"];
 const maxImportFileBytes = 20 * 1024 * 1024;
 
 const sourceLabels: Record<ImportSourceType, string> = {
@@ -219,7 +228,7 @@ const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message:
 const importNoticeMessages: Record<string, { title: string; message: string }> = {
   IMPORT_PLAN_BLOCKED: {
     title: "Import belum bisa dilanjutkan",
-    message: "Masih ada konflik yang perlu diselesaikan. Buka bagian Konflik, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
+    message: "Masih ada pilihan yang perlu diselesaikan. Buka bagian Cek & Perbaiki, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
   },
   IMPORT_NO_GRADE_COLUMNS: {
     title: "Kolom nilai belum ditemukan",
@@ -431,11 +440,11 @@ function getImportNotice(code?: string | null, fallback?: string) {
 function statusLabel(status: string) {
   if (status === "safe") return "Aman";
   if (status === "warning") return "Perlu dicek";
-  if (status === "needs_confirmation") return "Perlu konfirmasi";
-  if (status === "ambiguous") return "Belum pasti";
-  if (status === "missing" || status === "missing_in_web") return "Tidak ditemukan";
-  if (status === "missing_in_excel") return "Tidak ada di Excel";
-  if (status === "blocked") return "Diblokir";
+  if (status === "needs_confirmation") return "Perlu dicek";
+  if (status === "ambiguous") return "Perlu dipilih";
+  if (status === "missing" || status === "missing_in_web") return "Perlu dipilih";
+  if (status === "missing_in_excel") return "Perlu dicek";
+  if (status === "blocked") return "Perlu dipilih";
   return cleanBackendText(status);
 }
 
@@ -475,13 +484,14 @@ function sourceTone(sourceType: ImportSourceType): StatusBadgeTone {
 function statusTone(status: string): StatusBadgeTone {
   if (status === "safe") return "success";
   if (status === "warning" || status === "needs_confirmation") return "warning";
-  if (status === "blocked" || status === "ambiguous" || status === "missing_in_web") return "warning";
+  if (status === "blocked" || status === "ambiguous" || status === "missing_in_web") return "danger";
   return "info";
 }
 
 function operationTone(action: GradeOperation["action"]): StatusBadgeTone {
   if (action === "fill_empty" || action === "overwrite") return "success";
-  if (action === "blocked" || action === "needs_confirmation") return "warning";
+  if (action === "needs_confirmation") return "warning";
+  if (action === "blocked") return "danger";
   return "info";
 }
 
@@ -534,6 +544,16 @@ function conflictKey(conflict: ImportConflict): string {
     conflict.columnIndex ?? "",
     conflict.message,
   ].join(":");
+}
+
+function simplifiedWarningKey(warning: ImportWarning): string {
+  return getSimplifiedConflictSourceId({
+    type: warning.code.includes("STUDENT") ? "student" : warning.code.includes("CONTEXT") || warning.code.includes("SEMESTER") ? "context" : "column",
+    code: warning.code,
+    rowIndex: warning.rowIndex,
+    columnIndex: warning.columnIndex,
+    message: warning.message,
+  });
 }
 
 function targetKey(target: GradeTarget | undefined): string {
@@ -859,14 +879,14 @@ function AnalysisStep({ plan }: { plan: ImportPlan | null }) {
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge tone={sourceTone(plan.sourceType)}>{sourceLabels[plan.sourceType]}</StatusBadge>
           <StatusBadge tone={hasBlockedConflicts(plan) ? "warning" : "safe"}>
-            {hasBlockedConflicts(plan) ? "Ada konflik" : "Siap dilanjutkan"}
+            {hasBlockedConflicts(plan) ? "Perlu dicek" : "Siap dilanjutkan"}
           </StatusBadge>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <MetricCard label="Siswa cocok" value={plan.summary.matchedStudentCount || 0} tone="green" />
           <MetricCard label="Siswa ambigu" value={plan.summary.ambiguousStudentCount || 0} tone="orange" />
           <MetricCard label="Kolom nilai" value={plan.summary.gradeColumnCount || 0} tone="blue" />
-          <MetricCard label="Konflik" value={plan.summary.conflictCount || 0} tone={(plan.summary.conflictCount || 0) > 0 ? "red" : "green"} />
+          <MetricCard label="Perlu dicek" value={plan.summary.conflictCount || 0} tone={(plan.summary.conflictCount || 0) > 0 ? "red" : "green"} />
           <MetricCard label="Tugas baru" value={plan.summary.newAssignmentCount || 0} tone="violet" />
           <MetricCard label="Nilai invalid" value={plan.summary.invalidValueCount || 0} tone={(plan.summary.invalidValueCount || 0) > 0 ? "orange" : "green"} />
         </div>
@@ -1056,6 +1076,8 @@ interface ConflictResolutionActions {
   onBulkIgnoreDerived: () => void;
   onBulkUseSafeMappings: () => void;
   onBulkTrustStudentIdWarnings: () => void;
+  onApplySafeFixes: () => void;
+  onApproveSipenaSuggestions: () => void;
   onResetAllChoices: () => void;
   onUpdateModeChange: (mode: UpdateMode) => void;
 }
@@ -1065,7 +1087,7 @@ function ResolutionButton({
   onClick,
   tone = "default",
 }: {
-  children: string;
+  children: ReactNode;
   onClick: () => void;
   tone?: "default" | "safe" | "warning";
 }) {
@@ -1266,7 +1288,7 @@ function ConflictActionPanel({
   if (conflict.severity === "blocked") {
     return (
       <div className="mt-3 space-y-2 rounded-2xl border border-red-100 bg-white/70 p-3 text-xs leading-5 dark:border-red-900/50 dark:bg-slate-950/40">
-        <p>Konflik ini belum bisa dilanjutkan sampai file atau pemetaannya diperbaiki. Data ambigu tidak dipilih otomatis.</p>
+        <p>Item ini belum bisa dilanjutkan sampai file atau pemetaannya diperbaiki. Data ambigu tidak dipilih otomatis.</p>
         <ResolutionButton onClick={() => actions.onResetConflictChoice(conflict)}>Ulangi pilihan ini</ResolutionButton>
       </div>
     );
@@ -1292,7 +1314,7 @@ function ConflictStep({
   onBackToMapping: () => void;
 }) {
   if (!plan) {
-    return <EmptyPanel title="Konflik belum tersedia" description="Konflik akan muncul setelah file dianalisis." />;
+    return <EmptyPanel title="Cek & Perbaiki belum tersedia" description="Item yang perlu dicek akan muncul setelah file dianalisis." />;
   }
 
   const grouped = plan.conflicts.reduce((acc, item) => {
@@ -1306,14 +1328,14 @@ function ConflictStep({
       <section className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Aksi cepat untuk konflik</h3>
+            <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Aksi cepat untuk Cek & Perbaiki</h3>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
               Pilihan di sini hanya mengubah preview. Tidak ada nilai yang disimpan sebelum tahap import.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <ResolutionButton onClick={onBackToMapping}>Kembali ke pemetaan</ResolutionButton>
-            <ResolutionButton tone="warning" onClick={actions.onResetAllChoices}>Ulangi pilihan konflik</ResolutionButton>
+            <ResolutionButton tone="warning" onClick={actions.onResetAllChoices}>Ulangi pilihan</ResolutionButton>
             <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan kolom hasil rumus</ResolutionButton>
             <ResolutionButton tone="safe" onClick={actions.onBulkUseSafeMappings}>Terima pemetaan aman</ResolutionButton>
             <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa dari web</ResolutionButton>
@@ -1336,14 +1358,14 @@ function ConflictStep({
       </section>
 
       {!plan.conflicts.length ? (
-        <RiskAlert title="Tidak ada konflik wajib" tone="safe">
-          Tidak ada konflik utama. Lanjutkan ke preview untuk melihat nilai yang akan diproses.
+        <RiskAlert title="Tidak ada item wajib" tone="safe">
+          Tidak ada item utama yang harus dipilih. Lanjutkan ke preview untuk melihat nilai yang akan diproses.
         </RiskAlert>
       ) : types.filter((type) => grouped[type]?.length).map((type) => (
         <section key={type} className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">{conflictTypeLabels[type]}</h3>
-            <StatusBadge tone="warning">{grouped[type].length} konflik</StatusBadge>
+            <StatusBadge tone="warning">{grouped[type].length} item</StatusBadge>
           </div>
           <div className="mt-3 space-y-2">
             {grouped[type].map((item, index) => {
@@ -1380,6 +1402,243 @@ function ConflictStep({
   );
 }
 
+function SmartFixStep({
+  plan,
+  result,
+  context,
+  actions,
+  updateMode,
+  onBackToMapping,
+  onRestartUpload,
+}: {
+  plan: ImportPlan | null;
+  result: ConflictSimplifierResult | null;
+  context: ImportPlanContext;
+  actions: ConflictResolutionActions;
+  updateMode: UpdateMode;
+  onBackToMapping: () => void;
+  onRestartUpload: () => void;
+}) {
+  if (!plan || !result) {
+    return <EmptyPanel title="Cek & Perbaiki belum tersedia" description="Bagian ini akan muncul setelah file dianalisis." />;
+  }
+
+  const conflictById = new Map(plan.conflicts.map((conflict) => [conflictKey(conflict), conflict]));
+  const chapterById = new Map(context.chapters.map((chapter) => [chapter.id, chapter]));
+
+  const applySafeFixes = () => {
+    actions.onApplySafeFixes();
+  };
+
+  const approveSuggestions = () => {
+    actions.onApproveSipenaSuggestions();
+  };
+
+  const summaryAction = () => {
+    if (result.manualRequiredCount > 0) {
+      document.getElementById("sipena-smart-fix-manual")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (result.needsConfirmationCount > 0) {
+      approveSuggestions();
+      return;
+    }
+    applySafeFixes();
+  };
+
+  const renderManualChoice = (item: ConflictSimplifierResult["groups"][number]["items"][number]) => {
+    const conflict = item.sourceConflictIds.map((id) => conflictById.get(id)).find(Boolean);
+    if (!conflict) return <SmartFixItemCard key={item.id} item={item} defaultOpen={item.level === "manual_required"} />;
+
+    const studentMapping = conflict.rowIndex ? plan.studentMappings.find((mapping) => mapping.rowIndex === conflict.rowIndex) : undefined;
+    const columnMapping = conflict.columnIndex ? plan.columnMappings.find((mapping) => mapping.columnIndex === conflict.columnIndex) : undefined;
+    const duplicateOptionColumns = conflict.code === "IMPORT_DUPLICATE_COLUMN_TARGET"
+      ? (conflict.options || [])
+          .map((header) => plan.columnMappings.find((mapping) => mapping.rawHeader === header))
+          .filter(Boolean) as ColumnMapping[]
+      : [];
+
+    if (item.level !== "manual_required") {
+      return <SmartFixItemCard key={item.id} item={item} defaultOpen={false} />;
+    }
+
+    if (conflict.type === "student" && conflict.rowIndex) {
+      return (
+        <ManualChoiceCard
+          key={item.id}
+          title="Pilih siswa yang benar"
+          body="Nama dari Excel cocok dengan beberapa siswa. SIPENA tidak memilih otomatis agar nilai tidak masuk ke siswa yang salah."
+          fields={[
+            { label: "Excel", value: studentMapping?.excelName || `Baris ${conflict.rowIndex}` },
+            { label: "NISN Excel", value: studentMapping?.excelNisn || "-" },
+          ]}
+        >
+          {studentMapping?.studentId ? (
+            <ResolutionButton tone="safe" onClick={() => actions.onUseCurrentStudent(conflict.rowIndex!, studentMapping.studentId!)}>
+              Gunakan kandidat SIPENA
+            </ResolutionButton>
+          ) : null}
+          {context.students.slice(0, 8).map((student) => (
+            <ResolutionButton key={student.id} onClick={() => actions.onChooseStudent(conflict.rowIndex!, student.id)}>
+              Gunakan {student.name}
+            </ResolutionButton>
+          ))}
+          <ResolutionButton onClick={() => actions.onIgnoreRow(conflict.rowIndex!)}>Abaikan baris</ResolutionButton>
+        </ManualChoiceCard>
+      );
+    }
+
+    if (conflict.type === "context") {
+      return (
+        <ManualChoiceCard
+          key={item.id}
+          title="File berbeda kelas/mapel/semester"
+          body="File ini tampaknya bukan dari halaman yang sedang dibuka. Gunakan template baru jika ragu."
+          fields={[
+            { label: "Masalah", value: getImportNotice(conflict.code, conflict.message).message },
+          ]}
+        >
+          <ResolutionButton onClick={onRestartUpload}>Batalkan dan upload template baru</ResolutionButton>
+          <ResolutionButton tone="warning" onClick={() => actions.onResolveConflict(conflict)}>Gunakan file ini dengan konfirmasi</ResolutionButton>
+        </ManualChoiceCard>
+      );
+    }
+
+    if (conflict.type === "grade_value") {
+      return (
+        <ManualChoiceCard
+          key={item.id}
+          title="Nilai tidak valid"
+          body="SIPENA tidak bisa membaca nilai ini sebagai angka 0-100."
+          fields={[
+            { label: "Baris", value: String(conflict.rowIndex || "-") },
+            { label: "Kolom", value: columnMapping?.rawHeader || String(conflict.columnIndex || "-") },
+          ]}
+        >
+          {conflict.rowIndex ? <ResolutionButton onClick={() => actions.onIgnoreRow(conflict.rowIndex!)}>Abaikan nilai ini</ResolutionButton> : null}
+          {conflict.columnIndex ? <ResolutionButton onClick={() => actions.onIgnoreColumn(conflict.columnIndex!)}>Abaikan seluruh kolom invalid</ResolutionButton> : null}
+          <ResolutionButton tone="warning" onClick={() => actions.onResetConflictChoice(conflict)}>Edit di Excel lalu upload ulang</ResolutionButton>
+        </ManualChoiceCard>
+      );
+    }
+
+    if (conflict.code === "IMPORT_DUPLICATE_COLUMN_TARGET") {
+      return (
+        <ManualChoiceCard
+          key={item.id}
+          title="Ada 2 kolom menuju tugas yang sama"
+          body="Pilih kolom mana yang dipakai agar nilai tidak dobel."
+          fields={[
+            { label: "Kolom Excel", value: conflict.options?.join(" / ") || columnMapping?.rawHeader || "-" },
+          ]}
+        >
+          {duplicateOptionColumns[0] ? (
+            <ResolutionButton tone="safe" onClick={() => actions.onKeepDuplicateColumn(conflict, duplicateOptionColumns[0].columnIndex)}>
+              Gunakan kolom pertama
+            </ResolutionButton>
+          ) : null}
+          {duplicateOptionColumns[1] ? (
+            <ResolutionButton tone="safe" onClick={() => actions.onKeepDuplicateColumn(conflict, duplicateOptionColumns[1].columnIndex)}>
+              Gunakan kolom kedua
+            </ResolutionButton>
+          ) : null}
+          {conflict.columnIndex ? <ResolutionButton onClick={() => actions.onIgnoreColumn(conflict.columnIndex!)}>Abaikan salah satu</ResolutionButton> : null}
+        </ManualChoiceCard>
+      );
+    }
+
+    if ((conflict.type === "column" || conflict.type === "structure") && conflict.columnIndex) {
+      const assignmentName = columnMapping?.target?.assignmentName || columnMapping?.target?.sourceAssignmentName || columnMapping?.rawHeader || "Tugas";
+      return (
+        <ManualChoiceCard
+          key={item.id}
+          title={conflict.code.includes("WITHOUT_CHAPTER") ? "Tugas ini perlu BAB" : "Pilih target kolom nilai"}
+          body={conflict.code.includes("WITHOUT_CHAPTER")
+            ? "Kolom Excel hanya menyebut nama tugas. Pilih BAB yang benar sebelum import."
+            : "Target kolom nilai belum cukup aman untuk dipilih otomatis."}
+          fields={[
+            { label: "Kolom Excel", value: columnMapping?.rawHeader || String(conflict.columnIndex) },
+          ]}
+        >
+          {context.chapters.map((chapter) => (
+            <ResolutionButton
+              key={chapter.id}
+              tone="safe"
+              onClick={() => actions.onConfirmCreateAssignment(conflict.columnIndex!, chapter.id, assignmentName)}
+            >
+              Pakai {chapter.name}
+            </ResolutionButton>
+          ))}
+          <select
+            value=""
+            onChange={(event) => {
+              if (event.target.value) actions.onUseExistingAssignment(conflict.columnIndex!, event.target.value);
+            }}
+            className="min-h-11 max-w-full rounded-full border border-border bg-white px-3 text-sm dark:bg-slate-950"
+          >
+            <option value="">Gunakan tugas yang sudah ada</option>
+            {context.assignments.map((assignment) => (
+              <option key={assignment.id} value={assignment.id}>
+                {[chapterById.get(assignment.chapter_id)?.name, assignment.name].filter(Boolean).join(" - ")}
+              </option>
+            ))}
+          </select>
+          <ResolutionButton tone="safe" onClick={() => actions.onSetSpecialColumn(conflict.columnIndex!, "sts")}>Jadikan STS</ResolutionButton>
+          <ResolutionButton tone="safe" onClick={() => actions.onSetSpecialColumn(conflict.columnIndex!, "sas")}>Jadikan SAS</ResolutionButton>
+          <ResolutionButton onClick={() => actions.onIgnoreColumn(conflict.columnIndex!)}>Abaikan kolom</ResolutionButton>
+        </ManualChoiceCard>
+      );
+    }
+
+    return (
+      <SmartFixItemCard key={item.id} item={item} defaultOpen>
+        <ConflictActionPanel conflict={conflict} plan={plan} context={context} actions={actions} />
+      </SmartFixItemCard>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <SmartFixSummary result={result} onPrimaryAction={summaryAction} />
+
+      <section className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Aksi cepat aman</h3>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Pilihan di sini hanya mengubah preview. Tidak ada nilai yang disimpan sebelum tahap import.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <ResolutionButton onClick={onBackToMapping}>Kembali ke pemetaan</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={applySafeFixes}>Terapkan Semua yang Aman</ResolutionButton>
+            <ResolutionButton tone="warning" onClick={approveSuggestions}>Setujui Saran SIPENA</ResolutionButton>
+            <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan Kolom yang Bukan Nilai</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan Data Siswa dari Web</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={() => actions.onUpdateModeChange("fill_empty_only")}>Isi Nilai Kosong Saja</ResolutionButton>
+            <ResolutionButton tone="warning" onClick={actions.onResetAllChoices}>Ulangi semua pilihan</ResolutionButton>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-3 xl:grid-cols-3">
+        {result.groups.map((group) => (
+          <div key={group.id} id={group.level === "manual_required" ? "sipena-smart-fix-manual" : undefined} className="min-w-0 scroll-mt-4">
+            <SmartFixGroupCard
+              group={group}
+              defaultOpen={group.level === "manual_required" && group.itemCount > 0}
+              onPrimaryAction={group.level === "auto_fixable" ? applySafeFixes : group.level === "needs_confirmation" ? approveSuggestions : undefined}
+              renderItem={renderManualChoice}
+            />
+          </div>
+        ))}
+      </div>
+
+      <AdvancedImportOptions updateMode={updateMode} onUpdateModeChange={actions.onUpdateModeChange} />
+    </div>
+  );
+}
+
 function PreviewStep({
   plan,
   updateMode,
@@ -1406,30 +1665,11 @@ function PreviewStep({
     <div className="space-y-4">
       {isBlocked ? (
         <RiskAlert title={getImportNotice("IMPORT_PLAN_BLOCKED").title} tone="blocked">
-          Preview masih memiliki konflik yang wajib diselesaikan. Tombol import tetap nonaktif sampai semua konflik selesai dicek.
+          Preview masih memiliki pilihan yang wajib diselesaikan. Tombol import tetap nonaktif sampai semua item selesai dicek.
         </RiskAlert>
       ) : null}
 
-      <section className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
-        <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Update Mode</h3>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {(Object.keys(updateModeLabels) as UpdateMode[]).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => onUpdateModeChange(mode)}
-              className={cn(
-                "rounded-2xl border p-3 text-left text-sm transition-colors",
-                updateMode === mode
-                  ? "border-blue-300 bg-blue-50 text-blue-950 dark:border-blue-800 dark:bg-blue-950/35 dark:text-blue-100"
-                  : "border-border bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-slate-900/50 dark:text-slate-200",
-              )}
-            >
-              <span className="font-semibold">{updateModeLabels[mode]}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      <AdvancedImportOptions updateMode={updateMode} onUpdateModeChange={onUpdateModeChange} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="BAB baru" value={plan.summary.newChapterCount || 0} tone="violet" />
@@ -1514,7 +1754,7 @@ async function executeClientSideImport({
 
     if (operation.conflicts.length || operation.action === "blocked" || operation.action === "needs_confirmation") {
       summary.skippedCount += 1;
-      warnings.add("Sebagian nilai dilewati karena masih ada konflik yang belum selesai dicek.");
+      warnings.add("Sebagian nilai dilewati karena masih ada pilihan yang belum selesai dicek.");
       continue;
     }
 
@@ -1606,7 +1846,7 @@ function ImportStep({
       </h3>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
         {blocked
-          ? "Masih ada konflik yang wajib diselesaikan. Tahap ini tidak akan menyimpan data sebelum konflik selesai."
+          ? "Masih ada pilihan yang wajib diselesaikan. Tahap ini tidak akan menyimpan data sebelum semua item selesai."
           : "SIPENA hanya memproses nilai yang sudah aman, memakai mekanisme simpan nilai yang ada, dan tidak menimpa nilai lama kecuali aturan import mengizinkan."}
       </p>
       {state === "importing" ? (
@@ -1870,7 +2110,7 @@ export default function GradeImportExportDialog({
       ignoredColumns: uniqueNumbersForState([
         ...current.ignoredColumns,
         ...(plan?.columnMappings || [])
-          .filter((mapping) => mapping.parsedHeader.derived)
+          .filter((mapping) => mapping.parsedHeader.derived || mapping.parsedHeader.reserved)
           .map((mapping) => mapping.columnIndex),
       ]),
     })),
@@ -1898,6 +2138,139 @@ export default function GradeImportExportDialog({
           .map((mapping) => [String(mapping.rowIndex), mapping.studentId as string])),
       },
     })),
+    onApplySafeFixes: () => {
+      setUpdateMode("fill_empty_only");
+      updateResolver((current) => ({
+        ...current,
+        ignoredColumns: uniqueNumbersForState([
+          ...current.ignoredColumns,
+          ...(plan?.columnMappings || [])
+            .filter((mapping) => mapping.parsedHeader.derived || mapping.parsedHeader.reserved)
+            .map((mapping) => mapping.columnIndex),
+        ]),
+        studentOverrides: {
+          ...current.studentOverrides,
+          ...Object.fromEntries((plan?.studentMappings || [])
+            .filter((mapping) => mapping.matchedBy === "student_id" && mapping.status === "warning" && mapping.studentId)
+            .map((mapping) => [String(mapping.rowIndex), mapping.studentId as string])),
+        },
+        resolvedConflictKeys: uniqueStrings([
+          ...current.resolvedConflictKeys,
+          ...(plan?.warnings || [])
+            .filter((item) => [
+              "STUDENT_ID_NAME_CHANGED",
+              "STUDENT_ID_NISN_CHANGED",
+              "STUDENT_NISN_NORMALIZED_MATCH",
+              "STUDENT_NAME_NORMALIZED_MATCH",
+              "GRADE_VALUE_DECIMAL_COMMA",
+              "GRADE_VALUE_PERCENT",
+              "GRADE_VALUE_FRACTION_100",
+            ].includes(item.code))
+            .map(simplifiedWarningKey),
+          ...(plan?.conflicts || [])
+            .filter((item) => {
+              if (item.type === "overwrite") return true;
+              if (item.type === "student") {
+                const student = item.rowIndex ? plan?.studentMappings.find((mapping) => mapping.rowIndex === item.rowIndex) : undefined;
+                return Boolean(student?.matchedBy === "student_id" && student.studentId);
+              }
+              if (item.type === "column") {
+                const column = item.columnIndex ? plan?.columnMappings.find((mapping) => mapping.columnIndex === item.columnIndex) : undefined;
+                return Boolean(column?.parsedHeader.derived || column?.parsedHeader.reserved || column?.status === "safe");
+              }
+              return false;
+            })
+            .map(conflictKey),
+        ]),
+      }));
+    },
+    onApproveSipenaSuggestions: () => updateResolver((current) => {
+      const columnOverrides = { ...current.columnOverrides };
+      const resolvedConflictKeys: string[] = [...current.resolvedConflictKeys];
+
+      (plan?.columnMappings || []).forEach((mapping) => {
+        const codes = new Set([
+          ...mapping.warnings.map((warning) => warning.code),
+          ...mapping.conflicts.map((conflict) => conflict.code),
+        ]);
+        const canCreateAssignment = codes.has("COLUMN_CREATE_ASSIGNMENT_SUGGESTED")
+          && mapping.target?.chapterId
+          && mapping.target?.assignmentName
+          && !codes.has("COLUMN_ASSIGNMENT_WITHOUT_CHAPTER_AMBIGUOUS");
+        const canCreateChapterAndAssignment = codes.has("COLUMN_CREATE_CHAPTER_AND_ASSIGNMENT_SUGGESTED")
+          && mapping.target?.chapterName
+          && mapping.target?.assignmentName
+          && !codes.has("COLUMN_CHAPTER_SIMILAR_MATCH")
+          && !codes.has("COLUMN_ASSIGNMENT_SIMILAR_MATCH");
+        const canUseExisting = mapping.target?.assignmentId
+          && (codes.has("COLUMN_ASSIGNMENT_SIMILAR_MATCH")
+            || codes.has("COLUMN_CHAPTER_SIMILAR_MATCH")
+            || codes.has("COLUMN_METADATA_INVALID_HEADER_CLEAR")
+            || codes.has("COLUMN_METADATA_VS_HEADER_CHANGED"));
+
+        if (canUseExisting) {
+          columnOverrides[String(mapping.columnIndex)] = {
+            kind: "existing_assignment",
+            assignmentId: mapping.target?.assignmentId,
+          };
+        } else if (canCreateAssignment) {
+          columnOverrides[String(mapping.columnIndex)] = {
+            kind: "create_assignment",
+            chapterId: mapping.target?.chapterId,
+            chapterName: mapping.target?.chapterName,
+            assignmentName: mapping.target?.assignmentName,
+            confirmed: true,
+          };
+        } else if (canCreateChapterAndAssignment) {
+          columnOverrides[String(mapping.columnIndex)] = {
+            kind: "create_chapter_and_assignment",
+            chapterName: mapping.target?.chapterName,
+            assignmentName: mapping.target?.assignmentName,
+            confirmed: true,
+          };
+        }
+
+        if (columnOverrides[String(mapping.columnIndex)]) {
+          resolvedConflictKeys.push(
+            ...(plan?.conflicts || [])
+              .filter((conflict) => conflict.columnIndex === mapping.columnIndex && conflict.severity !== "blocked")
+              .map(conflictKey),
+          );
+        }
+      });
+
+      resolvedConflictKeys.push(
+        ...(plan?.warnings || [])
+          .filter((warning) => [
+            "COLUMN_CREATE_ASSIGNMENT_SUGGESTED",
+            "COLUMN_CREATE_CHAPTER_AND_ASSIGNMENT_SUGGESTED",
+            "COLUMN_ASSIGNMENT_SIMILAR_MATCH",
+            "COLUMN_CHAPTER_SIMILAR_MATCH",
+            "COLUMN_METADATA_INVALID_HEADER_CLEAR",
+            "COLUMN_METADATA_VS_HEADER_CHANGED",
+            "IMPORT_HEADER_CHANGED",
+            "IMPORT_ADDED_HEADER_DETECTED",
+            "IMPORT_UNSIGNED_TEMPLATE",
+            "GRADE_VALUE_FRACTION_SCALED",
+            "STUDENT_FUZZY_MATCH",
+          ].includes(warning.code))
+          .map(simplifiedWarningKey),
+      );
+
+      const studentOverrides = {
+        ...current.studentOverrides,
+        ...Object.fromEntries((plan?.studentMappings || [])
+          .filter((mapping) => mapping.matchedBy === "fuzzy" && mapping.status === "warning" && mapping.confidence >= 85 && mapping.studentId)
+          .map((mapping) => [String(mapping.rowIndex), mapping.studentId as string])),
+      };
+
+      return {
+        ...current,
+        studentOverrides,
+        columnOverrides,
+        resolvedConflictKeys: uniqueStrings(resolvedConflictKeys),
+      };
+    }),
     onResetAllChoices: () => updateResolver(() => emptyResolverState),
     onUpdateModeChange: setUpdateMode,
   }), [importContext.chapters, plan, updateResolver]);
@@ -1905,13 +2278,16 @@ export default function GradeImportExportDialog({
   const hasPlan = Boolean(plan || basePlan);
   const blocked = hasBlockedConflicts(plan);
   const unsupported = plan?.sourceType === "unsupported";
+  const smartFixResult = useMemo(() => (
+    plan ? simplifyImportConflicts({ plan, resolverState, updateMode }) : null
+  ), [plan, resolverState, updateMode]);
   const canGoNext = useMemo(() => {
     if (stepIndex === 0) return hasPlan && !unsupported;
     if (stepIndex === 1) return hasPlan && !unsupported;
-    if (stepIndex === 3) return hasPlan && !blocked;
+    if (stepIndex === 3) return hasPlan && Boolean(smartFixResult?.isReadyForPreview);
     if (stepIndex >= importSteps.length - 1) return false;
     return hasPlan;
-  }, [blocked, hasPlan, stepIndex, unsupported]);
+  }, [hasPlan, smartFixResult?.isReadyForPreview, stepIndex, unsupported]);
 
   const handleTabChange = useCallback((value: string) => {
     const nextTab = value === "export" ? "export" : "import";
@@ -1997,8 +2373,8 @@ export default function GradeImportExportDialog({
           return;
         }
 
-        if (blocked) {
-          showWarning("Import belum bisa dilanjutkan", "Selesaikan konflik yang wajib dicek sebelum proses simpan dijalankan.");
+        if (blocked || !smartFixResult?.isReadyForPreview) {
+          showWarning("Import belum siap", "Selesaikan pilihan di Cek & Perbaiki sebelum proses simpan dijalankan.");
           return;
         }
         if (!plan) {
@@ -2036,11 +2412,14 @@ export default function GradeImportExportDialog({
       }
 
       if (!canGoNext) {
+        const smartFixMessage = smartFixResult?.manualRequiredCount
+          ? `Import belum siap - selesaikan ${smartFixResult.manualRequiredCount} pilihan manual terlebih dahulu.`
+          : smartFixResult?.needsConfirmationCount
+            ? "Masih ada saran yang perlu dikonfirmasi."
+            : "Upload file yang valid dulu untuk membuat preview import.";
         showWarning(
-          stepIndex === 3 ? "Konflik belum selesai" : "Preview import belum siap",
-          stepIndex === 3
-            ? "Import tidak bisa lanjut selama masih ada konflik yang wajib diselesaikan."
-            : "Upload file yang valid dulu untuk membuat preview import.",
+          stepIndex === 3 ? "Cek & Perbaiki belum selesai" : "Preview import belum siap",
+          stepIndex === 3 ? smartFixMessage : "Upload file yang valid dulu untuk membuat preview import.",
         );
         return;
       }
@@ -2079,6 +2458,7 @@ export default function GradeImportExportDialog({
     onSaveGrade,
     plan,
     resolverState.columnOverrides,
+    smartFixResult,
     showError,
     showPlaceholder,
     showWarning,
@@ -2111,6 +2491,19 @@ export default function GradeImportExportDialog({
     : exportMode === "current"
       ? isExportingCurrentGrades
       : isExportingBackup;
+  const importReadinessMessage = useMemo(() => {
+    if (tab !== "import") return "Data tidak akan ditimpa tanpa konfirmasi.";
+    if (stepIndex === 3 && smartFixResult?.manualRequiredCount) {
+      return `Import belum siap - selesaikan ${smartFixResult.manualRequiredCount} pilihan manual terlebih dahulu.`;
+    }
+    if (stepIndex === 3 && smartFixResult?.needsConfirmationCount) {
+      return "Masih ada saran yang perlu dikonfirmasi.";
+    }
+    if (stepIndex >= 4 && smartFixResult?.isReadyForPreview) {
+      return "Siap import - mode aman aktif.";
+    }
+    return "Mode aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
+  }, [smartFixResult, stepIndex, tab]);
 
   const primaryLabel = useMemo(() => {
     if (tab === "export") {
@@ -2128,7 +2521,7 @@ export default function GradeImportExportDialog({
     executionState === "analyzing"
     || executionState === "importing"
     || (stepIndex > 0 && stepIndex < 5 && !canGoNext)
-    || (stepIndex === 5 && blocked)
+    || (stepIndex === 5 && (blocked || !smartFixResult?.isReadyForPreview))
   );
   const exportPrimaryDisabled = tab === "export" && (
     exportActionLoading
@@ -2224,7 +2617,7 @@ export default function GradeImportExportDialog({
                         ) : null}
                         {chapterCount === 0 || assignmentCount === 0 ? (
                           <RiskAlert title="Belum ada BAB/tugas" tone="warning">
-                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di step Konflik sebelum import.
+                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di step Cek & Perbaiki sebelum import.
                           </RiskAlert>
                         ) : null}
                         {importMode === "smart" ? (
@@ -2233,7 +2626,7 @@ export default function GradeImportExportDialog({
                           </RiskAlert>
                         ) : null}
                         <RiskAlert title="Data tidak akan ditimpa tanpa konfirmasi" tone="safe">
-                          Default import adalah isi nilai kosong saja. Nilai lama akan muncul sebagai konflik sebelum tahap simpan.
+                          Default import adalah isi nilai kosong saja. Nilai lama akan muncul sebagai item yang perlu dicek sebelum tahap simpan.
                         </RiskAlert>
                         <RiskAlert title="BAB dan tugas baru butuh persetujuan" tone="warning">
                           Header baru hanya menjadi kandidat. Sistem tidak membuat struktur baru secara otomatis.
@@ -2245,11 +2638,14 @@ export default function GradeImportExportDialog({
                   {stepIndex === 1 ? <AnalysisStep plan={plan} /> : null}
                   {stepIndex === 2 ? <MappingStep plan={plan} /> : null}
                   {stepIndex === 3 ? (
-                    <ConflictStep
+                    <SmartFixStep
                       plan={plan}
+                      result={smartFixResult}
                       context={importContext}
                       actions={resolverActions}
+                      updateMode={updateMode}
                       onBackToMapping={() => setStepIndex(2)}
+                      onRestartUpload={() => setStepIndex(0)}
                     />
                   ) : null}
                   {stepIndex === 4 ? <PreviewStep plan={plan} updateMode={updateMode} onUpdateModeChange={setUpdateMode} /> : null}
@@ -2338,7 +2734,7 @@ export default function GradeImportExportDialog({
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground sm:flex">
               <ShieldCheck className="h-4 w-4 shrink-0 text-blue-600" />
-              <span className="truncate">Data tidak akan ditimpa tanpa konfirmasi.</span>
+              <span className="truncate" title={importReadinessMessage}>{importReadinessMessage}</span>
             </div>
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {tab === "import" && stepIndex > 0 ? (
