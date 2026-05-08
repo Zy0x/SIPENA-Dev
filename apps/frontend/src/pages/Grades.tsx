@@ -1254,6 +1254,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           canDownloadOfficialTemplate={Boolean(selectedClass && selectedSubject)}
           isDownloadingTemplate={isDownloadingOfficialTemplate}
           onDownloadOfficialTemplate={handleDownloadOfficialTemplate}
+          onSaveGrade={handleSaveGrade}
+          onImportComplete={() => {
+            queryClient.invalidateQueries({ queryKey: ["grades"] });
+          }}
           importContext={gradeImportContext}
           onOpenLegacyImport={() => {
             setShowGradeImportExport(false);

@@ -65,6 +65,8 @@ interface GradeImportExportDialogProps {
   isDownloadingTemplate?: boolean;
   onDownloadOfficialTemplate?: () => void | Promise<void>;
   onOpenLegacyImport?: () => void;
+  onSaveGrade?: (studentId: string, gradeType: "assignment" | "sts" | "sas", value: number, assignmentId?: string) => void | Promise<void>;
+  onImportComplete?: () => void | Promise<void>;
   importContext: ImportPlanContext;
 }
 
@@ -89,6 +91,27 @@ interface ImportResolverState {
   ignoredColumns: number[];
   columnOverrides: Record<string, ColumnResolution>;
   resolvedConflictKeys: string[];
+}
+
+interface ImportExecutionFailure {
+  operationId: string;
+  rowIndex: number;
+  columnIndex: number;
+  target: string;
+  message: string;
+}
+
+interface ImportExecutionSummary {
+  successCount: number;
+  skippedCount: number;
+  failedCount: number;
+  warnings: string[];
+  failedRows: ImportExecutionFailure[];
+}
+
+interface ImportExecutionProgress {
+  current: number;
+  total: number;
 }
 
 const emptyResolverState: ImportResolverState = {
@@ -156,6 +179,16 @@ function operationLabel(operation: GradeOperation): string {
   if (operation.action === "skip_empty") return "Kosong";
   if (operation.action === "needs_confirmation") return "Perlu konfirmasi";
   return "Diblokir";
+}
+
+function emptyExecutionSummary(): ImportExecutionSummary {
+  return {
+    successCount: 0,
+    skippedCount: 0,
+    failedCount: 0,
+    warnings: [],
+    failedRows: [],
+  };
 }
 
 function targetLabel(operation: GradeOperation): string {
@@ -1072,25 +1105,205 @@ function PreviewStep({
   );
 }
 
-function ImportStep({ state, plan }: { state: ImportExecutionState; plan: ImportPlan | null }) {
+function hasExistingGrade(operation: GradeOperation): boolean {
+  return operation.existingValue !== null && operation.existingValue !== undefined;
+}
+
+function canExecuteOverwrite(
+  operation: GradeOperation,
+  selectedOverwriteColumns: Set<number>,
+): boolean {
+  if (!hasExistingGrade(operation)) return true;
+  if (operation.updateMode === "overwrite_existing") return true;
+  if (operation.updateMode === "overwrite_selected_columns") {
+    return selectedOverwriteColumns.has(operation.columnIndex);
+  }
+  return false;
+}
+
+// TODO production import hardening before replacing this safe client executor:
+// RPC batch import, idempotency key, signed server template, audit log,
+// rollback, and server-side validation.
+async function executeClientSideImport({
+  plan,
+  onSaveGrade,
+  onProgress,
+  selectedOverwriteColumns,
+}: {
+  plan: ImportPlan;
+  onSaveGrade?: GradeImportExportDialogProps["onSaveGrade"];
+  onProgress: (progress: ImportExecutionProgress) => void;
+  selectedOverwriteColumns: Set<number>;
+}): Promise<ImportExecutionSummary> {
+  const summary = emptyExecutionSummary();
+  const operations = plan.gradeOperations;
+  const warnings = new Set<string>();
+
+  if (!onSaveGrade) {
+    return {
+      ...summary,
+      skippedCount: operations.length,
+      warnings: ["Mekanisme simpan nilai belum tersedia di halaman ini."],
+    };
+  }
+
+  onProgress({ current: 0, total: operations.length });
+
+  for (const operation of operations) {
+    onProgress({ current: summary.successCount + summary.failedCount + summary.skippedCount, total: operations.length });
+
+    if (operation.conflicts.length || operation.action === "blocked" || operation.action === "needs_confirmation") {
+      summary.skippedCount += 1;
+      warnings.add("Sebagian operasi dilewati karena masih blocked atau unresolved.");
+      continue;
+    }
+
+    if (operation.action !== "fill_empty" && operation.action !== "overwrite") {
+      summary.skippedCount += 1;
+      continue;
+    }
+
+    if (!operation.studentId || operation.value === null) {
+      summary.skippedCount += 1;
+      warnings.add("Sebagian operasi dilewati karena siswa atau nilai belum valid.");
+      continue;
+    }
+
+    if (operation.target.gradeType === "assignment" && !operation.target.assignmentId) {
+      summary.skippedCount += 1;
+      warnings.add("Struktur baru perlu dibuat atau dikonfirmasi terlebih dahulu.");
+      continue;
+    }
+
+    if (operation.action === "overwrite" && !canExecuteOverwrite(operation, selectedOverwriteColumns)) {
+      summary.skippedCount += 1;
+      warnings.add("Nilai lama dilewati karena mode update tidak mengizinkan overwrite untuk kolom ini.");
+      continue;
+    }
+
+    try {
+      await onSaveGrade(
+        operation.studentId,
+        operation.target.gradeType,
+        operation.value,
+        operation.target.gradeType === "assignment" ? operation.target.assignmentId : undefined,
+      );
+      summary.successCount += 1;
+    } catch (caught) {
+      summary.failedCount += 1;
+      summary.failedRows.push({
+        operationId: operation.id,
+        rowIndex: operation.rowIndex,
+        columnIndex: operation.columnIndex,
+        target: targetLabel(operation),
+        message: caught instanceof Error ? caught.message : "Gagal menyimpan nilai.",
+      });
+    }
+  }
+
+  onProgress({ current: operations.length, total: operations.length });
+
+  return {
+    ...summary,
+    warnings: Array.from(warnings),
+  };
+}
+
+function ImportStep({
+  state,
+  plan,
+  summary,
+  progress,
+  onDone,
+  onBack,
+}: {
+  state: ImportExecutionState;
+  plan: ImportPlan | null;
+  summary: ImportExecutionSummary | null;
+  progress: ImportExecutionProgress;
+  onDone: () => void;
+  onBack: () => void;
+}) {
   const blocked = hasBlockedConflicts(plan);
   const isSuccess = state === "success";
+  const progressPercent = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+  const hasFailures = Boolean(summary?.failedCount);
   return (
-    <div className="rounded-[24px] border border-border bg-white p-6 text-center dark:bg-slate-950">
+    <div className="space-y-4">
+      <div className="rounded-[24px] border border-border bg-white p-6 text-center dark:bg-slate-950">
       <div className={cn(
         "mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl",
-        isSuccess ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30" : "bg-blue-50 text-blue-600 dark:bg-blue-950/30",
+        hasFailures
+          ? "bg-orange-50 text-orange-600 dark:bg-orange-950/30"
+          : isSuccess
+            ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30"
+            : "bg-blue-50 text-blue-600 dark:bg-blue-950/30",
       )}>
-        {state === "importing" ? <Loader2 className="h-6 w-6 animate-spin" /> : <CheckCircle2 className="h-6 w-6" />}
+        {state === "importing" ? <Loader2 className="h-6 w-6 animate-spin" /> : hasFailures ? <ShieldAlert className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
       </div>
       <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">
-        {isSuccess ? "Preview import selesai" : "Executor import belum diaktifkan"}
+        {isSuccess ? (hasFailures ? "Import selesai sebagian" : "Import aman selesai") : "Executor import aman siap"}
       </h3>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
         {blocked
           ? "Masih ada konflik blocking. Tahap ini tidak akan menyimpan data sebelum konflik diselesaikan."
-          : "Tahap ini hanya menampilkan progress aman. Penyimpanan final, RPC batch, dan conflict resolver akan masuk tahap berikutnya."}
+          : "Executor hanya memproses operasi yang sudah resolved, memakai mekanisme simpan nilai existing, dan tidak menimpa nilai lama kecuali mode update mengizinkan."}
       </p>
+      {state === "importing" ? (
+        <div className="mx-auto mt-5 max-w-md text-left">
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>Progress</span>
+            <span>{progress.current}/{progress.total}</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-900">
+            <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${progressPercent}%` }} />
+          </div>
+        </div>
+      ) : null}
+      </div>
+
+      {summary ? (
+        <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MetricCard label="Berhasil" value={summary.successCount} tone="green" />
+            <MetricCard label="Dilewati" value={summary.skippedCount} tone="orange" />
+            <MetricCard label="Gagal" value={summary.failedCount} tone={summary.failedCount ? "red" : "info"} />
+          </div>
+
+          {summary.warnings.length ? (
+            <RiskAlert title="Catatan executor aman" tone="warning">
+              <ul className="space-y-1 text-left">
+                {summary.warnings.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </RiskAlert>
+          ) : null}
+
+          {summary.failedRows.length ? (
+            <section className="rounded-[24px] border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/20">
+              <h4 className="text-sm font-semibold text-red-950 dark:text-red-100">Baris gagal disimpan</h4>
+              <div className="mt-3 grid gap-2">
+                {summary.failedRows.slice(0, 10).map((item) => (
+                  <div key={item.operationId} className="rounded-2xl border border-red-200 bg-white p-3 text-sm dark:border-red-900/50 dark:bg-slate-950">
+                    <p className="font-medium text-slate-950 dark:text-slate-50">{item.target}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Baris {item.rowIndex} / Kolom {item.columnIndex} / {item.message}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {isSuccess ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button type="button" variant="outline" className="h-11 rounded-full" onClick={onBack}>
+                Kembali
+              </Button>
+              <Button type="button" className="h-11 rounded-full bg-blue-600 hover:bg-blue-700" onClick={onDone}>
+                Selesai
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -1110,6 +1323,8 @@ export default function GradeImportExportDialog({
   isDownloadingTemplate = false,
   onDownloadOfficialTemplate,
   onOpenLegacyImport,
+  onSaveGrade,
+  onImportComplete,
   importContext,
 }: GradeImportExportDialogProps) {
   const { info, success, error: showError, warning: showWarning } = useEnhancedToast();
@@ -1124,6 +1339,8 @@ export default function GradeImportExportDialog({
   const [updateMode, setUpdateMode] = useState<UpdateMode>("fill_empty_only");
   const [resolverState, setResolverState] = useState<ImportResolverState>(emptyResolverState);
   const [executionState, setExecutionState] = useState<ImportExecutionState>("idle");
+  const [executionSummary, setExecutionSummary] = useState<ImportExecutionSummary | null>(null);
+  const [executionProgress, setExecutionProgress] = useState<ImportExecutionProgress>({ current: 0, total: 0 });
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1140,6 +1357,8 @@ export default function GradeImportExportDialog({
       setUpdateMode("fill_empty_only");
       setResolverState(emptyResolverState);
       setExecutionState("idle");
+      setExecutionSummary(null);
+      setExecutionProgress({ current: 0, total: 0 });
       setAnalysisError(null);
     }
   }, [open]);
@@ -1326,6 +1545,8 @@ export default function GradeImportExportDialog({
     setPlan(null);
     setResolverState(emptyResolverState);
     setAnalysisError(null);
+    setExecutionSummary(null);
+    setExecutionProgress({ current: 0, total: 0 });
     setExecutionState("analyzing");
 
     try {
@@ -1370,15 +1591,46 @@ export default function GradeImportExportDialog({
   const handlePrimaryAction = useCallback(async () => {
     if (tab === "import") {
       if (stepIndex === 5) {
+        if (executionState === "success") {
+          handleClose();
+          return;
+        }
+
         if (blocked) {
           showWarning("Import diblokir", "Konflik blocking harus diselesaikan sebelum executor import diaktifkan.");
           return;
         }
+        if (!plan) {
+          showWarning("ImportPlan belum siap", "Upload dan selesaikan preview import sebelum menjalankan executor.");
+          return;
+        }
+
         setExecutionState("importing");
-        window.setTimeout(() => {
+        setExecutionSummary(null);
+        setExecutionProgress({ current: 0, total: 0 });
+
+        try {
+          const selectedOverwriteColumns = new Set(Object.keys(resolverState.columnOverrides).map(Number));
+          const summary = await executeClientSideImport({
+            plan,
+            onSaveGrade,
+            selectedOverwriteColumns,
+            onProgress: setExecutionProgress,
+          });
+          setExecutionSummary(summary);
           setExecutionState("success");
-          success("Preview import selesai", "Executor penyimpanan belum dijalankan pada tahap ini.");
-        }, 500);
+          if (summary.successCount > 0) {
+            await onImportComplete?.();
+          }
+          if (summary.failedCount > 0) {
+            showWarning("Import selesai sebagian", `${summary.successCount} nilai tersimpan, ${summary.failedCount} gagal, ${summary.skippedCount} dilewati.`);
+          } else {
+            success("Import aman selesai", `${summary.successCount} nilai tersimpan, ${summary.skippedCount} dilewati.`);
+          }
+        } catch (caught) {
+          setExecutionState("failed");
+          showError("Import gagal", caught instanceof Error ? caught.message : "Executor import berhenti sebelum selesai.");
+        }
         return;
       }
 
@@ -1405,7 +1657,24 @@ export default function GradeImportExportDialog({
       exportMode === "current" ? "Export nilai saat ini belum dijalankan" : "Backup lengkap belum dijalankan",
       "Tahap berikutnya akan menambahkan export nilai terisi dan backup lengkap tanpa mengganggu input nilai manual.",
     );
-  }, [blocked, canGoNext, exportMode, onDownloadOfficialTemplate, showPlaceholder, showWarning, stepIndex, success, tab]);
+  }, [
+    blocked,
+    canGoNext,
+    executionState,
+    exportMode,
+    handleClose,
+    onDownloadOfficialTemplate,
+    onImportComplete,
+    onSaveGrade,
+    plan,
+    resolverState.columnOverrides,
+    showError,
+    showPlaceholder,
+    showWarning,
+    stepIndex,
+    success,
+    tab,
+  ]);
 
   const handleBack = useCallback(() => {
     setStepIndex((current) => Math.max(0, current - 1));
@@ -1420,6 +1689,7 @@ export default function GradeImportExportDialog({
   const primaryLabel = useMemo(() => {
     if (tab === "export") return exportMode === "official" ? (isDownloadingTemplate ? "Menyiapkan..." : "Download Template Resmi") : "Siapkan Export";
     if (stepIndex === 0) return executionState === "analyzing" ? "Menganalisis..." : "Upload File Dulu";
+    if (stepIndex === 5 && executionState === "success") return "Selesai";
     if (stepIndex === 5) return executionState === "importing" ? "Memproses..." : "Mulai Import Aman";
     return "Lanjut";
   }, [executionState, exportMode, isDownloadingTemplate, stepIndex, tab]);
@@ -1524,7 +1794,16 @@ export default function GradeImportExportDialog({
                   {stepIndex === 2 ? <MappingStep plan={plan} /> : null}
                   {stepIndex === 3 ? <ConflictStep plan={plan} context={importContext} actions={resolverActions} /> : null}
                   {stepIndex === 4 ? <PreviewStep plan={plan} updateMode={updateMode} onUpdateModeChange={setUpdateMode} /> : null}
-                  {stepIndex === 5 ? <ImportStep state={executionState} plan={plan} /> : null}
+                  {stepIndex === 5 ? (
+                    <ImportStep
+                      state={executionState}
+                      plan={plan}
+                      summary={executionSummary}
+                      progress={executionProgress}
+                      onDone={handleClose}
+                      onBack={handleBack}
+                    />
+                  ) : null}
                 </main>
 
                 <ImportSummaryPanel
