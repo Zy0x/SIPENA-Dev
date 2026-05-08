@@ -163,7 +163,7 @@ const conflictTypeLabels: Record<ImportConflict["type"], string> = {
   structure: "Struktur",
   grade_value: "Nilai",
   context: "Konteks",
-  overwrite: "Overwrite",
+  overwrite: "Nilai lama",
   unsupported: "Format",
 };
 
@@ -175,44 +175,216 @@ const exportSheetsByMode: Record<ExportMode, string[]> = {
 
 const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message: string }> = {
   IMPORT_FILE_TOO_LARGE: {
-    title: "IMPORT_FILE_TOO_LARGE",
+    title: "File terlalu besar",
     message: "File terlalu besar. Gunakan file maksimal 20 MB atau pecah workbook menjadi beberapa file.",
   },
   IMPORT_UNSUPPORTED_FILE_TYPE: {
-    title: "IMPORT_UNSUPPORTED_FILE_TYPE",
+    title: "Format file belum didukung",
     message: "Format file tidak didukung. Gunakan .xlsx, .xls, atau .csv.",
   },
   IMPORT_WORKBOOK_READ_FAILED: {
-    title: "IMPORT_WORKBOOK_READ_FAILED",
+    title: "Workbook gagal dibaca",
     message: "Workbook gagal dibaca. Coba simpan ulang dari Excel lalu upload kembali.",
   },
   IMPORT_CONTEXT_MISMATCH: {
-    title: "IMPORT_CONTEXT_MISMATCH",
+    title: "Template berbeda konteks",
     message: "Template berbeda dengan kelas, mapel, semester, atau tahun ajaran aktif. Pilih konteks yang sesuai atau download template baru.",
   },
   IMPORT_DUPLICATE_STUDENT_MAPPING: {
-    title: "IMPORT_DUPLICATE_STUDENT_MAPPING",
+    title: "Siswa terduplikasi",
     message: "Ada lebih dari satu baris Excel yang menuju siswa web yang sama. Pilih satu baris atau abaikan duplikat.",
   },
   IMPORT_DUPLICATE_COLUMN_TARGET: {
-    title: "IMPORT_DUPLICATE_COLUMN_TARGET",
+    title: "Kolom nilai terduplikasi",
     message: "Ada lebih dari satu kolom menuju target nilai yang sama. Pilih kolom yang dipakai sebelum import.",
   },
   IMPORT_INVALID_GRADE_VALUE: {
-    title: "IMPORT_INVALID_GRADE_VALUE",
+    title: "Nilai tidak valid",
     message: "Ada nilai invalid. Nilai harus berupa angka 0 sampai 100.",
   },
   IMPORT_NO_VALID_SHEET: {
-    title: "IMPORT_NO_VALID_SHEET",
+    title: "Sheet nilai tidak ditemukan",
     message: "Workbook tidak memiliki sheet valid. Pastikan file berisi sheet nilai.",
   },
   IMPORT_SHEET_EMPTY: {
-    title: "IMPORT_SHEET_EMPTY",
+    title: "Sheet kosong",
     message: "Sheet yang dibaca kosong. Pilih file dengan data siswa dan kolom nilai.",
   },
   IMPORT_FILE_EMPTY: {
-    title: "IMPORT_FILE_EMPTY",
+    title: "File kosong",
     message: "File kosong dan tidak bisa dianalisis.",
+  },
+};
+
+const importNoticeMessages: Record<string, { title: string; message: string }> = {
+  IMPORT_PLAN_BLOCKED: {
+    title: "Import belum bisa dilanjutkan",
+    message: "Masih ada konflik yang perlu diselesaikan. Buka bagian Konflik, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
+  },
+  IMPORT_NO_GRADE_COLUMNS: {
+    title: "Kolom nilai belum ditemukan",
+    message: "Pastikan workbook memiliki kolom nilai seperti BAB 1 - Tugas 1, STS, atau SAS.",
+  },
+  COLUMN_CREATE_ASSIGNMENT_SUGGESTED: {
+    title: "Tugas baru perlu konfirmasi",
+    message: "BAB sudah ada di web, tetapi nama tugas dari Excel belum ada. Konfirmasi dulu sebelum tugas baru dipakai.",
+  },
+  COLUMN_CREATE_CHAPTER_AND_ASSIGNMENT_SUGGESTED: {
+    title: "BAB dan tugas baru perlu konfirmasi",
+    message: "BAB dan tugas dari Excel belum ada di web. Konfirmasi atau ubah namanya dulu sebelum dipakai.",
+  },
+  COLUMN_ASSIGNMENT_SIMILAR_MATCH: {
+    title: "Nama tugas mirip",
+    message: "SIPENA menemukan tugas yang namanya mirip. Periksa kembali agar nilai masuk ke tugas yang tepat.",
+  },
+  COLUMN_CHAPTER_SIMILAR_MATCH: {
+    title: "Nama BAB mirip",
+    message: "SIPENA menemukan BAB yang namanya mirip. Periksa kembali agar nilai masuk ke BAB yang tepat.",
+  },
+  COLUMN_ASSIGNMENT_WITHOUT_CHAPTER: {
+    title: "Nama BAB belum jelas",
+    message: "Header Excel hanya menyebut tugas tanpa BAB. Pilih BAB yang benar sebelum import.",
+  },
+  COLUMN_ASSIGNMENT_WITHOUT_CHAPTER_AMBIGUOUS: {
+    title: "Tugas cocok ke beberapa BAB",
+    message: "Nama tugas ini ada di lebih dari satu BAB. Pilih target yang benar sebelum import.",
+  },
+  COLUMN_ASSIGNMENT_AMBIGUOUS: {
+    title: "Kolom belum bisa dipastikan",
+    message: "Header Excel cocok ke beberapa tugas. Pilih tugas yang benar secara manual.",
+  },
+  COLUMN_METADATA_VS_HEADER_CHANGED: {
+    title: "Header template berubah",
+    message: "Metadata template masih terbaca, tetapi nama kolom terlihat berubah. Periksa target kolom sebelum lanjut.",
+  },
+  COLUMN_METADATA_INVALID_HEADER_CLEAR: {
+    title: "Metadata kolom perlu dicek",
+    message: "Metadata template tidak cocok dengan struktur web, tetapi header Excel cukup jelas. Pilih target kolom untuk memastikan.",
+  },
+  COLUMN_UNRESOLVED: {
+    title: "Kolom belum dipetakan",
+    message: "SIPENA belum bisa menentukan target kolom ini. Pilih tugas, STS, SAS, atau abaikan kolom.",
+  },
+  STUDENT_ID_NAME_CHANGED: {
+    title: "Nama siswa berbeda",
+    message: "ID siswa cocok, tetapi nama di Excel berbeda dengan data web. SIPENA akan memakai data siswa dari web setelah Anda konfirmasi.",
+  },
+  STUDENT_ID_NISN_CHANGED: {
+    title: "NISN siswa berbeda",
+    message: "ID siswa cocok, tetapi NISN di Excel berbeda dengan data web. SIPENA akan memakai data siswa dari web setelah Anda konfirmasi.",
+  },
+  STUDENT_MATCH_AMBIGUOUS: {
+    title: "Siswa belum pasti",
+    message: "Ada lebih dari satu kemungkinan siswa. Pilih siswa yang benar atau abaikan baris Excel.",
+  },
+  STUDENT_DUPLICATE_EXCEL_MATCH: {
+    title: "Baris siswa ganda",
+    message: "Lebih dari satu baris Excel mengarah ke siswa yang sama. Pilih baris yang dipakai atau abaikan duplikat.",
+  },
+  STUDENT_MATCH_DUPLICATE_WEB_CANDIDATE: {
+    title: "Data siswa web mirip",
+    message: "Ada beberapa siswa web dengan data yang mirip. Pilih siswa yang benar secara manual.",
+  },
+  STUDENT_MISSING_IN_WEB: {
+    title: "Siswa belum ada di web",
+    message: "Baris Excel ini tidak cocok dengan siswa di kelas aktif. SIPENA tidak akan membuat siswa baru dari import nilai.",
+  },
+  STUDENT_MISSING_IN_EXCEL: {
+    title: "Siswa tidak ada di Excel",
+    message: "Ada siswa di kelas aktif yang tidak ditemukan di workbook. Nilainya tidak akan berubah.",
+  },
+  STUDENT_FUZZY_AMBIGUOUS: {
+    title: "Nama siswa mirip",
+    message: "Nama siswa mirip dengan beberapa data web. Pilih siswa yang benar secara manual.",
+  },
+  STUDENT_FUZZY_MATCH: {
+    title: "Nama siswa mirip",
+    message: "SIPENA menemukan kandidat siswa dari kemiripan nama. Periksa sebelum lanjut.",
+  },
+  STUDENT_NAME_NORMALIZED_MATCH: {
+    title: "Nama siswa disesuaikan",
+    message: "Nama siswa cocok setelah normalisasi ejaan/spasi. Data web tetap menjadi acuan.",
+  },
+  STUDENT_NISN_NORMALIZED_MATCH: {
+    title: "NISN disesuaikan",
+    message: "NISN cocok setelah formatnya dibersihkan. Data web tetap menjadi acuan.",
+  },
+  STUDENT_MARKED_UNRESOLVED: {
+    title: "Baris siswa belum selesai",
+    message: "Baris ini ditandai belum selesai. Pilih siswa, abaikan baris, atau ulangi pilihan.",
+  },
+  IMPORT_STUDENT_NOT_SAFE_FOR_VALUE: {
+    title: "Siswa harus dipastikan",
+    message: "Baris ini memiliki nilai, tetapi siswanya belum aman dipetakan. Pilih siswa atau abaikan baris.",
+  },
+  IMPORT_COLUMN_NOT_SAFE_FOR_VALUE: {
+    title: "Kolom nilai harus dipastikan",
+    message: "Kolom ini memiliki nilai, tetapi targetnya belum aman. Pilih tugas, STS, SAS, atau abaikan kolom.",
+  },
+  IMPORT_DUPLICATE_COLUMN_TARGET: importUiErrorMessages.IMPORT_DUPLICATE_COLUMN_TARGET,
+  IMPORT_CONTEXT_MISMATCH: importUiErrorMessages.IMPORT_CONTEXT_MISMATCH,
+  IMPORT_CONTEXT_MISMATCH_BLOCKED: importUiErrorMessages.IMPORT_CONTEXT_MISMATCH,
+  IMPORT_SEMESTER_MISMATCH: {
+    title: "Semester berbeda",
+    message: "Template atau workbook ini tampaknya berbeda semester. Pilih semester yang sesuai atau download template baru.",
+  },
+  IMPORT_MANIFEST_MISSING: {
+    title: "Identitas template tidak ditemukan",
+    message: "Sheet identitas template tidak ditemukan. File tetap bisa dianalisis, tetapi perlu pengecekan manual.",
+  },
+  IMPORT_METADATA_SHEET_MISSING: {
+    title: "Sheet validasi tidak lengkap",
+    message: "Beberapa sheet validasi template tidak ditemukan. Periksa pemetaan sebelum lanjut.",
+  },
+  IMPORT_HEADER_CHANGED: {
+    title: "Header berubah",
+    message: "Ada header yang berubah dari template awal. Periksa pemetaan kolom sebelum import.",
+  },
+  IMPORT_ADDED_HEADER_DETECTED: {
+    title: "Kolom tambahan terdeteksi",
+    message: "Ada kolom tambahan di workbook. SIPENA akan meminta konfirmasi jika kolom itu menjadi nilai baru.",
+  },
+  IMPORT_NEW_STRUCTURE_NOT_CONFIRMED: {
+    title: "Struktur baru belum dikonfirmasi",
+    message: "BAB atau tugas baru belum dikonfirmasi. Konfirmasi dulu sebelum import dilanjutkan.",
+  },
+  IMPORT_UNSIGNED_TEMPLATE: {
+    title: "Template belum ditandatangani server",
+    message: "Template ini dibuat dari sisi browser. SIPENA tetap membandingkannya dengan data web sebelum import.",
+  },
+  IMPORT_NO_FREE_EXCEL_REGION: {
+    title: "Area nilai belum ditemukan",
+    message: "SIPENA belum menemukan tabel nilai yang jelas di workbook. Pastikan ada kolom Nama/NISN dan kolom nilai.",
+  },
+  IMPORT_NO_SUPPORTED_TEMPLATE_STRUCTURE: {
+    title: "Struktur template belum dikenali",
+    message: "Format workbook belum dikenali sebagai template nilai SIPENA. Gunakan template resmi atau rapikan header nilai.",
+  },
+  IMPORT_INVALID_VALUE_STRICT: importUiErrorMessages.IMPORT_INVALID_GRADE_VALUE,
+  GRADE_VALUE_INVALID: importUiErrorMessages.IMPORT_INVALID_GRADE_VALUE,
+  GRADE_VALUE_TEXTUAL: {
+    title: "Nilai berupa teks",
+    message: "Ada nilai berupa teks seperti Tuntas, Remedial, atau huruf. Ubah menjadi angka 0 sampai 100 sebelum import.",
+  },
+  GRADE_VALUE_TEXTUAL_BLOCKED: {
+    title: "Nilai teks tidak bisa diimport",
+    message: "Nilai berupa teks tidak diimport otomatis. Ubah menjadi angka 0 sampai 100.",
+  },
+  GRADE_VALUE_FRACTION_SCALED: {
+    title: "Nilai pecahan perlu dicek",
+    message: "Nilai pecahan bisa dikonversi ke skala 100, tetapi perlu konfirmasi agar tidak salah tafsir.",
+  },
+  GRADE_VALUE_FRACTION_100: {
+    title: "Nilai pecahan dibaca",
+    message: "Format seperti 90/100 akan dibaca sebagai 90.",
+  },
+  GRADE_VALUE_PERCENT: {
+    title: "Nilai persen dibaca",
+    message: "Tanda persen akan diabaikan dan nilai dibaca sebagai angka 0 sampai 100.",
+  },
+  GRADE_VALUE_DECIMAL_COMMA: {
+    title: "Koma desimal dibaca",
+    message: "Koma desimal akan dibaca sebagai titik desimal.",
   },
 };
 
@@ -226,7 +398,70 @@ function normalizeImportErrorCode(code?: string): ImportUiErrorCode | null {
 }
 
 function getImportErrorMessage(code: ImportUiErrorCode | null, fallback?: string) {
-  return code ? importUiErrorMessages[code] : { title: "IMPORT_WORKBOOK_READ_FAILED", message: fallback || "File gagal dianalisis. Coba periksa format workbook." };
+  return code ? importUiErrorMessages[code] : { title: "File gagal dianalisis", message: cleanBackendText(fallback) || "File gagal dianalisis. Coba periksa format workbook." };
+}
+
+function cleanBackendText(text?: string) {
+  if (!text) return "";
+  return text
+    .replace(/ImportPlan/gi, "Rencana import")
+    .replace(/\bblocking\b/gi, "yang wajib diselesaikan")
+    .replace(/\bblocked\b/gi, "belum bisa dilanjutkan")
+    .replace(/\bresolved\b/gi, "selesai dicek")
+    .replace(/\bexecutor\b/gi, "proses simpan")
+    .replace(/\bderived columns?\b/gi, "kolom hasil rumus")
+    .replace(/\bmapping\b/gi, "pemetaan")
+    .replace(/\bsafe\b/gi, "aman")
+    .replace(/\bstudent_id\b/gi, "ID siswa")
+    .replace(/\bcreate_chapter_and_assignment\b/gi, "membuat BAB dan tugas baru")
+    .replace(/\bcreate_assignment\b/gi, "membuat tugas baru")
+    .replace(/_/g, " ");
+}
+
+function getImportNotice(code?: string | null, fallback?: string) {
+  if (code && importNoticeMessages[code]) return importNoticeMessages[code];
+  const normalized = normalizeImportErrorCode(code || undefined);
+  if (normalized) return importUiErrorMessages[normalized];
+  return {
+    title: cleanBackendText(code || "Perlu dicek"),
+    message: cleanBackendText(fallback) || "Periksa kembali item ini sebelum melanjutkan import.",
+  };
+}
+
+function statusLabel(status: string) {
+  if (status === "safe") return "Aman";
+  if (status === "warning") return "Perlu dicek";
+  if (status === "needs_confirmation") return "Perlu konfirmasi";
+  if (status === "ambiguous") return "Belum pasti";
+  if (status === "missing" || status === "missing_in_web") return "Tidak ditemukan";
+  if (status === "missing_in_excel") return "Tidak ada di Excel";
+  if (status === "blocked") return "Diblokir";
+  return cleanBackendText(status);
+}
+
+function headerTypeLabel(type: string) {
+  if (type === "assignment") return "Tugas";
+  if (type === "sts") return "STS";
+  if (type === "sas") return "SAS";
+  if (type === "reserved") return "Kolom identitas";
+  if (type === "derived") return "Kolom hasil rumus";
+  return "Belum dikenali";
+}
+
+function matchedByLabel(matchedBy?: StudentMapping["matchedBy"]) {
+  if (matchedBy === "student_id") return "ID siswa";
+  if (matchedBy === "nisn_exact") return "NISN cocok";
+  if (matchedBy === "nisn_normalized") return "NISN disesuaikan";
+  if (matchedBy === "name_exact") return "Nama cocok";
+  if (matchedBy === "name_normalized") return "Nama disesuaikan";
+  if (matchedBy === "fuzzy") return "Nama mirip";
+  return "Manual";
+}
+
+function conflictSeverityLabel(severity: ImportConflict["severity"]) {
+  if (severity === "blocked") return "Wajib diselesaikan";
+  if (severity === "warning") return "Perlu dicek";
+  return "Aman";
 }
 
 function sourceTone(sourceType: ImportSourceType): StatusBadgeTone {
@@ -252,7 +487,7 @@ function operationTone(action: GradeOperation["action"]): StatusBadgeTone {
 
 function operationLabel(operation: GradeOperation): string {
   if (operation.action === "fill_empty") return "Siap import";
-  if (operation.action === "overwrite") return "Overwrite";
+  if (operation.action === "overwrite") return "Akan menimpa";
   if (operation.action === "skip_existing") return "Dilewati";
   if (operation.action === "skip_empty") return "Kosong";
   if (operation.action === "needs_confirmation") return "Perlu konfirmasi";
@@ -615,7 +850,7 @@ function EmptyPanel({ title, description }: { title: string; description: string
 
 function AnalysisStep({ plan }: { plan: ImportPlan | null }) {
   if (!plan) {
-    return <EmptyPanel title="Belum ada file dianalisis" description="Upload file Excel atau CSV untuk membuat ImportPlan preview." />;
+    return <EmptyPanel title="Belum ada file dianalisis" description="Upload file Excel atau CSV untuk membuat preview import." />;
   }
 
   return (
@@ -624,7 +859,7 @@ function AnalysisStep({ plan }: { plan: ImportPlan | null }) {
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge tone={sourceTone(plan.sourceType)}>{sourceLabels[plan.sourceType]}</StatusBadge>
           <StatusBadge tone={hasBlockedConflicts(plan) ? "warning" : "safe"}>
-            {hasBlockedConflicts(plan) ? "Ada blocker" : "Siap dilanjutkan"}
+            {hasBlockedConflicts(plan) ? "Ada konflik" : "Siap dilanjutkan"}
           </StatusBadge>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -638,23 +873,26 @@ function AnalysisStep({ plan }: { plan: ImportPlan | null }) {
       </div>
 
       {(plan.summary.gradeColumnCount || 0) === 0 ? (
-        <RiskAlert title="Tidak ada kolom nilai" tone="blocked">
-          IMPORT_NO_GRADE_COLUMNS: Pastikan workbook memiliki kolom nilai seperti BAB 1 - Tugas 1, STS, atau SAS.
+        <RiskAlert title={getImportNotice("IMPORT_NO_GRADE_COLUMNS").title} tone="blocked">
+          {getImportNotice("IMPORT_NO_GRADE_COLUMNS").message}
         </RiskAlert>
       ) : null}
 
       {hasBlockedConflicts(plan) ? (
-        <RiskAlert title="ImportPlan blocked" tone="blocked">
-          IMPORT_PLAN_BLOCKED: Masuk ke step Konflik dan selesaikan item berstatus Diblokir sebelum import.
+        <RiskAlert title={getImportNotice("IMPORT_PLAN_BLOCKED").title} tone="blocked">
+          {getImportNotice("IMPORT_PLAN_BLOCKED").message}
         </RiskAlert>
       ) : null}
 
       <div className="space-y-2">
-        {getTopWarnings(plan).length ? getTopWarnings(plan).map((item, index) => (
-          <RiskAlert key={`${item.code}-${index}`} title={normalizeImportErrorCode(item.code) || item.code} tone="warning">
-            {getImportErrorMessage(normalizeImportErrorCode(item.code), item.message).message}
-          </RiskAlert>
-        )) : (
+        {getTopWarnings(plan).length ? getTopWarnings(plan).map((item, index) => {
+          const notice = getImportNotice(item.code, item.message);
+          return (
+            <RiskAlert key={`${item.code}-${index}`} title={notice.title} tone="warning">
+              {notice.message}
+            </RiskAlert>
+          );
+        }) : (
           <RiskAlert title="Tidak ada warning utama" tone="safe">
             Analisis awal tidak menemukan warning utama. Tetap cek pemetaan dan preview sebelum import.
           </RiskAlert>
@@ -679,12 +917,12 @@ function StudentMappingCard({ mapping }: { mapping: StudentMapping }) {
             {webLabel}
           </p>
         </div>
-        <StatusBadge tone={statusTone(mapping.status)}>{mapping.status}</StatusBadge>
+        <StatusBadge tone={statusTone(mapping.status)}>{statusLabel(mapping.status)}</StatusBadge>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span>Baris {mapping.rowIndex}</span>
-        <span>Confidence {mapping.confidence}%</span>
-        <span>{mapping.matchedBy || "manual"}</span>
+        <span>Keyakinan {mapping.confidence}%</span>
+        <span>{matchedByLabel(mapping.matchedBy)}</span>
       </div>
     </div>
   );
@@ -702,12 +940,12 @@ function ColumnMappingCard({ mapping }: { mapping: ColumnMapping }) {
           <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={mapping.rawHeader || `Kolom ${mapping.columnIndex}`}>{mapping.rawHeader || `Kolom ${mapping.columnIndex}`}</p>
           <p className="mt-1 truncate text-xs text-muted-foreground" title={target || "Belum dipetakan"}>Target: {target || "Belum dipetakan"}</p>
         </div>
-        <StatusBadge tone={statusTone(mapping.status)}>{mapping.status}</StatusBadge>
+        <StatusBadge tone={statusTone(mapping.status)}>{statusLabel(mapping.status)}</StatusBadge>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span>Kolom {mapping.columnIndex}</span>
-        <span>Confidence {mapping.confidence}%</span>
-        <span>{mapping.parsedHeader.headerType}</span>
+        <span>Keyakinan {mapping.confidence}%</span>
+        <span>{headerTypeLabel(mapping.parsedHeader.headerType)}</span>
       </div>
     </div>
   );
@@ -715,7 +953,7 @@ function ColumnMappingCard({ mapping }: { mapping: ColumnMapping }) {
 
 function MappingStep({ plan }: { plan: ImportPlan | null }) {
   if (!plan) {
-    return <EmptyPanel title="Pemetaan belum tersedia" description="ImportPlan akan menampilkan mapping siswa dan kolom setelah file selesai dianalisis." />;
+    return <EmptyPanel title="Pemetaan belum tersedia" description="Preview akan menampilkan pemetaan siswa dan kolom setelah file selesai dianalisis." />;
   }
 
   return (
@@ -738,7 +976,7 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
                 <th className="px-4 py-3 text-left font-semibold">Excel</th>
                 <th className="px-4 py-3 text-left font-semibold">Data Web</th>
                 <th className="px-4 py-3 text-left font-semibold">Status</th>
-                <th className="px-4 py-3 text-left font-semibold">Confidence</th>
+                <th className="px-4 py-3 text-left font-semibold">Keyakinan</th>
               </tr>
             </thead>
             <tbody>
@@ -747,7 +985,7 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
                   <td className="px-4 py-3">{mapping.rowIndex}</td>
                   <td className="max-w-[220px] px-4 py-3"><span className="block truncate" title={mapping.excelName || "-"}>{mapping.excelName || "-"}</span><span className="block truncate text-xs text-muted-foreground" title={mapping.excelNisn || ""}>{mapping.excelNisn || ""}</span></td>
                   <td className="max-w-[220px] px-4 py-3"><span className="block truncate" title={mapping.webName || "-"}>{mapping.webName || "-"}</span><span className="block truncate text-xs text-muted-foreground" title={mapping.webNisn || ""}>{mapping.webNisn || ""}</span></td>
-                  <td className="px-4 py-3"><StatusBadge tone={statusTone(mapping.status)}>{mapping.status}</StatusBadge></td>
+                  <td className="px-4 py-3"><StatusBadge tone={statusTone(mapping.status)}>{statusLabel(mapping.status)}</StatusBadge></td>
                   <td className="px-4 py-3">{mapping.confidence}%</td>
                 </tr>
               ))}
@@ -776,7 +1014,7 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
                 <th className="px-4 py-3 text-left font-semibold">Header</th>
                 <th className="px-4 py-3 text-left font-semibold">Target</th>
                 <th className="px-4 py-3 text-left font-semibold">Status</th>
-                <th className="px-4 py-3 text-left font-semibold">Confidence</th>
+                <th className="px-4 py-3 text-left font-semibold">Keyakinan</th>
               </tr>
             </thead>
             <tbody>
@@ -789,7 +1027,7 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
                     <td className="px-4 py-3">{mapping.columnIndex}</td>
                     <td className="max-w-[260px] px-4 py-3"><span className="block truncate" title={mapping.rawHeader}>{mapping.rawHeader}</span></td>
                     <td className="max-w-[260px] px-4 py-3"><span className="block truncate" title={target || "-"}>{target || "-"}</span></td>
-                    <td className="px-4 py-3"><StatusBadge tone={statusTone(mapping.status)}>{mapping.status}</StatusBadge></td>
+                    <td className="px-4 py-3"><StatusBadge tone={statusTone(mapping.status)}>{statusLabel(mapping.status)}</StatusBadge></td>
                     <td className="px-4 py-3">{mapping.confidence}%</td>
                   </tr>
                 );
@@ -813,10 +1051,12 @@ interface ConflictResolutionActions {
   onSetSpecialColumn: (columnIndex: number, kind: "sts" | "sas") => void;
   onIgnoreColumn: (columnIndex: number) => void;
   onResolveConflict: (conflict: ImportConflict) => void;
+  onResetConflictChoice: (conflict: ImportConflict) => void;
   onKeepDuplicateColumn: (conflict: ImportConflict, keepColumnIndex: number) => void;
   onBulkIgnoreDerived: () => void;
   onBulkUseSafeMappings: () => void;
   onBulkTrustStudentIdWarnings: () => void;
+  onResetAllChoices: () => void;
   onUpdateModeChange: (mode: UpdateMode) => void;
 }
 
@@ -953,7 +1193,8 @@ function ConflictActionPanel({
           ))}
         </select>
         <ResolutionButton onClick={() => actions.onIgnoreRow(conflict.rowIndex!)}>Abaikan baris Excel</ResolutionButton>
-        <ResolutionButton tone="warning" onClick={() => actions.onMarkRowUnresolved(conflict.rowIndex!)}>Tandai unresolved</ResolutionButton>
+        <ResolutionButton tone="warning" onClick={() => actions.onMarkRowUnresolved(conflict.rowIndex!)}>Tandai belum selesai</ResolutionButton>
+        <ResolutionButton onClick={() => actions.onResetConflictChoice(conflict)}>Ulangi pilihan ini</ResolutionButton>
       </div>
     );
   }
@@ -985,6 +1226,7 @@ function ConflictActionPanel({
           <ResolutionButton tone="safe" onClick={() => actions.onSetSpecialColumn(conflict.columnIndex!, "sts")}>Jadikan STS</ResolutionButton>
           <ResolutionButton tone="safe" onClick={() => actions.onSetSpecialColumn(conflict.columnIndex!, "sas")}>Jadikan SAS</ResolutionButton>
           <ResolutionButton onClick={() => actions.onIgnoreColumn(conflict.columnIndex!)}>Abaikan kolom</ResolutionButton>
+          <ResolutionButton onClick={() => actions.onResetConflictChoice(conflict)}>Ulangi pilihan ini</ResolutionButton>
           {conflict.code === "IMPORT_DUPLICATE_COLUMN_TARGET" ? (
             <ResolutionButton tone="safe" onClick={() => actions.onKeepDuplicateColumn(conflict, conflict.columnIndex!)}>
               Gunakan kolom ini
@@ -1016,14 +1258,16 @@ function ConflictActionPanel({
             {updateModeLabels[mode]}
           </ResolutionButton>
         ))}
+        <ResolutionButton onClick={() => actions.onResetConflictChoice(conflict)}>Ulangi pilihan ini</ResolutionButton>
       </div>
     );
   }
 
   if (conflict.severity === "blocked") {
     return (
-      <div className="mt-3 rounded-2xl border border-red-100 bg-white/70 p-3 text-xs leading-5 dark:border-red-900/50 dark:bg-slate-950/40">
-        Konflik ini tetap diblokir sampai file atau pemetaan sumber diperbaiki. Tidak ada auto-map untuk data ambigu.
+      <div className="mt-3 space-y-2 rounded-2xl border border-red-100 bg-white/70 p-3 text-xs leading-5 dark:border-red-900/50 dark:bg-slate-950/40">
+        <p>Konflik ini belum bisa dilanjutkan sampai file atau pemetaannya diperbaiki. Data ambigu tidak dipilih otomatis.</p>
+        <ResolutionButton onClick={() => actions.onResetConflictChoice(conflict)}>Ulangi pilihan ini</ResolutionButton>
       </div>
     );
   }
@@ -1031,6 +1275,7 @@ function ConflictActionPanel({
   return (
     <div className="mt-3 flex flex-wrap gap-2">
       <ResolutionButton onClick={() => actions.onResolveConflict(conflict)}>Tandai dicek</ResolutionButton>
+      <ResolutionButton onClick={() => actions.onResetConflictChoice(conflict)}>Ulangi pilihan ini</ResolutionButton>
     </div>
   );
 }
@@ -1039,10 +1284,12 @@ function ConflictStep({
   plan,
   context,
   actions,
+  onBackToMapping,
 }: {
   plan: ImportPlan | null;
   context: ImportPlanContext;
   actions: ConflictResolutionActions;
+  onBackToMapping: () => void;
 }) {
   if (!plan) {
     return <EmptyPanel title="Konflik belum tersedia" description="Konflik akan muncul setelah file dianalisis." />;
@@ -1059,19 +1306,21 @@ function ConflictStep({
       <section className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Bulk action aman</h3>
+            <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Aksi cepat untuk konflik</h3>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Action ini hanya mengubah preview resolver. Tidak ada data yang disimpan.
+              Pilihan di sini hanya mengubah preview. Tidak ada nilai yang disimpan sebelum tahap import.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan semua derived columns</ResolutionButton>
-            <ResolutionButton tone="safe" onClick={actions.onBulkUseSafeMappings}>Gunakan semua mapping safe</ResolutionButton>
-            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data web untuk warning student_id</ResolutionButton>
+            <ResolutionButton onClick={onBackToMapping}>Kembali ke pemetaan</ResolutionButton>
+            <ResolutionButton tone="warning" onClick={actions.onResetAllChoices}>Ulangi pilihan konflik</ResolutionButton>
+            <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan kolom hasil rumus</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={actions.onBulkUseSafeMappings}>Terima pemetaan aman</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa dari web</ResolutionButton>
           </div>
         </div>
         <div className="mt-4 border-t border-border pt-3">
-          <p className="mb-2 text-xs font-semibold text-muted-foreground">Existing value conflict policy</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">Aturan saat nilai sudah ada</p>
           <div className="flex flex-wrap gap-2">
             {(Object.keys(updateModeLabels) as UpdateMode[]).map((mode) => (
               <ResolutionButton
@@ -1087,8 +1336,8 @@ function ConflictStep({
       </section>
 
       {!plan.conflicts.length ? (
-        <RiskAlert title="Tidak ada konflik blocking" tone="safe">
-          ImportPlan tidak menemukan konflik utama. Lanjutkan ke preview untuk melihat operasi yang akan terjadi.
+        <RiskAlert title="Tidak ada konflik wajib" tone="safe">
+          Tidak ada konflik utama. Lanjutkan ke preview untuk melihat nilai yang akan diproses.
         </RiskAlert>
       ) : types.filter((type) => grouped[type]?.length).map((type) => (
         <section key={type} className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
@@ -1097,30 +1346,33 @@ function ConflictStep({
             <StatusBadge tone="warning">{grouped[type].length} konflik</StatusBadge>
           </div>
           <div className="mt-3 space-y-2">
-            {grouped[type].map((item, index) => (
-              <div key={`${item.code}-${index}`} className="rounded-2xl border border-red-100 bg-red-50/80 p-3 text-red-950 dark:border-red-900/60 dark:bg-red-950/25 dark:text-red-100">
-                <div className="flex min-w-0 items-start gap-2">
-                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="max-w-full truncate text-sm font-semibold" title={normalizeImportErrorCode(item.code) || item.code}>
-                        {normalizeImportErrorCode(item.code) || item.code}
+            {grouped[type].map((item, index) => {
+              const notice = getImportNotice(item.code, item.message);
+              return (
+                <div key={`${item.code}-${index}`} className="rounded-2xl border border-red-100 bg-red-50/80 p-3 text-red-950 dark:border-red-900/60 dark:bg-red-950/25 dark:text-red-100">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="max-w-full truncate text-sm font-semibold" title={notice.title}>
+                          {notice.title}
+                        </p>
+                        <StatusBadge tone={item.severity === "blocked" ? "warning" : "info"}>
+                          {conflictSeverityLabel(item.severity)}
+                        </StatusBadge>
+                      </div>
+                      <p className="mt-1 text-xs leading-5 opacity-85">
+                        {notice.message}
                       </p>
-                      <StatusBadge tone={item.severity === "blocked" ? "warning" : "info"}>
-                        {item.severity === "blocked" ? "Diblokir" : item.severity === "warning" ? "Perlu Dicek" : "Aman"}
-                      </StatusBadge>
+                      <p className="mt-1 text-xs opacity-70">
+                        {item.rowIndex ? `Baris ${item.rowIndex}` : ""} {item.columnIndex ? `Kolom ${item.columnIndex}` : ""}
+                      </p>
+                      <ConflictActionPanel conflict={item} plan={plan} context={context} actions={actions} />
                     </div>
-                    <p className="mt-1 text-xs leading-5 opacity-85">
-                      {getImportErrorMessage(normalizeImportErrorCode(item.code), item.message).message}
-                    </p>
-                    <p className="mt-1 text-xs opacity-70">
-                      {item.rowIndex ? `Baris ${item.rowIndex}` : ""} {item.columnIndex ? `Kolom ${item.columnIndex}` : ""}
-                    </p>
-                    <ConflictActionPanel conflict={item} plan={plan} context={context} actions={actions} />
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       ))}
@@ -1153,8 +1405,8 @@ function PreviewStep({
   return (
     <div className="space-y-4">
       {isBlocked ? (
-        <RiskAlert title="ImportPlan blocked" tone="blocked">
-          IMPORT_PLAN_BLOCKED: Preview ini masih memiliki konflik Diblokir. Tombol import tetap nonaktif sampai konflik diselesaikan.
+        <RiskAlert title={getImportNotice("IMPORT_PLAN_BLOCKED").title} tone="blocked">
+          Preview masih memiliki konflik yang wajib diselesaikan. Tombol import tetap nonaktif sampai semua konflik selesai dicek.
         </RiskAlert>
       ) : null}
 
@@ -1262,7 +1514,7 @@ async function executeClientSideImport({
 
     if (operation.conflicts.length || operation.action === "blocked" || operation.action === "needs_confirmation") {
       summary.skippedCount += 1;
-      warnings.add("Sebagian operasi dilewati karena masih blocked atau unresolved.");
+      warnings.add("Sebagian nilai dilewati karena masih ada konflik yang belum selesai dicek.");
       continue;
     }
 
@@ -1285,7 +1537,7 @@ async function executeClientSideImport({
 
     if (operation.action === "overwrite" && !canExecuteOverwrite(operation, selectedOverwriteColumns)) {
       summary.skippedCount += 1;
-      warnings.add("Nilai lama dilewati karena mode update tidak mengizinkan overwrite untuk kolom ini.");
+      warnings.add("Nilai lama dilewati karena aturan import saat ini tidak mengizinkan penimpaan nilai untuk kolom ini.");
       continue;
     }
 
@@ -1304,7 +1556,7 @@ async function executeClientSideImport({
         rowIndex: operation.rowIndex,
         columnIndex: operation.columnIndex,
         target: targetLabel(operation),
-        message: caught instanceof Error ? caught.message : "Gagal menyimpan nilai.",
+        message: caught instanceof Error ? cleanBackendText(caught.message) : "Gagal menyimpan nilai.",
       });
     }
   }
@@ -1350,17 +1602,17 @@ function ImportStep({
         {state === "importing" ? <Loader2 className="h-6 w-6 animate-spin" /> : hasFailures ? <ShieldAlert className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
       </div>
       <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">
-        {isSuccess ? (hasFailures ? "Import selesai sebagian" : "Import aman selesai") : "Executor import aman siap"}
+        {isSuccess ? (hasFailures ? "Import selesai sebagian" : "Import aman selesai") : "Proses import aman siap"}
       </h3>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
         {blocked
-          ? "Masih ada konflik blocking. Tahap ini tidak akan menyimpan data sebelum konflik diselesaikan."
-          : "Executor hanya memproses operasi yang sudah resolved, memakai mekanisme simpan nilai existing, dan tidak menimpa nilai lama kecuali mode update mengizinkan."}
+          ? "Masih ada konflik yang wajib diselesaikan. Tahap ini tidak akan menyimpan data sebelum konflik selesai."
+          : "SIPENA hanya memproses nilai yang sudah aman, memakai mekanisme simpan nilai yang ada, dan tidak menimpa nilai lama kecuali aturan import mengizinkan."}
       </p>
       {state === "importing" ? (
         <div className="mx-auto mt-5 max-w-md text-left">
           <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span>Progress</span>
+            <span>Progres</span>
             <span>{progress.current}/{progress.total}</span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-900">
@@ -1379,7 +1631,7 @@ function ImportStep({
           </div>
 
           {summary.warnings.length ? (
-            <RiskAlert title="Catatan executor aman" tone="warning">
+            <RiskAlert title="Catatan proses import" tone="warning">
               <ul className="space-y-1 text-left">
                 {summary.warnings.map((item) => <li key={item}>{item}</li>)}
               </ul>
@@ -1578,6 +1830,25 @@ export default function GradeImportExportDialog({
       ...current,
       resolvedConflictKeys: uniqueStrings([...current.resolvedConflictKeys, conflictKey(conflict)]),
     })),
+    onResetConflictChoice: (conflict) => updateResolver((current) => {
+      const rowIndex = conflict.rowIndex;
+      const columnIndex = conflict.columnIndex;
+      const studentOverrides = rowIndex
+        ? Object.fromEntries(Object.entries(current.studentOverrides).filter(([key]) => Number(key) !== rowIndex))
+        : current.studentOverrides;
+      const columnOverrides = columnIndex
+        ? Object.fromEntries(Object.entries(current.columnOverrides).filter(([key]) => Number(key) !== columnIndex))
+        : current.columnOverrides;
+      return {
+        ...current,
+        ignoredRows: rowIndex ? current.ignoredRows.filter((item) => item !== rowIndex) : current.ignoredRows,
+        unresolvedRows: rowIndex ? current.unresolvedRows.filter((item) => item !== rowIndex) : current.unresolvedRows,
+        studentOverrides,
+        ignoredColumns: columnIndex ? current.ignoredColumns.filter((item) => item !== columnIndex) : current.ignoredColumns,
+        columnOverrides,
+        resolvedConflictKeys: current.resolvedConflictKeys.filter((item) => item !== conflictKey(conflict)),
+      };
+    }),
     onKeepDuplicateColumn: (conflict, keepColumnIndex) => updateResolver((current) => {
       const optionHeaders = new Set(conflict.options || []);
       const duplicateColumns = (plan?.columnMappings || [])
@@ -1627,6 +1898,7 @@ export default function GradeImportExportDialog({
           .map((mapping) => [String(mapping.rowIndex), mapping.studentId as string])),
       },
     })),
+    onResetAllChoices: () => updateResolver(() => emptyResolverState),
     onUpdateModeChange: setUpdateMode,
   }), [importContext.chapters, plan, updateResolver]);
 
@@ -1703,7 +1975,7 @@ export default function GradeImportExportDialog({
       setStepIndex(1);
       setExecutionState("ready");
       setAnalysisErrorCode(null);
-      success("ImportPlan siap", "File sudah dianalisis sebagai preview. Belum ada data yang disimpan.");
+      success("Preview import siap", "File sudah dianalisis sebagai preview. Belum ada data yang disimpan.");
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "File gagal dianalisis.";
       setAnalysisError(message);
@@ -1726,11 +1998,11 @@ export default function GradeImportExportDialog({
         }
 
         if (blocked) {
-          showWarning("Import diblokir", "Konflik blocking harus diselesaikan sebelum executor import diaktifkan.");
+          showWarning("Import belum bisa dilanjutkan", "Selesaikan konflik yang wajib dicek sebelum proses simpan dijalankan.");
           return;
         }
         if (!plan) {
-          showWarning("ImportPlan belum siap", "Upload dan selesaikan preview import sebelum menjalankan executor.");
+          showWarning("Preview import belum siap", "Upload file dan selesaikan preview sebelum menjalankan proses simpan.");
           return;
         }
 
@@ -1758,16 +2030,16 @@ export default function GradeImportExportDialog({
           }
         } catch (caught) {
           setExecutionState("failed");
-          showError("Import gagal", caught instanceof Error ? caught.message : "Executor import berhenti sebelum selesai.");
+          showError("Import gagal", caught instanceof Error ? cleanBackendText(caught.message) : "Proses simpan berhenti sebelum selesai.");
         }
         return;
       }
 
       if (!canGoNext) {
         showWarning(
-          stepIndex === 3 ? "Konflik belum resolved" : "ImportPlan belum siap",
+          stepIndex === 3 ? "Konflik belum selesai" : "Preview import belum siap",
           stepIndex === 3
-            ? "Import tidak bisa lanjut selama masih ada konflik blocking."
+            ? "Import tidak bisa lanjut selama masih ada konflik yang wajib diselesaikan."
             : "Upload file yang valid dulu untuk membuat preview import.",
         );
         return;
@@ -1934,7 +2206,7 @@ export default function GradeImportExportDialog({
 
                       {executionState === "analyzing" ? (
                         <RiskAlert title="File sedang dianalisis" tone="info">
-                          SIPENA membaca workbook, mendeteksi template resmi atau Smart Import, lalu membuat ImportPlan preview.
+                          SIPENA membaca workbook, mendeteksi template resmi atau Smart Import, lalu membuat preview import.
                         </RiskAlert>
                       ) : null}
 
@@ -1972,7 +2244,14 @@ export default function GradeImportExportDialog({
 
                   {stepIndex === 1 ? <AnalysisStep plan={plan} /> : null}
                   {stepIndex === 2 ? <MappingStep plan={plan} /> : null}
-                  {stepIndex === 3 ? <ConflictStep plan={plan} context={importContext} actions={resolverActions} /> : null}
+                  {stepIndex === 3 ? (
+                    <ConflictStep
+                      plan={plan}
+                      context={importContext}
+                      actions={resolverActions}
+                      onBackToMapping={() => setStepIndex(2)}
+                    />
+                  ) : null}
                   {stepIndex === 4 ? <PreviewStep plan={plan} updateMode={updateMode} onUpdateModeChange={setUpdateMode} /> : null}
                   {stepIndex === 5 ? (
                     <ImportStep
