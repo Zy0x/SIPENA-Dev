@@ -8,6 +8,7 @@ import {
   Camera,
   CheckCircle2,
   ChevronDown,
+  Download,
   FileSpreadsheet,
   Loader2,
   LogOut,
@@ -73,6 +74,7 @@ import { SmartStudentSearch } from "@/components/grades/SmartStudentSearch";
 import { ChapterStructure } from "@/components/grades/ChapterStructure";
 import { SpreadsheetTable } from "@/components/grades/SpreadsheetTable";
 import { EmptyStudentsState } from "@/components/grades/EmptyStudentsState";
+import GradeImportExportDialog, { type GradeImportExportTab } from "@/components/grades/GradeImportExportDialog";
 import {
   FormulaSettings,
 } from "@/components/grades/FormulaSettings";
@@ -280,7 +282,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const { activeSemesterId } = useAcademicYear();
+  const { activeSemester, activeSemesterId } = useAcademicYear();
   const { success, error: showError } = useEnhancedToast();
   const { shouldShowTours } = useUserPreferences();
 
@@ -300,6 +302,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [lockedStudentId, setLockedStudentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("input");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showGradeImportExport, setShowGradeImportExport] = useState(false);
+  const [gradeImportExportTab, setGradeImportExportTab] = useState<GradeImportExportTab>("import");
   const [showImportGrades, setShowImportGrades] = useState(false);
   const [showOCRGrades, setShowOCRGrades] = useState(false);
   const [showGuestKkmDialog, setShowGuestKkmDialog] = useState(false);
@@ -771,14 +775,34 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px]">
             <Upload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Import</span>
+            <span className="hidden sm:inline">Import/Export</span>
             <ChevronDown className="w-3 h-3 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => {
+              setGradeImportExportTab("import");
+              setShowGradeImportExport(true);
+            }}
+            className="gap-2 min-h-[44px]"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Import Nilai
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              setGradeImportExportTab("export");
+              setShowGradeImportExport(true);
+            }}
+            className="gap-2 min-h-[44px]"
+          >
+            <Download className="w-4 h-4" />
+            Export Nilai
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowImportGrades(true)} className="gap-2 min-h-[44px]">
             <FileSpreadsheet className="w-4 h-4" />
-            Import dari Excel
+            Import dari Excel Lama
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowOCRGrades(true)} className="gap-2 min-h-[44px]">
             <Camera className="w-4 h-4" />
@@ -1114,6 +1138,25 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         requireOnboarding={!isGuestMode}
         shouldAutoStart={isGuestMode ? false : shouldShowTours}
       />
+
+      {!isGuestMode && selectedSubjectId && selectedClassId && (
+        <GradeImportExportDialog
+          open={showGradeImportExport}
+          onOpenChange={setShowGradeImportExport}
+          activeTab={gradeImportExportTab}
+          onTabChange={setGradeImportExportTab}
+          classNameLabel={selectedClass?.name || ""}
+          subjectName={selectedSubject?.name || ""}
+          semesterName={activeSemester?.name || null}
+          studentCount={students.length}
+          chapterCount={chapters.length}
+          assignmentCount={allAssignments.length}
+          onOpenLegacyImport={() => {
+            setShowGradeImportExport(false);
+            setShowImportGrades(true);
+          }}
+        />
+      )}
 
       {!isGuestMode && selectedSubjectId && selectedClassId && (
         <ImportGradesDialog
