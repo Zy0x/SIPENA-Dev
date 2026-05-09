@@ -64,6 +64,7 @@ export function SmartSpreadsheetPreview({
   onResetColumnSelection,
   onSetCellInclude,
   onSetCellValueMode,
+  onAcceptSuggestedValue,
   onResetCellSelection,
 }: {
   model: SpreadsheetPreviewModel;
@@ -87,12 +88,18 @@ export function SmartSpreadsheetPreview({
   onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
   onSetCellInclude: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, include: boolean) => void;
   onSetCellValueMode: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, mode: CellValueMode, overwriteConfirmed?: boolean) => void;
+  onAcceptSuggestedValue: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => void;
   onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
 }) {
   const [selection, setSelection] = useState<Selection>(null);
   const firstManual = useMemo(() => {
     for (const row of model.rows) {
-      const cell = row.cells.find((item) => item.status === "manual_required" || item.status === "invalid");
+      const cell = row.cells.find((item) =>
+        item.status === "manual_required"
+        || item.status === "invalid"
+        || item.status === "blocked"
+        || item.requiresConfirmation
+      );
       if (cell) {
         const column = model.columns.find((item) => item.id === cell.columnId);
         if (column) return { kind: "cell" as const, cell, row, column };
@@ -249,6 +256,7 @@ export function SmartSpreadsheetPreview({
             onResetColumnSelection={onResetColumnSelection}
             onSetCellInclude={onSetCellInclude}
             onSetCellValueMode={onSetCellValueMode}
+            onAcceptSuggestedValue={onAcceptSuggestedValue}
             onResetCellSelection={onResetCellSelection}
           />
         ) : null}

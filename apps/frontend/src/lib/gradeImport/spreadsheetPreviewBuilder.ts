@@ -1,6 +1,6 @@
 import type { ConflictSimplifierResolverState } from "./conflictSimplifier";
 import { getSimplifiedConflictSourceId } from "./conflictSimplifier";
-import { buildExecutableImportOperations } from "./executableImportBuilder";
+import { buildExecutableImportOperations, resolveOperationValue } from "./executableImportBuilder";
 import type { CellValueMode, ColumnValueMode, ImportSelectionState } from "./importSelection";
 import type { ColumnMapping, GradeOperation, ImportConflict, ImportPlan, StudentMapping, UpdateMode } from "./types";
 
@@ -65,8 +65,12 @@ export type SpreadsheetPreviewCell = {
   rowId: string;
   columnId: string;
   displayValue: string;
+  rawValue?: string | number | null;
   oldValue?: string | number | null;
   newValue?: string | number | null;
+  suggestedValue?: number;
+  resolvedValue?: number | null;
+  acceptedSuggestedValue?: boolean;
   status: PreviewCellStatus;
   message?: string;
   recommendedActionLabel?: string;
@@ -352,6 +356,7 @@ function operationDecision(
   const cellSetting = selectionState?.cellSettings[cellId];
   const columnMode = column.effectiveValueMode || columnValueModeFromUpdateMode(updateMode);
   const effectiveValueMode = cellSetting?.valueMode && cellSetting.valueMode !== "inherit_column" ? cellSetting.valueMode : columnMode;
+  const resolvedValue = operation ? resolveOperationValue(operation, cellSetting) : null;
   const isManuallySkipped = cellSetting?.include === false || resolverState?.ignoredCells?.includes(`${row.rowIndex}:${columnIndex}`) || false;
   const isManuallyIncluded = cellSetting?.include === true;
   const isBlockedByColumn = !column.effectiveInclude || column.isIgnored || resolverState?.ignoredColumns?.includes(columnIndex) || false;
@@ -367,7 +372,7 @@ function operationDecision(
     isBlockedByRow,
     isBlockedByTarget,
     canToggleInclude: Boolean(operation) && !isBlockedByRow && !isBlockedByTarget,
-    canOverwrite: Boolean(operation?.existingValue !== null && operation?.existingValue !== undefined && operation?.value !== null),
+    canOverwrite: Boolean(operation?.existingValue !== null && operation?.existingValue !== undefined && resolvedValue !== null),
     requiresConfirmation: false,
     overwriteConfirmed,
   };
@@ -391,7 +396,13 @@ function operationDecision(
   }
   if (hasBlockingConflict(operation.conflicts, resolverState)) return { ...base, status: "blocked", effectiveInclude: false };
   if (isBlockedByTarget) return { ...base, status: "blocked", effectiveInclude: false };
-  if (operation.value === null || operation.action === "skip_empty") return { ...base, status: "skipped", effectiveInclude: false };
+  if (resolvedValue === null) {
+    if (operation.suggestedValue !== undefined) {
+      return { ...base, status: "blocked", effectiveInclude: true, requiresConfirmation: true };
+    }
+    return { ...base, status: "skipped", effectiveInclude: false };
+  }
+  if (operation.action === "skip_empty") return { ...base, status: "skipped", effectiveInclude: false };
 
   const oldValue = operation.existingValue;
   const hasOldValue = oldValue !== null && oldValue !== undefined;
@@ -402,7 +413,7 @@ function operationDecision(
       effectiveInclude: true,
     };
   }
-  if (Number(oldValue) !== Number(operation.value)) {
+  if (Number(oldValue) !== Number(resolvedValue)) {
     if (effectiveValueMode === "overwrite_existing") {
       if (!overwriteConfirmed) {
         return { ...base, status: "blocked", effectiveInclude: true, requiresConfirmation: true };
@@ -447,6 +458,12 @@ function recommendedAction(status: PreviewCellStatus): string | undefined {
   return undefined;
 }
 
+function suggestedDisplayValue(operation: GradeOperation): string {
+  const suggested = operation.suggestedValue === undefined ? "" : `Saran ${operation.suggestedValue}`;
+  if (operation.rawValue === null || operation.rawValue === undefined || operation.rawValue === "") return suggested;
+  return `${operation.rawValue} -> ${suggested}`;
+}
+
 function identityCell(rowId: string, columnId: string, displayValue: string, rowStatusValue: PreviewCellStatus): SpreadsheetPreviewCell {
   return {
     id: `${rowId}:${columnId}`,
@@ -479,8 +496,13 @@ export function buildSpreadsheetPreviewModel({
       const operation = operationsByRowAndColumn.get(`${studentMapping.rowIndex}:${columnIndex}`);
       const decision = operationDecision(operation, column, studentMapping, resolverState, updateMode, selectionState);
       const status = decision.status;
+      const cellId = `${rowId}:${column.id}`;
+      const cellSetting = selectionState?.cellSettings[cellId];
+      const resolvedValue = operation ? resolveOperationValue(operation, cellSetting) : null;
       const displayValue = operation
-        ? operation.value === null || operation.value === undefined ? "" : String(operation.value)
+        ? operation.value === null || operation.value === undefined
+          ? operation.suggestedValue === undefined ? "" : suggestedDisplayValue(operation)
+          : String(operation.value)
         : "";
       const conflicts = operation?.conflicts || [];
       const cellConflictIds = [
@@ -489,14 +511,20 @@ export function buildSpreadsheetPreviewModel({
       ];
 
       return {
-        id: `${rowId}:${column.id}`,
+        id: cellId,
         rowId,
         columnId: column.id,
         displayValue,
+        rawValue: operation?.rawValue,
         oldValue: operation?.existingValue,
-        newValue: operation?.value,
+        newValue: resolvedValue ?? operation?.value ?? operation?.suggestedValue,
+        suggestedValue: operation?.suggestedValue,
+        resolvedValue,
+        acceptedSuggestedValue: Boolean(cellSetting?.acceptedSuggestedValue),
         status,
-        message: cellMessage(status),
+        message: operation?.suggestedValue !== undefined && resolvedValue === null
+          ? `Pakai nilai saran ${operation.suggestedValue} jika konversi ini benar.`
+          : cellMessage(status),
         recommendedActionLabel: recommendedAction(status),
         conflictIds: cellConflictIds,
         operationIds: operation ? [operation.id] : [],

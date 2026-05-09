@@ -101,6 +101,7 @@ export function PreviewFixPanel({
   onResetColumnSelection,
   onSetCellInclude,
   onSetCellValueMode,
+  onAcceptSuggestedValue,
   onResetCellSelection,
 }: {
   model: SpreadsheetPreviewModel;
@@ -120,6 +121,7 @@ export function PreviewFixPanel({
   onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
   onSetCellInclude: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, include: boolean) => void;
   onSetCellValueMode: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, mode: CellValueMode, overwriteConfirmed?: boolean) => void;
+  onAcceptSuggestedValue: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => void;
   onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
 }) {
   const [showDetail, setShowDetail] = useState(false);
@@ -135,6 +137,12 @@ export function PreviewFixPanel({
   const columnSetting = targetColumn ? selectionState.columnSettings[targetColumn.id] : undefined;
   const cellSetting = targetCell ? selectionState.cellSettings[targetCell.id] : undefined;
   const isGradeCell = Boolean(targetCell && targetColumn && targetColumn.type !== "identity");
+  const needsSuggestedApproval = Boolean(
+    targetCell
+    && targetCell.suggestedValue !== undefined
+    && targetCell.resolvedValue === null
+    && !targetCell.acceptedSuggestedValue
+  );
 
   return (
     <aside className="sipena-preview-fix-panel" aria-live="polite">
@@ -148,7 +156,10 @@ export function PreviewFixPanel({
           {targetCell ? (
             <>
               <div><span className="font-semibold">Nilai lama di SIPENA: </span>{targetCell.oldValue ?? "kosong"}</div>
-              <div><span className="font-semibold">Nilai Excel: </span>{(targetCell.newValue ?? targetCell.displayValue) || "kosong"}</div>
+              <div><span className="font-semibold">Nilai Excel: </span>{targetCell.displayValue || "kosong"}</div>
+              {targetCell.suggestedValue !== undefined ? (
+                <div><span className="font-semibold">Nilai saran: </span>{targetCell.suggestedValue}</div>
+              ) : null}
               <div><span className="font-semibold">Status saat ini: </span>{targetCell.effectiveInclude ? "Nilai dipilih" : "Nilai dilewati"}</div>
             </>
           ) : null}
@@ -225,6 +236,11 @@ export function PreviewFixPanel({
           {targetCell.effectiveInclude === false ? (
             <p className="mt-2 text-xs text-muted-foreground">Nilai ini akan dilewati dan tidak akan mengubah data.</p>
           ) : null}
+          {needsSuggestedApproval ? (
+            <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+              SIPENA membaca nilai pecahan sebagai saran. Setujui dulu agar angka ini bisa disimpan.
+            </p>
+          ) : null}
           <div className="mt-3 grid gap-2">
             {(["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[]).map((mode) => (
               <label key={mode} className="flex items-center gap-2 rounded-2xl border border-border p-2 text-xs">
@@ -269,7 +285,12 @@ export function PreviewFixPanel({
           </>
         ) : targetCell && isGradeCell ? (
           <>
-            <SettingButton tone="primary" onClick={() => onSetCellInclude(targetCell, targetRow!, targetColumn!, true)} disabled={targetCell.isBlockedByColumn || targetCell.isBlockedByRow || targetCell.isBlockedByTarget}>Simpan</SettingButton>
+            {needsSuggestedApproval ? (
+              <SettingButton tone="primary" onClick={() => onAcceptSuggestedValue(targetCell, targetRow!, targetColumn!)}>
+                Pakai nilai saran {targetCell.suggestedValue}
+              </SettingButton>
+            ) : null}
+            <SettingButton tone="primary" onClick={() => onSetCellInclude(targetCell, targetRow!, targetColumn!, true)} disabled={targetCell.isBlockedByColumn || targetCell.isBlockedByRow || targetCell.isBlockedByTarget || needsSuggestedApproval}>Simpan</SettingButton>
             <SettingButton onClick={() => onSetCellInclude(targetCell, targetRow!, targetColumn!, false)}>Lewati nilai ini</SettingButton>
             <SettingButton onClick={() => onResetCellSelection(targetCell)}>Reset pilihan</SettingButton>
           </>

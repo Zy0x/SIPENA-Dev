@@ -1279,6 +1279,7 @@ interface ConflictResolutionActions {
   onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
   onSetCellInclude: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, include: boolean) => void;
   onSetCellValueMode: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, mode: CellValueMode, overwriteConfirmed?: boolean) => void;
+  onAcceptSuggestedValue: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => void;
   onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
 }
 
@@ -1940,6 +1941,7 @@ function SpreadsheetPreviewStep({
       onResetColumnSelection={actions.onResetColumnSelection}
       onSetCellInclude={actions.onSetCellInclude}
       onSetCellValueMode={actions.onSetCellValueMode}
+      onAcceptSuggestedValue={actions.onAcceptSuggestedValue}
       onResetCellSelection={actions.onResetCellSelection}
     />
   );
@@ -2802,6 +2804,8 @@ export default function GradeImportExportDialog({
           ...(current.cellSettings[cell.id] || defaultCellImportSetting(cell.id, row.id, column.id, row.studentId)),
           include,
           overwriteConfirmed: include ? current.cellSettings[cell.id]?.overwriteConfirmed : false,
+          acceptedSuggestedValue: include ? current.cellSettings[cell.id]?.acceptedSuggestedValue : false,
+          resolvedValue: include ? current.cellSettings[cell.id]?.resolvedValue : null,
           updatedAt: nowSelectionTimestamp(),
         },
       },
@@ -2819,6 +2823,25 @@ export default function GradeImportExportDialog({
         },
       },
     })),
+    onAcceptSuggestedValue: (cell, row, column) => {
+      if (typeof cell.suggestedValue !== "number" || !Number.isFinite(cell.suggestedValue) || cell.suggestedValue < 0 || cell.suggestedValue > 100) {
+        return;
+      }
+      setSelectionState((current) => ({
+        ...current,
+        cellSettings: {
+          ...current.cellSettings,
+          [cell.id]: {
+            ...(current.cellSettings[cell.id] || defaultCellImportSetting(cell.id, row.id, column.id, row.studentId)),
+            include: true,
+            acceptedSuggestedValue: true,
+            resolvedValue: cell.suggestedValue,
+            reason: `Pakai nilai saran ${cell.suggestedValue}`,
+            updatedAt: nowSelectionTimestamp(),
+          },
+        },
+      }));
+    },
     onResetCellSelection: (cell) => setSelectionState((current) => {
       const cellSettings = { ...current.cellSettings };
       delete cellSettings[cell.id];

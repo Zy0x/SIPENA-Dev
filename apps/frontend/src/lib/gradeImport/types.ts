@@ -137,6 +137,7 @@ export interface GradeOperation {
   sourceColumnIndex?: number;
   studentId?: string;
   target: GradeTarget;
+  rawValue?: string | number | null;
   value: number | null;
   suggestedValue?: number;
   existingValue?: number | null;

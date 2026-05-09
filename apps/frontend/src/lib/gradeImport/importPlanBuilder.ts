@@ -452,6 +452,7 @@ export function buildImportPlan(
         sourceColumnIndex,
         studentId: studentMapping?.studentId,
         target,
+        rawValue,
         value: parsedValue.value,
         suggestedValue: parsedValue.suggestedValue,
         existingValue: existing?.value,

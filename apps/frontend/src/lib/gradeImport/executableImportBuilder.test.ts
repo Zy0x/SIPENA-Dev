@@ -217,6 +217,87 @@ describe("executable import builder", () => {
     expect(result.summary.invalidCount).toBe(1);
   });
 
+  it("blocks suggested values until the user accepts them", () => {
+    const result = buildExecutableImportOperations({
+      plan: plan({
+        gradeOperations: [operation({
+          value: null,
+          suggestedValue: 90,
+          action: "needs_confirmation",
+          warnings: [{ code: "GRADE_VALUE_FRACTION_SCALED", severity: "warning", message: "Scale to 90.", field: "value" }],
+        })],
+      }),
+    });
+
+    expect(result.summary.executableCount).toBe(0);
+    expect(result.summary.blockedCount).toBe(1);
+    expect(result.blockedItems[0]?.message).toContain("Nilai saran perlu disetujui");
+  });
+
+  it("uses accepted suggested values as executable values", () => {
+    const result = buildExecutableImportOperations({
+      plan: plan({
+        gradeOperations: [operation({
+          value: null,
+          suggestedValue: 90,
+          action: "needs_confirmation",
+          warnings: [{ code: "GRADE_VALUE_FRACTION_SCALED", severity: "warning", message: "Scale to 90.", field: "value" }],
+        })],
+      }),
+      selectionState: {
+        columnSettings: {},
+        cellSettings: {
+          "row-2:excel-col-4": {
+            cellId: "row-2:excel-col-4",
+            rowId: "row-2",
+            columnId: "excel-col-4",
+            include: true,
+            valueMode: "inherit_column",
+            acceptedSuggestedValue: true,
+            resolvedValue: 90,
+          },
+        },
+      },
+    });
+
+    expect(result.summary.executableCount).toBe(1);
+    expect(result.operations[0]?.value).toBe(90);
+  });
+
+  it("returns suggested values to blocked after the cell selection is reset", () => {
+    const suggestedPlan = plan({
+      gradeOperations: [operation({
+        rawValue: "18/20",
+        value: null,
+        suggestedValue: 90,
+        action: "needs_confirmation",
+        warnings: [{ code: "GRADE_VALUE_FRACTION_SCALED", severity: "warning", message: "Scale to 90.", field: "value" }],
+      })],
+    });
+    const accepted = buildExecutableImportOperations({
+      plan: suggestedPlan,
+      selectionState: {
+        columnSettings: {},
+        cellSettings: {
+          "row-2:excel-col-4": {
+            cellId: "row-2:excel-col-4",
+            rowId: "row-2",
+            columnId: "excel-col-4",
+            include: true,
+            valueMode: "inherit_column",
+            acceptedSuggestedValue: true,
+            resolvedValue: 90,
+          },
+        },
+      },
+    });
+    const reset = buildExecutableImportOperations({ plan: suggestedPlan, selectionState: { columnSettings: {}, cellSettings: {} } });
+
+    expect(accepted.summary.executableCount).toBe(1);
+    expect(reset.summary.executableCount).toBe(0);
+    expect(reset.summary.blockedCount).toBe(1);
+  });
+
   it("blocks missing students that still have values", () => {
     const result = buildExecutableImportOperations({
       plan: plan({
@@ -330,5 +411,29 @@ describe("executable import builder", () => {
     const preview = buildSpreadsheetPreviewModel({ plan: basePlan });
 
     expect(preview.summary.includedCells).toBe(executable.summary.executableCount);
+  });
+
+  it("marks unaccepted suggested values as blocked in preview", () => {
+    const basePlan = plan({
+      gradeOperations: [operation({
+        rawValue: "18/20",
+        value: null,
+        suggestedValue: 90,
+        action: "needs_confirmation",
+        warnings: [{ code: "GRADE_VALUE_FRACTION_SCALED", severity: "warning", message: "Scale to 90.", field: "value" }],
+      })],
+    });
+    const preview = buildSpreadsheetPreviewModel({ plan: basePlan });
+    const gradeCell = preview.rows[0]?.cells.find((cell) => cell.columnId === "excel-col-4");
+
+    expect(preview.summary.includedCells).toBe(0);
+    expect(gradeCell).toMatchObject({
+      status: "blocked",
+      displayValue: "18/20 -> Saran 90",
+      rawValue: "18/20",
+      suggestedValue: 90,
+      resolvedValue: null,
+      requiresConfirmation: true,
+    });
   });
 });

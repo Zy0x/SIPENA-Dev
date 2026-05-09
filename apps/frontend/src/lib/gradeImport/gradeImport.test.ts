@@ -187,6 +187,14 @@ describe("gradeImport value parser", () => {
     expect(parsed.warnings.map((item) => item.code)).toContain("GRADE_VALUE_FRACTION_SCALED");
   });
 
+  it("blocks invalid fractions", () => {
+    const parsed = parseGradeValue("18/0");
+
+    expect(parsed.status).toBe("invalid");
+    expect(parsed.value).toBeNull();
+    expect(parsed.conflicts.map((item) => item.code)).toContain("GRADE_VALUE_INVALID");
+  });
+
   it.each(["#N/A", "#VALUE!", "#DIV/0!", "nilai bagus"])("blocks invalid value %s", (value) => {
     const parsed = parseGradeValue(value);
 

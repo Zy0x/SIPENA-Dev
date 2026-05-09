@@ -1,6 +1,6 @@
 import type { ConflictSimplifierResolverState } from "./conflictSimplifier";
 import { getSimplifiedConflictSourceId } from "./conflictSimplifier";
-import type { CellValueMode, ColumnValueMode, ImportSelectionState } from "./importSelection";
+import type { CellImportSetting, CellValueMode, ColumnValueMode, ImportSelectionState } from "./importSelection";
 import type { ColumnMapping, GradeOperation, GradeTarget, ImportConflict, ImportPlan, StudentMapping, UpdateMode } from "./types";
 
 export type ExecutableImportAction = "fill_empty" | "overwrite";
@@ -107,6 +107,22 @@ function isInvalidOperation(operation: GradeOperation): boolean {
     || conflict.code.includes("INVALID")
     || conflict.code.includes("TEXTUAL"),
   );
+}
+
+function isValidGradeNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
+export function resolveOperationValue(
+  operation: GradeOperation,
+  cellSetting?: CellImportSetting,
+): number | null {
+  if (isValidGradeNumber(operation.value)) return operation.value;
+  if (cellSetting?.acceptedSuggestedValue && isValidGradeNumber(operation.suggestedValue)) {
+    return operation.suggestedValue;
+  }
+  if (isValidGradeNumber(cellSetting?.resolvedValue)) return cellSetting.resolvedValue;
+  return null;
 }
 
 function isResolved(
@@ -261,6 +277,8 @@ export function buildExecutableImportOperations({
     const target = effectiveColumnTarget(columnMapping, operation, columnOverride);
     const studentId = effectiveStudentId(studentMapping, resolverState, operation.rowIndex);
     const conflicts = unresolvedConflicts(operation, resolverState);
+    const cellSetting = selectionState?.cellSettings[cellIdFor(operation.rowIndex, operation.columnIndex)];
+    const resolvedValue = resolveOperationValue(operation, cellSetting);
 
     if (isManuallySkipped(operation, resolverState, selectionState) || columnOverride?.kind === "ignore") {
       skippedItems.push(skippedItem(operation, "manual_skip", "Baris, kolom, atau sel dilewati sesuai pilihan user."));
@@ -272,7 +290,11 @@ export function buildExecutableImportOperations({
       return;
     }
 
-    if (operation.value === null || operation.value === undefined) {
+    if (resolvedValue === null) {
+      if (operation.suggestedValue !== undefined) {
+        blockedItems.push(blockedItem(operation, "blocked_operation", "Nilai saran perlu disetujui sebelum disimpan.", conflicts));
+        return;
+      }
       skippedItems.push(skippedItem(operation, "empty_value", "Nilai kosong dilewati dan tidak menghapus nilai lama."));
       return;
     }
@@ -330,7 +352,7 @@ export function buildExecutableImportOperations({
       sourceColumnIndex: operation.sourceColumnIndex,
       studentId,
       target,
-      value: operation.value,
+      value: resolvedValue,
       action: hasExisting ? "overwrite" : "fill_empty",
     });
   });

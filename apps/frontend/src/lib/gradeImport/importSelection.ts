@@ -29,6 +29,8 @@ export type CellImportSetting = {
   studentId?: string;
   include: boolean;
   valueMode: CellValueMode;
+  resolvedValue?: number | null;
+  acceptedSuggestedValue?: boolean;
   overwriteConfirmed?: boolean;
   reason?: string;
   updatedAt?: string;
