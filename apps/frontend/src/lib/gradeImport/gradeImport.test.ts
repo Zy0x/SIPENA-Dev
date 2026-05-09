@@ -728,6 +728,23 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2" && operation.target.assignmentId === "assignment-1")?.value).toBe(0);
   });
 
+  it("skips Excel rows that are missing in web instead of blocking every value", () => {
+    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 90],
+        [2, "9999999999", "Siswa Dari File Lain", 75],
+      ],
+    }), { students });
+    const plan = buildImportPlan(freeAnalysis, { students, chapters, assignments });
+    const skippedRowOperation = plan.gradeOperations.find((operation) => operation.rowIndex === 3);
+
+    expect(plan.studentMappings.find((mapping) => mapping.rowIndex === 3)?.status).toBe("missing_in_web");
+    expect(skippedRowOperation?.action).toBe("skip_existing");
+    expect(skippedRowOperation?.conflicts.map((item) => item.code)).not.toContain("IMPORT_STUDENT_NOT_SAFE_FOR_VALUE");
+    expect(plan.conflicts.map((item) => item.code)).not.toContain("IMPORT_STUDENT_NOT_SAFE_FOR_VALUE");
+  });
+
   it("blocks new BAB/task suggestions and invalid values in strict mode", () => {
     const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
       Nilai: [

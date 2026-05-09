@@ -171,6 +171,16 @@ function hasImportableStudent(mapping: StudentMapping): boolean {
   return Boolean(mapping.studentId && ["safe", "warning"].includes(mapping.status));
 }
 
+function shouldSkipStudentRow(mapping: StudentMapping | undefined): boolean {
+  return mapping?.status === "missing_in_web" || mapping?.status === "missing_in_excel";
+}
+
+function hasBlockingStudentProblem(mapping: StudentMapping | undefined): boolean {
+  if (!mapping) return true;
+  if (shouldSkipStudentRow(mapping)) return false;
+  return !hasImportableStudent(mapping);
+}
+
 function hasImportableColumn(mapping: MatchedColumn): boolean {
   return Boolean(mapping.target && ["safe", "warning"].includes(mapping.status) && ["existing_assignment", "sts", "sas"].includes(mapping.targetType));
 }
@@ -256,7 +266,8 @@ export function buildImportPlan(
       const operationWarnings = [...parsedValue.warnings];
       const operationConflicts: ImportConflict[] = [...parsedValue.conflicts];
 
-      if (!studentMapping || !hasImportableStudent(studentMapping)) {
+      const skipStudentRow = shouldSkipStudentRow(studentMapping);
+      if (hasBlockingStudentProblem(studentMapping)) {
         if (parsedValue.value !== null || parsedValue.status === "needs_confirmation") {
           operationConflicts.push(conflict(
             "IMPORT_STUDENT_NOT_SAFE_FOR_VALUE",
@@ -294,7 +305,9 @@ export function buildImportPlan(
         : undefined;
       const selected = selectedColumns.size === 0 || selectedColumns.has(column.columnIndex);
       const baseAction = decideOperationAction(parsedValue.value, existing?.value, updateMode, selected);
-      const action: GradeOperation["action"] = operationConflicts.length
+      const action: GradeOperation["action"] = skipStudentRow
+        ? "skip_existing"
+        : operationConflicts.length
         ? "blocked"
         : parsedValue.status === "needs_confirmation" || column.status === "needs_confirmation" || studentMapping?.status === "ambiguous"
           ? "needs_confirmation"

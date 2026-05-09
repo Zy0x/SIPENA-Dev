@@ -87,6 +87,8 @@ const autoFixableConflictCodes = new Set([
   "STUDENT_ID_NISN_CHANGED",
   "STUDENT_NISN_NORMALIZED_MATCH",
   "STUDENT_NAME_NORMALIZED_MATCH",
+  "STUDENT_MISSING_IN_EXCEL",
+  "STUDENT_MISSING_IN_WEB",
   "GRADE_VALUE_DECIMAL_COMMA",
   "GRADE_VALUE_PERCENT",
   "GRADE_VALUE_FRACTION_100",
@@ -129,7 +131,6 @@ const manualConflictCodes = new Set([
   "STUDENT_MARKED_UNRESOLVED",
   "STUDENT_MATCH_AMBIGUOUS",
   "STUDENT_MATCH_DUPLICATE_WEB_CANDIDATE",
-  "STUDENT_MISSING_IN_WEB",
 ]);
 
 export function getSimplifiedConflictSourceId(
@@ -225,6 +226,34 @@ function classifyConflict(
     excelName: student?.excelName,
     webName: student?.webName,
   };
+
+  if (conflict.code === "STUDENT_MISSING_IN_WEB") {
+    return makeItem("auto_fixable", {
+      id,
+      sourceConflictIds,
+      title: `Lewati baris "${student?.excelName || "siswa dari Excel"}"`,
+      description: "Siswa ini tidak ada di data web. SIPENA akan melewati baris ini dan tidak membuat siswa baru.",
+      recommendedActionLabel: "Lewati baris ini",
+      detailLabel: "Lihat alasan SIPENA",
+      reason: conflict.message,
+      rawType: conflict.type,
+      metadata,
+    });
+  }
+
+  if (conflict.code === "STUDENT_MISSING_IN_EXCEL") {
+    return makeItem("auto_fixable", {
+      id,
+      sourceConflictIds,
+      title: `Biarkan siswa "${student?.webName || "di web"}"`,
+      description: "Siswa ini ada di web tetapi tidak ada di Excel. Nilainya tidak akan diubah dari file ini.",
+      recommendedActionLabel: "Biarkan",
+      detailLabel: "Lihat alasan SIPENA",
+      reason: conflict.message,
+      rawType: conflict.type,
+      metadata,
+    });
+  }
 
   if (autoFixableConflictCodes.has(conflict.code)) {
     if (conflict.type === "student") {

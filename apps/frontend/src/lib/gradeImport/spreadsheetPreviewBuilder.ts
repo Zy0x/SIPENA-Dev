@@ -315,7 +315,8 @@ function buildPreviewColumns(
 function rowStatus(mapping: StudentMapping, resolverState?: SpreadsheetPreviewResolverState): PreviewCellStatus {
   if (resolverState?.ignoredRows?.includes(mapping.rowIndex)) return "ignored";
   if (hasBlockingConflict(mapping.conflicts, resolverState)) return "manual_required";
-  if (["ambiguous", "blocked", "missing", "missing_in_web"].includes(mapping.status)) return "manual_required";
+  if (mapping.status === "missing_in_web" || mapping.status === "missing_in_excel") return "ignored";
+  if (["ambiguous", "blocked", "missing"].includes(mapping.status)) return "manual_required";
   if (mapping.status === "warning" || mapping.status === "needs_confirmation") return "needs_check";
   return "unchanged";
 }
@@ -352,7 +353,8 @@ function operationDecision(
   const isManuallySkipped = cellSetting?.include === false || resolverState?.ignoredCells?.includes(`${row.rowIndex}:${columnIndex}`) || false;
   const isManuallyIncluded = cellSetting?.include === true;
   const isBlockedByColumn = !column.effectiveInclude || column.isIgnored || resolverState?.ignoredColumns?.includes(columnIndex) || false;
-  const isBlockedByRow = resolverState?.ignoredRows?.includes(row.rowIndex) || rowStatusValue === "manual_required" || rowStatusValue === "ignored" || false;
+  const isIgnoredByRow = resolverState?.ignoredRows?.includes(row.rowIndex) || rowStatusValue === "ignored" || false;
+  const isBlockedByRow = rowStatusValue === "manual_required";
   const isBlockedByTarget = column.status === "manual_required" || !column.gradeType && column.type !== "identity";
   const overwriteConfirmed = Boolean(cellSetting?.overwriteConfirmed || column.overwriteConfirmed);
   const base: Omit<PreviewCellDecision, "status" | "effectiveInclude"> = {
@@ -368,6 +370,7 @@ function operationDecision(
     overwriteConfirmed,
   };
 
+  if (isIgnoredByRow) return { ...base, status: "ignored", effectiveInclude: false };
   if (isBlockedByRow) return { ...base, status: "blocked", effectiveInclude: false };
   if (isBlockedByColumn) {
     return {

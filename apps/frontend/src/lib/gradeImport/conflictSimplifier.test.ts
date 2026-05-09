@@ -104,6 +104,29 @@ describe("gradeImport conflict simplifier", () => {
     expect(result.groups[0].items.some((item) => item.recommendedActionLabel === "Gunakan data siswa dari web")).toBe(true);
   });
 
+  it("treats students missing in web as safe row skips", () => {
+    const result = simplifyImportConflicts({
+      plan: plan({
+        studentMappings: [studentMapping({
+          rowIndex: 3,
+          studentId: undefined,
+          webName: undefined,
+          webNisn: undefined,
+          excelName: "Siswa Dari File Lain",
+          excelNisn: "999",
+          matchedBy: "manual",
+          status: "missing_in_web",
+          warnings: [{ code: "STUDENT_MISSING_IN_WEB", severity: "warning", message: "Tidak ada di web.", rowIndex: 3 }],
+        })],
+        warnings: [{ code: "STUDENT_MISSING_IN_WEB", severity: "warning", message: "Tidak ada di web.", rowIndex: 3 }],
+      }),
+    });
+
+    expect(result.manualRequiredCount).toBe(0);
+    expect(result.groups[0].items.some((item) => item.recommendedActionLabel === "Lewati baris ini")).toBe(true);
+    expect(result.isReadyForPreview).toBe(true);
+  });
+
   it("groups explicit new assignment suggestion as needs confirmation", () => {
     const result = simplifyImportConflicts({
       plan: plan({

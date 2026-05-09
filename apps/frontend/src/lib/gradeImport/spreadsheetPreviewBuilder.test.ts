@@ -174,6 +174,28 @@ describe("spreadsheet preview builder", () => {
     expect(model.summary.manualRequired).toBeGreaterThan(0);
   });
 
+  it("shows rows missing in web as ignored instead of blocking import", () => {
+    const model = buildSpreadsheetPreviewModel({
+      plan: plan({
+        studentMappings: [student({
+          studentId: undefined,
+          webName: undefined,
+          webNisn: undefined,
+          excelName: "Siswa Dari File Lain",
+          excelNisn: "999",
+          status: "missing_in_web",
+          matchedBy: "manual",
+          warnings: [{ code: "STUDENT_MISSING_IN_WEB", severity: "warning", message: "Tidak ada di web.", rowIndex: 2 }],
+        })],
+        gradeOperations: [operation({ studentId: undefined, action: "skip_existing" })],
+      }),
+    });
+
+    expect(model.rows[0].status).toBe("ignored");
+    expect(firstGradeCell(model)?.status).toBe("ignored");
+    expect(model.summary.manualRequired).toBe(0);
+  });
+
   it("marks invalid values as invalid", () => {
     const model = buildSpreadsheetPreviewModel({
       plan: plan({

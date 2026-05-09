@@ -2452,6 +2452,12 @@ export default function GradeImportExportDialog({
             .filter((mapping) => mapping.parsedHeader.derived || mapping.parsedHeader.reserved)
             .map((mapping) => mapping.columnIndex),
         ]),
+        ignoredRows: uniqueNumbersForState([
+          ...current.ignoredRows,
+          ...(plan?.studentMappings || [])
+            .filter((mapping) => mapping.status === "missing_in_web")
+            .map((mapping) => mapping.rowIndex),
+        ]),
         studentOverrides: {
           ...current.studentOverrides,
           ...Object.fromEntries((plan?.studentMappings || [])
