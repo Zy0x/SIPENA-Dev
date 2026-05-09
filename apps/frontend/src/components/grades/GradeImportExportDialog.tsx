@@ -2795,7 +2795,9 @@ export default function GradeImportExportDialog({
         academicYearId: importContext.academicYearId,
       });
       const isOfficial = officialAnalysis.sourceType.startsWith("official_");
-      const nextAnalysis = isOfficial ? officialAnalysis : analyzeFreeExcelWorkbook(workbook);
+      const nextAnalysis = isOfficial
+        ? officialAnalysis
+        : analyzeFreeExcelWorkbook(workbook, { students: importContext.students });
       const nextPlan = buildImportPlan(nextAnalysis, importContext, { updateMode });
 
       setSelectionState(emptyImportSelectionState);

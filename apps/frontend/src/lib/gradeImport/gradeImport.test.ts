@@ -638,6 +638,37 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     expect(analysis.bestRegion?.gradeColumns.map((column) => column.rawHeader)).toEqual(["BAB 1 - Tugas 1", "STS"]);
   });
 
+  it("recognizes common teacher identity headers and prioritizes sheets that match active students", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai_Multi_Header: [
+        ["Data Siswa", "", "", "BAB 1", "", "Ujian"],
+        ["No", "NISN", "Nama Siswa", "Ide Pokok", "Tugas 4", "UTS"],
+        [1, "0012345678", "Siti Aminah", 80, 82, 90],
+      ],
+      Nilai_Smart_Test: [
+        ["Daftar Nilai Bahasa Indonesia"],
+        ["Kelas VI-B"],
+        ["Diisi dari file guru"],
+        ["No", "NISN / NIS", "Peserta Didik", "UH 1", "BAB 1 - Kalimat Fakta", "PTS", "PAS", "Rata-rata"],
+        [1, "0012345678", "Siti Aminah", 82, 86, 90, 91, 87.25],
+        [2, "1234567890", "Muhammad Rizki", 75, 80, 84, 85, 81],
+        ["Rata-rata", "", "", 78.5, 83, 87, 88, 84],
+      ],
+    }), { students });
+
+    expect(analysis.bestRegion?.sheetName).toBe("Nilai_Smart_Test");
+    expect(analysis.bestRegion?.headerRowIndex).toBe(4);
+    expect(analysis.bestRegion?.nameColumnIndex).toBe(3);
+    expect(analysis.bestRegion?.nisnColumnIndex).toBe(2);
+    expect(analysis.bestRegion?.matchedStudentCount).toBe(2);
+    expect(analysis.bestRegion?.gradeColumns.map((column) => column.rawHeader)).toEqual([
+      "UH 1",
+      "BAB 1 - Kalimat Fakta",
+      "PTS",
+      "PAS",
+    ]);
+  });
+
   it("supports simple multi-row headers and warns about multi-region workbooks", () => {
     const analysis = analyzeFreeExcelWorkbook(workbookResult({
       Nilai1: [
@@ -654,6 +685,25 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     expect(analysis.bestRegion?.headerRowCount).toBe(2);
     expect(analysis.bestRegion?.gradeColumns[0].rawHeader).toBe("BAB 1 - Tugas 1");
     expect(analysis.warnings.map((item) => item.code)).toContain("FREE_EXCEL_MULTI_REGION_DETECTED");
+  });
+
+  it("carries sparse multi-row group headers into grade columns", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["Data Siswa", "", "", "BAB 1", "", "", "Ujian", "", "Rekap", ""],
+        ["No", "NISN / NIS", "Peserta Didik", "Ide Pokok", "Fiksi Non Fiksi", "Tugas 4", "UTS", "UAS", "Total", "Status"],
+        [1, "0012345678", "Siti Aminah", 80, 82, 83, 84, 85, 414, "Tuntas"],
+      ],
+    }));
+
+    expect(analysis.bestRegion?.headerRowCount).toBe(2);
+    expect(analysis.bestRegion?.gradeColumns.map((column) => column.rawHeader)).toEqual([
+      "BAB 1 - Ide Pokok",
+      "BAB 1 - Fiksi Non Fiksi",
+      "BAB 1 - Tugas 4",
+      "UTS",
+      "UAS",
+    ]);
   });
 
   it("builds a safe preview plan and skips existing values by default", () => {

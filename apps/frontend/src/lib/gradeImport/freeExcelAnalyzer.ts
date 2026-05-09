@@ -1,5 +1,5 @@
 import { parseGradeHeader } from "./headerParser";
-import { normalizeText, normalizeWhitespace } from "./textNormalizer";
+import { normalizeName, normalizeNisn, normalizeText, normalizeWhitespace } from "./textNormalizer";
 import type { ImportConflict, ImportSourceType, ImportWarning, ParsedGradeHeader } from "./types";
 import type { WorkbookCell, WorkbookReadResult, WorkbookSheetData } from "./workbookReader";
 
@@ -17,6 +17,9 @@ export interface FreeExcelColumnAnalysis {
 export interface FreeExcelRegionAnalysis {
   sheetName: string;
   score: number;
+  baseScore: number;
+  matchedStudentCount: number;
+  identityMatchScore: number;
   headerRowIndex: number;
   headerRowCount: number;
   dataStartRowIndex: number;
@@ -38,6 +41,17 @@ export interface FreeExcelAnalysis {
   conflicts: ImportConflict[];
 }
 
+export interface FreeExcelAnalyzerStudentContext {
+  id?: string | null;
+  name?: string | null;
+  nisn?: string | null;
+}
+
+export interface FreeExcelAnalyzerContext {
+  students?: FreeExcelAnalyzerStudentContext[];
+  preferredSheetName?: string | null;
+}
+
 const FOOTER_PATTERNS = [
   "rata rata",
   "jumlah",
@@ -48,6 +62,37 @@ const FOOTER_PATTERNS = [
   "kepala sekolah",
   "tanggal",
 ];
+
+const NAME_HEADER_ALIASES = new Set([
+  "nama",
+  "nama siswa",
+  "nama peserta didik",
+  "peserta didik",
+  "siswa",
+  "nama murid",
+  "murid",
+]);
+
+const NISN_HEADER_ALIASES = new Set([
+  "nisn",
+  "nis",
+  "nisn nis",
+  "nis nisn",
+  "nisn atau nis",
+  "nis atau nisn",
+  "nomor induk",
+  "nomor induk siswa",
+  "nomor induk siswa nasional",
+]);
+
+const HEADER_GROUP_LABELS = new Set([
+  "data siswa",
+  "identitas",
+  "ujian",
+  "rekap",
+  "nilai",
+  "nilai siswa",
+]);
 
 function warning(code: string, message: string, field?: string, rowIndex?: number, columnIndex?: number): ImportWarning {
   return { code, severity: "warning", message, field, rowIndex, columnIndex };
@@ -82,11 +127,23 @@ function isNumericGradeLike(value: WorkbookCell | undefined): boolean {
   return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
 }
 
+function isNameHeader(normalized: string): boolean {
+  return NAME_HEADER_ALIASES.has(normalized);
+}
+
+function isNisnHeader(normalized: string): boolean {
+  return NISN_HEADER_ALIASES.has(normalized);
+}
+
+function isIdentityHeader(normalized: string): boolean {
+  return ["no", "nomor"].includes(normalized) || isNameHeader(normalized) || isNisnHeader(normalized);
+}
+
 function detectColumnRole(header: string, parsed: ParsedGradeHeader, values: WorkbookCell[]): FreeExcelColumnRole {
   const normalized = normalizeText(header);
   if (["no", "nomor"].includes(normalized)) return "row_number";
-  if (["nama", "nama siswa", "nama peserta didik", "siswa"].includes(normalized)) return "name";
-  if (["nisn", "nis"].includes(normalized)) return "nisn";
+  if (isNameHeader(normalized)) return "name";
+  if (isNisnHeader(normalized)) return "nisn";
   if (parsed.reserved || parsed.derived) return "ignored";
   if (["assignment", "sts", "sas"].includes(parsed.headerType)) return "grade";
 
@@ -99,14 +156,88 @@ function detectColumnRole(header: string, parsed: ParsedGradeHeader, values: Wor
   return "unknown";
 }
 
-function combineHeaders(topRow: WorkbookCell[] | undefined, bottomRow: WorkbookCell[], columnIndex: number): string {
-  const top = normalizeWhitespace(cellText(topRow?.[columnIndex]));
+function expandHeaderRow(row: WorkbookCell[] | undefined, maxLength: number): string[] {
+  const expanded: string[] = [];
+  let active = "";
+  for (let index = 0; index < maxLength; index += 1) {
+    const current = normalizeWhitespace(cellText(row?.[index]));
+    if (current) active = current;
+    expanded[index] = current || active;
+  }
+  return expanded;
+}
+
+function combineHeaders(topHeaders: string[] | undefined, bottomRow: WorkbookCell[], columnIndex: number): string {
+  const top = normalizeWhitespace(topHeaders?.[columnIndex] || "");
   const bottom = normalizeWhitespace(cellText(bottomRow[columnIndex]));
   if (!top) return bottom;
   if (!bottom) return top;
-  if (normalizeText(top) === normalizeText(bottom)) return bottom;
-  if (["no", "nisn", "nis", "nama", "nama siswa", "nama peserta didik"].includes(normalizeText(bottom))) return bottom;
+  const normalizedTop = normalizeText(top);
+  const normalizedBottom = normalizeText(bottom);
+  if (normalizedTop === normalizedBottom) return bottom;
+  if (isIdentityHeader(normalizedBottom)) return bottom;
+
+  const parsedBottom = parseGradeHeader(bottom);
+  if (parsedBottom.reserved || parsedBottom.derived) return bottom;
+  if (["sts", "sas"].includes(parsedBottom.headerType)) return bottom;
+  if (HEADER_GROUP_LABELS.has(normalizedTop)) return bottom;
+
   return `${top} - ${bottom}`;
+}
+
+function createStudentLookup(students: FreeExcelAnalyzerStudentContext[] = []) {
+  const normalizedNames = new Set<string>();
+  const normalizedNisns = new Set<string>();
+
+  students.forEach((student) => {
+    const name = normalizeName(student.name).normalized;
+    const nisn = normalizeNisn(student.nisn).normalized;
+    if (name) normalizedNames.add(name);
+    if (nisn) normalizedNisns.add(nisn);
+  });
+
+  return { normalizedNames, normalizedNisns };
+}
+
+function countMatchedStudents(region: FreeExcelRegionAnalysis, context: FreeExcelAnalyzerContext): number {
+  if (!context.students?.length) return 0;
+
+  const lookup = createStudentLookup(context.students);
+  if (lookup.normalizedNames.size === 0 && lookup.normalizedNisns.size === 0) return 0;
+
+  const matchedKeys = new Set<string>();
+  region.dataRows.forEach((row) => {
+    const nameValue = region.nameColumnIndex ? row[region.nameColumnIndex - 1] : undefined;
+    const nisnValue = region.nisnColumnIndex ? row[region.nisnColumnIndex - 1] : undefined;
+    const normalizedName = normalizeName(nameValue).normalized;
+    const normalizedNisn = normalizeNisn(nisnValue).normalized;
+
+    if (normalizedNisn && lookup.normalizedNisns.has(normalizedNisn)) {
+      matchedKeys.add(`nisn:${normalizedNisn}`);
+      return;
+    }
+    if (normalizedName && lookup.normalizedNames.has(normalizedName)) {
+      matchedKeys.add(`name:${normalizedName}`);
+    }
+  });
+
+  return matchedKeys.size;
+}
+
+function applyContextScore(region: FreeExcelRegionAnalysis, context: FreeExcelAnalyzerContext): FreeExcelRegionAnalysis {
+  const matchedStudentCount = countMatchedStudents(region, context);
+  const identityMatchScore = matchedStudentCount * 15;
+  const sheetPreferenceScore = context.preferredSheetName
+    && normalizeText(context.preferredSheetName) === normalizeText(region.sheetName)
+    ? 80
+    : 0;
+
+  return {
+    ...region,
+    matchedStudentCount,
+    identityMatchScore,
+    score: region.baseScore + identityMatchScore + sheetPreferenceScore,
+  };
 }
 
 function getDataEndRowIndex(rows: WorkbookCell[][], dataStartRowIndex: number): number {
@@ -133,10 +264,11 @@ function analyzeCandidate(
     : [];
 
   const columnCount = Math.max(headerRow.length, topHeaderRow?.length || 0, ...dataRows.map((row) => row.length));
+  const expandedTopHeaders = headerRowCount === 2 ? expandHeaderRow(topHeaderRow, columnCount) : undefined;
   const columns: FreeExcelColumnAnalysis[] = [];
   for (let index = 0; index < columnCount; index += 1) {
     const rawHeader = headerRowCount === 2
-      ? combineHeaders(topHeaderRow, headerRow, index)
+      ? combineHeaders(expandedTopHeaders, headerRow, index)
       : normalizeWhitespace(cellText(headerRow[index]));
     const parsedHeader = parseGradeHeader(rawHeader);
     const values = dataRows.map((row) => row[index]);
@@ -156,9 +288,9 @@ function analyzeCandidate(
   const gradeColumns = columns.filter((column) => column.role === "grade");
   const usableDataRows = dataRows.filter((row) => !isFooterRow(row) && !isEmptyRow(row));
   const identityScore = (nameColumn ? 35 : 0) + (nisnColumn ? 25 : 0);
-  const score = identityScore + gradeColumns.length * 12 + Math.min(usableDataRows.length, 30);
+  const baseScore = identityScore + gradeColumns.length * 12 + Math.min(usableDataRows.length, 30);
 
-  if (score < 45 || gradeColumns.length === 0 || (!nameColumn && !nisnColumn)) return null;
+  if (baseScore < 45 || gradeColumns.length === 0 || (!nameColumn && !nisnColumn)) return null;
 
   const warnings: ImportWarning[] = [];
   if (headerRowCount === 2) {
@@ -180,7 +312,10 @@ function analyzeCandidate(
 
   return {
     sheetName: sheet.name,
-    score,
+    score: baseScore,
+    baseScore,
+    matchedStudentCount: 0,
+    identityMatchScore: 0,
     headerRowIndex,
     headerRowCount,
     dataStartRowIndex,
@@ -214,14 +349,26 @@ function analyzeSheet(sheet: WorkbookSheetData): FreeExcelRegionAnalysis[] {
     .filter((region, index, all) => index === 0 || Math.abs(region.headerRowIndex - all[0].headerRowIndex) > 2);
 }
 
-export function analyzeFreeExcelWorkbook(workbook: WorkbookReadResult): FreeExcelAnalysis {
+export function analyzeFreeExcelWorkbook(
+  workbook: WorkbookReadResult,
+  context: FreeExcelAnalyzerContext = {},
+): FreeExcelAnalysis {
   const warnings: ImportWarning[] = workbook.warnings.map((item) => warning(item.code, item.message, item.details));
   const conflicts: ImportConflict[] = [];
   if (!workbook.ok && "error" in workbook) {
     conflicts.push(conflict(workbook.error.code, workbook.error.message, "unsupported"));
   }
 
-  const regions = workbook.sheets.flatMap(analyzeSheet).sort((left, right) => right.score - left.score);
+  const regions = workbook.sheets
+    .flatMap(analyzeSheet)
+    .map((region) => applyContextScore(region, context))
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score;
+      if (right.matchedStudentCount !== left.matchedStudentCount) {
+        return right.matchedStudentCount - left.matchedStudentCount;
+      }
+      return right.dataRows.length - left.dataRows.length;
+    });
   const bestRegion = regions[0] || null;
   if (regions.length > 1) {
     warnings.push(warning(
