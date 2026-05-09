@@ -39,6 +39,8 @@ import {
   type ColumnMapping,
   type ColumnValueMode,
   type ConflictSimplifierResult,
+  type FreeExcelAnalysis,
+  type FreeExcelRegionAnalysis,
   type GradeOperation,
   type GradeTarget,
   type ImportConflict,
@@ -395,6 +397,10 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
     title: "Area nilai belum ditemukan",
     message: "SIPENA belum menemukan tabel nilai yang jelas di workbook. Pastikan ada kolom Nama/NISN dan kolom nilai.",
   },
+  IMPORT_REGION_SELECTION_REQUIRED: {
+    title: "Pilih tabel nilai dulu",
+    message: "Workbook memiliki lebih dari satu tabel nilai. Pilih tabel yang akan dipakai agar SIPENA tidak mengambil nilai dari area yang salah.",
+  },
   IMPORT_NO_SUPPORTED_TEMPLATE_STRUCTURE: {
     title: "Struktur template belum dikenali",
     message: "Format workbook belum dikenali sebagai template nilai SIPENA. Gunakan template resmi atau rapikan header nilai.",
@@ -562,6 +568,37 @@ function hasBlockedConflicts(plan: ImportPlan | null): boolean {
 
 function getTopWarnings(plan: ImportPlan | null): ImportWarning[] {
   return (plan?.warnings || []).slice(0, 5);
+}
+
+function isFreeExcelAnalysis(analysis: ImportPlanInputAnalysis | null): analysis is FreeExcelAnalysis {
+  return Boolean(analysis && "regions" in analysis);
+}
+
+function isRegionSelectionPending(analysis: ImportPlanInputAnalysis | null): boolean {
+  return isFreeExcelAnalysis(analysis) && analysis.requiresRegionSelection && !analysis.selectedRegionId;
+}
+
+function workbookCellLabel(value: unknown) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function sampleStudentLabels(region: FreeExcelRegionAnalysis): string[] {
+  return region.addressedDataRows
+    .slice(0, 3)
+    .map((row) => {
+      const name = region.nameColumnIndex ? workbookCellLabel(row.values[region.nameColumnIndex - 1]) : "";
+      const nisn = region.nisnColumnIndex ? workbookCellLabel(row.values[region.nisnColumnIndex - 1]) : "";
+      return [name, nisn ? `(${nisn})` : ""].filter(Boolean).join(" ");
+    })
+    .filter(Boolean);
+}
+
+function selectedRegionLabel(analysis: FreeExcelAnalysis): string | null {
+  if (!analysis.selectedRegionId) return null;
+  const region = analysis.regions.find((item) => item.id === analysis.selectedRegionId);
+  if (!region) return null;
+  return `${region.sheetName}, header baris ${region.headerRowIndex}`;
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -906,19 +943,131 @@ function EmptyPanel({ title, description }: { title: string; description: string
   );
 }
 
-function AnalysisStep({ plan }: { plan: ImportPlan | null }) {
+function RegionSelectionPanel({
+  analysis,
+  onSelectRegion,
+}: {
+  analysis: FreeExcelAnalysis;
+  onSelectRegion: (regionId: string) => void;
+}) {
+  const bestRegionId = analysis.bestRegion?.id;
+
+  return (
+    <div className="rounded-[24px] border border-orange-200 bg-orange-50/80 p-4 shadow-sm dark:border-orange-900/60 dark:bg-orange-950/20">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge tone="warning">Perlu pilih tabel</StatusBadge>
+            <StatusBadge tone="safe">{analysis.regions.length} tabel terdeteksi</StatusBadge>
+          </div>
+          <h3 className="mt-3 text-sm font-semibold text-slate-950 dark:text-slate-50">
+            Pilih tabel nilai yang akan diimport
+          </h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            SIPENA menemukan lebih dari satu tabel nilai valid. Tabel terbaik diberi tanda, tetapi import tidak dilanjutkan sampai Anda memilih tabel yang benar.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        {analysis.regions.map((region) => {
+          const gradeHeaders = region.gradeColumns.slice(0, 3).map((column) => column.rawHeader).filter(Boolean);
+          const studentSamples = sampleStudentLabels(region);
+          const selected = analysis.selectedRegionId === region.id;
+          const best = bestRegionId === region.id;
+
+          return (
+            <div
+              key={region.id}
+              className={cn(
+                "rounded-2xl border bg-white p-3 shadow-sm dark:bg-slate-950",
+                selected ? "border-emerald-300 ring-2 ring-emerald-100 dark:border-emerald-700 dark:ring-emerald-950" : "border-border",
+              )}
+            >
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={region.sheetName}>
+                      {region.sheetName}
+                    </p>
+                    {best ? <StatusBadge tone="safe">Rekomendasi</StatusBadge> : null}
+                    {selected ? <StatusBadge tone="success">Dipilih</StatusBadge> : null}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Header baris {region.headerRowIndex} - data baris {region.dataStartRowIndex}-{region.dataEndRowIndex}
+                  </p>
+                </div>
+                <div className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  Skor {region.score}
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-900/70">
+                  <p className="text-muted-foreground">Data siswa</p>
+                  <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">{region.addressedDataRows.length}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-900/70">
+                  <p className="text-muted-foreground">Kolom nilai</p>
+                  <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">{region.gradeColumns.length}</p>
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-2 text-xs leading-5 text-muted-foreground">
+                <p>
+                  <span className="font-medium text-slate-700 dark:text-slate-200">Header nilai: </span>
+                  {gradeHeaders.length ? gradeHeaders.join(", ") : "Belum ada contoh"}
+                </p>
+                <p>
+                  <span className="font-medium text-slate-700 dark:text-slate-200">Contoh siswa: </span>
+                  {studentSamples.length ? studentSamples.join(", ") : "Belum ada contoh"}
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                className="mt-3 min-h-10 w-full rounded-full"
+                variant={selected ? "outline" : "default"}
+                onClick={() => onSelectRegion(region.id)}
+              >
+                {selected ? "Tabel ini dipakai" : "Gunakan tabel ini"}
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AnalysisStep({
+  plan,
+  analysis,
+  onSelectRegion,
+}: {
+  plan: ImportPlan | null;
+  analysis: ImportPlanInputAnalysis | null;
+  onSelectRegion: (regionId: string) => void;
+}) {
   if (!plan) {
     return <EmptyPanel title="Belum ada file dianalisis" description="Upload file Excel atau CSV untuk membuat preview import." />;
   }
 
+  const freeAnalysis = isFreeExcelAnalysis(analysis) ? analysis : null;
+
   return (
     <div className="space-y-4">
+      {freeAnalysis?.requiresRegionSelection ? (
+        <RegionSelectionPanel analysis={freeAnalysis} onSelectRegion={onSelectRegion} />
+      ) : null}
+
       <div className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge tone={sourceTone(plan.sourceType)}>{sourceLabels[plan.sourceType]}</StatusBadge>
           <StatusBadge tone={hasBlockedConflicts(plan) ? "warning" : "safe"}>
             {hasBlockedConflicts(plan) ? "Perlu dicek" : "Siap dilanjutkan"}
           </StatusBadge>
+          {freeAnalysis?.selectedRegionId ? <StatusBadge tone="safe">{selectedRegionLabel(freeAnalysis)}</StatusBadge> : null}
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <MetricCard label="Siswa cocok" value={plan.summary.matchedStudentCount || 0} tone="green" />
@@ -2326,7 +2475,10 @@ export default function GradeImportExportDialog({
 
   useEffect(() => {
     if (!analysis) return;
-    const nextBasePlan = buildImportPlan(analysis, importContext, { updateMode });
+    const nextBasePlan = buildImportPlan(analysis, importContext, {
+      updateMode,
+      selectedRegionId: isFreeExcelAnalysis(analysis) ? analysis.selectedRegionId : undefined,
+    });
     setBasePlan(nextBasePlan);
     setPlan(applyResolverToPlan(nextBasePlan, resolverState, importContext, updateMode));
   }, [analysis, importContext, resolverState, updateMode]);
@@ -2781,6 +2933,7 @@ export default function GradeImportExportDialog({
   const hasPlan = Boolean(plan || basePlan);
   const blocked = hasBlockedConflicts(plan);
   const unsupported = plan?.sourceType === "unsupported";
+  const regionSelectionPending = isRegionSelectionPending(analysis);
   const smartFixResult = useMemo(() => (
     plan ? simplifyImportConflicts({ plan, resolverState, updateMode }) : null
   ), [plan, resolverState, updateMode]);
@@ -2788,8 +2941,8 @@ export default function GradeImportExportDialog({
     plan ? buildSpreadsheetPreviewModel({ plan, resolverState, updateMode, selectionState }) : null
   ), [plan, resolverState, selectionState, updateMode]);
   const canGoNext = useMemo(() => {
-    if (stepIndex === 0) return hasPlan && !unsupported;
-    if (stepIndex === 1) return hasPlan && !unsupported;
+    if (stepIndex === 0) return hasPlan && !unsupported && !regionSelectionPending;
+    if (stepIndex === 1) return hasPlan && !unsupported && !regionSelectionPending;
     if (stepIndex === 2 || stepIndex === 3) {
       return hasPlan
         && (spreadsheetPreview?.summary.manualRequired || 0) === 0
@@ -2800,6 +2953,7 @@ export default function GradeImportExportDialog({
     return hasPlan;
   }, [
     hasPlan,
+    regionSelectionPending,
     spreadsheetPreview?.summary.invalidCells,
     spreadsheetPreview?.summary.manualRequired,
     spreadsheetPreview?.summary.overwriteNeedsConfirmation,
@@ -2812,6 +2966,21 @@ export default function GradeImportExportDialog({
     setTab(nextTab);
     onTabChange(nextTab);
   }, [onTabChange]);
+
+  const handleSelectRegion = useCallback((regionId: string) => {
+    setAnalysis((current) => {
+      if (!isFreeExcelAnalysis(current)) return current;
+      const region = current.regions.find((item) => item.id === regionId);
+      if (!region) return current;
+      return {
+        ...current,
+        selectedRegionId: regionId,
+      };
+    });
+    setResolverState(emptyResolverState);
+    setSelectionState(emptyImportSelectionState);
+    success("Tabel nilai dipilih", "Preview import diperbarui dari tabel yang Anda pilih.");
+  }, [success]);
 
   const showPlaceholder = useCallback((title: string, description: string) => {
     info(title, description);
@@ -2863,7 +3032,11 @@ export default function GradeImportExportDialog({
       const nextAnalysis = isOfficial
         ? officialAnalysis
         : analyzeFreeExcelWorkbook(workbook, { students: importContext.students });
-      const nextPlan = buildImportPlan(nextAnalysis, importContext, { updateMode });
+      const nextPlan = buildImportPlan(nextAnalysis, importContext, {
+        updateMode,
+        selectedRegionId: isFreeExcelAnalysis(nextAnalysis) ? nextAnalysis.selectedRegionId : undefined,
+      });
+      const needsRegionSelection = isRegionSelectionPending(nextAnalysis);
 
       setSelectionState(emptyImportSelectionState);
       setAnalysis(nextAnalysis);
@@ -2873,7 +3046,11 @@ export default function GradeImportExportDialog({
       setStepIndex(1);
       setExecutionState("ready");
       setAnalysisErrorCode(null);
-      success("Preview import siap", "File sudah dianalisis sebagai preview. Belum ada data yang disimpan.");
+      if (needsRegionSelection) {
+        showWarning("Pilih tabel nilai dulu", "Workbook memiliki beberapa tabel nilai. Pilih tabel yang benar sebelum lanjut.");
+      } else {
+        success("Preview import siap", "File sudah dianalisis sebagai preview. Belum ada data yang disimpan.");
+      }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "File gagal dianalisis.";
       setAnalysisError(message);
@@ -2881,7 +3058,7 @@ export default function GradeImportExportDialog({
       setExecutionState("failed");
       showError("IMPORT_WORKBOOK_READ_FAILED", message);
     }
-  }, [importContext, showError, success, updateMode]);
+  }, [importContext, showError, showWarning, success, updateMode]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -3206,7 +3383,7 @@ export default function GradeImportExportDialog({
                     </>
                   ) : null}
 
-                  {stepIndex === 1 ? <AnalysisStep plan={plan} /> : null}
+                  {stepIndex === 1 ? <AnalysisStep plan={plan} analysis={analysis} onSelectRegion={handleSelectRegion} /> : null}
                   {stepIndex === 2 ? (
                     <SpreadsheetPreviewStep
                       plan={plan}

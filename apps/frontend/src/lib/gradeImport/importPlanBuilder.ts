@@ -1,5 +1,5 @@
 import { matchColumns, type ColumnMatcherHeaderInput, type MatchedColumn } from "./columnMatcher";
-import type { FreeExcelAnalysis } from "./freeExcelAnalyzer";
+import type { FreeExcelAnalysis, FreeExcelRegionAnalysis } from "./freeExcelAnalyzer";
 import type { OfficialTemplateAnalysis } from "./officialTemplateReader";
 import { extractStudentRowsFromWorkbook, matchStudents, type ImportWebStudent, type OfficialStudentRowMetadata } from "./studentMatcher";
 import type {
@@ -52,6 +52,8 @@ export interface ImportPlanBuilderOptions {
   updateMode?: UpdateMode;
   strictMode?: boolean;
   selectedColumnIndexes?: number[];
+  selectedRegionId?: string;
+  selectedRegion?: FreeExcelRegionAnalysis;
 }
 
 export type ImportPlanInputAnalysis = OfficialTemplateAnalysis | FreeExcelAnalysis;
@@ -106,7 +108,54 @@ function readOfficialStudentMetadata(analysis: OfficialTemplateAnalysis): Offici
     .filter((item) => item.studentId);
 }
 
-function getRowsAndHeaders(analysis: ImportPlanInputAnalysis): {
+function emptyPlan(
+  sourceType: ImportSourceType,
+  updateMode: UpdateMode,
+  warnings: ImportWarning[],
+  conflicts: ImportConflict[],
+): ImportPlan {
+  return {
+    sourceType,
+    updateMode,
+    studentMappings: [],
+    columnMappings: [],
+    structureSuggestions: [],
+    gradeOperations: [],
+    warnings,
+    conflicts,
+    summary: {
+      totalRows: 0,
+      matchedStudents: 0,
+      mappedColumns: 0,
+      safeOperations: 0,
+      blockedOperations: 0,
+      needsConfirmation: 0,
+      matchedStudentCount: 0,
+      ambiguousStudentCount: 0,
+      missingStudentCount: 0,
+      gradeColumnCount: 0,
+      conflictCount: conflicts.length,
+      newAssignmentCount: 0,
+      newChapterCount: 0,
+      invalidValueCount: 0,
+      readyImportCount: 0,
+      skippedValueCount: 0,
+    },
+  };
+}
+
+function isFreeExcelAnalysis(analysis: ImportPlanInputAnalysis): analysis is FreeExcelAnalysis {
+  return "regions" in analysis;
+}
+
+function getSelectedFreeRegion(analysis: FreeExcelAnalysis, options: ImportPlanBuilderOptions): FreeExcelRegionAnalysis | null {
+  if (options.selectedRegion) return options.selectedRegion;
+  const selectedRegionId = options.selectedRegionId || analysis.selectedRegionId;
+  if (selectedRegionId) return analysis.regions.find((region) => region.id === selectedRegionId) || null;
+  return analysis.requiresRegionSelection ? null : analysis.bestRegion;
+}
+
+function getRowsAndHeaders(analysis: ImportPlanInputAnalysis, options: ImportPlanBuilderOptions): {
   rows: WorkbookCell[][];
   rowByIndex: Map<number, WorkbookCell[]>;
   studentRows: ReturnType<typeof extractStudentRowsFromWorkbook>;
@@ -137,7 +186,7 @@ function getRowsAndHeaders(analysis: ImportPlanInputAnalysis): {
     };
   }
 
-  const region = analysis.bestRegion;
+  const region = getSelectedFreeRegion(analysis, options);
   if (!region) {
     return { rows: [], rowByIndex: new Map(), studentRows: [], headers: [], warnings: [warning("IMPORT_NO_FREE_EXCEL_REGION", "Tidak ada region nilai yang cukup jelas untuk dibuat ImportPlan.")] };
   }
@@ -251,7 +300,31 @@ export function buildImportPlan(
   const updateMode = options.updateMode || "fill_empty_only";
   const strictMode = options.strictMode ?? true;
   const selectedColumns = new Set(options.selectedColumnIndexes || []);
-  const extracted = getRowsAndHeaders(analysis);
+  if (isFreeExcelAnalysis(analysis) && analysis.requiresRegionSelection && !getSelectedFreeRegion(analysis, options)) {
+    return emptyPlan(
+      sourceTypeOf(analysis),
+      updateMode,
+      [
+        ...(analysis.warnings || []),
+        warning(
+          "IMPORT_REGION_SELECTION_REQUIRED",
+          "Workbook memiliki lebih dari satu tabel nilai. Pilih tabel yang akan dipakai sebelum preview import dibuat.",
+          undefined,
+          undefined,
+          "region",
+        ),
+      ],
+      [
+        conflict(
+          "IMPORT_REGION_SELECTION_REQUIRED",
+          "Workbook memiliki lebih dari satu tabel nilai. Pilih tabel yang akan dipakai sebelum import dilanjutkan.",
+          "unsupported",
+        ),
+      ],
+    );
+  }
+
+  const extracted = getRowsAndHeaders(analysis, options);
   const studentResult = matchStudents(extracted.studentRows, context.students);
   const columnResult = matchColumns(extracted.headers, context.chapters, context.assignments);
   const warnings: ImportWarning[] = [

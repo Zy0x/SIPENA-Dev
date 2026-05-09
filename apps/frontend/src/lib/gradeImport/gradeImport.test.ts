@@ -752,6 +752,9 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
 
     expect(analysis.bestRegion?.headerRowCount).toBe(2);
     expect(analysis.bestRegion?.gradeColumns[0].rawHeader).toBe("BAB 1 - Tugas 1");
+    expect(analysis.regions.length).toBeGreaterThan(1);
+    expect(analysis.requiresRegionSelection).toBe(true);
+    expect(analysis.bestRegion?.id).toBe("Nilai1:2:3:3");
     expect(analysis.warnings.map((item) => item.code)).toContain("FREE_EXCEL_MULTI_REGION_DETECTED");
   });
 
@@ -794,6 +797,51 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     expect(plan.summary.gradeColumnCount).toBe(2);
     expect(plan.gradeOperations.find((operation) => operation.studentId === "student-1" && operation.target.assignmentId === "assignment-1")?.action).toBe("skip_existing");
     expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2" && operation.target.assignmentId === "assignment-1")?.value).toBe(0);
+  });
+
+  it("blocks final plan when free Excel has multiple regions and no region is selected", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 90],
+        [],
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "1234567890", "Muhammad Rizki", 75],
+      ],
+    }), { students });
+
+    const plan = buildImportPlan(analysis, { students, chapters, assignments });
+
+    expect(analysis.regions).toHaveLength(2);
+    expect(analysis.requiresRegionSelection).toBe(true);
+    expect(plan.gradeOperations).toHaveLength(0);
+    expect(plan.summary.readyImportCount).toBe(0);
+    expect(plan.conflicts.map((item) => item.code)).toContain("IMPORT_REGION_SELECTION_REQUIRED");
+  });
+
+  it("uses selectedRegionId when building an ImportPlan from multi-region free Excel", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 90],
+        [],
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "1234567890", "Muhammad Rizki", 75],
+      ],
+    }), { students });
+    const secondRegion = analysis.regions.find((region) => region.headerRowIndex === 4);
+    const plan = buildImportPlan(analysis, { students, chapters, assignments }, { selectedRegionId: secondRegion?.id });
+
+    expect(secondRegion?.id).toBe("Nilai:4:5:5");
+    expect(plan.conflicts.map((item) => item.code)).not.toContain("IMPORT_REGION_SELECTION_REQUIRED");
+    expect(plan.studentMappings.filter((mapping) => mapping.status !== "missing_in_excel").map((mapping) => mapping.rowIndex)).toEqual([5]);
+    expect(plan.gradeOperations).toHaveLength(1);
+    expect(plan.gradeOperations[0]).toMatchObject({
+      rowIndex: 5,
+      originalRowIndex: 5,
+      studentId: "student-2",
+      value: 75,
+    });
   });
 
   it("keeps original row indexes in ImportPlan operations after blank workbook rows", () => {

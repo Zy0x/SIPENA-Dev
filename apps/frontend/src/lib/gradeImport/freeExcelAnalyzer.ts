@@ -17,6 +17,7 @@ export interface FreeExcelColumnAnalysis {
 }
 
 export interface FreeExcelRegionAnalysis {
+  id: string;
   sheetName: string;
   score: number;
   baseScore: number;
@@ -40,6 +41,8 @@ export interface FreeExcelAnalysis {
   workbook: WorkbookReadResult;
   bestRegion: FreeExcelRegionAnalysis | null;
   regions: FreeExcelRegionAnalysis[];
+  requiresRegionSelection: boolean;
+  selectedRegionId?: string;
   warnings: ImportWarning[];
   conflicts: ImportConflict[];
 }
@@ -53,6 +56,7 @@ export interface FreeExcelAnalyzerStudentContext {
 export interface FreeExcelAnalyzerContext {
   students?: FreeExcelAnalyzerStudentContext[];
   preferredSheetName?: string | null;
+  selectedRegionId?: string;
 }
 
 const FOOTER_PATTERNS = [
@@ -328,6 +332,7 @@ function analyzeCandidate(
   }
 
   return {
+    id: "",
     sheetName: sheet.name,
     score: baseScore,
     baseScore,
@@ -367,6 +372,10 @@ function analyzeSheet(sheet: WorkbookSheetData): FreeExcelRegionAnalysis[] {
     .filter((region, index, all) => index === 0 || Math.abs(region.headerRowIndex - all[0].headerRowIndex) > 2);
 }
 
+function regionId(region: FreeExcelRegionAnalysis): string {
+  return `${region.sheetName}:${region.headerRowIndex}:${region.dataStartRowIndex}:${region.dataEndRowIndex}`;
+}
+
 export function analyzeFreeExcelWorkbook(
   workbook: WorkbookReadResult,
   context: FreeExcelAnalyzerContext = {},
@@ -379,7 +388,10 @@ export function analyzeFreeExcelWorkbook(
 
   const regions = workbook.sheets
     .flatMap(analyzeSheet)
-    .map((region) => applyContextScore(region, context))
+    .map((region) => {
+      const scored = applyContextScore(region, context);
+      return { ...scored, id: regionId(scored) };
+    })
     .sort((left, right) => {
       if (right.score !== left.score) return right.score - left.score;
       if (right.matchedStudentCount !== left.matchedStudentCount) {
@@ -403,6 +415,8 @@ export function analyzeFreeExcelWorkbook(
     workbook,
     bestRegion,
     regions,
+    requiresRegionSelection: regions.length > 1,
+    selectedRegionId: context.selectedRegionId,
     warnings,
     conflicts,
   };
