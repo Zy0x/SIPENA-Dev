@@ -20,9 +20,22 @@ export interface WorkbookReadError {
 export interface WorkbookSheetData {
   name: string;
   rows: WorkbookCell[][];
+  addressedRows: WorkbookRowAddressed[];
   rowCount: number;
   columnCount: number;
   isEmpty: boolean;
+}
+
+export interface WorkbookCellAddressed {
+  value: WorkbookCell;
+  originalRowIndex: number;
+  originalColumnIndex: number;
+}
+
+export interface WorkbookRowAddressed {
+  originalRowIndex: number;
+  cells: WorkbookCellAddressed[];
+  values: WorkbookCell[];
 }
 
 export type WorkbookReadResult =
@@ -76,23 +89,65 @@ function normalizeRows(rows: unknown[][]): WorkbookCell[][] {
   });
 }
 
+export function rowValues(row: WorkbookRowAddressed): WorkbookCell[] {
+  return row.values;
+}
+
+export function getCellValue(row: WorkbookRowAddressed, columnIndex: number): WorkbookCell {
+  return row.values[columnIndex - 1] ?? null;
+}
+
+export function toWorkbookRows(addressedRows: WorkbookRowAddressed[]): WorkbookCell[][] {
+  return addressedRows.map(rowValues);
+}
+
+function normalizeAddressedRows(sheet: XLSX.WorkSheet | undefined): WorkbookRowAddressed[] {
+  if (!sheet?.["!ref"]) return [];
+
+  const range = XLSX.utils.decode_range(sheet["!ref"]);
+  const addressedRows: WorkbookRowAddressed[] = [];
+
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    const cells: WorkbookCellAddressed[] = [];
+    const values: WorkbookCell[] = [];
+    let hasValue = false;
+
+    for (let columnIndex = range.s.c; columnIndex <= range.e.c; columnIndex += 1) {
+      const address = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+      const value = normalizeCell(sheet[address]?.v);
+      if (value !== null) hasValue = true;
+
+      cells.push({
+        value,
+        originalRowIndex: rowIndex + 1,
+        originalColumnIndex: columnIndex + 1,
+      });
+      values.push(value);
+    }
+
+    if (hasValue) {
+      addressedRows.push({
+        originalRowIndex: rowIndex + 1,
+        cells,
+        values,
+      });
+    }
+  }
+
+  return addressedRows;
+}
+
 function readSheets(workbook: XLSX.WorkBook): WorkbookSheetData[] {
   return workbook.SheetNames.map((name) => {
     const sheet = workbook.Sheets[name];
-    const rawRows = sheet
-      ? XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-          header: 1,
-          raw: true,
-          defval: null,
-          blankrows: false,
-        })
-      : [];
-    const rows = normalizeRows(rawRows).filter((row) => row.some((cell) => cell !== null));
+    const addressedRows = normalizeAddressedRows(sheet);
+    const rows = normalizeRows(toWorkbookRows(addressedRows)).filter((row) => row.some((cell) => cell !== null));
     const columnCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
 
     return {
       name,
       rows,
+      addressedRows,
       rowCount: rows.length,
       columnCount,
       isEmpty: rows.length === 0,

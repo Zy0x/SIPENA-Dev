@@ -34,6 +34,7 @@ export interface ImportWebAssignment {
 
 export interface ColumnMatcherMetadata {
   columnIndex: number;
+  originalColumnIndex?: number;
   visibleHeader?: string;
   gradeType?: string;
   chapterId?: string;
@@ -43,6 +44,7 @@ export interface ColumnMatcherMetadata {
 
 export interface ColumnMatcherHeaderInput {
   columnIndex: number;
+  originalColumnIndex?: number;
   rawHeader: string;
   parsedHeader?: ParsedGradeHeader;
   metadata?: ColumnMatcherMetadata;
@@ -136,6 +138,7 @@ function makeMapping(
 ): MatchedColumn {
   return {
     columnIndex: input.columnIndex,
+    originalColumnIndex: input.originalColumnIndex,
     rawHeader: input.rawHeader,
     parsedHeader,
     target,

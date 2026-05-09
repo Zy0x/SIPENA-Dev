@@ -31,6 +31,7 @@ export interface ManifestData {
 
 export interface OfficialTemplateColumnMap {
   columnIndex: number;
+  originalColumnIndex?: number;
   visibleHeader: string;
   gradeType: string;
   chapterId?: string;
@@ -40,6 +41,7 @@ export interface OfficialTemplateColumnMap {
 
 export interface AnalyzedTemplateHeader {
   columnIndex: number;
+  originalColumnIndex?: number;
   rawHeader: string;
   parsedHeader: ParsedGradeHeader;
   mappedColumn?: OfficialTemplateColumnMap;
@@ -113,6 +115,7 @@ function readColumnMap(sheet: WorkbookSheetData | null): OfficialTemplateColumnM
 
   return sheet.rows.slice(1).map((row) => ({
     columnIndex: Number(row[columnIndexIndex]) || 0,
+    originalColumnIndex: Number(row[columnIndexIndex]) || 0,
     visibleHeader: asText(row[visibleHeaderIndex]),
     gradeType: asText(row[gradeTypeIndex]),
     chapterId: asText(row[chapterIdIndex]),
@@ -155,11 +158,13 @@ function compareManifestContext(manifest: ManifestData | null, context: Official
 
 function analyzeHeaders(inputSheet: WorkbookSheetData | null, columnMap: OfficialTemplateColumnMap[]) {
   const headerRow = inputSheet?.rows[0] || [];
+  const addressedHeaderRow = inputSheet?.addressedRows[0];
   const knownColumns = new Map<number, OfficialTemplateColumnMap>();
   columnMap.forEach((column) => knownColumns.set(column.columnIndex, column));
 
   const headers = headerRow.map((cell, zeroBasedIndex) => {
     const columnIndex = zeroBasedIndex + 1;
+    const originalColumnIndex = addressedHeaderRow?.cells[zeroBasedIndex]?.originalColumnIndex ?? columnIndex;
     const rawHeader = asText(cell);
     const parsedHeader = parseGradeHeader(rawHeader);
     const mappedColumn = knownColumns.get(columnIndex);
@@ -173,6 +178,7 @@ function analyzeHeaders(inputSheet: WorkbookSheetData | null, columnMap: Officia
 
     return {
       columnIndex,
+      originalColumnIndex,
       rawHeader,
       parsedHeader,
       mappedColumn,

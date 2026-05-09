@@ -1,17 +1,19 @@
 import { parseGradeHeader } from "./headerParser";
 import { normalizeName, normalizeNisn, normalizeText, normalizeWhitespace } from "./textNormalizer";
 import type { ImportConflict, ImportSourceType, ImportWarning, ParsedGradeHeader } from "./types";
-import type { WorkbookCell, WorkbookReadResult, WorkbookSheetData } from "./workbookReader";
+import type { WorkbookCell, WorkbookReadResult, WorkbookRowAddressed, WorkbookSheetData } from "./workbookReader";
 
 export type FreeExcelColumnRole = "row_number" | "name" | "nisn" | "grade" | "ignored" | "unknown";
 
 export interface FreeExcelColumnAnalysis {
   columnIndex: number;
+  originalColumnIndex?: number;
   rawHeader: string;
   normalizedHeader: string;
   parsedHeader: ParsedGradeHeader;
   role: FreeExcelColumnRole;
   sourceRowIndexes: number[];
+  sourceOriginalRowIndexes?: number[];
 }
 
 export interface FreeExcelRegionAnalysis {
@@ -29,6 +31,7 @@ export interface FreeExcelRegionAnalysis {
   columns: FreeExcelColumnAnalysis[];
   gradeColumns: FreeExcelColumnAnalysis[];
   dataRows: WorkbookCell[][];
+  addressedDataRows: WorkbookRowAddressed[];
   warnings: ImportWarning[];
 }
 
@@ -240,28 +243,36 @@ function applyContextScore(region: FreeExcelRegionAnalysis, context: FreeExcelAn
   };
 }
 
-function getDataEndRowIndex(rows: WorkbookCell[][], dataStartRowIndex: number): number {
-  let lastDataRow = dataStartRowIndex - 1;
-  for (let index = dataStartRowIndex - 1; index < rows.length; index += 1) {
-    const row = rows[index] || [];
+function getDataEndPosition(addressedRows: WorkbookRowAddressed[], dataStartPosition: number): number {
+  let lastDataPosition = dataStartPosition - 1;
+  for (let index = dataStartPosition; index < addressedRows.length; index += 1) {
+    const row = addressedRows[index]?.values || [];
     if (isFooterRow(row)) break;
-    if (!isEmptyRow(row)) lastDataRow = index + 1;
+    if (!isEmptyRow(row)) lastDataPosition = index;
   }
-  return lastDataRow;
+  return lastDataPosition;
 }
 
 function analyzeCandidate(
   sheet: WorkbookSheetData,
-  headerRowIndex: number,
+  headerRowPosition: number,
   headerRowCount: 1 | 2,
 ): FreeExcelRegionAnalysis | null {
-  const headerRow = sheet.rows[headerRowIndex - 1] || [];
-  const topHeaderRow = headerRowCount === 2 ? sheet.rows[headerRowIndex - 2] : undefined;
-  const dataStartRowIndex = headerRowIndex + 1;
-  const dataEndRowIndex = getDataEndRowIndex(sheet.rows, dataStartRowIndex);
-  const dataRows = dataEndRowIndex >= dataStartRowIndex
-    ? sheet.rows.slice(dataStartRowIndex - 1, dataEndRowIndex)
+  const headerAddressedRow = sheet.addressedRows[headerRowPosition];
+  if (!headerAddressedRow) return null;
+
+  const topHeaderAddressedRow = headerRowCount === 2 ? sheet.addressedRows[headerRowPosition - 1] : undefined;
+  const headerRow = headerAddressedRow.values;
+  const topHeaderRow = topHeaderAddressedRow?.values;
+  const dataStartPosition = headerRowPosition + 1;
+  const dataEndPosition = getDataEndPosition(sheet.addressedRows, dataStartPosition);
+  const addressedDataRows = dataEndPosition >= dataStartPosition
+    ? sheet.addressedRows.slice(dataStartPosition, dataEndPosition + 1)
     : [];
+  const dataRows = addressedDataRows.map((row) => row.values);
+  const headerRowIndex = headerAddressedRow.originalRowIndex;
+  const dataStartRowIndex = addressedDataRows[0]?.originalRowIndex ?? headerRowIndex + 1;
+  const dataEndRowIndex = addressedDataRows[addressedDataRows.length - 1]?.originalRowIndex ?? headerRowIndex;
 
   const columnCount = Math.max(headerRow.length, topHeaderRow?.length || 0, ...dataRows.map((row) => row.length));
   const expandedTopHeaders = headerRowCount === 2 ? expandHeaderRow(topHeaderRow, columnCount) : undefined;
@@ -275,11 +286,17 @@ function analyzeCandidate(
     const role = detectColumnRole(rawHeader, parsedHeader, values);
     columns.push({
       columnIndex: index + 1,
+      originalColumnIndex: headerAddressedRow.cells[index]?.originalColumnIndex ?? index + 1,
       rawHeader,
       normalizedHeader: normalizeText(rawHeader),
       parsedHeader,
       role,
-      sourceRowIndexes: headerRowCount === 2 ? [headerRowIndex - 1, headerRowIndex] : [headerRowIndex],
+      sourceRowIndexes: headerRowCount === 2
+        ? [topHeaderAddressedRow?.originalRowIndex, headerAddressedRow.originalRowIndex].filter((rowIndex): rowIndex is number => Boolean(rowIndex))
+        : [headerAddressedRow.originalRowIndex],
+      sourceOriginalRowIndexes: headerRowCount === 2
+        ? [topHeaderAddressedRow?.originalRowIndex, headerAddressedRow.originalRowIndex].filter((rowIndex): rowIndex is number => Boolean(rowIndex))
+        : [headerAddressedRow.originalRowIndex],
     });
   }
 
@@ -325,6 +342,7 @@ function analyzeCandidate(
     columns,
     gradeColumns,
     dataRows: usableDataRows,
+    addressedDataRows: addressedDataRows.filter((row) => !isFooterRow(row.values) && !isEmptyRow(row.values)),
     warnings,
   };
 }
@@ -332,14 +350,14 @@ function analyzeCandidate(
 function analyzeSheet(sheet: WorkbookSheetData): FreeExcelRegionAnalysis[] {
   if (sheet.isEmpty) return [];
   const regions: FreeExcelRegionAnalysis[] = [];
-  const maxHeaderRow = Math.min(sheet.rows.length, 20);
+  const maxHeaderPosition = Math.min(sheet.addressedRows.length, 20);
 
-  for (let rowIndex = 1; rowIndex <= maxHeaderRow; rowIndex += 1) {
-    const single = analyzeCandidate(sheet, rowIndex, 1);
+  for (let rowPosition = 0; rowPosition < maxHeaderPosition; rowPosition += 1) {
+    const single = analyzeCandidate(sheet, rowPosition, 1);
     if (single) regions.push(single);
 
-    if (rowIndex > 1) {
-      const multi = analyzeCandidate(sheet, rowIndex, 2);
+    if (rowPosition > 0) {
+      const multi = analyzeCandidate(sheet, rowPosition, 2);
       if (multi) regions.push(multi);
     }
   }

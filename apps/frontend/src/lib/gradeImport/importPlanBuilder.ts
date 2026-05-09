@@ -108,15 +108,21 @@ function readOfficialStudentMetadata(analysis: OfficialTemplateAnalysis): Offici
 
 function getRowsAndHeaders(analysis: ImportPlanInputAnalysis): {
   rows: WorkbookCell[][];
+  rowByIndex: Map<number, WorkbookCell[]>;
   studentRows: ReturnType<typeof extractStudentRowsFromWorkbook>;
   headers: ColumnMatcherHeaderInput[];
   warnings: ImportWarning[];
 } {
   if (hasOfficialShape(analysis)) {
     const inputRows = analysis.inputSheet?.rows || [];
+    const originalRowIndexes = analysis.inputSheet?.addressedRows.map((row) => row.originalRowIndex) || [];
+    const rowByIndex = new Map<number, WorkbookCell[]>(
+      (analysis.inputSheet?.addressedRows || []).map((row) => [row.originalRowIndex, row.values]),
+    );
     const officialMetadata = readOfficialStudentMetadata(analysis);
     const headers = analysis.headers.map((header) => ({
       columnIndex: header.columnIndex,
+      originalColumnIndex: header.originalColumnIndex,
       rawHeader: header.rawHeader,
       parsedHeader: header.parsedHeader,
       metadata: header.mappedColumn,
@@ -124,7 +130,8 @@ function getRowsAndHeaders(analysis: ImportPlanInputAnalysis): {
 
     return {
       rows: inputRows,
-      studentRows: extractStudentRowsFromWorkbook(inputRows, { officialMetadata }),
+      rowByIndex,
+      studentRows: extractStudentRowsFromWorkbook(inputRows, { officialMetadata, originalRowIndexes }),
       headers,
       warnings: [],
     };
@@ -132,25 +139,35 @@ function getRowsAndHeaders(analysis: ImportPlanInputAnalysis): {
 
   const region = analysis.bestRegion;
   if (!region) {
-    return { rows: [], studentRows: [], headers: [], warnings: [warning("IMPORT_NO_FREE_EXCEL_REGION", "Tidak ada region nilai yang cukup jelas untuk dibuat ImportPlan.")] };
+    return { rows: [], rowByIndex: new Map(), studentRows: [], headers: [], warnings: [warning("IMPORT_NO_FREE_EXCEL_REGION", "Tidak ada region nilai yang cukup jelas untuk dibuat ImportPlan.")] };
   }
 
   const rows = [
     region.columns.map((column) => column.rawHeader),
     ...region.dataRows,
   ];
+  const originalRowIndexes = [
+    region.headerRowIndex,
+    ...region.addressedDataRows.map((row) => row.originalRowIndex),
+  ];
+  const rowByIndex = new Map<number, WorkbookCell[]>([
+    [region.headerRowIndex, region.columns.map((column) => column.rawHeader)],
+    ...region.addressedDataRows.map((row): [number, WorkbookCell[]] => [row.originalRowIndex, row.values]),
+  ]);
   const headers = region.columns.map((column) => ({
     columnIndex: column.columnIndex,
+    originalColumnIndex: column.originalColumnIndex,
     rawHeader: column.rawHeader,
     parsedHeader: column.parsedHeader,
   }));
   const studentRows = extractStudentRowsFromWorkbook(rows, {
     dataStartRowIndex: 2,
+    originalRowIndexes,
     nameColumnIndex: region.nameColumnIndex,
     nisnColumnIndex: region.nisnColumnIndex,
   });
 
-  return { rows, studentRows, headers, warnings: [] };
+  return { rows, rowByIndex, studentRows, headers, warnings: [] };
 }
 
 function targetKey(target: GradeTarget | undefined): string {
@@ -258,7 +275,10 @@ export function buildImportPlan(
 
   extracted.studentRows.forEach((studentRow) => {
     const studentMapping = studentByRow.get(studentRow.rowIndex);
-    const workbookRow = extracted.rows[studentRow.rowIndex - rowOffset] || extracted.rows[studentRow.rowIndex - 1] || [];
+    const workbookRow = extracted.rowByIndex.get(studentRow.rowIndex)
+      || extracted.rows[studentRow.rowIndex - rowOffset]
+      || extracted.rows[studentRow.rowIndex - 1]
+      || [];
 
     importableColumns.forEach((column) => {
       const rawValue = workbookRow[column.columnIndex - 1];
@@ -317,6 +337,8 @@ export function buildImportPlan(
         id: `${studentRow.rowIndex}:${column.columnIndex}:${targetKey(column.target) || column.rawHeader}`,
         rowIndex: studentRow.rowIndex,
         columnIndex: column.columnIndex,
+        originalRowIndex: studentRow.originalRowIndex ?? studentRow.rowIndex,
+        originalColumnIndex: column.originalColumnIndex ?? column.columnIndex,
         studentId: studentMapping?.studentId,
         target,
         value: parsedValue.value,

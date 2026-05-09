@@ -313,6 +313,11 @@ describe("gradeImport workbook reader", () => {
     expect(result.ok).toBe(true);
     expect(result.sheetNames).toEqual(["Nilai"]);
     expect(result.sheets[0].rows[1][1]).toBe(0);
+    expect(result.sheets[0].addressedRows[1].cells[1]).toMatchObject({
+      value: 0,
+      originalRowIndex: 2,
+      originalColumnIndex: 2,
+    });
   });
 
   it("reads csv input when extension is csv", () => {
@@ -321,6 +326,39 @@ describe("gradeImport workbook reader", () => {
 
     expect(result.ok).toBe(true);
     expect(result.sheets[0].rows[0]).toEqual(["No", "NISN", "Nama Siswa"]);
+    expect(result.sheets[0].addressedRows[1].cells[1]).toMatchObject({
+      value: "0012345678",
+      originalRowIndex: 2,
+      originalColumnIndex: 2,
+    });
+  });
+
+  it("keeps original row and column indexes with title rows and blank workbook rows", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["KOP SEKOLAH"],
+      [],
+      ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+      [1, "0012345678", "Siti Aminah", 88],
+      [],
+      [2, "1234567890", "Muhammad Rizki", 91],
+    ]), "Nilai");
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+    const result = readWorkbookBuffer(buffer, "nilai.xlsx");
+
+    expect(result.ok).toBe(true);
+    expect(result.sheets[0].rows).toHaveLength(4);
+    expect(result.sheets[0].addressedRows.map((row) => row.originalRowIndex)).toEqual([1, 3, 4, 6]);
+    expect(result.sheets[0].addressedRows[1].cells[3]).toMatchObject({
+      value: "BAB 1 - Tugas 1",
+      originalRowIndex: 3,
+      originalColumnIndex: 4,
+    });
+    expect(result.sheets[0].addressedRows[3].cells[3]).toMatchObject({
+      value: 91,
+      originalRowIndex: 6,
+      originalColumnIndex: 4,
+    });
   });
 
   it("returns clear errors for empty and unsupported files", () => {
@@ -375,6 +413,12 @@ describe("official SIPENA template reader", () => {
     expect(result.sourceType).toBe("official_exact");
     expect(result.manifest?.app).toBe("SIPENA");
     expect(result.sheetPresence).toMatchObject({ input: true, manifest: true, students: true, structure: true, columnMap: true });
+    expect(result.inputSheet?.addressedRows[0].originalRowIndex).toBe(1);
+    expect(result.headers[3]).toMatchObject({
+      columnIndex: 4,
+      originalColumnIndex: 4,
+      rawHeader: "BAB 1 - Tugas 1",
+    });
     expect(result.warnings.map((item) => item.code)).toContain("IMPORT_UNSIGNED_TEMPLATE");
   });
 
@@ -638,6 +682,30 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     expect(analysis.bestRegion?.gradeColumns.map((column) => column.rawHeader)).toEqual(["BAB 1 - Tugas 1", "STS"]);
   });
 
+  it("carries original coordinates from free Excel workbooks with title and blank rows", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["KOP SEKOLAH"],
+        [],
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 90],
+        [],
+        [2, "1234567890", "Muhammad Rizki", 91],
+      ],
+    }), { students });
+
+    expect(analysis.bestRegion?.headerRowIndex).toBe(3);
+    expect(analysis.bestRegion?.dataStartRowIndex).toBe(4);
+    expect(analysis.bestRegion?.dataEndRowIndex).toBe(6);
+    expect(analysis.bestRegion?.addressedDataRows.map((row) => row.originalRowIndex)).toEqual([4, 6]);
+    expect(analysis.bestRegion?.gradeColumns[0]).toMatchObject({
+      columnIndex: 4,
+      originalColumnIndex: 4,
+      sourceRowIndexes: [3],
+      sourceOriginalRowIndexes: [3],
+    });
+  });
+
   it("recognizes common teacher identity headers and prioritizes sheets that match active students", () => {
     const analysis = analyzeFreeExcelWorkbook(workbookResult({
       Nilai_Multi_Header: [
@@ -726,6 +794,27 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     expect(plan.summary.gradeColumnCount).toBe(2);
     expect(plan.gradeOperations.find((operation) => operation.studentId === "student-1" && operation.target.assignmentId === "assignment-1")?.action).toBe("skip_existing");
     expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2" && operation.target.assignmentId === "assignment-1")?.value).toBe(0);
+  });
+
+  it("keeps original row indexes in ImportPlan operations after blank workbook rows", () => {
+    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 90],
+        [],
+        [2, "1234567890", "Muhammad Rizki", 91],
+      ],
+    }), { students });
+    const plan = buildImportPlan(freeAnalysis, { students, chapters, assignments });
+
+    expect(plan.studentMappings.filter((mapping) => mapping.status !== "missing_in_excel").map((mapping) => mapping.rowIndex)).toEqual([2, 4]);
+    expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2")).toMatchObject({
+      rowIndex: 4,
+      originalRowIndex: 4,
+      columnIndex: 4,
+      originalColumnIndex: 4,
+      value: 91,
+    });
   });
 
   it("skips Excel rows that are missing in web instead of blocking every value", () => {

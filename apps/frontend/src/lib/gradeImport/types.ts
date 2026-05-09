@@ -35,6 +35,8 @@ export interface ImportWarning {
   field?: string;
   rowIndex?: number;
   columnIndex?: number;
+  originalRowIndex?: number;
+  originalColumnIndex?: number;
 }
 
 export interface ImportConflict {
@@ -51,6 +53,8 @@ export interface ImportConflict {
     | "unsupported";
   rowIndex?: number;
   columnIndex?: number;
+  originalRowIndex?: number;
+  originalColumnIndex?: number;
   options?: string[];
 }
 
@@ -78,6 +82,7 @@ export interface ParsedGradeHeader {
 
 export interface StudentMapping {
   rowIndex: number;
+  originalRowIndex?: number;
   excelName?: string;
   excelNisn?: string;
   studentId?: string;
@@ -92,6 +97,7 @@ export interface StudentMapping {
 
 export interface ColumnMapping {
   columnIndex: number;
+  originalColumnIndex?: number;
   rawHeader: string;
   parsedHeader: ParsedGradeHeader;
   target?: GradeTarget;
@@ -117,6 +123,8 @@ export interface GradeOperation {
   id: string;
   rowIndex: number;
   columnIndex: number;
+  originalRowIndex?: number;
+  originalColumnIndex?: number;
   studentId?: string;
   target: GradeTarget;
   value: number | null;

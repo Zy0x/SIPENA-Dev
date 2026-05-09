@@ -10,6 +10,7 @@ export interface ImportWebStudent {
 
 export interface ImportExcelStudentRow {
   rowIndex: number;
+  originalRowIndex?: number;
   name?: string | null;
   nisn?: string | null;
   studentId?: string | null;
@@ -27,6 +28,7 @@ export interface StudentMatcherOptions {
   nisnColumnIndex?: number;
   studentIdColumnIndex?: number;
   dataStartRowIndex?: number;
+  originalRowIndexes?: number[];
   officialMetadata?: OfficialStudentRowMetadata[];
 }
 
@@ -128,11 +130,13 @@ export function extractStudentRowsFromWorkbook(
     metadataByOrder.set(index, item);
   });
 
-  return rows.slice(Math.max(0, dataStartRowIndex - 1)).map((row, offset) => {
-    const rowIndex = dataStartRowIndex + offset;
+  const startIndex = Math.max(0, dataStartRowIndex - 1);
+  return rows.slice(startIndex).map((row, offset) => {
+    const rowIndex = options.originalRowIndexes?.[startIndex + offset] ?? dataStartRowIndex + offset;
     const metadata = metadataByRow.get(rowIndex) || metadataByOrder.get(offset);
     return {
       rowIndex,
+      originalRowIndex: rowIndex,
       name: cellText(row[nameColumnIndex - 1]) || metadata?.name || "",
       nisn: cellText(row[nisnColumnIndex - 1]) || metadata?.nisn || "",
       studentId: studentIdColumnIndex ? cellText(row[studentIdColumnIndex - 1]) || metadata?.studentId : metadata?.studentId,
@@ -151,6 +155,7 @@ function createMapping(
 ): StudentMapping {
   return {
     rowIndex: row.rowIndex,
+    originalRowIndex: row.originalRowIndex ?? row.rowIndex,
     excelName: row.name || undefined,
     excelNisn: row.nisn || undefined,
     studentId: student?.id,
