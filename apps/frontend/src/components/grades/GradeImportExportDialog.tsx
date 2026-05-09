@@ -10,6 +10,8 @@ import {
   FileSpreadsheet,
   Loader2,
   MapPinned,
+  RotateCcw,
+  RotateCw,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
@@ -101,12 +103,17 @@ interface GradeImportExportDialogProps {
   }>) => Promise<{ savedCount: number; skippedUnchangedCount?: number } | void>;
   onEnsureAssignmentTarget?: (target: GradeTarget) => Promise<GradeTarget>;
   onImportComplete?: () => void | Promise<void>;
+  canUndoImport?: boolean;
+  canRedoImport?: boolean;
+  onUndoImport?: () => void | Promise<void>;
+  onRedoImport?: () => void | Promise<void>;
   importContext: ImportPlanContext;
 }
 
 type ImportMode = "official" | "smart";
 type ExportMode = "official" | "current" | "backup";
 type ImportExecutionState = "idle" | "analyzing" | "ready" | "failed" | "importing" | "success";
+type ImportHistoryActionState = "idle" | "undoing" | "redoing";
 type ColumnResolutionKind = "existing_assignment" | "create_assignment" | "create_chapter_and_assignment" | "sts" | "sas" | "ignore";
 type ImportUiErrorCode =
   | "IMPORT_FILE_TOO_LARGE"
@@ -2109,6 +2116,11 @@ function ImportStep({
   progress,
   onDone,
   onBack,
+  canUndoImport,
+  canRedoImport,
+  historyActionState,
+  onUndoImport,
+  onRedoImport,
 }: {
   state: ImportExecutionState;
   plan: ImportPlan | null;
@@ -2116,6 +2128,11 @@ function ImportStep({
   progress: ImportExecutionProgress;
   onDone: () => void;
   onBack: () => void;
+  canUndoImport: boolean;
+  canRedoImport: boolean;
+  historyActionState: ImportHistoryActionState;
+  onUndoImport: () => void | Promise<void>;
+  onRedoImport: () => void | Promise<void>;
 }) {
   const blocked = hasBlockedConflicts(plan);
   const isSuccess = state === "success";
@@ -2171,6 +2188,41 @@ function ImportStep({
             </RiskAlert>
           ) : null}
 
+          {isSuccess ? (
+            <section className="rounded-[24px] border border-blue-200 bg-blue-50 p-4 text-left dark:border-blue-900/60 dark:bg-blue-950/20">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <h4 className="text-sm font-semibold text-blue-950 dark:text-blue-100">Riwayat import tersedia</h4>
+                  <p className="mt-1 text-xs leading-5 text-blue-800/80 dark:text-blue-100/75">
+                    Jika hasil import belum sesuai, gunakan Undo untuk mengembalikan nilai terakhir. Redo dapat menerapkan kembali perubahan yang baru di-undo.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 rounded-full border-blue-200 bg-white text-blue-700 hover:bg-blue-100 dark:border-blue-900/60 dark:bg-slate-950 dark:text-blue-100"
+                    disabled={!canUndoImport || historyActionState !== "idle"}
+                    onClick={onUndoImport}
+                  >
+                    {historyActionState === "undoing" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                    Undo import terakhir
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 rounded-full border-blue-200 bg-white text-blue-700 hover:bg-blue-100 dark:border-blue-900/60 dark:bg-slate-950 dark:text-blue-100"
+                    disabled={!canRedoImport || historyActionState !== "idle"}
+                    onClick={onRedoImport}
+                  >
+                    {historyActionState === "redoing" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
+                    Redo import
+                  </Button>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
           {summary.failedRows.length ? (
             <section className="rounded-[24px] border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/20">
               <h4 className="text-sm font-semibold text-red-950 dark:text-red-100">Baris gagal disimpan</h4>
@@ -2224,6 +2276,10 @@ export default function GradeImportExportDialog({
   onSaveGradesBatch,
   onEnsureAssignmentTarget,
   onImportComplete,
+  canUndoImport = false,
+  canRedoImport = false,
+  onUndoImport,
+  onRedoImport,
   importContext,
 }: GradeImportExportDialogProps) {
   const { info, success, error: showError, warning: showWarning } = useEnhancedToast();
@@ -2239,6 +2295,7 @@ export default function GradeImportExportDialog({
   const [resolverState, setResolverState] = useState<ImportResolverState>(emptyResolverState);
   const [selectionState, setSelectionState] = useState<ImportSelectionState>(emptyImportSelectionState);
   const [executionState, setExecutionState] = useState<ImportExecutionState>("idle");
+  const [historyActionState, setHistoryActionState] = useState<ImportHistoryActionState>("idle");
   const [executionSummary, setExecutionSummary] = useState<ImportExecutionSummary | null>(null);
   const [executionProgress, setExecutionProgress] = useState<ImportExecutionProgress>({ current: 0, total: 0 });
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -2259,6 +2316,7 @@ export default function GradeImportExportDialog({
       setResolverState(emptyResolverState);
       setSelectionState(emptyImportSelectionState);
       setExecutionState("idle");
+      setHistoryActionState("idle");
       setExecutionSummary(null);
       setExecutionProgress({ current: 0, total: 0 });
       setAnalysisError(null);
@@ -2770,6 +2828,7 @@ export default function GradeImportExportDialog({
     setAnalysisErrorCode(null);
     setExecutionSummary(null);
     setExecutionProgress({ current: 0, total: 0 });
+    setHistoryActionState("idle");
     setExecutionState("analyzing");
 
     try {
@@ -2827,6 +2886,34 @@ export default function GradeImportExportDialog({
   const handleClose = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
+
+  const handleUndoImport = useCallback(async () => {
+    if (!onUndoImport || !canUndoImport || historyActionState !== "idle") return;
+    setHistoryActionState("undoing");
+    try {
+      await onUndoImport();
+      await onImportComplete?.();
+      success("Undo import berhasil", "Perubahan import terakhir sudah dikembalikan.");
+    } catch (caught) {
+      showError("Undo import gagal", caught instanceof Error ? cleanBackendText(caught.message) : "Perubahan import belum bisa dikembalikan.");
+    } finally {
+      setHistoryActionState("idle");
+    }
+  }, [canUndoImport, historyActionState, onImportComplete, onUndoImport, showError, success]);
+
+  const handleRedoImport = useCallback(async () => {
+    if (!onRedoImport || !canRedoImport || historyActionState !== "idle") return;
+    setHistoryActionState("redoing");
+    try {
+      await onRedoImport();
+      await onImportComplete?.();
+      success("Redo import berhasil", "Perubahan import sudah diterapkan kembali.");
+    } catch (caught) {
+      showError("Redo import gagal", caught instanceof Error ? cleanBackendText(caught.message) : "Perubahan import belum bisa diterapkan kembali.");
+    } finally {
+      setHistoryActionState("idle");
+    }
+  }, [canRedoImport, historyActionState, onImportComplete, onRedoImport, showError, success]);
 
   const handlePrimaryAction = useCallback(async () => {
     if (tab === "import") {
@@ -3139,6 +3226,11 @@ export default function GradeImportExportDialog({
                       progress={executionProgress}
                       onDone={handleClose}
                       onBack={handleBack}
+                      canUndoImport={canUndoImport}
+                      canRedoImport={canRedoImport}
+                      historyActionState={historyActionState}
+                      onUndoImport={handleUndoImport}
+                      onRedoImport={handleRedoImport}
                     />
                   ) : null}
                 </main>

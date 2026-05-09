@@ -1441,6 +1441,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onSaveGrade={handleSaveGrade}
           onSaveGradesBatch={async (items) => saveGradesBatchWithUndo(items)}
           onEnsureAssignmentTarget={handleEnsureImportAssignmentTarget}
+          canUndoImport={canUndo}
+          canRedoImport={canRedo}
+          onUndoImport={undo}
+          onRedoImport={redo}
           onImportComplete={() => {
             queryClient.invalidateQueries({ queryKey: ["grades"] });
             queryClient.invalidateQueries({ queryKey: ["chapters"] });
