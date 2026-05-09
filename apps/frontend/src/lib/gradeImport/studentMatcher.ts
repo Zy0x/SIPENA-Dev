@@ -1,5 +1,5 @@
 import { normalizeName, normalizeNisn } from "./textNormalizer";
-import type { ImportConflict, ImportWarning, MappingStatus, StudentMapping } from "./types";
+import type { ImportConflict, ImportWarning, MappingStatus, MissingInExcelStudent, StudentMapping } from "./types";
 import type { WorkbookCell } from "./workbookReader";
 
 export interface ImportWebStudent {
@@ -34,6 +34,7 @@ export interface StudentMatcherOptions {
 
 export interface StudentMatcherResult {
   mappings: StudentMapping[];
+  missingInExcelStudents: MissingInExcelStudent[];
   warnings: ImportWarning[];
   conflicts: ImportConflict[];
   summary: {
@@ -375,27 +376,26 @@ export function matchStudents(
   }
 
   const matchedStudentIds = new Set(mappings.filter((mapping) => mapping.studentId && mapping.status !== "blocked").map((mapping) => mapping.studentId));
-  students.forEach((student) => {
-    if (matchedStudentIds.has(student.id)) return;
-    mappings.push({
-      rowIndex: -1,
+  const missingInExcelStudents = students
+    .filter((student) => !matchedStudentIds.has(student.id))
+    .map<MissingInExcelStudent>((student) => ({
       studentId: student.id,
       webName: student.name,
       webNisn: student.nisn || undefined,
-      matchedBy: "manual",
-      confidence: 0,
       status: "missing_in_excel",
       warnings: [warning("STUDENT_MISSING_IN_EXCEL", "Siswa ada di web tetapi tidak ada di Excel.", undefined, "student")],
-      conflicts: [],
-    });
-  });
+    }));
 
-  const warnings = mappings.flatMap((mapping) => mapping.warnings);
+  const warnings = [
+    ...mappings.flatMap((mapping) => mapping.warnings),
+    ...missingInExcelStudents.flatMap((student) => student.warnings),
+  ];
   const conflicts = mappings.flatMap((mapping) => mapping.conflicts);
   const countStatus = (status: MappingStatus) => mappings.filter((mapping) => mapping.status === status).length;
 
   return {
     mappings,
+    missingInExcelStudents,
     warnings,
     conflicts,
     summary: {
@@ -405,7 +405,7 @@ export function matchStudents(
       warning: countStatus("warning"),
       ambiguous: countStatus("ambiguous"),
       missingInWeb: countStatus("missing_in_web"),
-      missingInExcel: countStatus("missing_in_excel"),
+      missingInExcel: missingInExcelStudents.length,
       blocked: countStatus("blocked"),
     },
   };

@@ -69,6 +69,7 @@ function plan(overrides: Partial<ImportPlan> = {}): ImportPlan {
     sourceType: "official_exact",
     updateMode: "fill_empty_only",
     studentMappings: [student()],
+    missingInExcelStudents: [],
     columnMappings: [column("BAB 1 - Tugas 1", {
       target: {
         gradeType: "assignment",

@@ -34,6 +34,9 @@ export function PreviewSummaryBanner({
           <span className="sipena-preview-stat">{model.summary.manualSkippedCells + model.summary.skippedCells} nilai dilewati</span>
           <span className="sipena-preview-stat">{model.summary.overwriteCells} nilai akan ditimpa</span>
           <span className="sipena-preview-stat">{model.summary.manualRequired} perlu dipilih</span>
+          {model.summary.missingInExcelStudents > 0 ? (
+            <span className="sipena-preview-stat">{model.summary.missingInExcelStudents} siswa di web tidak ada di Excel; nilainya tidak akan berubah.</span>
+          ) : null}
         </div>
       </div>
       <button type="button" className="min-h-11 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700" onClick={onPrimaryAction}>

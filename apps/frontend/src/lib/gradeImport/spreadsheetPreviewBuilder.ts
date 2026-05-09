@@ -119,6 +119,7 @@ export type SpreadsheetPreviewModel = {
     overwriteCells: number;
     blockedCells: number;
     overwriteNeedsConfirmation: number;
+    missingInExcelStudents: number;
   };
 };
 
@@ -573,6 +574,7 @@ export function buildSpreadsheetPreviewModel({
     overwriteCells: allCells.filter((cell) => cell.status === "overwrite").length,
     blockedCells: executablePlan.summary.blockedCount,
     overwriteNeedsConfirmation: executablePlan.summary.overwriteNeedsConfirmationCount,
+    missingInExcelStudents: plan.missingInExcelStudents.length,
   };
 
   return { columns: columnsWithStats, rows, summary };

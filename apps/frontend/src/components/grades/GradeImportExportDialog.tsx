@@ -700,7 +700,8 @@ function recalculateSummary(plan: ImportPlan): ImportPlan["summary"] {
     needsConfirmation: plan.gradeOperations.filter((operation) => operation.action === "needs_confirmation").length,
     matchedStudentCount: plan.studentMappings.filter((mapping) => mapping.studentId && ["safe", "warning"].includes(mapping.status)).length,
     ambiguousStudentCount: plan.studentMappings.filter((mapping) => mapping.status === "ambiguous").length,
-    missingStudentCount: plan.studentMappings.filter((mapping) => mapping.status === "missing_in_web" || mapping.status === "missing_in_excel").length,
+    missingStudentCount: plan.studentMappings.filter((mapping) => mapping.status === "missing_in_web").length
+      + plan.missingInExcelStudents.length,
     gradeColumnCount: plan.columnMappings.filter((mapping) => !mapping.parsedHeader.reserved && !mapping.parsedHeader.derived && mapping.status !== "missing").length,
     conflictCount: plan.conflicts.length,
     newAssignmentCount: newAssignmentSuggestions,

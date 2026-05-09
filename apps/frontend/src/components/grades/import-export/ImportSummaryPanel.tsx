@@ -33,6 +33,7 @@ export function ImportSummaryPanel({
     assignments: assignmentCount,
   };
   const blockedCount = plan?.conflicts.filter((item) => item.severity === "blocked").length || 0;
+  const missingInExcelCount = plan?.missingInExcelStudents.length || 0;
 
   return (
     <aside className="min-w-0 space-y-3 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950 lg:sticky lg:top-4 lg:max-h-[calc(92dvh-12rem)] lg:overflow-y-auto">
@@ -64,6 +65,7 @@ export function ImportSummaryPanel({
             {plan
               ? `${plan.summary.readyImportCount || 0} nilai siap import, ${blockedCount} item wajib dipilih.`
               : fileName ? "File sudah siap dianalisis sebagai preview." : "Upload file untuk melihat rencana import."}
+            {missingInExcelCount > 0 ? ` ${missingInExcelCount} siswa di web tidak ada di Excel; nilainya tidak akan berubah.` : ""}
           </p>
         </div>
       </div>

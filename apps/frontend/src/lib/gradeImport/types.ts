@@ -95,6 +95,14 @@ export interface StudentMapping {
   conflicts: ImportConflict[];
 }
 
+export interface MissingInExcelStudent {
+  studentId: string;
+  webName: string;
+  webNisn?: string;
+  status: "missing_in_excel";
+  warnings: ImportWarning[];
+}
+
 export interface ColumnMapping {
   columnIndex: number;
   originalColumnIndex?: number;
@@ -142,6 +150,7 @@ export interface ImportPlan {
   sourceType: ImportSourceType;
   updateMode: UpdateMode;
   studentMappings: StudentMapping[];
+  missingInExcelStudents: MissingInExcelStudent[];
   columnMappings: ColumnMapping[];
   structureSuggestions: StructureSuggestion[];
   gradeOperations: GradeOperation[];

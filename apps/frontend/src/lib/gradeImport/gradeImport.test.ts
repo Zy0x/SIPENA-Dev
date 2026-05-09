@@ -5,6 +5,7 @@ import {
   analyzeOfficialTemplateWorkbook,
   analyzeFreeExcelWorkbook,
   buildImportPlan,
+  buildSpreadsheetPreviewModel,
   buildCurrentGradesExportWorkbook,
   buildFullGradeBackupWorkbook,
   buildOfficialGradeTemplateWorkbook,
@@ -531,7 +532,10 @@ describe("SIPENA student matcher", () => {
     const result = matchStudents([{ rowIndex: 2, name: "Siswa Baru", nisn: "777" }], students);
 
     expect(result.mappings.find((mapping) => mapping.rowIndex === 2)?.status).toBe("missing_in_web");
-    expect(result.mappings.filter((mapping) => mapping.status === "missing_in_excel")).toHaveLength(students.length);
+    expect(result.mappings.filter((mapping) => mapping.status === "missing_in_excel")).toHaveLength(0);
+    expect(result.mappings.map((mapping) => mapping.rowIndex)).not.toContain(-1);
+    expect(result.missingInExcelStudents).toHaveLength(students.length);
+    expect(result.summary.missingInExcel).toBe(students.length);
   });
 
   it("extracts workbook rows and matches students", () => {
@@ -797,6 +801,33 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     expect(plan.summary.gradeColumnCount).toBe(2);
     expect(plan.gradeOperations.find((operation) => operation.studentId === "student-1" && operation.target.assignmentId === "assignment-1")?.action).toBe("skip_existing");
     expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2" && operation.target.assignmentId === "assignment-1")?.value).toBe(0);
+  });
+
+  it("keeps web-only students out of import rows, preview rows, and grade operations", () => {
+    const studentsWithMissingInExcel = [
+      ...students,
+      { id: "student-3", name: "Ahmad Fauzi", nisn: "5555555555" },
+    ];
+    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 90],
+      ],
+    }), { students: studentsWithMissingInExcel });
+    const plan = buildImportPlan(freeAnalysis, { students: studentsWithMissingInExcel, chapters, assignments });
+    const preview = buildSpreadsheetPreviewModel({ plan });
+    const previewRowIds = preview.rows.map((row) => row.id);
+
+    expect(plan.studentMappings).toHaveLength(1);
+    expect(plan.studentMappings.map((mapping) => mapping.rowIndex)).toEqual([2]);
+    expect(plan.studentMappings.map((mapping) => mapping.rowIndex)).not.toContain(-1);
+    expect(plan.missingInExcelStudents).toHaveLength(2);
+    expect(plan.summary.missingStudentCount).toBe(2);
+    expect(plan.gradeOperations).toHaveLength(1);
+    expect(plan.gradeOperations.map((operation) => operation.studentId)).toEqual(["student-1"]);
+    expect(preview.rows).toHaveLength(1);
+    expect(new Set(previewRowIds).size).toBe(previewRowIds.length);
+    expect(preview.summary.missingInExcelStudents).toBe(2);
   });
 
   it("reads free Excel values from the original rows when title rows precede the header", () => {
