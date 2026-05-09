@@ -47,6 +47,7 @@ import {
   downloadFullGradeBackup,
   downloadOfficialGradeTemplate,
   type GradeExportContext,
+  type GradeTarget,
   type ImportPlanContext,
 } from "@/lib/gradeImport";
 import { Button } from "@/components/ui/button";
@@ -875,6 +876,70 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     }
   };
 
+  const handleEnsureImportAssignmentTarget = useCallback(async (target: GradeTarget): Promise<GradeTarget> => {
+    if (target.gradeType !== "assignment") return target;
+    if (target.assignmentId) return target;
+    if (!subjectId) throw new Error("Pilih mata pelajaran terlebih dahulu.");
+
+    const normalize = (value?: string | null) => (value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const assignmentName = target.assignmentName?.trim();
+    if (!assignmentName) throw new Error("Nama tugas baru belum diisi.");
+
+    let chapterId = target.chapterId;
+    let chapterName = target.chapterName?.trim();
+
+    if (!chapterId) {
+      const requestedChapterName = chapterName;
+      if (!requestedChapterName) throw new Error("Nama BAB baru belum diisi.");
+
+      const existingChapter = chapters.find((chapter) => normalize(chapter.name) === normalize(requestedChapterName));
+      if (existingChapter) {
+        chapterId = existingChapter.id;
+        chapterName = existingChapter.name;
+      } else {
+        const createdChapters = await createBulkChapters.mutateAsync([{
+          subject_id: subjectId,
+          name: requestedChapterName,
+          order_index: chapters.length + 1,
+        }]);
+        const createdChapter = Array.isArray(createdChapters) ? createdChapters[0] as Chapter | undefined : undefined;
+        if (!createdChapter?.id) throw new Error("BAB baru gagal dibuat.");
+        chapterId = createdChapter.id;
+        chapterName = createdChapter.name;
+      }
+    }
+
+    const existingAssignment = allAssignments.find((assignment) =>
+      assignment.chapter_id === chapterId && normalize(assignment.name) === normalize(assignmentName),
+    );
+    if (existingAssignment) {
+      return {
+        ...target,
+        chapterId,
+        chapterName,
+        assignmentId: existingAssignment.id,
+        assignmentName: existingAssignment.name,
+      };
+    }
+
+    const chapterAssignments = allAssignments.filter((assignment) => assignment.chapter_id === chapterId);
+    const createdAssignments = await createBulkAssignments.mutateAsync([{
+      chapter_id: chapterId,
+      name: assignmentName,
+      order_index: chapterAssignments.length + 1,
+    }]);
+    const createdAssignment = Array.isArray(createdAssignments) ? createdAssignments[0] as Assignment | undefined : undefined;
+    if (!createdAssignment?.id) throw new Error("Tugas baru gagal dibuat.");
+
+    return {
+      ...target,
+      chapterId,
+      chapterName,
+      assignmentId: createdAssignment.id,
+      assignmentName: createdAssignment.name,
+    };
+  }, [allAssignments, chapters, createBulkAssignments, createBulkChapters, subjectId]);
+
   const handleUpdateChapter = async (id: string, name: string) => {
     try {
       if (isGuestMode) {
@@ -1373,8 +1438,12 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onDownloadCurrentGrades={handleDownloadCurrentGrades}
           onDownloadBackup={handleDownloadGradeBackup}
           onSaveGrade={handleSaveGrade}
+          onEnsureAssignmentTarget={handleEnsureImportAssignmentTarget}
           onImportComplete={() => {
             queryClient.invalidateQueries({ queryKey: ["grades"] });
+            queryClient.invalidateQueries({ queryKey: ["chapters"] });
+            queryClient.invalidateQueries({ queryKey: ["assignments"] });
+            queryClient.invalidateQueries({ queryKey: ["all_assignments"] });
           }}
           importContext={gradeImportContext}
           onOpenLegacyImport={() => {

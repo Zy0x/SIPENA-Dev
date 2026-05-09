@@ -93,6 +93,7 @@ interface GradeImportExportDialogProps {
   onDownloadBackup?: () => void | Promise<void>;
   onOpenLegacyImport?: () => void;
   onSaveGrade?: (studentId: string, gradeType: "assignment" | "sts" | "sas", value: number, assignmentId?: string) => void | Promise<void>;
+  onEnsureAssignmentTarget?: (target: GradeTarget) => Promise<GradeTarget>;
   onImportComplete?: () => void | Promise<void>;
   importContext: ImportPlanContext;
 }
@@ -534,6 +535,12 @@ function targetLabel(operation: GradeOperation): string {
   if (operation.target.gradeType === "sts") return "STS";
   if (operation.target.gradeType === "sas") return "SAS";
   return [operation.target.chapterName, operation.target.assignmentName].filter(Boolean).join(" - ") || "Tugas";
+}
+
+function gradeTargetLabel(target: GradeTarget): string {
+  if (target.gradeType === "sts") return "STS";
+  if (target.gradeType === "sas") return "SAS";
+  return [target.chapterName, target.assignmentName].filter(Boolean).join(" - ") || "Tugas";
 }
 
 function hasBlockedConflicts(plan: ImportPlan | null): boolean {
@@ -1915,12 +1922,14 @@ function resolveOperationSelection(
 async function executeClientSideImport({
   plan,
   onSaveGrade,
+  onEnsureAssignmentTarget,
   onProgress,
   selectedOverwriteColumns,
   selectionState,
 }: {
   plan: ImportPlan;
   onSaveGrade?: GradeImportExportDialogProps["onSaveGrade"];
+  onEnsureAssignmentTarget?: GradeImportExportDialogProps["onEnsureAssignmentTarget"];
   onProgress: (progress: ImportExecutionProgress) => void;
   selectedOverwriteColumns: Set<number>;
   selectionState?: ImportSelectionState;
@@ -1928,6 +1937,7 @@ async function executeClientSideImport({
   const summary = emptyExecutionSummary();
   const operations = plan.gradeOperations;
   const warnings = new Set<string>();
+  const ensuredAssignmentTargets = new Map<string, GradeTarget>();
 
   if (!onSaveGrade) {
     return {
@@ -1978,10 +1988,37 @@ async function executeClientSideImport({
       continue;
     }
 
-    if (operation.target.gradeType === "assignment" && !operation.target.assignmentId) {
-      summary.skippedCount += 1;
-      warnings.add("Struktur baru perlu dibuat atau dikonfirmasi terlebih dahulu.");
-      continue;
+    let operationTarget = operation.target;
+    if (operationTarget.gradeType === "assignment" && !operationTarget.assignmentId) {
+      if (!onEnsureAssignmentTarget) {
+        summary.skippedCount += 1;
+        warnings.add("BAB atau tugas baru belum bisa dibuat otomatis di halaman ini.");
+        continue;
+      }
+
+      const key = targetKey(operationTarget);
+      try {
+        if (!ensuredAssignmentTargets.has(key)) {
+          ensuredAssignmentTargets.set(key, await onEnsureAssignmentTarget(operationTarget));
+        }
+        operationTarget = ensuredAssignmentTargets.get(key) || operationTarget;
+      } catch (caught) {
+        summary.failedCount += 1;
+        summary.failedRows.push({
+          operationId: operation.id,
+          rowIndex: operation.rowIndex,
+          columnIndex: operation.columnIndex,
+          target: gradeTargetLabel(operationTarget),
+          message: caught instanceof Error ? caught.message : "BAB atau tugas baru gagal dibuat.",
+        });
+        continue;
+      }
+
+      if (!operationTarget.assignmentId) {
+        summary.skippedCount += 1;
+        warnings.add("Tugas baru belum memiliki ID, sehingga nilainya dilewati.");
+        continue;
+      }
     }
 
     if (shouldOverwrite && !selection.overwriteConfirmed) {
@@ -1999,9 +2036,9 @@ async function executeClientSideImport({
     try {
       await onSaveGrade(
         operation.studentId,
-        operation.target.gradeType,
+        operationTarget.gradeType,
         operation.value,
-        operation.target.gradeType === "assignment" ? operation.target.assignmentId : undefined,
+        operationTarget.gradeType === "assignment" ? operationTarget.assignmentId : undefined,
       );
       summary.successCount += 1;
     } catch (caught) {
@@ -2143,6 +2180,7 @@ export default function GradeImportExportDialog({
   onDownloadBackup,
   onOpenLegacyImport,
   onSaveGrade,
+  onEnsureAssignmentTarget,
   onImportComplete,
   importContext,
 }: GradeImportExportDialogProps) {
@@ -2773,6 +2811,7 @@ export default function GradeImportExportDialog({
           const summary = await executeClientSideImport({
             plan,
             onSaveGrade,
+            onEnsureAssignmentTarget,
             selectedOverwriteColumns,
             selectionState,
             onProgress: setExecutionProgress,
@@ -2839,6 +2878,7 @@ export default function GradeImportExportDialog({
     onDownloadCurrentGrades,
     onImportComplete,
     onSaveGrade,
+    onEnsureAssignmentTarget,
     plan,
     resolverState.columnOverrides,
     selectionState,

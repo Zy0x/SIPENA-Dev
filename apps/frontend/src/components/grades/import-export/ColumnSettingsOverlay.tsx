@@ -49,6 +49,8 @@ function defaultTargetMode(column: SpreadsheetPreviewColumn): TargetMode {
   if (column.gradeType === "sts") return "sts";
   if (column.gradeType === "sas") return "sas";
   if (column.assignmentId) return `assignment:${column.assignmentId}`;
+  if (column.isNewStructure && column.chapterId) return "new_assignment";
+  if (column.isNewStructure) return "new_chapter_assignment";
   return "keep";
 }
 
@@ -105,6 +107,21 @@ export function ColumnSettingsOverlay({
     onSetHeader(column, nextHeader || column.sourceHeader || column.header);
 
     if (targetMode === "keep") {
+      if (column.isNewStructure && column.chapterId && cleanName(newAssignmentName)) {
+        onSetTarget(column, {
+          kind: "create_assignment",
+          chapterId: column.chapterId,
+          assignmentName: cleanName(newAssignmentName),
+        });
+        onSetInclude(column, true);
+      } else if (column.isNewStructure && cleanName(newChapterName) && cleanName(newAssignmentName)) {
+        onSetTarget(column, {
+          kind: "create_chapter_and_assignment",
+          chapterName: cleanName(newChapterName),
+          assignmentName: cleanName(newAssignmentName),
+        });
+        onSetInclude(column, true);
+      }
       onClose();
       return;
     }

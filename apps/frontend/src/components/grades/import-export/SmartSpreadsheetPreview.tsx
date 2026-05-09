@@ -114,6 +114,8 @@ export function SmartSpreadsheetPreview({
     onApplySafeFixes();
   };
 
+  const showFixPanel = Boolean(selection && selection.kind !== "column");
+
   const toggleCellInclude = (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => {
     if (column.type === "identity") {
       setSelection({ kind: "row", row });
@@ -137,7 +139,7 @@ export function SmartSpreadsheetPreview({
       />
       <PreviewLegend />
 
-      <div className="grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className={cn("grid min-w-0 gap-3", showFixPanel && "2xl:grid-cols-[minmax(0,1fr)_340px]")}>
         <section className="sipena-preview-grid-wrap">
           <div className="sipena-preview-scroll">
             <table className="sipena-preview-table">
@@ -214,26 +216,28 @@ export function SmartSpreadsheetPreview({
           </div>
         </section>
 
-        <PreviewFixPanel
-          model={model}
-          selection={selection?.kind === "column" ? null : selection}
-          updateMode={updateMode}
-          selectionState={selectionState}
-          onUpdateModeChange={onUpdateModeChange}
-          onApproveColumn={onApproveColumn}
-          onIgnoreColumn={onIgnoreColumn}
-          onIgnoreCell={onIgnoreCell}
-          onIgnoreRow={onIgnoreRow}
-          onApplySafeFixes={onApplySafeFixes}
-          onApproveSuggestions={onApproveSuggestions}
-          onSetColumnInclude={onSetColumnInclude}
-          onSetColumnValueMode={onSetColumnValueMode}
-          onBulkColumnAction={onBulkColumnAction}
-          onResetColumnSelection={onResetColumnSelection}
-          onSetCellInclude={onSetCellInclude}
-          onSetCellValueMode={onSetCellValueMode}
-          onResetCellSelection={onResetCellSelection}
-        />
+        {showFixPanel ? (
+          <PreviewFixPanel
+            model={model}
+            selection={selection?.kind === "column" ? null : selection}
+            updateMode={updateMode}
+            selectionState={selectionState}
+            onUpdateModeChange={onUpdateModeChange}
+            onApproveColumn={onApproveColumn}
+            onIgnoreColumn={onIgnoreColumn}
+            onIgnoreCell={onIgnoreCell}
+            onIgnoreRow={onIgnoreRow}
+            onApplySafeFixes={onApplySafeFixes}
+            onApproveSuggestions={onApproveSuggestions}
+            onSetColumnInclude={onSetColumnInclude}
+            onSetColumnValueMode={onSetColumnValueMode}
+            onBulkColumnAction={onBulkColumnAction}
+            onResetColumnSelection={onResetColumnSelection}
+            onSetCellInclude={onSetCellInclude}
+            onSetCellValueMode={onSetCellValueMode}
+            onResetCellSelection={onResetCellSelection}
+          />
+        ) : null}
       </div>
 
       {selection?.kind === "column" && selection.column.type !== "identity" ? (
