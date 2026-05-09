@@ -567,11 +567,11 @@ export function buildSpreadsheetPreviewModel({
     ignoredCells: allCells.filter((cell) => cell.status === "ignored" || cell.status === "skipped" || cell.status === "manual_skipped").length,
     invalidCells: allCells.filter((cell) => cell.status === "invalid").length,
     includedCells: executablePlan.summary.executableCount,
-    skippedCells: allCells.filter((cell) => cell.status === "skipped").length,
+    skippedCells: executablePlan.summary.skippedEmptyCount + executablePlan.summary.skippedExistingCount,
     manualIncludedCells: allCells.filter((cell) => cell.status === "manual_included").length,
-    manualSkippedCells: allCells.filter((cell) => cell.status === "manual_skipped").length,
+    manualSkippedCells: executablePlan.summary.skippedManualCount,
     overwriteCells: allCells.filter((cell) => cell.status === "overwrite").length,
-    blockedCells: allCells.filter((cell) => cell.status === "blocked").length,
+    blockedCells: executablePlan.summary.blockedCount,
     overwriteNeedsConfirmation: executablePlan.summary.overwriteNeedsConfirmationCount,
   };
 

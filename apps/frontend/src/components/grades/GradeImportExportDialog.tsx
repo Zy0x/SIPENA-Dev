@@ -2035,29 +2035,19 @@ function PreviewStep({
 // RPC batch import, idempotency key, signed server template, audit log,
 // rollback, and server-side validation.
 async function executeClientSideImport({
-  plan,
+  executablePlan,
   onSaveGrade,
   onSaveGradesBatch,
   onEnsureAssignmentTarget,
   onProgress,
-  resolverState,
-  selectionState,
 }: {
-  plan: ImportPlan;
+  executablePlan: ReturnType<typeof buildExecutableImportOperations>;
   onSaveGrade?: GradeImportExportDialogProps["onSaveGrade"];
   onSaveGradesBatch?: GradeImportExportDialogProps["onSaveGradesBatch"];
   onEnsureAssignmentTarget?: GradeImportExportDialogProps["onEnsureAssignmentTarget"];
   onProgress: (progress: ImportExecutionProgress) => void;
-  resolverState?: ImportResolverState;
-  selectionState?: ImportSelectionState;
 }): Promise<ImportExecutionSummary> {
   const summary = emptyExecutionSummary();
-  const executablePlan = buildExecutableImportOperations({
-    plan,
-    resolverState,
-    selectionState,
-    updateMode: plan.updateMode,
-  });
   const operations = executablePlan.operations;
   const warnings = new Set<string>();
   const ensuredAssignmentTargets = new Map<string, GradeTarget>();
@@ -2859,6 +2849,9 @@ export default function GradeImportExportDialog({
   const spreadsheetPreview = useMemo<SpreadsheetPreviewModel | null>(() => (
     plan ? buildSpreadsheetPreviewModel({ plan, resolverState, updateMode, selectionState }) : null
   ), [plan, resolverState, selectionState, updateMode]);
+  const executableImportPlan = useMemo(() => (
+    plan ? buildExecutableImportOperations({ plan, resolverState, selectionState, updateMode }) : null
+  ), [plan, resolverState, selectionState, updateMode]);
   const canGoNext = useMemo(() => {
     if (stepIndex === 0) return hasPlan && !unsupported && !regionSelectionPending;
     if (stepIndex === 1) return hasPlan && !unsupported && !regionSelectionPending;
@@ -2866,11 +2859,15 @@ export default function GradeImportExportDialog({
       return hasPlan
         && (spreadsheetPreview?.summary.manualRequired || 0) === 0
         && (spreadsheetPreview?.summary.invalidCells || 0) === 0
-        && (spreadsheetPreview?.summary.overwriteNeedsConfirmation || 0) === 0;
+        && (spreadsheetPreview?.summary.overwriteNeedsConfirmation || 0) === 0
+        && (executableImportPlan?.summary.blockedCount || 0) === 0
+        && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) === 0;
     }
     if (stepIndex >= importSteps.length - 1) return false;
     return hasPlan;
   }, [
+    executableImportPlan?.summary.blockedCount,
+    executableImportPlan?.summary.overwriteNeedsConfirmationCount,
     hasPlan,
     regionSelectionPending,
     spreadsheetPreview?.summary.invalidCells,
@@ -3035,18 +3032,46 @@ export default function GradeImportExportDialog({
           return;
         }
 
+        const executablePlan = buildExecutableImportOperations({
+          plan,
+          resolverState,
+          selectionState,
+          updateMode,
+        });
+        if (executablePlan.summary.overwriteNeedsConfirmationCount > 0) {
+          setStepIndex(3);
+          showWarning(
+            "Overwrite harus dikonfirmasi dulu.",
+            `Import dibatalkan karena ${executablePlan.summary.overwriteNeedsConfirmationCount} nilai lama belum dikonfirmasi untuk ditimpa.`,
+          );
+          return;
+        }
+        if (executablePlan.summary.blockedCount > 0) {
+          setStepIndex(3);
+          showWarning(
+            "Import dibatalkan karena masih ada item yang perlu dipilih.",
+            `${executablePlan.summary.blockedCount} item masih perlu dicek sebelum nilai disimpan.`,
+          );
+          return;
+        }
+        if (executablePlan.summary.executableCount === 0) {
+          showWarning(
+            "Tidak ada nilai yang siap diimport.",
+            `0 nilai akan disimpan, ${executablePlan.summary.skippedEmptyCount + executablePlan.summary.skippedExistingCount + executablePlan.summary.skippedManualCount} dilewati karena kosong/nilai lama/pilihan manual.`,
+          );
+          return;
+        }
+
         setExecutionState("importing");
         setExecutionSummary(null);
-        setExecutionProgress({ current: 0, total: 0 });
+        setExecutionProgress({ current: 0, total: executablePlan.summary.totalOperations });
 
         try {
           const summary = await executeClientSideImport({
-            plan,
+            executablePlan,
             onSaveGrade,
             onSaveGradesBatch,
             onEnsureAssignmentTarget,
-            resolverState,
-            selectionState,
             onProgress: setExecutionProgress,
           });
           setExecutionSummary(summary);
@@ -3057,7 +3082,10 @@ export default function GradeImportExportDialog({
           if (summary.failedCount > 0) {
             showWarning("Import selesai sebagian", `${summary.successCount} nilai tersimpan, ${summary.failedCount} gagal, ${summary.skippedCount} dilewati.`);
           } else {
-            success("Import aman selesai", `${summary.successCount} nilai tersimpan, ${summary.skippedCount} dilewati.`);
+            success(
+              "Import aman selesai",
+              `${summary.successCount} nilai tersimpan. ${executablePlan.summary.executableCount} nilai akan disimpan, ${summary.skippedCount} dilewati karena kosong/nilai lama/pilihan manual.`,
+            );
           }
         } catch (caught) {
           setExecutionState("failed");
@@ -3124,6 +3152,7 @@ export default function GradeImportExportDialog({
     stepIndex,
     success,
     tab,
+    updateMode,
   ]);
 
   const handleBack = useCallback(() => {
@@ -3152,6 +3181,12 @@ export default function GradeImportExportDialog({
       : isExportingBackup;
   const importReadinessMessage = useMemo(() => {
     if (tab !== "import") return "Data tidak akan ditimpa tanpa konfirmasi.";
+    if (stepIndex >= 2 && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) {
+      return "Overwrite harus dikonfirmasi dulu.";
+    }
+    if (stepIndex >= 2 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
+      return `Import dibatalkan karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
+    }
     if ((stepIndex === 2 || stepIndex === 3) && spreadsheetPreview?.summary.manualRequired) {
       return `Lanjut belum bisa - pilih target atau atur ${spreadsheetPreview.summary.manualRequired} bagian merah.`;
     }
@@ -3161,11 +3196,15 @@ export default function GradeImportExportDialog({
     if ((stepIndex === 2 || stepIndex === 3) && spreadsheetPreview?.summary.invalidCells) {
       return `Lanjut belum bisa - perbaiki atau lewati ${spreadsheetPreview.summary.invalidCells} nilai tidak valid.`;
     }
-    if (stepIndex >= 2 && (spreadsheetPreview?.summary.manualRequired || 0) === 0) {
-      return `Siap lanjut - ${spreadsheetPreview?.summary.includedCells || 0} nilai akan diimport.`;
+    if (stepIndex >= 2 && executableImportPlan) {
+      const skipped = executableImportPlan.summary.skippedEmptyCount
+        + executableImportPlan.summary.skippedExistingCount
+        + executableImportPlan.summary.skippedManualCount;
+      if (executableImportPlan.summary.executableCount === 0) return "Tidak ada nilai yang siap diimport.";
+      return `${executableImportPlan.summary.executableCount} nilai akan disimpan, ${skipped} dilewati karena kosong/nilai lama.`;
     }
     return "Mode aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
-  }, [spreadsheetPreview, stepIndex, tab]);
+  }, [executableImportPlan, spreadsheetPreview, stepIndex, tab]);
 
   const primaryLabel = useMemo(() => {
     if (tab === "export") {

@@ -261,6 +261,44 @@ describe("executable import builder", () => {
     expect(confirmed.summary.executableCount).toBe(1);
   });
 
+  it("does not make skipped create-structure columns executable", () => {
+    const createPlan = plan({
+      columnMappings: [column("BAB 1 - Tugas Baru", {
+        status: "needs_confirmation",
+        target: { gradeType: "assignment", chapterId: "chapter-1", chapterName: "BAB 1", assignmentName: "Tugas Baru" },
+      })],
+      gradeOperations: [operation({
+        target: { gradeType: "assignment", chapterId: "chapter-1", chapterName: "BAB 1", assignmentName: "Tugas Baru" },
+      })],
+    });
+    const result = buildExecutableImportOperations({
+      plan: createPlan,
+      selectionState: {
+        columnSettings: {
+          "excel-col-4": { columnId: "excel-col-4", columnIndex: 4, include: false, valueMode: "fill_empty_only" },
+        },
+        cellSettings: {},
+      },
+    });
+
+    expect(result.summary.executableCount).toBe(0);
+    expect(result.summary.unresolvedColumnCount).toBe(0);
+    expect(result.summary.skippedManualCount).toBe(1);
+  });
+
+  it("keeps STS and SAS executable targets free of assignmentId", () => {
+    const result = buildExecutableImportOperations({
+      plan: plan({
+        columnMappings: [column("STS", { target: { gradeType: "sts" } })],
+        gradeOperations: [operation({ target: { gradeType: "sts" } })],
+      }),
+      resolverState: { columnOverrides: { 4: { kind: "sts" } } },
+    });
+
+    expect(result.summary.executableCount).toBe(1);
+    expect(result.operations[0]?.target).toEqual({ gradeType: "sts" });
+  });
+
   it("executes safe new values as fill empty", () => {
     const result = buildExecutableImportOperations({ plan: plan() });
 
