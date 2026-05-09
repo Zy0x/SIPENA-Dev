@@ -239,6 +239,7 @@ describe("official SIPENA grade template exporter", () => {
 
   it("builds official workbook sheets and hides metadata sheets", () => {
     const workbook = buildOfficialGradeTemplateWorkbook(context);
+    const guideSheet = workbook.Sheets.Panduan;
 
     expect(workbook.SheetNames).toEqual(["Panduan", "Isi_Nilai", "_manifest", "_students", "_structure", "_column_map"]);
     expect(workbook.Workbook?.Sheets?.filter((sheet) => sheet.Hidden === 1).map((sheet) => sheet.name)).toEqual([
@@ -247,6 +248,9 @@ describe("official SIPENA grade template exporter", () => {
       "_structure",
       "_column_map",
     ]);
+    expect(guideSheet.A3?.v).toBe("Saat diupload, SIPENA tetap mencocokkan isinya dengan data web sebelum import.");
+    expect(guideSheet.A12?.v).toBe("7. Sheet tersembunyi membantu SIPENA mengenali siswa, kolom nilai, dan struktur web saat import.");
+    expect(guideSheet.A15?.v).toBe("Template dibuat dari browser, sehingga bukan jaminan file tidak berubah. SIPENA tetap memvalidasi terhadap data web saat upload.");
   });
 
   it("creates Isi_Nilai headers from web structure plus STS and SAS", () => {
@@ -287,9 +291,11 @@ describe("official SIPENA grade template exporter", () => {
 describe("SIPENA current grades and backup exporters", () => {
   it("exports current grades with guide and visible Nilai sheet only", () => {
     const workbook = buildCurrentGradesExportWorkbook(exportContext);
+    const guideSheet = workbook.Sheets.Panduan;
     const nilaiRows = XLSX.utils.sheet_to_json(workbook.Sheets.Nilai, { header: 1 }) as unknown[][];
 
     expect(workbook.SheetNames).toEqual(["Panduan", "Nilai"]);
+    expect(guideSheet.A6?.v).toBe("3. Workbook ini untuk cek atau melengkapi nilai saat ini, bukan template validasi lengkap.");
     expect(nilaiRows[0]).toEqual(["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1", "STS", "SAS"]);
     expect(nilaiRows[1]).toEqual([1, "00123", "Ahmad", 85, 90, ""]);
     expect(nilaiRows[2]).toEqual([2, "00456", "Budi", "", "", ""]);
@@ -297,11 +303,13 @@ describe("SIPENA current grades and backup exporters", () => {
 
   it("exports full backup sheets with hidden metadata and available grade rows", () => {
     const workbook = buildFullGradeBackupWorkbook(exportContext);
+    const guideSheet = workbook.Sheets.Panduan;
     const hiddenSheets = workbook.Workbook?.Sheets?.filter((sheet) => sheet.Hidden === 1).map((sheet) => sheet.name);
     const gradeRows = XLSX.utils.sheet_to_json(workbook.Sheets._grades, { header: 1 }) as unknown[][];
 
     expect(workbook.SheetNames).toEqual(["Panduan", "Nilai", "_manifest", "_students", "_structure", "_grades"]);
     expect(hiddenSheets).toEqual(["_manifest", "_students", "_structure", "_grades"]);
+    expect(guideSheet.A7?.v).toBe("4. Backup adalah arsip pemeriksaan. File ini bukan restore otomatis 1 klik.");
     expect(gradeRows[0]).toEqual(["grade_id", "student_id", "subject_id", "assignment_id", "grade_type", "value", "semester_id", "academic_year_id"]);
     expect(gradeRows[1]).toContain("grade-1");
   });
@@ -429,6 +437,8 @@ describe("official SIPENA template reader", () => {
       rawHeader: "BAB 1 - Tugas 1",
     });
     expect(result.warnings.map((item) => item.code)).toContain("IMPORT_UNSIGNED_TEMPLATE");
+    expect(result.warnings.find((item) => item.code === "IMPORT_UNSIGNED_TEMPLATE")?.message)
+      .toBe("Template dibuat dari browser. SIPENA akan tetap memvalidasi terhadap data web.");
   });
 
   it("detects context mismatch and classifies as official modified", () => {
@@ -436,9 +446,16 @@ describe("official SIPENA template reader", () => {
       ...context,
       semesterId: "semester-2",
     });
+    const plan = buildImportPlan(result, templateContext);
 
     expect(result.sourceType).toBe("official_modified");
     expect(result.warnings.map((item) => item.code)).toContain("IMPORT_SEMESTER_MISMATCH");
+    expect(result.warnings.find((item) => item.code === "IMPORT_SEMESTER_MISMATCH")?.message).toBe("File ini dibuat untuk semester lain.");
+    expect(plan.conflicts.find((item) => item.code === "IMPORT_CONTEXT_MISMATCH_BLOCKED")).toMatchObject({
+      severity: "blocked",
+      type: "context",
+      message: "File ini dibuat untuk semester lain.",
+    });
   });
 
   it("detects added grade headers in official templates", () => {

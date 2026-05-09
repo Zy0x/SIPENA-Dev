@@ -141,16 +141,16 @@ function compareManifestContext(manifest: ManifestData | null, context: Official
   const warnings: ImportWarning[] = [];
 
   if (contextValueMismatch(manifest.class_id, context.classId)) {
-    warnings.push(warning("IMPORT_CONTEXT_MISMATCH", "class_id template berbeda dengan kelas aktif.", "class_id"));
+    warnings.push(warning("IMPORT_CONTEXT_MISMATCH", "File ini dibuat untuk kelas lain.", "class_id"));
   }
   if (contextValueMismatch(manifest.subject_id, context.subjectId)) {
-    warnings.push(warning("IMPORT_CONTEXT_MISMATCH", "subject_id template berbeda dengan mata pelajaran aktif.", "subject_id"));
+    warnings.push(warning("IMPORT_CONTEXT_MISMATCH", "File ini dibuat untuk mata pelajaran lain.", "subject_id"));
   }
   if (contextValueMismatch(manifest.semester_id, context.semesterId)) {
-    warnings.push(warning("IMPORT_SEMESTER_MISMATCH", "semester_id template berbeda dengan semester aktif.", "semester_id"));
+    warnings.push(warning("IMPORT_SEMESTER_MISMATCH", "File ini dibuat untuk semester lain.", "semester_id"));
   }
   if (contextValueMismatch(manifest.academic_year_id, context.academicYearId)) {
-    warnings.push(warning("IMPORT_CONTEXT_MISMATCH", "academic_year_id template berbeda dengan tahun ajaran aktif.", "academic_year_id"));
+    warnings.push(warning("IMPORT_CONTEXT_MISMATCH", "File ini dibuat untuk tahun ajaran lain.", "academic_year_id"));
   }
 
   return warnings;
@@ -233,7 +233,7 @@ export function analyzeOfficialTemplateWorkbook(
   if (manifest?.signature_status === "unsigned_client_template") {
     warnings.push(warning(
       "IMPORT_UNSIGNED_TEMPLATE",
-      "Template ini unsigned_client_template. Validasi tetap harus dibandingkan dengan data web.",
+      "Template dibuat dari browser. SIPENA akan tetap memvalidasi terhadap data web.",
       "signature_status",
     ));
   }

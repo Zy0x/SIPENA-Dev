@@ -346,7 +346,7 @@ function classifyConflict(
               ? "Pilih siswa yang benar"
               : columnTitle(column),
       description: isContext
-        ? "File ini tampaknya bukan dari halaman yang sedang dibuka."
+        ? "File ini dibuat untuk kelas, mapel, semester, atau tahun ajaran lain."
         : isDuplicateTarget
           ? "Pilih kolom mana yang dipakai agar nilai tidak dobel."
           : isInvalidValue
@@ -354,7 +354,7 @@ function classifyConflict(
             : isStudent
               ? "Nama dari Excel cocok dengan beberapa siswa atau belum ditemukan di web."
               : "Target kolom nilai belum cukup aman untuk dipilih otomatis.",
-      recommendedActionLabel: isContext ? "Pilih konteks yang sesuai" : "Pilih sekarang",
+      recommendedActionLabel: isContext ? "Batalkan dan upload template baru" : "Pilih sekarang",
       secondaryActionLabel: "Abaikan data ini",
       detailLabel: "Lihat alasan SIPENA",
       canApplyRecommended: false,

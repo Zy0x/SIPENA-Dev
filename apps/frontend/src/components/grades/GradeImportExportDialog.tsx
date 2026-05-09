@@ -231,8 +231,8 @@ const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message:
     message: "Workbook gagal dibaca. Coba simpan ulang dari Excel lalu upload kembali.",
   },
   IMPORT_CONTEXT_MISMATCH: {
-    title: "Template berbeda konteks",
-    message: "Template berbeda dengan kelas, mapel, semester, atau tahun ajaran aktif. Pilih konteks yang sesuai atau download template baru.",
+    title: "File berbeda kelas/mapel/semester",
+    message: "File ini dibuat untuk kelas/mapel/semester lain. Pilih konteks yang sesuai atau download template baru.",
   },
   IMPORT_DUPLICATE_STUDENT_MAPPING: {
     title: "Siswa terduplikasi",
@@ -370,7 +370,7 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
   IMPORT_CONTEXT_MISMATCH_BLOCKED: importUiErrorMessages.IMPORT_CONTEXT_MISMATCH,
   IMPORT_SEMESTER_MISMATCH: {
     title: "Semester berbeda",
-    message: "Template atau workbook ini tampaknya berbeda semester. Pilih semester yang sesuai atau download template baru.",
+    message: "File ini dibuat untuk semester lain. Pilih semester yang sesuai atau download template baru.",
   },
   IMPORT_MANIFEST_MISSING: {
     title: "Identitas template tidak ditemukan",
@@ -393,8 +393,8 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
     message: "BAB atau tugas baru belum dikonfirmasi. Konfirmasi dulu sebelum import dilanjutkan.",
   },
   IMPORT_UNSIGNED_TEMPLATE: {
-    title: "Template belum ditandatangani server",
-    message: "Template ini dibuat dari sisi browser. SIPENA tetap membandingkannya dengan data web sebelum import.",
+    title: "Template dibuat dari browser",
+    message: "SIPENA akan tetap memvalidasi isinya terhadap data web sebelum import.",
   },
   IMPORT_NO_FREE_EXCEL_REGION: {
     title: "Area nilai belum ditemukan",
@@ -1809,13 +1809,12 @@ function SmartFixStep({
         <ManualChoiceCard
           key={item.id}
           title="File berbeda kelas/mapel/semester"
-          body="File ini tampaknya bukan dari halaman yang sedang dibuka. Gunakan template baru jika ragu."
+          body="File ini dibuat untuk kelas, mapel, semester, atau tahun ajaran lain. Import diblokir agar nilai tidak masuk ke konteks yang salah."
           fields={[
             { label: "Masalah", value: getImportNotice(conflict.code, conflict.message).message },
           ]}
         >
           <ResolutionButton onClick={onRestartUpload}>Batalkan dan upload template baru</ResolutionButton>
-          <ResolutionButton tone="warning" onClick={() => actions.onResolveConflict(conflict)}>Gunakan file ini dengan konfirmasi</ResolutionButton>
         </ManualChoiceCard>
       );
     }
@@ -3461,8 +3460,8 @@ export default function GradeImportExportDialog({
                       <div className="grid min-w-0 gap-3 md:grid-cols-2">
                         <ImportModeCard
                           title="Template Resmi SIPENA"
-                          description="Gunakan template dari struktur web aktif untuk import paling terarah."
-                          details={["Siswa dan NISN mengikuti data web", "Cocok untuk BAB, tugas, STS, dan SAS", "Sel kosong tidak menghapus nilai lama"]}
+                          description="Gunakan template dari kelas, mapel, dan semester yang sedang aktif."
+                          details={["Saat upload tetap dicocokkan dengan data web", "Cocok untuk BAB, tugas, STS, dan SAS", "Sel kosong tidak menghapus nilai lama"]}
                           selected={importMode === "official"}
                           tone="official"
                           icon={<FileSpreadsheet className="h-5 w-5" />}
@@ -3510,7 +3509,7 @@ export default function GradeImportExportDialog({
                           </RiskAlert>
                         ) : null}
                         <RiskAlert title="Data tidak akan ditimpa tanpa konfirmasi" tone="safe">
-                          Default import adalah isi nilai kosong saja. Nilai lama akan muncul sebagai item yang perlu dicek sebelum tahap simpan.
+                          Default import adalah isi nilai kosong saja. Template tetap dicocokkan dengan data web sebelum nilai disimpan.
                         </RiskAlert>
                         <RiskAlert title="BAB dan tugas baru butuh persetujuan" tone="warning">
                           Header baru hanya menjadi kandidat. Sistem tidak membuat struktur baru secara otomatis.
@@ -3575,8 +3574,8 @@ export default function GradeImportExportDialog({
                 <main className="min-w-0 space-y-3">
                   <ExportOptionCard
                     title="Template Resmi SIPENA"
-                    description="Workbook kosong berbasis struktur kelas, mapel, semester, siswa, BAB, dan tugas aktif."
-                    meta="Paling aman untuk input nilai baru"
+                    description="Workbook kosong dari data kelas, mapel, semester, siswa, BAB, dan tugas aktif. Saat diupload, SIPENA tetap mencocokkan isinya dengan data web."
+                    meta="Paling terarah untuk input nilai baru"
                     selected={exportMode === "official"}
                     tone="official"
                     icon={<FileSpreadsheet className="h-5 w-5" />}
@@ -3584,8 +3583,8 @@ export default function GradeImportExportDialog({
                   />
                   <ExportOptionCard
                     title="Export Nilai Saat Ini"
-                    description="Membawa nilai yang sedang tersimpan agar guru dapat mengecek atau melengkapi data."
-                    meta="Sheet Panduan dan Nilai"
+                    description="Membawa nilai yang sedang tersimpan untuk dicek atau dilengkapi. File ini bukan template validasi lengkap."
+                    meta="Untuk pemeriksaan nilai saat ini"
                     selected={exportMode === "current"}
                     tone="current"
                     icon={<Download className="h-5 w-5" />}
@@ -3593,8 +3592,8 @@ export default function GradeImportExportDialog({
                   />
                   <ExportOptionCard
                     title="Backup Lengkap"
-                    description="Paket workbook untuk arsip kelas dan mapel aktif sebelum perubahan besar."
-                    meta="Disarankan sebelum import massal"
+                    description="Paket workbook untuk arsip kelas dan mapel aktif sebelum perubahan besar. Backup bukan restore otomatis 1 klik."
+                    meta="Arsip pemeriksaan sebelum import massal"
                     selected={exportMode === "backup"}
                     tone="backup"
                     icon={<Archive className="h-5 w-5" />}
@@ -3607,7 +3606,7 @@ export default function GradeImportExportDialog({
                     </RiskAlert>
                   ) : (
                     <RiskAlert title="Export aman aktif" tone="safe">
-                      Nilai kosong tetap kosong. Export tidak mengubah nilai di Input Nilai dan tidak menyimpan data baru.
+                      Nilai kosong tetap kosong. Export tidak mengubah nilai di Input Nilai dan tidak menyimpan data baru. Template resmi tetap divalidasi saat diupload kembali.
                     </RiskAlert>
                   )}
                 </main>

@@ -205,6 +205,8 @@ function buildTemplateColumns(context: OfficialGradeTemplateContext): TemplateCo
 function createGuideSheet() {
   const rows = [
     ["SIPENA - Template Resmi Import Nilai"],
+    ["Template ini dibuat dari data kelas, mapel, semester, siswa, BAB, dan tugas yang sedang aktif."],
+    ["Saat diupload, SIPENA tetap mencocokkan isinya dengan data web sebelum import."],
     [""],
     ["Cara mengisi template"],
     ["1. Isi nilai hanya pada sheet Isi_Nilai."],
@@ -213,10 +215,10 @@ function createGuideSheet() {
     ["4. Sel kosong tidak akan menghapus atau menimpa nilai lama saat import."],
     ["5. Pengguna boleh menambah header baru dengan format: BAB 1 - Tugas 2 atau BAB 3 - Proyek."],
     ["6. Header STS dan SAS dipakai untuk nilai sumatif tengah dan akhir semester."],
-    ["7. Sheet tersembunyi digunakan SIPENA untuk validasi terhadap data web saat import."],
+    ["7. Sheet tersembunyi membantu SIPENA mengenali siswa, kolom nilai, dan struktur web saat import."],
     [""],
     ["Catatan keamanan"],
-    ["Template ini berstatus unsigned_client_template. Validasi tetap harus dibandingkan dengan data web saat import."],
+    ["Template dibuat dari browser, sehingga bukan jaminan file tidak berubah. SIPENA tetap memvalidasi terhadap data web saat upload."],
   ];
   const ws = XLSX.utils.aoa_to_sheet(rows);
   setColumnWidths(ws, [110]);

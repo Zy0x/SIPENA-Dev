@@ -211,7 +211,8 @@ function createGuideSheet(type: "current" | "backup") {
         ["Isi workbook"],
         ["1. Sheet Nilai berisi siswa, BAB/tugas, STS, SAS, dan nilai yang sedang tersimpan."],
         ["2. Nilai kosong tetap dikosongkan dan tidak diubah menjadi 0."],
-        ["3. Workbook ini tidak menyertakan metadata internal yang tidak perlu."],
+        ["3. Workbook ini untuk cek atau melengkapi nilai saat ini, bukan template validasi lengkap."],
+        ["4. Jika ingin import paling terarah, download Template Resmi SIPENA dari halaman yang sama."],
       ]
     : [
         ["SIPENA - Backup Lengkap Nilai"],
@@ -220,6 +221,7 @@ function createGuideSheet(type: "current" | "backup") {
         ["1. Sheet Nilai berisi tampilan nilai aktif."],
         ["2. Sheet metadata tersembunyi menyimpan struktur, siswa, manifest, dan nilai yang tersedia."],
         ["3. Backup ini dibuat dari data yang tersedia di browser saat export."],
+        ["4. Backup adalah arsip pemeriksaan. File ini bukan restore otomatis 1 klik."],
       ];
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
