@@ -252,6 +252,29 @@ describe("spreadsheet preview builder", () => {
     expect(firstGradeCell(model)?.isBlockedByColumn).toBe(true);
   });
 
+  it("uses preview-only header override without changing the assignment target", () => {
+    const model = buildSpreadsheetPreviewModel({
+      plan: plan(),
+      selectionState: {
+        columnSettings: {
+          "excel-col-4": {
+            columnId: "excel-col-4",
+            columnIndex: 4,
+            include: true,
+            valueMode: "fill_empty_only",
+            headerOverride: "BAB 1 - Tugas Remedial",
+          },
+        },
+        cellSettings: {},
+      },
+    });
+
+    const previewColumn = model.columns.find((item) => item.id === "excel-col-4");
+    expect(previewColumn?.header).toBe("BAB 1 - Tugas Remedial");
+    expect(previewColumn?.sourceHeader).toBe("BAB 1 - Tugas 1");
+    expect(previewColumn?.assignmentId).toBe("assignment-1");
+  });
+
   it("counts preview summary values", () => {
     const model = buildSpreadsheetPreviewModel({
       plan: plan({

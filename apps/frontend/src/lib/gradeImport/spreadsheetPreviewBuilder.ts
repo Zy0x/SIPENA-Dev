@@ -33,6 +33,9 @@ export type SpreadsheetPreviewColumn = {
   type: PreviewColumnType;
   status: PreviewCellStatus;
   targetLabel?: string;
+  sourceHeader?: string;
+  chapterId?: string;
+  assignmentId?: string;
   chapterName?: string;
   assignmentName?: string;
   gradeType?: "assignment" | "sts" | "sas";
@@ -276,10 +279,13 @@ function buildPreviewColumns(
     const selection = columnSelection(mapping, status, selectionState, updateMode);
     return {
       id: selection.columnId,
-      header: mapping.rawHeader,
+      header: selection.setting?.headerOverride?.trim() || mapping.rawHeader,
       type: columnType(mapping),
       status: selection.isManuallySkipped ? "manual_skipped" : selection.isManuallyIncluded ? "manual_included" : status,
       targetLabel: targetLabel(mapping),
+      sourceHeader: mapping.rawHeader,
+      chapterId: mapping.target?.chapterId,
+      assignmentId: mapping.target?.assignmentId,
       chapterName: mapping.target?.chapterName,
       assignmentName: mapping.target?.assignmentName,
       gradeType: mapping.target?.gradeType,

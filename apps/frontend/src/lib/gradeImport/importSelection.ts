@@ -16,6 +16,7 @@ export type ColumnImportSetting = {
   columnIndex?: number;
   include: boolean;
   valueMode: ColumnValueMode;
+  headerOverride?: string;
   overwriteConfirmed?: boolean;
   reason?: string;
   updatedAt?: string;

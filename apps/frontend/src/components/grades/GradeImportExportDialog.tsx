@@ -57,6 +57,7 @@ import { cn } from "@/lib/utils";
 
 import { ExportOptionCard } from "./import-export/ExportOptionCard";
 import { AdvancedImportOptions } from "./import-export/AdvancedImportOptions";
+import type { ColumnTargetDraft } from "./import-export/ColumnSettingsOverlay";
 import { ImportDropzone } from "./import-export/ImportDropzone";
 import { ImportModeCard } from "./import-export/ImportModeCard";
 import { ImportStepper } from "./import-export/ImportStepper";
@@ -1099,6 +1100,8 @@ interface ConflictResolutionActions {
   onResetAllChoices: () => void;
   onUpdateModeChange: (mode: UpdateMode) => void;
   onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
+  onSetColumnHeader: (column: SpreadsheetPreviewColumn, header: string) => void;
+  onSetColumnTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
   onSetColumnValueMode: (column: SpreadsheetPreviewColumn, mode: ColumnValueMode, overwriteConfirmed?: boolean) => void;
   onBulkColumnAction: (column: SpreadsheetPreviewColumn, action: "include_valid" | "skip_all" | "skip_existing" | "reset") => void;
   onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
@@ -1687,12 +1690,14 @@ function SpreadsheetPreviewStep({
   actions,
   updateMode,
   selectionState,
+  importContext,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
   actions: ConflictResolutionActions;
   updateMode: UpdateMode;
   selectionState: ImportSelectionState;
+  importContext: ImportPlanContext;
 }) {
   if (!plan || !model) {
     return <EmptyPanel title="Atur Kolom belum tersedia" description="Preview spreadsheet akan muncul setelah file dianalisis." />;
@@ -1730,6 +1735,17 @@ function SpreadsheetPreviewStep({
       model={model}
       updateMode={updateMode}
       selectionState={selectionState}
+      assignments={importContext.assignments.map((assignment) => {
+        const chapter = importContext.chapters.find((item) => item.id === assignment.chapter_id);
+        return {
+          id: assignment.id,
+          label: [chapter?.name, assignment.name].filter(Boolean).join(" - ") || assignment.name,
+          chapterId: assignment.chapter_id,
+          chapterName: chapter?.name,
+          assignmentName: assignment.name,
+        };
+      })}
+      chapters={importContext.chapters.map((chapter) => ({ id: chapter.id, name: chapter.name }))}
       onUpdateModeChange={actions.onUpdateModeChange}
       onApplySafeFixes={actions.onApplySafeFixes}
       onApproveSuggestions={actions.onApproveSipenaSuggestions}
@@ -1745,6 +1761,8 @@ function SpreadsheetPreviewStep({
       }}
       onIgnoreRow={(row) => actions.onIgnoreRow(previewRowIndex(row))}
       onSetColumnInclude={actions.onSetColumnInclude}
+      onSetColumnHeader={actions.onSetColumnHeader}
+      onSetColumnTarget={actions.onSetColumnTarget}
       onSetColumnValueMode={actions.onSetColumnValueMode}
       onBulkColumnAction={actions.onBulkColumnAction}
       onResetColumnSelection={actions.onResetColumnSelection}
@@ -2493,6 +2511,55 @@ export default function GradeImportExportDialog({
         },
       },
     })),
+    onSetColumnHeader: (column, header) => setSelectionState((current) => {
+      const trimmedHeader = header.trim();
+      const existing = current.columnSettings[column.id] || defaultColumnImportSetting(column.id, previewColumnIndex(column) || undefined);
+      return {
+        ...current,
+        columnSettings: {
+          ...current.columnSettings,
+          [column.id]: {
+            ...existing,
+            include: existing.include ?? column.effectiveInclude !== false,
+            headerOverride: trimmedHeader || column.sourceHeader || column.header,
+            updatedAt: nowSelectionTimestamp(),
+          },
+        },
+      };
+    }),
+    onSetColumnTarget: (column, target) => {
+      const columnIndex = previewColumnIndex(column);
+      if (!columnIndex) return;
+      updateResolver((current) => {
+        const columnOverrides = { ...current.columnOverrides };
+        if (target.kind === "ignore") {
+          delete columnOverrides[String(columnIndex)];
+          return {
+            ...current,
+            ignoredColumns: uniqueNumbersForState([...current.ignoredColumns, columnIndex]),
+            columnOverrides,
+          };
+        }
+
+        columnOverrides[String(columnIndex)] = target.kind === "create_assignment"
+          ? { ...target, confirmed: true }
+          : target.kind === "create_chapter_and_assignment"
+            ? { ...target, confirmed: true }
+            : target;
+
+        return {
+          ...current,
+          ignoredColumns: current.ignoredColumns.filter((item) => item !== columnIndex),
+          columnOverrides,
+          resolvedConflictKeys: uniqueStrings([
+            ...current.resolvedConflictKeys,
+            ...(plan?.conflicts || [])
+              .filter((conflict) => conflict.columnIndex === columnIndex)
+              .map(conflictKey),
+          ]),
+        };
+      });
+    },
     onSetColumnValueMode: (column, mode, overwriteConfirmed = false) => setSelectionState((current) => ({
       ...current,
       columnSettings: {
@@ -2968,6 +3035,7 @@ export default function GradeImportExportDialog({
                       actions={resolverActions}
                       updateMode={updateMode}
                       selectionState={selectionState}
+                      importContext={importContext}
                     />
                   ) : null}
                   {stepIndex === 3 ? <PreviewStep plan={plan} model={spreadsheetPreview} updateMode={updateMode} onUpdateModeChange={setUpdateMode} /> : null}

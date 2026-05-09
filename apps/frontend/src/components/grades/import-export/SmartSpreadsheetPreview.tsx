@@ -13,6 +13,12 @@ import type {
 } from "@/lib/gradeImport";
 import { cn } from "@/lib/utils";
 
+import {
+  ColumnSettingsOverlay,
+  type ColumnSettingsAssignmentOption,
+  type ColumnSettingsChapterOption,
+  type ColumnTargetDraft,
+} from "./ColumnSettingsOverlay";
 import { PreviewCellBadge } from "./PreviewCellBadge";
 import { PreviewFixPanel } from "./PreviewFixPanel";
 import { PreviewLegend } from "./PreviewLegend";
@@ -48,7 +54,11 @@ export function SmartSpreadsheetPreview({
   onIgnoreCell,
   onIgnoreRow,
   selectionState,
+  assignments,
+  chapters,
   onSetColumnInclude,
+  onSetColumnHeader,
+  onSetColumnTarget,
   onSetColumnValueMode,
   onBulkColumnAction,
   onResetColumnSelection,
@@ -59,6 +69,8 @@ export function SmartSpreadsheetPreview({
   model: SpreadsheetPreviewModel;
   updateMode: UpdateMode;
   selectionState: ImportSelectionState;
+  assignments: ColumnSettingsAssignmentOption[];
+  chapters: ColumnSettingsChapterOption[];
   onUpdateModeChange: (mode: UpdateMode) => void;
   onApplySafeFixes: () => void;
   onApproveSuggestions: () => void;
@@ -68,6 +80,8 @@ export function SmartSpreadsheetPreview({
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
   onIgnoreRow: (row: SpreadsheetPreviewRow) => void;
   onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
+  onSetColumnHeader: (column: SpreadsheetPreviewColumn, header: string) => void;
+  onSetColumnTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
   onSetColumnValueMode: (column: SpreadsheetPreviewColumn, mode: ColumnValueMode, overwriteConfirmed?: boolean) => void;
   onBulkColumnAction: (column: SpreadsheetPreviewColumn, action: "include_valid" | "skip_all" | "skip_existing" | "reset") => void;
   onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
@@ -100,6 +114,18 @@ export function SmartSpreadsheetPreview({
     onApplySafeFixes();
   };
 
+  const toggleCellInclude = (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => {
+    if (column.type === "identity") {
+      setSelection({ kind: "row", row });
+      return;
+    }
+    if (!cell.canToggleInclude || cell.status === "invalid" || cell.status === "blocked" || cell.status === "manual_required" || cell.requiresConfirmation) {
+      setSelection({ kind: "cell", cell, row, column });
+      return;
+    }
+    onSetCellInclude(cell, row, column, cell.effectiveInclude === false);
+  };
+
   return (
     <div className="sipena-preview-shell">
       <PreviewSummaryBanner model={model} onPrimaryAction={primarySummaryAction} />
@@ -128,11 +154,16 @@ export function SmartSpreadsheetPreview({
                     >
                       <button
                         type="button"
-                        className="block max-w-[220px] truncate text-left"
+                        className="sipena-preview-header-button"
                         title={column.targetLabel || column.header}
                         onClick={() => setSelection({ kind: "column", column })}
                       >
-                        {column.header}
+                        <span className="truncate">{column.header}</span>
+                        {column.type !== "identity" ? (
+                          <span className="sipena-import-cell-mini-badge">
+                            {column.effectiveInclude === false ? "Dilewati" : "Dipakai"}
+                          </span>
+                        ) : null}
                       </button>
                     </th>
                   ))}
@@ -156,8 +187,9 @@ export function SmartSpreadsheetPreview({
                             index < 3 && "sipena-preview-sticky-left",
                           )}
                           style={stickyStyle(index)}
-                          onClick={() => setSelection({ kind: "cell", cell, row, column })}
-                          title={cell.message || cell.displayValue}
+                          onClick={() => toggleCellInclude(cell, row, column)}
+                          onDoubleClick={() => setSelection({ kind: "cell", cell, row, column })}
+                          title={column.type === "identity" ? cell.displayValue : "Klik untuk include/lewati. Klik dua kali untuk detail."}
                         >
                           <div className="sipena-preview-cell-main">
                             <span className="sipena-preview-cell-value">{cell.displayValue || "-"}</span>
@@ -184,7 +216,7 @@ export function SmartSpreadsheetPreview({
 
         <PreviewFixPanel
           model={model}
-          selection={selection}
+          selection={selection?.kind === "column" ? null : selection}
           updateMode={updateMode}
           selectionState={selectionState}
           onUpdateModeChange={onUpdateModeChange}
@@ -203,6 +235,21 @@ export function SmartSpreadsheetPreview({
           onResetCellSelection={onResetCellSelection}
         />
       </div>
+
+      {selection?.kind === "column" && selection.column.type !== "identity" ? (
+        <ColumnSettingsOverlay
+          column={selection.column}
+          assignments={assignments}
+          chapters={chapters}
+          onClose={() => setSelection(null)}
+          onSetInclude={onSetColumnInclude}
+          onSetHeader={onSetColumnHeader}
+          onSetTarget={onSetColumnTarget}
+          onSetValueMode={onSetColumnValueMode}
+          onBulkColumnAction={onBulkColumnAction}
+          onResetColumnSelection={onResetColumnSelection}
+        />
+      ) : null}
     </div>
   );
 }
