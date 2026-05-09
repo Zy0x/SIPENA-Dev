@@ -93,6 +93,12 @@ interface GradeImportExportDialogProps {
   onDownloadBackup?: () => void | Promise<void>;
   onOpenLegacyImport?: () => void;
   onSaveGrade?: (studentId: string, gradeType: "assignment" | "sts" | "sas", value: number, assignmentId?: string) => void | Promise<void>;
+  onSaveGradesBatch?: (items: Array<{
+    studentId: string;
+    gradeType: "assignment" | "sts" | "sas";
+    value: number;
+    assignmentId?: string;
+  }>) => Promise<{ savedCount: number; skippedUnchangedCount?: number } | void>;
   onEnsureAssignmentTarget?: (target: GradeTarget) => Promise<GradeTarget>;
   onImportComplete?: () => void | Promise<void>;
   importContext: ImportPlanContext;
@@ -1922,6 +1928,7 @@ function resolveOperationSelection(
 async function executeClientSideImport({
   plan,
   onSaveGrade,
+  onSaveGradesBatch,
   onEnsureAssignmentTarget,
   onProgress,
   selectedOverwriteColumns,
@@ -1929,6 +1936,7 @@ async function executeClientSideImport({
 }: {
   plan: ImportPlan;
   onSaveGrade?: GradeImportExportDialogProps["onSaveGrade"];
+  onSaveGradesBatch?: GradeImportExportDialogProps["onSaveGradesBatch"];
   onEnsureAssignmentTarget?: GradeImportExportDialogProps["onEnsureAssignmentTarget"];
   onProgress: (progress: ImportExecutionProgress) => void;
   selectedOverwriteColumns: Set<number>;
@@ -1938,8 +1946,10 @@ async function executeClientSideImport({
   const operations = plan.gradeOperations;
   const warnings = new Set<string>();
   const ensuredAssignmentTargets = new Map<string, GradeTarget>();
+  const batchItems: Parameters<NonNullable<GradeImportExportDialogProps["onSaveGradesBatch"]>>[0] = [];
+  const batchOperations: GradeOperation[] = [];
 
-  if (!onSaveGrade) {
+  if (!onSaveGrade && !onSaveGradesBatch) {
     return {
       ...summary,
       skippedCount: operations.length,
@@ -2033,23 +2043,54 @@ async function executeClientSideImport({
       continue;
     }
 
-    try {
-      await onSaveGrade(
-        operation.studentId,
-        operationTarget.gradeType,
-        operation.value,
-        operationTarget.gradeType === "assignment" ? operationTarget.assignmentId : undefined,
-      );
-      summary.successCount += 1;
-    } catch (caught) {
-      summary.failedCount += 1;
-      summary.failedRows.push({
-        operationId: operation.id,
-        rowIndex: operation.rowIndex,
-        columnIndex: operation.columnIndex,
-        target: targetLabel(operation),
-        message: caught instanceof Error ? cleanBackendText(caught.message) : "Gagal menyimpan nilai.",
+    if (onSaveGradesBatch) {
+      batchItems.push({
+        studentId: operation.studentId,
+        gradeType: operationTarget.gradeType,
+        value: operation.value,
+        assignmentId: operationTarget.gradeType === "assignment" ? operationTarget.assignmentId : undefined,
       });
+      batchOperations.push({ ...operation, target: operationTarget });
+    } else if (onSaveGrade) {
+      try {
+        await onSaveGrade(
+          operation.studentId,
+          operationTarget.gradeType,
+          operation.value,
+          operationTarget.gradeType === "assignment" ? operationTarget.assignmentId : undefined,
+        );
+        summary.successCount += 1;
+      } catch (caught) {
+        summary.failedCount += 1;
+        summary.failedRows.push({
+          operationId: operation.id,
+          rowIndex: operation.rowIndex,
+          columnIndex: operation.columnIndex,
+          target: targetLabel(operation),
+          message: caught instanceof Error ? cleanBackendText(caught.message) : "Gagal menyimpan nilai.",
+        });
+      }
+    }
+  }
+
+  if (onSaveGradesBatch && batchItems.length > 0) {
+    try {
+      const result = await onSaveGradesBatch(batchItems);
+      const batchResult = result || { savedCount: batchItems.length, skippedUnchangedCount: 0 };
+      summary.successCount += batchResult.savedCount;
+      summary.skippedCount += batchResult.skippedUnchangedCount || 0;
+    } catch (caught) {
+      summary.failedCount += batchItems.length;
+      batchOperations.slice(0, 20).forEach((operation) => {
+        summary.failedRows.push({
+          operationId: operation.id,
+          rowIndex: operation.rowIndex,
+          columnIndex: operation.columnIndex,
+          target: targetLabel(operation),
+          message: caught instanceof Error ? cleanBackendText(caught.message) : "Batch import gagal disimpan.",
+        });
+      });
+      warnings.add("Sebagian atau seluruh nilai import gagal disimpan. Jika ada nilai yang sempat tersimpan, gunakan Undo untuk mengembalikannya.");
     }
   }
 
@@ -2180,6 +2221,7 @@ export default function GradeImportExportDialog({
   onDownloadBackup,
   onOpenLegacyImport,
   onSaveGrade,
+  onSaveGradesBatch,
   onEnsureAssignmentTarget,
   onImportComplete,
   importContext,
@@ -2811,6 +2853,7 @@ export default function GradeImportExportDialog({
           const summary = await executeClientSideImport({
             plan,
             onSaveGrade,
+            onSaveGradesBatch,
             onEnsureAssignmentTarget,
             selectedOverwriteColumns,
             selectionState,
@@ -2878,6 +2921,7 @@ export default function GradeImportExportDialog({
     onDownloadCurrentGrades,
     onImportComplete,
     onSaveGrade,
+    onSaveGradesBatch,
     onEnsureAssignmentTarget,
     plan,
     resolverState.columnOverrides,

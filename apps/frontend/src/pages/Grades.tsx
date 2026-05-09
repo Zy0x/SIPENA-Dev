@@ -369,6 +369,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     grades: ownerGrades,
     isLoading: gradesLoading,
     saveGradeWithUndo,
+    saveGradesBatchWithUndo,
     undo,
     redo,
     canUndo,
@@ -1438,6 +1439,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onDownloadCurrentGrades={handleDownloadCurrentGrades}
           onDownloadBackup={handleDownloadGradeBackup}
           onSaveGrade={handleSaveGrade}
+          onSaveGradesBatch={async (items) => saveGradesBatchWithUndo(items)}
           onEnsureAssignmentTarget={handleEnsureImportAssignmentTarget}
           onImportComplete={() => {
             queryClient.invalidateQueries({ queryKey: ["grades"] });

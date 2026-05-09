@@ -10,6 +10,13 @@ interface GradeChange {
   newValue: number | null;
 }
 
+export interface GradeBatchChangeInput {
+  studentId: string;
+  gradeType: string;
+  assignmentId?: string;
+  value: number | null;
+}
+
 interface UndoState {
   past: GradeChange[][];
   future: GradeChange[][];
@@ -28,6 +35,17 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
   
   // Track if undo/redo is in progress to prevent recording
   const isUndoRedoInProgress = useRef(false);
+
+  const recordUndoBatch = useCallback((changes: GradeChange[], message?: string) => {
+    if (changes.length === 0 || isUndoRedoInProgress.current) return;
+    setUndoState(prev => ({
+      past: [...prev.past.slice(-MAX_HISTORY + 1), changes],
+      future: [],
+    }));
+    if (message) {
+      info("Import dapat di-undo", message);
+    }
+  }, [info]);
 
   // Enhanced save that tracks changes for undo
   const saveGradeWithUndo = useCallback(async (
@@ -56,10 +74,7 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
         newValue: value,
       };
       
-      setUndoState(prev => ({
-        past: [...prev.past.slice(-MAX_HISTORY + 1), [change]],
-        future: [], // Clear future on new change
-      }));
+      recordUndoBatch([change]);
     }
     
     // Save the value
@@ -70,7 +85,51 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
       grade_type: gradeType,
       value,
     });
-  }, [gradesHook, subjectId]);
+  }, [gradesHook, recordUndoBatch, subjectId]);
+
+  const saveGradesBatchWithUndo = useCallback(async (
+    inputs: GradeBatchChangeInput[],
+  ): Promise<{ savedCount: number; skippedUnchangedCount: number }> => {
+    if (!subjectId || inputs.length === 0) {
+      return { savedCount: 0, skippedUnchangedCount: inputs.length };
+    }
+
+    const changes: GradeChange[] = [];
+    let skippedUnchangedCount = 0;
+
+    try {
+      for (const input of inputs) {
+        const oldValue = gradesHook.getGradeValue(input.studentId, input.gradeType, input.assignmentId);
+        if (oldValue === input.value) {
+          skippedUnchangedCount += 1;
+          continue;
+        }
+
+        await gradesHook.upsertGrade.mutateAsync({
+          student_id: input.studentId,
+          subject_id: subjectId,
+          assignment_id: input.assignmentId,
+          grade_type: input.gradeType,
+          value: input.value,
+        });
+
+        changes.push({
+          studentId: input.studentId,
+          gradeType: input.gradeType,
+          assignmentId: input.assignmentId,
+          oldValue,
+          newValue: input.value,
+        });
+      }
+    } catch (error) {
+      recordUndoBatch(changes, `${changes.length} nilai yang sempat tersimpan dari import dapat dikembalikan.`);
+      throw error;
+    }
+
+    recordUndoBatch(changes, `${changes.length} nilai dari import tersimpan sebagai satu riwayat undo.`);
+
+    return { savedCount: changes.length, skippedUnchangedCount };
+  }, [gradesHook, recordUndoBatch, subjectId]);
 
   const undo = useCallback(async () => {
     if (undoState.past.length === 0 || !subjectId) return;
@@ -141,6 +200,7 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
   return {
     ...gradesHook,
     saveGradeWithUndo,
+    saveGradesBatchWithUndo,
     undo,
     redo,
     canUndo,
