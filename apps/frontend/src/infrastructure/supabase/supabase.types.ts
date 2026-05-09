@@ -251,10 +251,12 @@ export type Database = {
       }
       grades: {
         Row: {
+          academic_year_id: string | null
           assignment_id: string | null
           created_at: string
           grade_type: string
           id: string
+          semester_id: string | null
           student_id: string
           subject_id: string
           updated_at: string
@@ -262,10 +264,12 @@ export type Database = {
           value: number | null
         }
         Insert: {
+          academic_year_id?: string | null
           assignment_id?: string | null
           created_at?: string
           grade_type: string
           id?: string
+          semester_id?: string | null
           student_id: string
           subject_id: string
           updated_at?: string
@@ -273,10 +277,12 @@ export type Database = {
           value?: number | null
         }
         Update: {
+          academic_year_id?: string | null
           assignment_id?: string | null
           created_at?: string
           grade_type?: string
           id?: string
+          semester_id?: string | null
           student_id?: string
           subject_id?: string
           updated_at?: string
@@ -284,6 +290,13 @@ export type Database = {
           value?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "grades_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "grades_assignment_id_fkey"
             columns: ["assignment_id"]
@@ -296,6 +309,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grades_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "semesters"
             referencedColumns: ["id"]
           },
           {
@@ -789,11 +809,15 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
-      guest_has_access_via_shared_link: {
-        Args: { p_class_id: string; p_subject_id: string }
-        Returns: boolean
-      }
-      user_owns_shared_link: {
+        guest_has_access_via_shared_link: {
+          Args: { p_class_id: string; p_subject_id: string }
+          Returns: boolean
+        }
+        import_grades_batch: {
+          Args: { p_items: Json }
+          Returns: Json
+        }
+        user_owns_shared_link: {
         Args: { p_class_id: string; p_subject_id: string; p_user_id: string }
         Returns: boolean
       }

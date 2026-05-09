@@ -1,11 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useGrades, BulkGradeInput } from './useGrades';
+import { useGrades, type BulkGradeInput, type GradeBatchChangedRow } from './useGrades';
 import { useEnhancedToast } from '@/contexts/ToastContext';
 
 interface GradeChange {
   studentId: string;
+  subjectId?: string;
   gradeType: string;
   assignmentId?: string;
+  academicYearId?: string | null;
+  semesterId?: string | null;
   oldValue: number | null;
   newValue: number | null;
 }
@@ -23,6 +26,31 @@ interface UndoState {
 }
 
 const MAX_HISTORY = 50;
+
+function changeFromRpcRow(row: GradeBatchChangedRow): GradeChange {
+  return {
+    studentId: row.studentId,
+    subjectId: row.subjectId,
+    gradeType: row.gradeType,
+    assignmentId: row.assignmentId || undefined,
+    academicYearId: row.academicYearId,
+    semesterId: row.semesterId,
+    oldValue: row.oldValue,
+    newValue: row.newValue,
+  };
+}
+
+function changeToBulkInput(change: GradeChange, fallbackSubjectId: string, value: number | null): BulkGradeInput {
+  return {
+    student_id: change.studentId,
+    subject_id: change.subjectId || fallbackSubjectId,
+    assignment_id: change.assignmentId,
+    academic_year_id: change.academicYearId || undefined,
+    semester_id: change.semesterId || undefined,
+    grade_type: change.gradeType,
+    value,
+  };
+}
 
 export function useGradesWithUndo(subjectId?: string, classId?: string) {
   const gradesHook = useGrades(subjectId, classId);
@@ -64,19 +92,6 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
       return;
     }
     
-    // Only record change if not from undo/redo
-    if (!isUndoRedoInProgress.current) {
-      const change: GradeChange = {
-        studentId,
-        gradeType,
-        assignmentId,
-        oldValue,
-        newValue: value,
-      };
-      
-      recordUndoBatch([change]);
-    }
-    
     // Save the value
     await gradesHook.upsertGrade.mutateAsync({
       student_id: studentId,
@@ -85,6 +100,20 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
       grade_type: gradeType,
       value,
     });
+
+    // Only record change after save succeeds and not from undo/redo
+    if (!isUndoRedoInProgress.current) {
+      recordUndoBatch([{
+        studentId,
+        subjectId,
+        gradeType,
+        assignmentId,
+        academicYearId: gradesHook.activeYearId,
+        semesterId: gradesHook.activeSemesterId,
+        oldValue,
+        newValue: value,
+      }]);
+    }
   }, [gradesHook, recordUndoBatch, subjectId]);
 
   const saveGradesBatchWithUndo = useCallback(async (
@@ -94,41 +123,18 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
       return { savedCount: 0, skippedUnchangedCount: inputs.length };
     }
 
-    const changes: GradeChange[] = [];
-    let skippedUnchangedCount = 0;
-
-    try {
-      for (const input of inputs) {
-        const oldValue = gradesHook.getGradeValue(input.studentId, input.gradeType, input.assignmentId);
-        if (oldValue === input.value) {
-          skippedUnchangedCount += 1;
-          continue;
-        }
-
-        await gradesHook.upsertGrade.mutateAsync({
-          student_id: input.studentId,
-          subject_id: subjectId,
-          assignment_id: input.assignmentId,
-          grade_type: input.gradeType,
-          value: input.value,
-        });
-
-        changes.push({
-          studentId: input.studentId,
-          gradeType: input.gradeType,
-          assignmentId: input.assignmentId,
-          oldValue,
-          newValue: input.value,
-        });
-      }
-    } catch (error) {
-      recordUndoBatch(changes, `${changes.length} nilai yang sempat tersimpan dari import dapat dikembalikan.`);
-      throw error;
-    }
+    const result = await gradesHook.upsertGradesBatch.mutateAsync(inputs.map((input) => ({
+      student_id: input.studentId,
+      subject_id: subjectId,
+      assignment_id: input.assignmentId,
+      grade_type: input.gradeType,
+      value: input.value,
+    })));
+    const changes = result.changedRows.map(changeFromRpcRow);
 
     recordUndoBatch(changes, `${changes.length} nilai dari import tersimpan sebagai satu riwayat undo.`);
 
-    return { savedCount: changes.length, skippedUnchangedCount };
+    return { savedCount: result.savedCount, skippedUnchangedCount: result.skippedUnchangedCount };
   }, [gradesHook, recordUndoBatch, subjectId]);
 
   const undo = useCallback(async () => {
@@ -138,16 +144,9 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
     const lastChanges = undoState.past[undoState.past.length - 1];
     
     try {
-      // Apply reverse changes
-      for (const change of lastChanges) {
-        await gradesHook.upsertGrade.mutateAsync({
-          student_id: change.studentId,
-          subject_id: subjectId,
-          assignment_id: change.assignmentId,
-          grade_type: change.gradeType,
-          value: change.oldValue,
-        });
-      }
+      await gradesHook.upsertGradesBatch.mutateAsync(
+        lastChanges.map((change) => changeToBulkInput(change, subjectId, change.oldValue)),
+      );
       
       setUndoState(prev => ({
         past: prev.past.slice(0, -1),
@@ -167,16 +166,9 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
     const nextChanges = undoState.future[0];
     
     try {
-      // Apply changes again
-      for (const change of nextChanges) {
-        await gradesHook.upsertGrade.mutateAsync({
-          student_id: change.studentId,
-          subject_id: subjectId,
-          assignment_id: change.assignmentId,
-          grade_type: change.gradeType,
-          value: change.newValue,
-        });
-      }
+      await gradesHook.upsertGradesBatch.mutateAsync(
+        nextChanges.map((change) => changeToBulkInput(change, subjectId, change.newValue)),
+      );
       
       setUndoState(prev => ({
         past: [...prev.past.slice(-MAX_HISTORY + 1), nextChanges],

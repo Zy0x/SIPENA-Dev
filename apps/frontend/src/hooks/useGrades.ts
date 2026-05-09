@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { getScopedGradeValue } from "@/lib/gradeValueSelection";
+import type { Json } from "@/infrastructure/supabase/supabase.types";
 
 export interface Grade {
   id: string;
@@ -42,6 +43,97 @@ export interface BulkGradeInput {
   value: number | null;
   academic_year_id?: string;
   semester_id?: string;
+}
+
+export interface GradeBatchChangedRow {
+  gradeId?: string;
+  studentId: string;
+  subjectId: string;
+  assignmentId?: string | null;
+  academicYearId?: string | null;
+  semesterId?: string | null;
+  gradeType: string;
+  oldValue: number | null;
+  newValue: number | null;
+}
+
+export interface GradeBatchUpsertResult {
+  savedCount: number;
+  skippedUnchangedCount: number;
+  changedRows: GradeBatchChangedRow[];
+}
+
+type GradeBatchRpcItem = {
+  studentId: string;
+  subjectId: string;
+  assignmentId: string | null;
+  academicYearId: string | null;
+  semesterId: string | null;
+  gradeType: string;
+  value: number | null;
+};
+
+type RpcErrorLike = {
+  code?: string;
+  message: string;
+  details?: string;
+  hint?: string;
+};
+
+type ImportGradesBatchRpcClient = {
+  rpc: (
+    fn: "import_grades_batch",
+    args: { p_items: GradeBatchRpcItem[] },
+  ) => Promise<{ data: Json; error: RpcErrorLike | null }>;
+};
+
+function parseNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function parseOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function parseBatchChangedRows(value: unknown): GradeBatchChangedRow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+    .map((item) => ({
+      gradeId: parseOptionalString(item.gradeId) || undefined,
+      studentId: parseOptionalString(item.studentId) || "",
+      subjectId: parseOptionalString(item.subjectId) || "",
+      assignmentId: parseOptionalString(item.assignmentId),
+      academicYearId: parseOptionalString(item.academicYearId),
+      semesterId: parseOptionalString(item.semesterId),
+      gradeType: parseOptionalString(item.gradeType) || "",
+      oldValue: parseNullableNumber(item.oldValue),
+      newValue: parseNullableNumber(item.newValue),
+    }))
+    .filter((item) => item.studentId && item.subjectId && item.gradeType);
+}
+
+function parseBatchUpsertResult(value: Json): GradeBatchUpsertResult {
+  const record = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return {
+    savedCount: Number(record.savedCount || 0),
+    skippedUnchangedCount: Number(record.skippedUnchangedCount || 0),
+    changedRows: parseBatchChangedRows(record.changedRows),
+  };
+}
+
+function gradeRpcErrorMessage(error: RpcErrorLike): string {
+  if (error.code === "PGRST202" || error.message.includes("import_grades_batch")) {
+    return "Fungsi database import_grades_batch belum tersedia. Jalankan migration terbaru sebelum import nilai batch.";
+  }
+  if (error.message.includes("duplikat") || error.message.includes("duplicate")) {
+    return "Data nilai duplikat ditemukan. Perlu perbaikan database sebelum menyimpan.";
+  }
+  return error.message;
 }
 
 /**
@@ -233,10 +325,17 @@ export function useGrades(
       const yearId = input.academic_year_id || activeYearId;
       const semesterId = input.semester_id || activeSemesterId;
 
+      if (gradeType === "assignment" && !input.assignment_id) {
+        throw new Error("Nilai tugas wajib memiliki assignment_id.");
+      }
+      if ((gradeType === "sts" || gradeType === "sas") && input.assignment_id) {
+        throw new Error(`Nilai ${gradeType.toUpperCase()} tidak boleh memiliki assignment_id.`);
+      }
+
       // Build query for checking existing grade
       let query = supabase
         .from("grades")
-        .select("id")
+        .select("id,value")
         .eq("user_id", user.id)
         .eq("student_id", input.student_id)
         .eq("subject_id", input.subject_id)
@@ -249,17 +348,27 @@ export function useGrades(
         query = query.is("assignment_id", null);
       }
 
-      // Also filter by semester to allow same student to have different grades per semester
-      if (semesterId) {
-        query = (query as any).eq("semester_id", semesterId);
+      if (yearId) {
+        query = query.eq("academic_year_id", yearId);
+      } else {
+        query = query.is("academic_year_id", null);
       }
 
-      // Use .limit(1) to avoid "multiple rows returned" error
-      const { data: existingRows, error: queryError } = await query.limit(1);
+      if (semesterId) {
+        query = query.eq("semester_id", semesterId);
+      } else {
+        query = query.is("semester_id", null);
+      }
+
+      const { data: existingRows, error: queryError } = await query.limit(2);
 
       if (queryError) {
         console.error("Query error:", queryError);
         throw new Error(`Gagal memeriksa data nilai: ${queryError.message}`);
+      }
+
+      if ((existingRows?.length || 0) > 1) {
+        throw new Error("Data nilai duplikat ditemukan. Perlu perbaikan database sebelum menyimpan.");
       }
 
       const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
@@ -327,6 +436,47 @@ export function useGrades(
     },
   });
 
+  const upsertGradesBatch = useMutation({
+    mutationFn: async (inputs: BulkGradeInput[]): Promise<GradeBatchUpsertResult> => {
+      if (!user) throw new Error("Pengguna tidak terautentikasi. Silakan login kembali.");
+      if (inputs.length === 0) return { savedCount: 0, skippedUnchangedCount: 0, changedRows: [] };
+
+      const rpcItems: GradeBatchRpcItem[] = inputs.map((input) => ({
+        studentId: input.student_id,
+        subjectId: input.subject_id,
+        assignmentId: input.assignment_id || null,
+        academicYearId: input.academic_year_id || activeYearId || null,
+        semesterId: input.semester_id || activeSemesterId || null,
+        gradeType: input.grade_type,
+        value: input.value,
+      }));
+
+      const rpcClient = supabase as unknown as ImportGradesBatchRpcClient;
+      const { data, error } = await rpcClient.rpc("import_grades_batch", { p_items: rpcItems });
+
+      if (error) {
+        console.error("Batch grade import RPC error:", error);
+        throw new Error(gradeRpcErrorMessage(error));
+      }
+
+      return parseBatchUpsertResult(data);
+    },
+    onSuccess: (_, variables) => {
+      const subjectIds = new Set(variables.map((item) => item.subject_id).filter(Boolean));
+      subjectIds.forEach((variableSubjectId) => {
+        queryClient.invalidateQueries({ queryKey: ["grades", variableSubjectId] });
+      });
+      queryClient.invalidateQueries({ queryKey: ["grades"] });
+      queryClient.invalidateQueries({ queryKey: ["grades_by_class"] });
+      queryClient.invalidateQueries({ queryKey: ["input_progress"] });
+      queryClient.invalidateQueries({ queryKey: ["student-rankings"] });
+    },
+    onError: (error: Error) => {
+      console.error("Batch upsert grade error:", error);
+      showError("Gagal import nilai", error.message || "Import dibatalkan dan tidak ada nilai yang disimpan.");
+    },
+  });
+
   const deleteGrade = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("grades").delete().eq("id", id);
@@ -372,6 +522,7 @@ export function useGrades(
     createGrade,
     updateGrade,
     upsertGrade,
+    upsertGradesBatch,
     deleteGrade,
     getGradeValue,
     getGradeValueAsNumber,

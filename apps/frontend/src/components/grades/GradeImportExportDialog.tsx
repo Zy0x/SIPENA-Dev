@@ -2159,7 +2159,7 @@ async function executeClientSideImport({
           message: caught instanceof Error ? cleanBackendText(caught.message) : "Batch import gagal disimpan.",
         });
       });
-      warnings.add("Sebagian atau seluruh nilai import gagal disimpan. Jika ada nilai yang sempat tersimpan, gunakan Undo untuk mengembalikannya.");
+      warnings.add("Import batch dibatalkan. Tidak ada nilai yang disimpan karena proses atomic gagal.");
     }
   }
 
@@ -3085,11 +3085,13 @@ export default function GradeImportExportDialog({
             onProgress: setExecutionProgress,
           });
           setExecutionSummary(summary);
-          setExecutionState("success");
+          setExecutionState(summary.failedCount > 0 && summary.successCount === 0 ? "failed" : "success");
           if (summary.successCount > 0) {
             await onImportComplete?.();
           }
-          if (summary.failedCount > 0) {
+          if (summary.failedCount > 0 && summary.successCount === 0) {
+            showError("Import dibatalkan", `Tidak ada nilai disimpan. ${summary.failedCount} nilai batal karena proses atomic gagal.`);
+          } else if (summary.failedCount > 0) {
             showWarning("Import selesai sebagian", `${summary.successCount} nilai tersimpan, ${summary.failedCount} gagal, ${summary.skippedCount} dilewati.`);
           } else {
             success(
