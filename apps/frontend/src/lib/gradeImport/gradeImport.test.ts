@@ -799,6 +799,87 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2" && operation.target.assignmentId === "assignment-1")?.value).toBe(0);
   });
 
+  it("reads free Excel values from the original rows when title rows precede the header", () => {
+    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["KOP SEKOLAH"],
+        ["Daftar Nilai"],
+        ["Kelas VII"],
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 80],
+        [2, "1234567890", "Muhammad Rizki", 90],
+      ],
+    }), { students });
+    const plan = buildImportPlan(freeAnalysis, { students, chapters, assignments });
+
+    expect(plan.gradeOperations.find((operation) => operation.studentId === "student-1")).toMatchObject({
+      rowIndex: 5,
+      originalRowIndex: 5,
+      sourceRowIndex: 5,
+      sourceColumnIndex: 4,
+      value: 80,
+    });
+    expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2")).toMatchObject({
+      rowIndex: 6,
+      originalRowIndex: 6,
+      sourceRowIndex: 6,
+      sourceColumnIndex: 4,
+      value: 90,
+    });
+  });
+
+  it("keeps free Excel values aligned across blank rows between students", () => {
+    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["KOP SEKOLAH"],
+        ["Daftar Nilai"],
+        ["Kelas VII"],
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 80],
+        [],
+        [2, "1234567890", "Muhammad Rizki", 90],
+      ],
+    }), { students });
+    const plan = buildImportPlan(freeAnalysis, { students, chapters, assignments });
+
+    expect(plan.studentMappings.filter((mapping) => mapping.status !== "missing_in_excel").map((mapping) => mapping.rowIndex)).toEqual([5, 7]);
+    expect(plan.gradeOperations.find((operation) => operation.studentId === "student-1")).toMatchObject({
+      rowIndex: 5,
+      value: 80,
+    });
+    expect(plan.gradeOperations.find((operation) => operation.studentId === "student-2")).toMatchObject({
+      rowIndex: 7,
+      originalRowIndex: 7,
+      sourceRowIndex: 7,
+      value: 90,
+    });
+  });
+
+  it("reads multi-row header values from the matching original data row", () => {
+    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["Data Siswa", "", "", "BAB 1", "", "", "Ujian", "", "Rekap", ""],
+        ["No", "NISN / NIS", "Peserta Didik", "Ide Pokok", "Fiksi Non Fiksi", "Tugas 4", "UTS", "UAS", "Total", "Status"],
+        [1, "0012345678", "Siti Aminah", 80, 82, 83, 84, 85, 414, "Tuntas"],
+      ],
+    }), { students });
+    const plan = buildImportPlan(freeAnalysis, {
+      students,
+      chapters,
+      assignments: [{ id: "assignment-1", chapter_id: "chapter-1", name: "Ide Pokok", order_index: 1 }],
+    });
+
+    expect(freeAnalysis.bestRegion?.headerRowCount).toBe(2);
+    expect(freeAnalysis.bestRegion?.gradeColumns[0].rawHeader).toBe("BAB 1 - Ide Pokok");
+    expect(plan.gradeOperations.find((operation) =>
+      operation.studentId === "student-1" && operation.target.assignmentId === "assignment-1",
+    )).toMatchObject({
+      rowIndex: 3,
+      originalRowIndex: 3,
+      value: 80,
+    });
+  });
+
   it("blocks final plan when free Excel has multiple regions and no region is selected", () => {
     const analysis = analyzeFreeExcelWorkbook(workbookResult({
       Nilai: [

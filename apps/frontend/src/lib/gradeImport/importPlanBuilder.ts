@@ -14,7 +14,7 @@ import type {
   UpdateMode,
 } from "./types";
 import { parseGradeValue } from "./valueParser";
-import type { WorkbookCell, WorkbookSheetData } from "./workbookReader";
+import type { WorkbookCell, WorkbookRowAddressed, WorkbookSheetData } from "./workbookReader";
 
 export interface ImportPlanChapter {
   id: string;
@@ -155,18 +155,28 @@ function getSelectedFreeRegion(analysis: FreeExcelAnalysis, options: ImportPlanB
   return analysis.requiresRegionSelection ? null : analysis.bestRegion;
 }
 
+type ExtractedStudentRows = ReturnType<typeof extractStudentRowsFromWorkbook>;
+
+interface ExtractedPlanInput {
+  rows: WorkbookCell[][];
+  addressedRowsByOriginalIndex: Map<number, WorkbookRowAddressed>;
+  studentRows: ExtractedStudentRows;
+  headers: ColumnMatcherHeaderInput[];
+  warnings: ImportWarning[];
+}
+
 function getRowsAndHeaders(analysis: ImportPlanInputAnalysis, options: ImportPlanBuilderOptions): {
   rows: WorkbookCell[][];
-  rowByIndex: Map<number, WorkbookCell[]>;
-  studentRows: ReturnType<typeof extractStudentRowsFromWorkbook>;
+  addressedRowsByOriginalIndex: Map<number, WorkbookRowAddressed>;
+  studentRows: ExtractedStudentRows;
   headers: ColumnMatcherHeaderInput[];
   warnings: ImportWarning[];
 } {
   if (hasOfficialShape(analysis)) {
     const inputRows = analysis.inputSheet?.rows || [];
     const originalRowIndexes = analysis.inputSheet?.addressedRows.map((row) => row.originalRowIndex) || [];
-    const rowByIndex = new Map<number, WorkbookCell[]>(
-      (analysis.inputSheet?.addressedRows || []).map((row) => [row.originalRowIndex, row.values]),
+    const addressedRowsByOriginalIndex = new Map<number, WorkbookRowAddressed>(
+      (analysis.inputSheet?.addressedRows || []).map((row) => [row.originalRowIndex, row]),
     );
     const officialMetadata = readOfficialStudentMetadata(analysis);
     const headers = analysis.headers.map((header) => ({
@@ -179,7 +189,7 @@ function getRowsAndHeaders(analysis: ImportPlanInputAnalysis, options: ImportPla
 
     return {
       rows: inputRows,
-      rowByIndex,
+      addressedRowsByOriginalIndex,
       studentRows: extractStudentRowsFromWorkbook(inputRows, { officialMetadata, originalRowIndexes }),
       headers,
       warnings: [],
@@ -188,7 +198,13 @@ function getRowsAndHeaders(analysis: ImportPlanInputAnalysis, options: ImportPla
 
   const region = getSelectedFreeRegion(analysis, options);
   if (!region) {
-    return { rows: [], rowByIndex: new Map(), studentRows: [], headers: [], warnings: [warning("IMPORT_NO_FREE_EXCEL_REGION", "Tidak ada region nilai yang cukup jelas untuk dibuat ImportPlan.")] };
+    return {
+      rows: [],
+      addressedRowsByOriginalIndex: new Map(),
+      studentRows: [],
+      headers: [],
+      warnings: [warning("IMPORT_NO_FREE_EXCEL_REGION", "Tidak ada region nilai yang cukup jelas untuk dibuat ImportPlan.")],
+    };
   }
 
   const rows = [
@@ -199,10 +215,9 @@ function getRowsAndHeaders(analysis: ImportPlanInputAnalysis, options: ImportPla
     region.headerRowIndex,
     ...region.addressedDataRows.map((row) => row.originalRowIndex),
   ];
-  const rowByIndex = new Map<number, WorkbookCell[]>([
-    [region.headerRowIndex, region.columns.map((column) => column.rawHeader)],
-    ...region.addressedDataRows.map((row): [number, WorkbookCell[]] => [row.originalRowIndex, row.values]),
-  ]);
+  const addressedRowsByOriginalIndex = new Map<number, WorkbookRowAddressed>(
+    region.addressedDataRows.map((row) => [row.originalRowIndex, row]),
+  );
   const headers = region.columns.map((column) => ({
     columnIndex: column.columnIndex,
     originalColumnIndex: column.originalColumnIndex,
@@ -216,7 +231,30 @@ function getRowsAndHeaders(analysis: ImportPlanInputAnalysis, options: ImportPla
     nisnColumnIndex: region.nisnColumnIndex,
   });
 
-  return { rows, rowByIndex, studentRows, headers, warnings: [] };
+  return { rows, addressedRowsByOriginalIndex, studentRows, headers, warnings: [] };
+}
+
+function readCellByOriginalColumn(row: WorkbookRowAddressed, originalColumnIndex: number): WorkbookCell | undefined {
+  const cell = row.cells.find((item) => item.originalColumnIndex === originalColumnIndex);
+  return cell ? cell.value : undefined;
+}
+
+function getRawCellValueForOperation(
+  extracted: ExtractedPlanInput,
+  studentRow: ExtractedStudentRows[number],
+  column: MatchedColumn,
+): WorkbookCell {
+  const sourceRowIndex = studentRow.originalRowIndex ?? studentRow.rowIndex;
+  const sourceColumnIndex = column.originalColumnIndex ?? column.columnIndex;
+  const addressedRow = extracted.addressedRowsByOriginalIndex.get(sourceRowIndex);
+
+  if (addressedRow) {
+    const valueFromOriginalColumn = readCellByOriginalColumn(addressedRow, sourceColumnIndex);
+    if (valueFromOriginalColumn !== undefined) return valueFromOriginalColumn;
+    return addressedRow.values[column.columnIndex - 1] ?? null;
+  }
+
+  return null;
 }
 
 function targetKey(target: GradeTarget | undefined): string {
@@ -324,7 +362,7 @@ export function buildImportPlan(
     );
   }
 
-  const extracted = getRowsAndHeaders(analysis, options);
+  const extracted: ExtractedPlanInput = getRowsAndHeaders(analysis, options);
   const studentResult = matchStudents(extracted.studentRows, context.students);
   const columnResult = matchColumns(extracted.headers, context.chapters, context.assignments);
   const warnings: ImportWarning[] = [
@@ -343,21 +381,18 @@ export function buildImportPlan(
 
   const studentByRow = new Map(studentResult.mappings.map((mapping) => [mapping.rowIndex, mapping]));
   const importableColumns = columnResult.mappings.filter((mapping) => mapping.targetType !== "ignore");
-  const rowOffset = hasOfficialShape(analysis) ? 1 : 1;
   const gradeOperations: GradeOperation[] = [];
 
   extracted.studentRows.forEach((studentRow) => {
     const studentMapping = studentByRow.get(studentRow.rowIndex);
-    const workbookRow = extracted.rowByIndex.get(studentRow.rowIndex)
-      || extracted.rows[studentRow.rowIndex - rowOffset]
-      || extracted.rows[studentRow.rowIndex - 1]
-      || [];
 
     importableColumns.forEach((column) => {
-      const rawValue = workbookRow[column.columnIndex - 1];
+      const rawValue = getRawCellValueForOperation(extracted, studentRow, column);
       const parsedValue = parseGradeValue(rawValue);
       const operationWarnings = [...parsedValue.warnings];
       const operationConflicts: ImportConflict[] = [...parsedValue.conflicts];
+      const sourceRowIndex = studentRow.originalRowIndex ?? studentRow.rowIndex;
+      const sourceColumnIndex = column.originalColumnIndex ?? column.columnIndex;
 
       const skipStudentRow = shouldSkipStudentRow(studentMapping);
       if (hasBlockingStudentProblem(studentMapping)) {
@@ -412,6 +447,8 @@ export function buildImportPlan(
         columnIndex: column.columnIndex,
         originalRowIndex: studentRow.originalRowIndex ?? studentRow.rowIndex,
         originalColumnIndex: column.originalColumnIndex ?? column.columnIndex,
+        sourceRowIndex,
+        sourceColumnIndex,
         studentId: studentMapping?.studentId,
         target,
         value: parsedValue.value,

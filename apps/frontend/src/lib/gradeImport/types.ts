@@ -125,6 +125,8 @@ export interface GradeOperation {
   columnIndex: number;
   originalRowIndex?: number;
   originalColumnIndex?: number;
+  sourceRowIndex?: number;
+  sourceColumnIndex?: number;
   studentId?: string;
   target: GradeTarget;
   value: number | null;
