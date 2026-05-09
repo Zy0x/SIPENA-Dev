@@ -114,7 +114,7 @@ describe("spreadsheet preview builder", () => {
     expect(model.summary.newColumns).toBe(1);
   });
 
-  it("marks changed cells when overwrite mode would replace old value", () => {
+  it("blocks overwrite cells until overwrite is confirmed", () => {
     const model = buildSpreadsheetPreviewModel({
       plan: plan({
         updateMode: "overwrite_existing",
@@ -123,8 +123,34 @@ describe("spreadsheet preview builder", () => {
       updateMode: "overwrite_existing",
     });
 
-    expect(firstGradeCell(model)?.status).toBe("changed");
-    expect(model.summary.changedCells).toBe(1);
+    expect(firstGradeCell(model)?.status).toBe("blocked");
+    expect(firstGradeCell(model)?.requiresConfirmation).toBe(true);
+    expect(model.summary.overwriteNeedsConfirmation).toBe(1);
+  });
+
+  it("marks confirmed cell overwrite as overwrite", () => {
+    const model = buildSpreadsheetPreviewModel({
+      plan: plan({
+        gradeOperations: [operation({ existingValue: 70, value: 85, action: "skip_existing" })],
+      }),
+      selectionState: {
+        columnSettings: {},
+        cellSettings: {
+          "row-2:excel-col-4": {
+            cellId: "row-2:excel-col-4",
+            rowId: "row-2",
+            columnId: "excel-col-4",
+            studentId: "student-1",
+            include: true,
+            valueMode: "overwrite_existing",
+            overwriteConfirmed: true,
+          },
+        },
+      },
+    });
+
+    expect(firstGradeCell(model)?.status).toBe("overwrite");
+    expect(model.summary.overwriteCells).toBe(1);
   });
 
   it("marks empty existing value filled from Excel as new_value", () => {
@@ -173,6 +199,57 @@ describe("spreadsheet preview builder", () => {
 
     expect(model.columns.find((item) => item.id === "excel-col-4")?.status).toBe("ignored");
     expect(firstGradeCell(model)?.status).toBe("ignored");
+  });
+
+  it("marks manual skipped cells as manual_skipped", () => {
+    const model = buildSpreadsheetPreviewModel({
+      plan: plan(),
+      selectionState: {
+        columnSettings: {},
+        cellSettings: {
+          "row-2:excel-col-4": {
+            cellId: "row-2:excel-col-4",
+            rowId: "row-2",
+            columnId: "excel-col-4",
+            studentId: "student-1",
+            include: false,
+            valueMode: "inherit_column",
+          },
+        },
+      },
+    });
+
+    expect(firstGradeCell(model)?.status).toBe("manual_skipped");
+    expect(model.summary.manualSkippedCells).toBe(1);
+  });
+
+  it("column skipped blocks cell import", () => {
+    const model = buildSpreadsheetPreviewModel({
+      plan: plan(),
+      selectionState: {
+        columnSettings: {
+          "excel-col-4": {
+            columnId: "excel-col-4",
+            columnIndex: 4,
+            include: false,
+            valueMode: "fill_empty_only",
+          },
+        },
+        cellSettings: {
+          "row-2:excel-col-4": {
+            cellId: "row-2:excel-col-4",
+            rowId: "row-2",
+            columnId: "excel-col-4",
+            studentId: "student-1",
+            include: true,
+            valueMode: "inherit_column",
+          },
+        },
+      },
+    });
+
+    expect(firstGradeCell(model)?.effectiveInclude).toBe(false);
+    expect(firstGradeCell(model)?.isBlockedByColumn).toBe(true);
   });
 
   it("counts preview summary values", () => {

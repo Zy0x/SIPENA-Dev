@@ -3,11 +3,12 @@ import type { PreviewCellStatus } from "@/lib/gradeImport";
 const legendItems: Array<{ status: PreviewCellStatus; label: string }> = [
   { status: "unchanged", label: "Tidak berubah" },
   { status: "new_value", label: "Akan diisi" },
-  { status: "changed", label: "Nilai berbeda" },
+  { status: "included", label: "Dipilih" },
+  { status: "skipped", label: "Dilewati" },
+  { status: "overwrite", label: "Timpa" },
   { status: "new_column", label: "Kolom baru" },
   { status: "needs_check", label: "Perlu dicek" },
-  { status: "manual_required", label: "Harus dipilih" },
-  { status: "ignored", label: "Diabaikan" },
+  { status: "blocked", label: "Perlu target" },
   { status: "invalid", label: "Nilai tidak valid" },
 ];
 

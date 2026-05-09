@@ -344,6 +344,11 @@
   color: #0f172a;
 }
 
+.sipena-preview-cell--included {
+  background: #ffffff !important;
+  color: #0f172a;
+}
+
 .sipena-preview-cell--new-value {
   background: #ecfdf5 !important;
   color: #166534;
@@ -389,6 +394,55 @@
   background: #ffe4e6 !important;
   color: #9f1239;
   box-shadow: inset 0 0 0 2px #e11d48;
+}
+
+.sipena-preview-cell--skipped {
+  background: #f8fafc !important;
+  color: #64748b;
+}
+
+.sipena-preview-cell--manual-included,
+.sipena-import-cell-manual-include {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.sipena-preview-cell--manual-skipped,
+.sipena-import-cell-manual-skip {
+  background: repeating-linear-gradient(
+    135deg,
+    #f8fafc 0,
+    #f8fafc 6px,
+    #cbd5e1 6px,
+    #cbd5e1 8px
+  ) !important;
+  color: #64748b;
+}
+
+.sipena-preview-cell--overwrite,
+.sipena-import-cell-overwrite-confirmed {
+  background: #fef3c7 !important;
+  color: #92400e;
+  box-shadow: inset 0 0 0 2px #f59e0b;
+}
+
+.sipena-preview-cell--blocked,
+.sipena-import-cell-blocked-by-column {
+  background: #fef2f2 !important;
+  color: #991b1b;
+  opacity: 0.85;
+}
+
+.sipena-import-cell-mini-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid currentColor;
+  margin-left: 4px;
 }
 
 .sipena-preview-cell-main {

@@ -2,6 +2,9 @@ import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 
 import type {
+  CellValueMode,
+  ColumnValueMode,
+  ImportSelectionState,
   SpreadsheetPreviewCell,
   SpreadsheetPreviewColumn,
   SpreadsheetPreviewModel,
@@ -44,9 +47,18 @@ export function SmartSpreadsheetPreview({
   onIgnoreColumn,
   onIgnoreCell,
   onIgnoreRow,
+  selectionState,
+  onSetColumnInclude,
+  onSetColumnValueMode,
+  onBulkColumnAction,
+  onResetColumnSelection,
+  onSetCellInclude,
+  onSetCellValueMode,
+  onResetCellSelection,
 }: {
   model: SpreadsheetPreviewModel;
   updateMode: UpdateMode;
+  selectionState: ImportSelectionState;
   onUpdateModeChange: (mode: UpdateMode) => void;
   onApplySafeFixes: () => void;
   onApproveSuggestions: () => void;
@@ -55,6 +67,13 @@ export function SmartSpreadsheetPreview({
   onIgnoreColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
   onIgnoreRow: (row: SpreadsheetPreviewRow) => void;
+  onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
+  onSetColumnValueMode: (column: SpreadsheetPreviewColumn, mode: ColumnValueMode, overwriteConfirmed?: boolean) => void;
+  onBulkColumnAction: (column: SpreadsheetPreviewColumn, action: "include_valid" | "skip_all" | "skip_existing" | "reset") => void;
+  onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
+  onSetCellInclude: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, include: boolean) => void;
+  onSetCellValueMode: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, mode: CellValueMode, overwriteConfirmed?: boolean) => void;
+  onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
 }) {
   const [selection, setSelection] = useState<Selection>(null);
   const firstManual = useMemo(() => {
@@ -130,6 +149,10 @@ export function SmartSpreadsheetPreview({
                           className={cn(
                             "sipena-preview-cell",
                             previewStatusClass(cell.status),
+                            cell.isManuallyIncluded && "sipena-import-cell-manual-include",
+                            cell.isManuallySkipped && "sipena-import-cell-manual-skip",
+                            cell.status === "overwrite" && "sipena-import-cell-overwrite-confirmed",
+                            cell.isBlockedByColumn && "sipena-import-cell-blocked-by-column",
                             index < 3 && "sipena-preview-sticky-left",
                           )}
                           style={stickyStyle(index)}
@@ -139,6 +162,9 @@ export function SmartSpreadsheetPreview({
                           <div className="sipena-preview-cell-main">
                             <span className="sipena-preview-cell-value">{cell.displayValue || "-"}</span>
                             <PreviewCellBadge status={cell.status} />
+                            {cell.isManuallyIncluded ? <span className="sipena-import-cell-mini-badge">Dipilih</span> : null}
+                            {cell.isManuallySkipped ? <span className="sipena-import-cell-mini-badge">Dilewati</span> : null}
+                            {cell.status === "overwrite" ? <span className="sipena-import-cell-mini-badge">Timpa</span> : null}
                           </div>
                         </td>
                       );
@@ -160,6 +186,7 @@ export function SmartSpreadsheetPreview({
           model={model}
           selection={selection}
           updateMode={updateMode}
+          selectionState={selectionState}
           onUpdateModeChange={onUpdateModeChange}
           onApproveColumn={onApproveColumn}
           onIgnoreColumn={onIgnoreColumn}
@@ -167,6 +194,13 @@ export function SmartSpreadsheetPreview({
           onIgnoreRow={onIgnoreRow}
           onApplySafeFixes={onApplySafeFixes}
           onApproveSuggestions={onApproveSuggestions}
+          onSetColumnInclude={onSetColumnInclude}
+          onSetColumnValueMode={onSetColumnValueMode}
+          onBulkColumnAction={onBulkColumnAction}
+          onResetColumnSelection={onResetColumnSelection}
+          onSetCellInclude={onSetCellInclude}
+          onSetCellValueMode={onSetCellValueMode}
+          onResetCellSelection={onResetCellSelection}
         />
       </div>
     </div>

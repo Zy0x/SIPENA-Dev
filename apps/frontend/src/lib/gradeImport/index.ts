@@ -4,6 +4,7 @@ export * from "./conflictSimplifier";
 export * from "./currentGradesExporter";
 export * from "./freeExcelAnalyzer";
 export * from "./headerParser";
+export * from "./importSelection";
 export * from "./importPlanBuilder";
 export * from "./officialTemplateReader";
 export * from "./spreadsheetPreviewBuilder";

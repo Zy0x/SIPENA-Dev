@@ -14,15 +14,15 @@ export function PreviewQuickActions({
       <div className="grid gap-2 lg:grid-cols-3">
         <button type="button" className="min-h-11 rounded-2xl bg-emerald-600 px-4 text-left text-sm font-semibold text-white hover:bg-emerald-700" onClick={onApplySafeFixes}>
           Terapkan yang Aman
-          <span className="mt-1 block text-xs font-medium text-emerald-50">Abaikan kolom bukan nilai, pakai STS/SAS yang dikenali, dan gunakan data siswa dari web jika ID cocok.</span>
+          <span className="mt-1 block text-xs font-medium text-emerald-50">Pakai kolom valid, include nilai valid, dan lewati sel kosong atau kolom bukan nilai.</span>
         </button>
         <button type="button" className="min-h-11 rounded-2xl bg-orange-600 px-4 text-left text-sm font-semibold text-white hover:bg-orange-700" onClick={onApproveSuggestions}>
           Setujui Saran SIPENA
-          <span className="mt-1 block text-xs font-medium text-orange-50">Pakai saran yang jelas, seperti membuat kolom tugas dari header BAB 1 - Tugas 2.</span>
+          <span className="mt-1 block text-xs font-medium text-orange-50">Pakai saran yang jelas, seperti target STS/SAS atau kolom BAB dan tugas yang terbaca.</span>
         </button>
         <button type="button" className="min-h-11 rounded-2xl bg-red-600 px-4 text-left text-sm font-semibold text-white hover:bg-red-700" onClick={onPickManualItems}>
           Pilih yang Merah
-          <span className="mt-1 block text-xs font-medium text-red-50">Bagian merah perlu dipilih manual agar nilai tidak salah masuk.</span>
+          <span className="mt-1 block text-xs font-medium text-red-50">Bagian merah perlu dipilih agar nilai tidak masuk ke target yang salah.</span>
         </button>
       </div>
       <div className="mt-2">

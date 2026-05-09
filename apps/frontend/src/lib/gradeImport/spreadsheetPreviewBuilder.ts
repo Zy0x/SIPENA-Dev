@@ -1,16 +1,23 @@
 import type { ConflictSimplifierResolverState } from "./conflictSimplifier";
 import { getSimplifiedConflictSourceId } from "./conflictSimplifier";
+import type { CellValueMode, ColumnValueMode, ImportSelectionState } from "./importSelection";
 import type { ColumnMapping, GradeOperation, ImportConflict, ImportPlan, StudentMapping, UpdateMode } from "./types";
 
 export type PreviewCellStatus =
   | "unchanged"
+  | "included"
   | "new_value"
   | "changed"
   | "new_column"
   | "needs_check"
   | "manual_required"
   | "ignored"
-  | "invalid";
+  | "invalid"
+  | "skipped"
+  | "manual_included"
+  | "manual_skipped"
+  | "blocked"
+  | "overwrite";
 
 export type PreviewColumnType =
   | "identity"
@@ -31,6 +38,21 @@ export type SpreadsheetPreviewColumn = {
   gradeType?: "assignment" | "sts" | "sas";
   isNewStructure?: boolean;
   isIgnored?: boolean;
+  effectiveInclude?: boolean;
+  effectiveValueMode?: ColumnValueMode;
+  isManuallyIncluded?: boolean;
+  isManuallySkipped?: boolean;
+  overwriteConfirmed?: boolean;
+  stats?: {
+    validValues: number;
+    willImport: number;
+    willFill: number;
+    skippedExisting: number;
+    skippedManual: number;
+    invalid: number;
+    overwrite: number;
+    blocked: number;
+  };
   conflictIds?: string[];
 };
 
@@ -47,6 +69,17 @@ export type SpreadsheetPreviewCell = {
   conflictIds?: string[];
   operationIds?: string[];
   editable?: boolean;
+  effectiveInclude?: boolean;
+  effectiveValueMode?: CellValueMode | ColumnValueMode;
+  isManuallyIncluded?: boolean;
+  isManuallySkipped?: boolean;
+  isBlockedByColumn?: boolean;
+  isBlockedByRow?: boolean;
+  isBlockedByTarget?: boolean;
+  canToggleInclude?: boolean;
+  canOverwrite?: boolean;
+  requiresConfirmation?: boolean;
+  overwriteConfirmed?: boolean;
 };
 
 export type SpreadsheetPreviewRow = {
@@ -75,6 +108,13 @@ export type SpreadsheetPreviewModel = {
     manualRequired: number;
     ignoredCells: number;
     invalidCells: number;
+    includedCells: number;
+    skippedCells: number;
+    manualIncludedCells: number;
+    manualSkippedCells: number;
+    overwriteCells: number;
+    blockedCells: number;
+    overwriteNeedsConfirmation: number;
   };
 };
 
@@ -86,6 +126,7 @@ export interface BuildSpreadsheetPreviewModelInput {
   plan: ImportPlan;
   resolverState?: SpreadsheetPreviewResolverState;
   updateMode?: UpdateMode;
+  selectionState?: ImportSelectionState;
 }
 
 const identityColumns: SpreadsheetPreviewColumn[] = [
@@ -97,10 +138,16 @@ const identityColumns: SpreadsheetPreviewColumn[] = [
 const statusRank: Record<PreviewCellStatus, number> = {
   unchanged: 0,
   ignored: 1,
+  skipped: 1,
+  included: 2,
   new_value: 2,
+  manual_included: 3,
+  manual_skipped: 3,
   changed: 3,
+  overwrite: 4,
   new_column: 4,
   needs_check: 5,
+  blocked: 6,
   invalid: 6,
   manual_required: 7,
 };
@@ -156,6 +203,45 @@ function statusFromMapping(mapping: ColumnMapping, resolverState?: SpreadsheetPr
   return "unchanged";
 }
 
+function columnIdFor(columnIndex: number): string {
+  return `excel-col-${columnIndex}`;
+}
+
+function rowIdFor(rowIndex: number): string {
+  return `row-${rowIndex}`;
+}
+
+function operationCellId(rowIndex: number, columnIndex: number): string {
+  return `${rowIdFor(rowIndex)}:${columnIdFor(columnIndex)}`;
+}
+
+function columnValueModeFromUpdateMode(updateMode: UpdateMode): ColumnValueMode {
+  if (updateMode === "overwrite_existing" || updateMode === "overwrite_selected_columns") return "overwrite_existing";
+  if (updateMode === "skip_existing") return "skip_existing";
+  return "fill_empty_only";
+}
+
+function columnSelection(
+  mapping: ColumnMapping,
+  status: PreviewCellStatus,
+  selectionState: ImportSelectionState | undefined,
+  updateMode: UpdateMode,
+) {
+  const columnId = columnIdFor(mapping.columnIndex);
+  const setting = selectionState?.columnSettings[columnId];
+  const defaultInclude = status !== "ignored" && status !== "manual_required" && Boolean(mapping.target);
+  const effectiveInclude = setting ? setting.include : defaultInclude;
+  return {
+    columnId,
+    setting,
+    effectiveInclude,
+    effectiveValueMode: setting?.valueMode || columnValueModeFromUpdateMode(updateMode),
+    isManuallyIncluded: setting?.include === true && !defaultInclude,
+    isManuallySkipped: setting?.include === false,
+    overwriteConfirmed: Boolean(setting?.overwriteConfirmed),
+  };
+}
+
 function isNewStructure(mapping: ColumnMapping): boolean {
   if (!mapping.target) return false;
   if (mapping.target.gradeType !== "assignment") return false;
@@ -179,20 +265,31 @@ function targetLabel(mapping: ColumnMapping): string | undefined {
   return [mapping.target.chapterName, mapping.target.assignmentName].filter(Boolean).join(" - ") || mapping.rawHeader;
 }
 
-function buildPreviewColumns(plan: ImportPlan, resolverState?: SpreadsheetPreviewResolverState): SpreadsheetPreviewColumn[] {
+function buildPreviewColumns(
+  plan: ImportPlan,
+  resolverState: SpreadsheetPreviewResolverState | undefined,
+  selectionState: ImportSelectionState | undefined,
+  updateMode: UpdateMode,
+): SpreadsheetPreviewColumn[] {
   const gradeColumns = plan.columnMappings.map((mapping) => {
     const status = statusFromMapping(mapping, resolverState);
+    const selection = columnSelection(mapping, status, selectionState, updateMode);
     return {
-      id: `excel-col-${mapping.columnIndex}`,
+      id: selection.columnId,
       header: mapping.rawHeader,
       type: columnType(mapping),
-      status,
+      status: selection.isManuallySkipped ? "manual_skipped" : selection.isManuallyIncluded ? "manual_included" : status,
       targetLabel: targetLabel(mapping),
       chapterName: mapping.target?.chapterName,
       assignmentName: mapping.target?.assignmentName,
       gradeType: mapping.target?.gradeType,
       isNewStructure: isNewStructure(mapping),
-      isIgnored: status === "ignored",
+      isIgnored: status === "ignored" || !selection.effectiveInclude,
+      effectiveInclude: selection.effectiveInclude,
+      effectiveValueMode: selection.effectiveValueMode,
+      isManuallyIncluded: selection.isManuallyIncluded,
+      isManuallySkipped: selection.isManuallySkipped,
+      overwriteConfirmed: selection.overwriteConfirmed,
       conflictIds: conflictIdsFor([
         ...mapping.conflicts,
         ...mapping.warnings.map((warning) => ({
@@ -217,34 +314,97 @@ function rowStatus(mapping: StudentMapping, resolverState?: SpreadsheetPreviewRe
   return "unchanged";
 }
 
-function operationStatus(
+type PreviewCellDecision = {
+  status: PreviewCellStatus;
+  effectiveInclude: boolean;
+  effectiveValueMode: CellValueMode | ColumnValueMode;
+  isManuallyIncluded: boolean;
+  isManuallySkipped: boolean;
+  isBlockedByColumn: boolean;
+  isBlockedByRow: boolean;
+  isBlockedByTarget: boolean;
+  canToggleInclude: boolean;
+  canOverwrite: boolean;
+  requiresConfirmation: boolean;
+  overwriteConfirmed: boolean;
+};
+
+function operationDecision(
   operation: GradeOperation | undefined,
   column: SpreadsheetPreviewColumn,
   row: StudentMapping,
   resolverState: SpreadsheetPreviewResolverState | undefined,
   updateMode: UpdateMode,
-): PreviewCellStatus {
-  if (resolverState?.ignoredRows?.includes(row.rowIndex)) return "ignored";
-  if (column.isIgnored || resolverState?.ignoredColumns?.includes(Number(column.id.replace("excel-col-", "")))) return "ignored";
-  if (!operation) return column.status === "manual_required" ? "manual_required" : column.status === "new_column" ? "new_column" : "unchanged";
-  if (resolverState?.ignoredCells?.includes(`${operation.rowIndex}:${operation.columnIndex}`)) return "ignored";
-  if (hasInvalidConflict(operation.conflicts, resolverState)) return "invalid";
-  if (hasBlockingConflict(operation.conflicts, resolverState)) return "manual_required";
-  if (column.status === "manual_required" || rowStatus(row, resolverState) === "manual_required") return "manual_required";
-  if (column.status === "new_column") return "new_column";
-  if (operation.value === null || operation.action === "skip_empty") return "ignored";
+  selectionState: ImportSelectionState | undefined,
+): PreviewCellDecision {
+  const rowStatusValue = rowStatus(row, resolverState);
+  const columnIndex = Number(column.id.replace("excel-col-", ""));
+  const cellId = operation ? operationCellId(operation.rowIndex, operation.columnIndex) : `${rowIdFor(row.rowIndex)}:${column.id}`;
+  const cellSetting = selectionState?.cellSettings[cellId];
+  const columnMode = column.effectiveValueMode || columnValueModeFromUpdateMode(updateMode);
+  const effectiveValueMode = cellSetting?.valueMode && cellSetting.valueMode !== "inherit_column" ? cellSetting.valueMode : columnMode;
+  const isManuallySkipped = cellSetting?.include === false || resolverState?.ignoredCells?.includes(`${row.rowIndex}:${columnIndex}`) || false;
+  const isManuallyIncluded = cellSetting?.include === true;
+  const isBlockedByColumn = !column.effectiveInclude || column.isIgnored || resolverState?.ignoredColumns?.includes(columnIndex) || false;
+  const isBlockedByRow = resolverState?.ignoredRows?.includes(row.rowIndex) || rowStatusValue === "manual_required" || rowStatusValue === "ignored" || false;
+  const isBlockedByTarget = column.status === "manual_required" || !column.gradeType && column.type !== "identity";
+  const overwriteConfirmed = Boolean(cellSetting?.overwriteConfirmed || column.overwriteConfirmed);
+  const base: Omit<PreviewCellDecision, "status" | "effectiveInclude"> = {
+    effectiveValueMode,
+    isManuallyIncluded,
+    isManuallySkipped,
+    isBlockedByColumn,
+    isBlockedByRow,
+    isBlockedByTarget,
+    canToggleInclude: Boolean(operation) && !isBlockedByRow && !isBlockedByTarget,
+    canOverwrite: Boolean(operation?.existingValue !== null && operation?.existingValue !== undefined && operation?.value !== null),
+    requiresConfirmation: false,
+    overwriteConfirmed,
+  };
+
+  if (isBlockedByRow) return { ...base, status: "blocked", effectiveInclude: false };
+  if (isBlockedByColumn) {
+    return {
+      ...base,
+      status: column.status === "ignored" ? "ignored" : isManuallySkipped ? "manual_skipped" : "skipped",
+      effectiveInclude: false,
+    };
+  }
+  if (!operation) {
+    const status = column.status === "new_column" ? "new_column" : column.status === "manual_required" ? "blocked" : "unchanged";
+    return { ...base, status, effectiveInclude: false };
+  }
+  if (isManuallySkipped) return { ...base, status: "manual_skipped", effectiveInclude: false };
+  if (hasInvalidConflict(operation.conflicts, resolverState)) {
+    return { ...base, status: "invalid", effectiveInclude: true };
+  }
+  if (hasBlockingConflict(operation.conflicts, resolverState)) return { ...base, status: "blocked", effectiveInclude: false };
+  if (isBlockedByTarget) return { ...base, status: "blocked", effectiveInclude: false };
+  if (operation.value === null || operation.action === "skip_empty") return { ...base, status: "skipped", effectiveInclude: false };
 
   const oldValue = operation.existingValue;
   const hasOldValue = oldValue !== null && oldValue !== undefined;
-  if (!hasOldValue) return "new_value";
-  if (Number(oldValue) !== Number(operation.value)) {
-    if (operation.action === "overwrite" || updateMode === "overwrite_existing" || updateMode === "overwrite_selected_columns") return "changed";
-    return "needs_check";
+  if (!hasOldValue) {
+    return {
+      ...base,
+      status: isManuallyIncluded ? "manual_included" : column.status === "new_column" ? "new_column" : "new_value",
+      effectiveInclude: true,
+    };
   }
-  return "unchanged";
+  if (Number(oldValue) !== Number(operation.value)) {
+    if (effectiveValueMode === "overwrite_existing") {
+      if (!overwriteConfirmed) {
+        return { ...base, status: "blocked", effectiveInclude: true, requiresConfirmation: true };
+      }
+      return { ...base, status: "overwrite", effectiveInclude: true };
+    }
+    return { ...base, status: isManuallyIncluded ? "manual_included" : "skipped", effectiveInclude: false };
+  }
+  return { ...base, status: isManuallyIncluded ? "manual_included" : "included", effectiveInclude: true };
 }
 
 function cellMessage(status: PreviewCellStatus): string {
+  if (status === "included") return "Nilai ini akan ikut diimport.";
   if (status === "new_value") return "Nilai ini akan diisi ke sel yang masih kosong.";
   if (status === "changed") return "Nilai lama berbeda dari nilai Excel.";
   if (status === "new_column") return "Kolom ini berasal dari struktur baru yang perlu disetujui.";
@@ -252,16 +412,27 @@ function cellMessage(status: PreviewCellStatus): string {
   if (status === "manual_required") return "Bagian merah ini harus dipilih manual.";
   if (status === "ignored") return "Bagian ini tidak akan diimport.";
   if (status === "invalid") return "Nilai tidak valid dan tidak bisa diimport.";
+  if (status === "skipped") return "Nilai ini akan dilewati.";
+  if (status === "manual_included") return "Nilai ini dipilih manual untuk ikut import.";
+  if (status === "manual_skipped") return "Nilai ini dilewati manual.";
+  if (status === "blocked") return "Bagian ini perlu target atau konfirmasi sebelum bisa diimport.";
+  if (status === "overwrite") return "Nilai lama akan ditimpa karena sudah dikonfirmasi.";
   return "Tidak ada perubahan.";
 }
 
 function recommendedAction(status: PreviewCellStatus): string | undefined {
+  if (status === "included") return "Biarkan";
   if (status === "new_value") return "Biarkan";
   if (status === "changed") return "Biarkan mode aman";
   if (status === "new_column") return "Setujui kolom baru";
   if (status === "needs_check") return "Setujui saran SIPENA";
   if (status === "manual_required") return "Pilih sekarang";
   if (status === "invalid") return "Abaikan nilai";
+  if (status === "skipped") return "Include nilai ini";
+  if (status === "manual_included") return "Biarkan";
+  if (status === "manual_skipped") return "Include nilai ini";
+  if (status === "blocked") return "Pilih target";
+  if (status === "overwrite") return "Biarkan";
   return undefined;
 }
 
@@ -280,8 +451,9 @@ export function buildSpreadsheetPreviewModel({
   plan,
   resolverState,
   updateMode = plan.updateMode,
+  selectionState,
 }: BuildSpreadsheetPreviewModelInput): SpreadsheetPreviewModel {
-  const columns = buildPreviewColumns(plan, resolverState);
+  const columns = buildPreviewColumns(plan, resolverState, selectionState, updateMode);
   const operationsByRowAndColumn = new Map<string, GradeOperation>();
   plan.gradeOperations.forEach((operation) => {
     operationsByRowAndColumn.set(`${operation.rowIndex}:${operation.columnIndex}`, operation);
@@ -293,7 +465,8 @@ export function buildSpreadsheetPreviewModel({
     const gradeCells = columns.slice(3).map((column) => {
       const columnIndex = Number(column.id.replace("excel-col-", ""));
       const operation = operationsByRowAndColumn.get(`${studentMapping.rowIndex}:${columnIndex}`);
-      const status = operationStatus(operation, column, studentMapping, resolverState, updateMode);
+      const decision = operationDecision(operation, column, studentMapping, resolverState, updateMode, selectionState);
+      const status = decision.status;
       const displayValue = operation
         ? operation.value === null || operation.value === undefined ? "" : String(operation.value)
         : "";
@@ -316,6 +489,17 @@ export function buildSpreadsheetPreviewModel({
         conflictIds: cellConflictIds,
         operationIds: operation ? [operation.id] : [],
         editable: status === "invalid" || status === "changed",
+        effectiveInclude: decision.effectiveInclude,
+        effectiveValueMode: decision.effectiveValueMode,
+        isManuallyIncluded: decision.isManuallyIncluded,
+        isManuallySkipped: decision.isManuallySkipped,
+        isBlockedByColumn: decision.isBlockedByColumn,
+        isBlockedByRow: decision.isBlockedByRow,
+        isBlockedByTarget: decision.isBlockedByTarget,
+        canToggleInclude: decision.canToggleInclude,
+        canOverwrite: decision.canOverwrite,
+        requiresConfirmation: decision.requiresConfirmation,
+        overwriteConfirmed: decision.overwriteConfirmed,
       } satisfies SpreadsheetPreviewCell;
     });
 
@@ -340,20 +524,45 @@ export function buildSpreadsheetPreviewModel({
   });
 
   const allCells = rows.flatMap((row) => row.cells);
+  const columnStats = new Map<string, NonNullable<SpreadsheetPreviewColumn["stats"]>>();
+  columns.slice(3).forEach((column) => {
+    const cells = rows.map((row) => row.cells.find((cell) => cell.columnId === column.id)).filter(Boolean) as SpreadsheetPreviewCell[];
+    columnStats.set(column.id, {
+      validValues: cells.filter((cell) => cell.newValue !== null && cell.newValue !== undefined && cell.status !== "invalid").length,
+      willImport: cells.filter((cell) => cell.effectiveInclude && !cell.requiresConfirmation && !["invalid", "blocked"].includes(cell.status)).length,
+      willFill: cells.filter((cell) => cell.status === "new_value" || cell.status === "manual_included").length,
+      skippedExisting: cells.filter((cell) => cell.status === "skipped" && cell.oldValue !== null && cell.oldValue !== undefined).length,
+      skippedManual: cells.filter((cell) => cell.status === "manual_skipped").length,
+      invalid: cells.filter((cell) => cell.status === "invalid").length,
+      overwrite: cells.filter((cell) => cell.status === "overwrite").length,
+      blocked: cells.filter((cell) => cell.status === "blocked" || cell.requiresConfirmation).length,
+    });
+  });
+  const columnsWithStats = columns.map((column) => ({
+    ...column,
+    stats: columnStats.get(column.id) || column.stats,
+  }));
   const summary = {
     totalRows: rows.length,
     totalColumns: columns.length,
-    readyCells: allCells.filter((cell) => ["unchanged", "new_value"].includes(cell.status)).length,
+    readyCells: allCells.filter((cell) => ["unchanged", "included", "new_value", "manual_included", "overwrite"].includes(cell.status)).length,
     newValueCells: allCells.filter((cell) => cell.status === "new_value").length,
     changedCells: allCells.filter((cell) => cell.status === "changed").length,
     newColumns: columns.filter((column) => column.status === "new_column").length,
     needsCheck: allCells.filter((cell) => cell.status === "needs_check").length
       + columns.filter((column) => column.status === "needs_check").length,
-    manualRequired: allCells.filter((cell) => cell.status === "manual_required").length
-      + columns.filter((column) => column.status === "manual_required").length,
-    ignoredCells: allCells.filter((cell) => cell.status === "ignored").length,
+    manualRequired: allCells.filter((cell) => cell.status === "manual_required" || cell.status === "blocked" || cell.requiresConfirmation).length
+      + columns.filter((column) => column.status === "manual_required" || column.status === "blocked").length,
+    ignoredCells: allCells.filter((cell) => cell.status === "ignored" || cell.status === "skipped" || cell.status === "manual_skipped").length,
     invalidCells: allCells.filter((cell) => cell.status === "invalid").length,
+    includedCells: allCells.filter((cell) => cell.effectiveInclude && !cell.requiresConfirmation && !["invalid", "blocked"].includes(cell.status)).length,
+    skippedCells: allCells.filter((cell) => cell.status === "skipped").length,
+    manualIncludedCells: allCells.filter((cell) => cell.status === "manual_included").length,
+    manualSkippedCells: allCells.filter((cell) => cell.status === "manual_skipped").length,
+    overwriteCells: allCells.filter((cell) => cell.status === "overwrite").length,
+    blockedCells: allCells.filter((cell) => cell.status === "blocked").length,
+    overwriteNeedsConfirmation: allCells.filter((cell) => cell.requiresConfirmation).length,
   };
 
-  return { columns, rows, summary };
+  return { columns: columnsWithStats, rows, summary };
 }
