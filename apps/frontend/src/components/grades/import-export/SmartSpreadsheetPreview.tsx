@@ -128,6 +128,13 @@ export function SmartSpreadsheetPreview({
     onSetCellInclude(cell, row, column, cell.effectiveInclude === false);
   };
 
+  const headerHint = (column: SpreadsheetPreviewColumn) => {
+    if (column.type === "identity") return "Klik untuk memilih baris.";
+    if (column.isNewStructure) return "Klik untuk setujui atau ubah BAB/tugas baru.";
+    if (column.effectiveInclude === false) return "Klik untuk mengatur kolom yang dilewati.";
+    return "Klik untuk atur kolom, target tugas, dan mode nilai.";
+  };
+
   return (
     <div className="sipena-preview-shell">
       <PreviewSummaryBanner model={model} onPrimaryAction={primarySummaryAction} />
@@ -157,16 +164,23 @@ export function SmartSpreadsheetPreview({
                       <button
                         type="button"
                         className="sipena-preview-header-button"
-                        title={column.targetLabel || column.header}
+                        title={headerHint(column)}
                         onClick={() => setSelection({ kind: "column", column })}
                       >
                         <span className="truncate">{column.header}</span>
                         {column.type !== "identity" ? (
-                          <span className="sipena-import-cell-mini-badge">
-                            {column.effectiveInclude === false ? "Dilewati" : "Dipakai"}
+                          <span className="sipena-preview-header-meta">
+                            {column.isNewStructure ? <span className="sipena-import-cell-mini-badge">Kolom baru</span> : null}
+                            <span className="sipena-import-cell-mini-badge">
+                              {column.effectiveInclude === false ? "Dilewati" : "Dipakai"}
+                            </span>
+                            <span className="sipena-preview-header-action">Atur</span>
                           </span>
                         ) : null}
                       </button>
+                      {column.type !== "identity" ? (
+                        <span className="sipena-preview-header-hint">{headerHint(column)}</span>
+                      ) : null}
                     </th>
                   ))}
                 </tr>

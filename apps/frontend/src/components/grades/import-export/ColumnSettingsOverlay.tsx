@@ -45,6 +45,20 @@ function cleanName(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function sourceTaskName(column: SpreadsheetPreviewColumn): string {
+  const source = cleanName(column.sourceHeader || column.header);
+  if (column.assignmentName) return column.assignmentName;
+  const parts = source.split(/\s+-\s+/);
+  return cleanName(parts[parts.length - 1] || source) || "Tugas Baru";
+}
+
+function sourceChapterName(column: SpreadsheetPreviewColumn): string {
+  if (column.chapterName) return column.chapterName;
+  const source = cleanName(column.sourceHeader || column.header);
+  const parts = source.split(/\s+-\s+/);
+  return parts.length > 1 ? cleanName(parts[0]) : "BAB Baru";
+}
+
 function defaultTargetMode(column: SpreadsheetPreviewColumn): TargetMode {
   if (column.gradeType === "sts") return "sts";
   if (column.gradeType === "sas") return "sas";
@@ -52,6 +66,29 @@ function defaultTargetMode(column: SpreadsheetPreviewColumn): TargetMode {
   if (column.isNewStructure && column.chapterId) return "new_assignment";
   if (column.isNewStructure) return "new_chapter_assignment";
   return "keep";
+}
+
+function TargetQuickButton({
+  active,
+  title,
+  description,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`sipena-column-target-card${active ? " sipena-column-target-card-active" : ""}`}
+      onClick={onClick}
+    >
+      <span>{title}</span>
+      <small>{description}</small>
+    </button>
+  );
 }
 
 export function ColumnSettingsOverlay({
@@ -80,16 +117,16 @@ export function ColumnSettingsOverlay({
   const [headerLabel, setHeaderLabel] = useState(column.header);
   const [targetMode, setTargetMode] = useState<TargetMode>(() => defaultTargetMode(column));
   const [selectedChapterId, setSelectedChapterId] = useState(column.chapterId || chapters[0]?.id || "");
-  const [newChapterName, setNewChapterName] = useState(column.chapterName || "BAB Baru");
-  const [newAssignmentName, setNewAssignmentName] = useState(column.assignmentName || cleanName(column.sourceHeader || column.header) || "Tugas Baru");
+  const [newChapterName, setNewChapterName] = useState(sourceChapterName(column));
+  const [newAssignmentName, setNewAssignmentName] = useState(sourceTaskName(column));
   const [overwriteChecked, setOverwriteChecked] = useState(Boolean(column.overwriteConfirmed));
 
   useEffect(() => {
     setHeaderLabel(column.header);
     setTargetMode(defaultTargetMode(column));
     setSelectedChapterId(column.chapterId || chapters[0]?.id || "");
-    setNewChapterName(column.chapterName || "BAB Baru");
-    setNewAssignmentName(column.assignmentName || cleanName(column.sourceHeader || column.header) || "Tugas Baru");
+    setNewChapterName(sourceChapterName(column));
+    setNewAssignmentName(sourceTaskName(column));
     setOverwriteChecked(Boolean(column.overwriteConfirmed));
   }, [chapters, column]);
 
@@ -210,6 +247,68 @@ export function ColumnSettingsOverlay({
 
           <div className="sipena-column-field">
             <span>Target kolom nilai</span>
+            {column.isNewStructure ? (
+              <div className="sipena-column-suggestion-card">
+                <b>Kolom baru terdeteksi</b>
+                <p>
+                  SIPENA membaca kolom ini sebagai {newChapterName && newAssignmentName
+                    ? `${newChapterName} - ${newAssignmentName}`
+                    : "BAB/tugas baru"}. Setujui hanya jika targetnya benar.
+                </p>
+                <div className="sipena-column-suggestion-actions">
+                  <button
+                    type="button"
+                    className="sipena-column-btn sipena-column-btn-primary"
+                    onClick={() => setTargetMode(column.chapterId ? "new_assignment" : "new_chapter_assignment")}
+                  >
+                    Pakai saran SIPENA
+                  </button>
+                  <button type="button" className="sipena-column-btn" onClick={() => setTargetMode("ignore")}>
+                    Lewati kolom
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="sipena-column-target-grid" aria-label="Pilihan cepat target kolom">
+              <TargetQuickButton
+                active={targetMode === "keep"}
+                title="Target saat ini"
+                description={column.targetLabel || "Gunakan hasil baca SIPENA"}
+                onClick={() => setTargetMode("keep")}
+              />
+              <TargetQuickButton
+                active={targetMode === "sts"}
+                title="STS"
+                description="Nilai tengah semester"
+                onClick={() => setTargetMode("sts")}
+              />
+              <TargetQuickButton
+                active={targetMode === "sas"}
+                title="SAS"
+                description="Nilai akhir semester"
+                onClick={() => setTargetMode("sas")}
+              />
+              <TargetQuickButton
+                active={targetMode === "new_assignment"}
+                title="Tugas baru"
+                description="Tambahkan ke BAB yang ada"
+                onClick={() => setTargetMode("new_assignment")}
+              />
+              <TargetQuickButton
+                active={targetMode === "new_chapter_assignment"}
+                title="BAB + tugas baru"
+                description="Buat struktur baru"
+                onClick={() => setTargetMode("new_chapter_assignment")}
+              />
+              <TargetQuickButton
+                active={targetMode === "ignore"}
+                title="Lewati"
+                description="Kolom tidak diimport"
+                onClick={() => setTargetMode("ignore")}
+              />
+            </div>
+
             <select value={targetMode} onChange={(event) => setTargetMode(event.target.value as TargetMode)}>
               <option value="keep">Gunakan target saat ini</option>
               <option value="sts">Jadikan STS</option>
