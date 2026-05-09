@@ -1,5 +1,6 @@
 import type { ConflictSimplifierResolverState } from "./conflictSimplifier";
 import { getSimplifiedConflictSourceId } from "./conflictSimplifier";
+import { buildExecutableImportOperations } from "./executableImportBuilder";
 import type { CellValueMode, ColumnValueMode, ImportSelectionState } from "./importSelection";
 import type { ColumnMapping, GradeOperation, ImportConflict, ImportPlan, StudentMapping, UpdateMode } from "./types";
 
@@ -462,6 +463,7 @@ export function buildSpreadsheetPreviewModel({
   updateMode = plan.updateMode,
   selectionState,
 }: BuildSpreadsheetPreviewModelInput): SpreadsheetPreviewModel {
+  const executablePlan = buildExecutableImportOperations({ plan, resolverState, updateMode, selectionState });
   const columns = buildPreviewColumns(plan, resolverState, selectionState, updateMode);
   const operationsByRowAndColumn = new Map<string, GradeOperation>();
   plan.gradeOperations.forEach((operation) => {
@@ -564,13 +566,13 @@ export function buildSpreadsheetPreviewModel({
       + columns.filter((column) => column.status === "manual_required" || column.status === "blocked").length,
     ignoredCells: allCells.filter((cell) => cell.status === "ignored" || cell.status === "skipped" || cell.status === "manual_skipped").length,
     invalidCells: allCells.filter((cell) => cell.status === "invalid").length,
-    includedCells: allCells.filter((cell) => cell.effectiveInclude && !cell.requiresConfirmation && !["invalid", "blocked"].includes(cell.status)).length,
+    includedCells: executablePlan.summary.executableCount,
     skippedCells: allCells.filter((cell) => cell.status === "skipped").length,
     manualIncludedCells: allCells.filter((cell) => cell.status === "manual_included").length,
     manualSkippedCells: allCells.filter((cell) => cell.status === "manual_skipped").length,
     overwriteCells: allCells.filter((cell) => cell.status === "overwrite").length,
     blockedCells: allCells.filter((cell) => cell.status === "blocked").length,
-    overwriteNeedsConfirmation: allCells.filter((cell) => cell.requiresConfirmation).length,
+    overwriteNeedsConfirmation: executablePlan.summary.overwriteNeedsConfirmationCount,
   };
 
   return { columns: columnsWithStats, rows, summary };

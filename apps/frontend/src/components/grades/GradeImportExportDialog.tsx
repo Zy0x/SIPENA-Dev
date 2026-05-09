@@ -26,6 +26,7 @@ import { useEnhancedToast } from "@/contexts/ToastContext";
 import {
   analyzeFreeExcelWorkbook,
   analyzeOfficialTemplateWorkbook,
+  buildExecutableImportOperations,
   buildImportPlan,
   buildSpreadsheetPreviewModel,
   defaultCellImportSetting,
@@ -2030,54 +2031,6 @@ function PreviewStep({
   );
 }
 
-function hasExistingGrade(operation: GradeOperation): boolean {
-  return operation.existingValue !== null && operation.existingValue !== undefined;
-}
-
-function canExecuteOverwrite(
-  operation: GradeOperation,
-  selectedOverwriteColumns: Set<number>,
-  selectionState?: ImportSelectionState,
-): boolean {
-  if (!hasExistingGrade(operation)) return true;
-  const columnId = `excel-col-${operation.columnIndex}`;
-  const rowId = `row-${operation.rowIndex}`;
-  const cellId = `${rowId}:${columnId}`;
-  const cellSetting = selectionState?.cellSettings[cellId];
-  const columnSetting = selectionState?.columnSettings[columnId];
-  if (cellSetting?.valueMode === "overwrite_existing") return Boolean(cellSetting.overwriteConfirmed);
-  if (columnSetting?.valueMode === "overwrite_existing") return Boolean(columnSetting.overwriteConfirmed);
-  if (operation.updateMode === "overwrite_existing") return true;
-  if (operation.updateMode === "overwrite_selected_columns") {
-    return selectedOverwriteColumns.has(operation.columnIndex);
-  }
-  return false;
-}
-
-function resolveOperationSelection(
-  operation: GradeOperation,
-  selectionState: ImportSelectionState | undefined,
-): { include: boolean; mode?: ColumnValueMode | CellValueMode; overwriteConfirmed: boolean; skippedByColumn: boolean; skippedByCell: boolean } {
-  const columnId = `excel-col-${operation.columnIndex}`;
-  const rowId = `row-${operation.rowIndex}`;
-  const cellId = `${rowId}:${columnId}`;
-  const columnSetting = selectionState?.columnSettings[columnId];
-  const cellSetting = selectionState?.cellSettings[cellId];
-  const skippedByColumn = columnSetting?.include === false;
-  const skippedByCell = cellSetting?.include === false;
-  const include = !skippedByColumn && !skippedByCell;
-  const mode = cellSetting?.valueMode && cellSetting.valueMode !== "inherit_column"
-    ? cellSetting.valueMode
-    : columnSetting?.valueMode;
-  return {
-    include,
-    mode,
-    overwriteConfirmed: Boolean(cellSetting?.overwriteConfirmed || columnSetting?.overwriteConfirmed),
-    skippedByColumn,
-    skippedByCell,
-  };
-}
-
 // TODO production import hardening before replacing this safe client executor:
 // RPC batch import, idempotency key, signed server template, audit log,
 // rollback, and server-side validation.
@@ -2087,7 +2040,7 @@ async function executeClientSideImport({
   onSaveGradesBatch,
   onEnsureAssignmentTarget,
   onProgress,
-  selectedOverwriteColumns,
+  resolverState,
   selectionState,
 }: {
   plan: ImportPlan;
@@ -2095,66 +2048,44 @@ async function executeClientSideImport({
   onSaveGradesBatch?: GradeImportExportDialogProps["onSaveGradesBatch"];
   onEnsureAssignmentTarget?: GradeImportExportDialogProps["onEnsureAssignmentTarget"];
   onProgress: (progress: ImportExecutionProgress) => void;
-  selectedOverwriteColumns: Set<number>;
+  resolverState?: ImportResolverState;
   selectionState?: ImportSelectionState;
 }): Promise<ImportExecutionSummary> {
   const summary = emptyExecutionSummary();
-  const operations = plan.gradeOperations;
+  const executablePlan = buildExecutableImportOperations({
+    plan,
+    resolverState,
+    selectionState,
+    updateMode: plan.updateMode,
+  });
+  const operations = executablePlan.operations;
   const warnings = new Set<string>();
   const ensuredAssignmentTargets = new Map<string, GradeTarget>();
   const batchItems: Parameters<NonNullable<GradeImportExportDialogProps["onSaveGradesBatch"]>>[0] = [];
   const batchOperations: GradeOperation[] = [];
 
+  summary.skippedCount = executablePlan.summary.totalOperations - executablePlan.summary.executableCount;
+  if (executablePlan.summary.skippedManualCount > 0) warnings.add("Sebagian nilai dilewati sesuai pilihan manual.");
+  if (executablePlan.summary.skippedExistingCount > 0) warnings.add("Sebagian nilai dilewati karena nilai lama sudah ada dan mode aman aktif.");
+  if (executablePlan.summary.skippedEmptyCount > 0) warnings.add("Sebagian sel kosong dilewati dan tidak menghapus nilai lama.");
+  if (executablePlan.summary.blockedCount > 0) warnings.add("Sebagian nilai dilewati karena masih ada pilihan yang belum selesai dicek.");
+  if (executablePlan.summary.overwriteNeedsConfirmationCount > 0) warnings.add("Sebagian nilai lama dilewati karena belum ada konfirmasi timpa.");
+
   if (!onSaveGrade && !onSaveGradesBatch) {
     return {
       ...summary,
-      skippedCount: operations.length,
+      skippedCount: executablePlan.summary.totalOperations,
       warnings: ["Mekanisme simpan nilai belum tersedia di halaman ini."],
     };
   }
 
-  onProgress({ current: 0, total: operations.length });
+  onProgress({ current: summary.skippedCount, total: executablePlan.summary.totalOperations });
 
-  for (const operation of operations) {
-    onProgress({ current: summary.successCount + summary.failedCount + summary.skippedCount, total: operations.length });
-    const selection = resolveOperationSelection(operation, selectionState);
+  for (const executableOperation of operations) {
+    onProgress({ current: summary.successCount + summary.failedCount + summary.skippedCount, total: executablePlan.summary.totalOperations });
+    const operation = executableOperation.operation;
 
-    if (!selection.include) {
-      summary.skippedCount += 1;
-      if (selection.skippedByColumn) warnings.add("Sebagian nilai dilewati karena kolomnya tidak dipakai.");
-      if (selection.skippedByCell) warnings.add("Sebagian nilai dilewati sesuai pilihan manual.");
-      continue;
-    }
-
-    if (operation.conflicts.length || operation.action === "blocked" || operation.action === "needs_confirmation") {
-      summary.skippedCount += 1;
-      warnings.add("Sebagian nilai dilewati karena masih ada pilihan yang belum selesai dicek.");
-      continue;
-    }
-
-    const hasExisting = hasExistingGrade(operation);
-    const effectiveMode = selection.mode || operation.updateMode;
-    const shouldOverwrite = hasExisting && effectiveMode === "overwrite_existing";
-    const shouldSkipExisting = hasExisting && (effectiveMode === "fill_empty_only" || effectiveMode === "skip_existing");
-
-    if (shouldSkipExisting) {
-      summary.skippedCount += 1;
-      warnings.add("Sebagian nilai dilewati karena nilai lama sudah ada dan mode aman aktif.");
-      continue;
-    }
-
-    if (operation.action !== "fill_empty" && operation.action !== "overwrite" && !shouldOverwrite) {
-      summary.skippedCount += 1;
-      continue;
-    }
-
-    if (!operation.studentId || operation.value === null) {
-      summary.skippedCount += 1;
-      warnings.add("Sebagian operasi dilewati karena siswa atau nilai belum valid.");
-      continue;
-    }
-
-    let operationTarget = operation.target;
+    let operationTarget = executableOperation.target;
     if (operationTarget.gradeType === "assignment" && !operationTarget.assignmentId) {
       if (!onEnsureAssignmentTarget) {
         summary.skippedCount += 1;
@@ -2187,32 +2118,20 @@ async function executeClientSideImport({
       }
     }
 
-    if (shouldOverwrite && !selection.overwriteConfirmed) {
-      summary.skippedCount += 1;
-      warnings.add("Sebagian nilai lama dilewati karena belum ada konfirmasi timpa.");
-      continue;
-    }
-
-    if ((operation.action === "overwrite" || shouldOverwrite) && !canExecuteOverwrite(operation, selectedOverwriteColumns, selectionState)) {
-      summary.skippedCount += 1;
-      warnings.add("Nilai lama dilewati karena aturan import saat ini tidak mengizinkan penimpaan nilai untuk kolom ini.");
-      continue;
-    }
-
     if (onSaveGradesBatch) {
       batchItems.push({
-        studentId: operation.studentId,
+        studentId: executableOperation.studentId,
         gradeType: operationTarget.gradeType,
-        value: operation.value,
+        value: executableOperation.value,
         assignmentId: operationTarget.gradeType === "assignment" ? operationTarget.assignmentId : undefined,
       });
       batchOperations.push({ ...operation, target: operationTarget });
     } else if (onSaveGrade) {
       try {
         await onSaveGrade(
-          operation.studentId,
+          executableOperation.studentId,
           operationTarget.gradeType,
-          operation.value,
+          executableOperation.value,
           operationTarget.gradeType === "assignment" ? operationTarget.assignmentId : undefined,
         );
         summary.successCount += 1;
@@ -2250,7 +2169,7 @@ async function executeClientSideImport({
     }
   }
 
-  onProgress({ current: operations.length, total: operations.length });
+  onProgress({ current: executablePlan.summary.totalOperations, total: executablePlan.summary.totalOperations });
 
   return {
     ...summary,
@@ -3121,13 +3040,12 @@ export default function GradeImportExportDialog({
         setExecutionProgress({ current: 0, total: 0 });
 
         try {
-          const selectedOverwriteColumns = new Set(Object.keys(resolverState.columnOverrides).map(Number));
           const summary = await executeClientSideImport({
             plan,
             onSaveGrade,
             onSaveGradesBatch,
             onEnsureAssignmentTarget,
-            selectedOverwriteColumns,
+            resolverState,
             selectionState,
             onProgress: setExecutionProgress,
           });
@@ -3196,7 +3114,7 @@ export default function GradeImportExportDialog({
     onSaveGradesBatch,
     onEnsureAssignmentTarget,
     plan,
-    resolverState.columnOverrides,
+    resolverState,
     selectionState,
     smartFixResult,
     spreadsheetPreview,
