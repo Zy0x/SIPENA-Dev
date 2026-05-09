@@ -31,6 +31,8 @@ type Selection =
   | { kind: "row"; row: SpreadsheetPreviewRow }
   | null;
 
+type ImportComplexityMode = "simple" | "advanced";
+
 function previewStatusClass(status: string): string {
   return `sipena-preview-cell--${status.replace(/_/g, "-")}`;
 }
@@ -45,6 +47,7 @@ function stickyStyle(index: number): CSSProperties | undefined {
 export function SmartSpreadsheetPreview({
   model,
   updateMode,
+  complexityMode = "simple",
   onUpdateModeChange,
   onApplySafeFixes,
   onApproveSuggestions,
@@ -69,6 +72,7 @@ export function SmartSpreadsheetPreview({
 }: {
   model: SpreadsheetPreviewModel;
   updateMode: UpdateMode;
+  complexityMode?: ImportComplexityMode;
   selectionState: ImportSelectionState;
   assignments: ColumnSettingsAssignmentOption[];
   chapters: ColumnSettingsChapterOption[];
@@ -114,6 +118,10 @@ export function SmartSpreadsheetPreview({
       setSelection(firstManual);
       return;
     }
+    if (complexityMode === "simple") {
+      onApplySafeFixes();
+      return;
+    }
     if (model.summary.needsCheck > 0) {
       onApproveSuggestions();
       return;
@@ -146,6 +154,7 @@ export function SmartSpreadsheetPreview({
     <div className="sipena-preview-shell">
       <PreviewSummaryBanner model={model} onPrimaryAction={primarySummaryAction} />
       <PreviewQuickActions
+        complexityMode={complexityMode}
         onApplySafeFixes={onApplySafeFixes}
         onApproveSuggestions={onApproveSuggestions}
         onIgnoreNonGradeColumns={onIgnoreNonGradeColumns}
@@ -244,6 +253,7 @@ export function SmartSpreadsheetPreview({
             updateMode={updateMode}
             selectionState={selectionState}
             onUpdateModeChange={onUpdateModeChange}
+            complexityMode={complexityMode}
             onApproveColumn={onApproveColumn}
             onIgnoreColumn={onIgnoreColumn}
             onIgnoreCell={onIgnoreCell}
@@ -274,6 +284,7 @@ export function SmartSpreadsheetPreview({
           onSetValueMode={onSetColumnValueMode}
           onBulkColumnAction={onBulkColumnAction}
           onResetColumnSelection={onResetColumnSelection}
+          complexityMode={complexityMode}
         />
       ) : null}
     </div>

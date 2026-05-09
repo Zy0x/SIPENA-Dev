@@ -35,6 +35,8 @@ export interface ColumnSettingsChapterOption {
   name: string;
 }
 
+type ImportComplexityMode = "simple" | "advanced";
+
 function columnModeLabel(mode: ColumnValueMode): string {
   if (mode === "overwrite_existing") return "Timpa nilai lama pada kolom ini";
   if (mode === "skip_existing") return "Lewati nilai yang sudah ada";
@@ -59,10 +61,16 @@ function sourceChapterName(column: SpreadsheetPreviewColumn): string {
   return parts.length > 1 ? cleanName(parts[0]) : "BAB Baru";
 }
 
-function defaultTargetMode(column: SpreadsheetPreviewColumn): TargetMode {
+function targetCurrentSafeInSimple(column: SpreadsheetPreviewColumn): boolean {
+  if (column.gradeType === "sts" || column.gradeType === "sas") return true;
+  return Boolean(column.assignmentId && !column.isNewStructure);
+}
+
+function defaultTargetMode(column: SpreadsheetPreviewColumn, complexityMode: ImportComplexityMode): TargetMode {
   if (column.gradeType === "sts") return "sts";
   if (column.gradeType === "sas") return "sas";
   if (column.assignmentId) return `assignment:${column.assignmentId}`;
+  if (complexityMode === "simple") return "ignore";
   if (column.isNewStructure && column.chapterId) return "new_assignment";
   if (column.isNewStructure) return "new_chapter_assignment";
   return "keep";
@@ -102,6 +110,7 @@ export function ColumnSettingsOverlay({
   onSetTarget,
   onBulkColumnAction,
   onResetColumnSelection,
+  complexityMode = "simple",
 }: {
   column: SpreadsheetPreviewColumn;
   assignments: ColumnSettingsAssignmentOption[];
@@ -113,9 +122,11 @@ export function ColumnSettingsOverlay({
   onSetTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
   onBulkColumnAction: (column: SpreadsheetPreviewColumn, action: "include_valid" | "skip_all" | "skip_existing" | "reset") => void;
   onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
+  complexityMode?: ImportComplexityMode;
 }) {
+  const advanced = complexityMode === "advanced";
   const [headerLabel, setHeaderLabel] = useState(column.header);
-  const [targetMode, setTargetMode] = useState<TargetMode>(() => defaultTargetMode(column));
+  const [targetMode, setTargetMode] = useState<TargetMode>(() => defaultTargetMode(column, complexityMode));
   const [selectedChapterId, setSelectedChapterId] = useState(column.chapterId || chapters[0]?.id || "");
   const [newChapterName, setNewChapterName] = useState(sourceChapterName(column));
   const [newAssignmentName, setNewAssignmentName] = useState(sourceTaskName(column));
@@ -123,27 +134,32 @@ export function ColumnSettingsOverlay({
 
   useEffect(() => {
     setHeaderLabel(column.header);
-    setTargetMode(defaultTargetMode(column));
+    setTargetMode(defaultTargetMode(column, complexityMode));
     setSelectedChapterId(column.chapterId || chapters[0]?.id || "");
     setNewChapterName(sourceChapterName(column));
     setNewAssignmentName(sourceTaskName(column));
     setOverwriteChecked(Boolean(column.overwriteConfirmed));
-  }, [chapters, column]);
+  }, [chapters, column, complexityMode]);
 
   const activeMode = column.effectiveValueMode || "fill_empty_only";
   const canApplyTarget = useMemo(() => {
     if (targetMode === "keep") return true;
+    if (!advanced && (targetMode === "new_assignment" || targetMode === "new_chapter_assignment")) return false;
     if (targetMode === "new_assignment") return Boolean(selectedChapterId && cleanName(newAssignmentName));
     if (targetMode === "new_chapter_assignment") return Boolean(cleanName(newChapterName) && cleanName(newAssignmentName));
     if (targetMode.startsWith("assignment:")) return Boolean(targetMode.replace("assignment:", ""));
     return true;
-  }, [newAssignmentName, newChapterName, selectedChapterId, targetMode]);
+  }, [advanced, newAssignmentName, newChapterName, selectedChapterId, targetMode]);
 
   const applyTarget = () => {
     const nextHeader = cleanName(headerLabel);
     onSetHeader(column, nextHeader || column.sourceHeader || column.header);
 
     if (targetMode === "keep") {
+      if (!advanced && !targetCurrentSafeInSimple(column)) {
+        onClose();
+        return;
+      }
       if (column.isNewStructure && column.chapterId && cleanName(newAssignmentName)) {
         onSetTarget(column, {
           kind: "create_assignment",
@@ -211,7 +227,9 @@ export function ColumnSettingsOverlay({
           <div>
             <h3 id="sipena-column-overlay-title" className="sipena-column-overlay-title">Atur kolom</h3>
             <p className="sipena-column-overlay-desc">
-              Pilih apakah kolom ini dipakai, arahnya ke tugas mana, dan bagaimana nilai lama diperlakukan.
+              {advanced
+                ? "Pilih apakah kolom ini dipakai, arahnya ke tugas mana, dan bagaimana nilai lama diperlakukan."
+                : "Pilih arah kolom nilai. Mode aman hanya mengisi nilai kosong dan tidak membuat tugas baru."}
             </p>
           </div>
           <button type="button" className="sipena-column-overlay-close" aria-label="Tutup pengaturan kolom" onClick={onClose}>
@@ -251,18 +269,20 @@ export function ColumnSettingsOverlay({
               <div className="sipena-column-suggestion-card">
                 <b>Kolom baru terdeteksi</b>
                 <p>
-                  SIPENA membaca kolom ini sebagai {newChapterName && newAssignmentName
-                    ? `${newChapterName} - ${newAssignmentName}`
-                    : "BAB/tugas baru"}. Setujui hanya jika targetnya benar.
+                  {advanced
+                    ? `SIPENA membaca kolom ini sebagai ${newChapterName && newAssignmentName ? `${newChapterName} - ${newAssignmentName}` : "BAB/tugas baru"}. Setujui hanya jika targetnya benar.`
+                    : "Kolom ini belum ada di SIPENA. Pilih tugas yang sudah ada, jadikan STS/SAS, atau lewati kolom. Buka Mode Lanjutan untuk membuat tugas baru."}
                 </p>
                 <div className="sipena-column-suggestion-actions">
-                  <button
-                    type="button"
-                    className="sipena-column-btn sipena-column-btn-primary"
-                    onClick={() => setTargetMode(column.chapterId ? "new_assignment" : "new_chapter_assignment")}
-                  >
-                    Pakai saran SIPENA
-                  </button>
+                  {advanced ? (
+                    <button
+                      type="button"
+                      className="sipena-column-btn sipena-column-btn-primary"
+                      onClick={() => setTargetMode(column.chapterId ? "new_assignment" : "new_chapter_assignment")}
+                    >
+                      Pakai saran SIPENA
+                    </button>
+                  ) : null}
                   <button type="button" className="sipena-column-btn" onClick={() => setTargetMode("ignore")}>
                     Lewati kolom
                   </button>
@@ -271,12 +291,14 @@ export function ColumnSettingsOverlay({
             ) : null}
 
             <div className="sipena-column-target-grid" aria-label="Pilihan cepat target kolom">
-              <TargetQuickButton
-                active={targetMode === "keep"}
-                title="Target saat ini"
-                description={column.targetLabel || "Gunakan hasil baca SIPENA"}
-                onClick={() => setTargetMode("keep")}
-              />
+              {advanced || targetCurrentSafeInSimple(column) ? (
+                <TargetQuickButton
+                  active={targetMode === "keep"}
+                  title="Target saat ini"
+                  description={column.targetLabel || "Gunakan hasil baca SIPENA"}
+                  onClick={() => setTargetMode("keep")}
+                />
+              ) : null}
               <TargetQuickButton
                 active={targetMode === "sts"}
                 title="STS"
@@ -289,18 +311,22 @@ export function ColumnSettingsOverlay({
                 description="Nilai akhir semester"
                 onClick={() => setTargetMode("sas")}
               />
-              <TargetQuickButton
-                active={targetMode === "new_assignment"}
-                title="Tugas baru"
-                description="Tambahkan ke BAB yang ada"
-                onClick={() => setTargetMode("new_assignment")}
-              />
-              <TargetQuickButton
-                active={targetMode === "new_chapter_assignment"}
-                title="BAB + tugas baru"
-                description="Buat struktur baru"
-                onClick={() => setTargetMode("new_chapter_assignment")}
-              />
+              {advanced ? (
+                <>
+                  <TargetQuickButton
+                    active={targetMode === "new_assignment"}
+                    title="Tugas baru"
+                    description="Tambahkan ke BAB yang ada"
+                    onClick={() => setTargetMode("new_assignment")}
+                  />
+                  <TargetQuickButton
+                    active={targetMode === "new_chapter_assignment"}
+                    title="BAB + tugas baru"
+                    description="Buat struktur baru"
+                    onClick={() => setTargetMode("new_chapter_assignment")}
+                  />
+                </>
+              ) : null}
               <TargetQuickButton
                 active={targetMode === "ignore"}
                 title="Lewati"
@@ -310,7 +336,7 @@ export function ColumnSettingsOverlay({
             </div>
 
             <select value={targetMode} onChange={(event) => setTargetMode(event.target.value as TargetMode)}>
-              <option value="keep">Gunakan target saat ini</option>
+              {advanced || targetCurrentSafeInSimple(column) ? <option value="keep">Gunakan target saat ini</option> : null}
               <option value="sts">Jadikan STS</option>
               <option value="sas">Jadikan SAS</option>
               {assignments.length ? (
@@ -322,13 +348,13 @@ export function ColumnSettingsOverlay({
                   ))}
                 </optgroup>
               ) : null}
-              <option value="new_assignment">Buat tugas baru di BAB yang ada</option>
-              <option value="new_chapter_assignment">Buat BAB dan tugas baru</option>
+              {advanced ? <option value="new_assignment">Buat tugas baru di BAB yang ada</option> : null}
+              {advanced ? <option value="new_chapter_assignment">Buat BAB dan tugas baru</option> : null}
               <option value="ignore">Lewati kolom ini</option>
             </select>
           </div>
 
-          {targetMode === "new_assignment" ? (
+          {advanced && targetMode === "new_assignment" ? (
             <div className="sipena-column-split">
               <label className="sipena-column-field">
                 <span>BAB</span>
@@ -343,7 +369,7 @@ export function ColumnSettingsOverlay({
             </div>
           ) : null}
 
-          {targetMode === "new_chapter_assignment" ? (
+          {advanced && targetMode === "new_chapter_assignment" ? (
             <div className="sipena-column-split">
               <label className="sipena-column-field">
                 <span>Nama BAB baru</span>
@@ -356,21 +382,27 @@ export function ColumnSettingsOverlay({
             </div>
           ) : null}
 
-          <div className="sipena-column-mode-list" aria-label="Mode nilai kolom">
-            {(["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[]).map((mode) => (
-              <label key={mode} className="sipena-column-mode-item">
-                <input
-                  type="radio"
-                  name={`column-overlay-mode-${column.id}`}
-                  checked={activeMode === mode}
-                  onChange={() => onSetValueMode(column, mode, mode === "overwrite_existing" ? overwriteChecked : false)}
-                />
-                <span>{columnModeLabel(mode)}</span>
-              </label>
-            ))}
-          </div>
+          {advanced ? (
+            <div className="sipena-column-mode-list" aria-label="Mode nilai kolom">
+              {(["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[]).map((mode) => (
+                <label key={mode} className="sipena-column-mode-item">
+                  <input
+                    type="radio"
+                    name={`column-overlay-mode-${column.id}`}
+                    checked={activeMode === mode}
+                    onChange={() => onSetValueMode(column, mode, mode === "overwrite_existing" ? overwriteChecked : false)}
+                  />
+                  <span>{columnModeLabel(mode)}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-xs leading-5 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-100">
+              Mode aman aktif: nilai lama dilewati, nilai kosong boleh diisi.
+            </div>
+          )}
 
-          {activeMode === "overwrite_existing" ? (
+          {advanced && activeMode === "overwrite_existing" ? (
             <label className="sipena-column-danger-confirm">
               <input
                 type="checkbox"
@@ -388,7 +420,7 @@ export function ColumnSettingsOverlay({
             <span><b>{column.stats?.validValues || 0}</b> nilai terbaca</span>
             <span><b>{column.stats?.willFill || 0}</b> akan diisi</span>
             <span><b>{column.stats?.skippedManual || 0}</b> dilewati manual</span>
-            <span><b>{column.stats?.overwrite || 0}</b> akan ditimpa</span>
+          {advanced ? <span><b>{column.stats?.overwrite || 0}</b> akan ditimpa</span> : null}
           </div>
         </div>
 
@@ -396,9 +428,11 @@ export function ColumnSettingsOverlay({
           <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={applyTarget} disabled={!canApplyTarget}>
             Simpan pengaturan
           </button>
-          <button type="button" className="sipena-column-btn" onClick={() => onBulkColumnAction(column, "include_valid")}>
-            Include semua nilai valid
-          </button>
+          {advanced ? (
+            <button type="button" className="sipena-column-btn" onClick={() => onBulkColumnAction(column, "include_valid")}>
+              Include semua nilai valid
+            </button>
+          ) : null}
           <button type="button" className="sipena-column-btn" onClick={() => onBulkColumnAction(column, "skip_existing")}>
             Lewati nilai yang sudah ada
           </button>

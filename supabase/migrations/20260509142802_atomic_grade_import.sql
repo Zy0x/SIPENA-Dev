@@ -1,6 +1,7 @@
 -- Atomic owner grade imports and duplicate-safe grade upserts.
--- This migration is intentionally non-destructive: if duplicate grade rows
--- already exist, it fails before adding the unique index so data can be audited.
+-- This migration is intentionally non-destructive: existing duplicate grade rows
+-- are reported and keep the full unique constraint from being created, while the
+-- batch RPC still rejects duplicate target keys and runs atomically.
 
 ALTER TABLE public.grades
   ADD COLUMN IF NOT EXISTS academic_year_id uuid,
@@ -57,17 +58,7 @@ BEGIN
       HAVING COUNT(*) > 1
     ) duplicate_scopes;
 
-  IF v_duplicate_count > 0 THEN
-    RAISE EXCEPTION 'Data nilai duplikat ditemukan pada %. Perlu audit database sebelum unique index grade dibuat.', v_duplicate_count
-      USING ERRCODE = 'P0001',
-            HINT = 'Cek public.grades berdasarkan user_id, student_id, subject_id, grade_type, assignment_id, semester_id, academic_year_id.';
-  END IF;
-END;
-$$;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
+  IF v_duplicate_count = 0 AND NOT EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'grades_unique_owner_scope'
   ) THEN
     ALTER TABLE public.grades
@@ -81,6 +72,8 @@ BEGIN
         semester_id,
         academic_year_id
       );
+  ELSIF v_duplicate_count > 0 THEN
+    RAISE WARNING 'Data nilai duplikat ditemukan pada %. Unique constraint penuh dilewati sampai data dibersihkan.', v_duplicate_count;
   END IF;
 END;
 $$;
@@ -236,6 +229,17 @@ BEGIN
         USING ERRCODE = 'P0001';
     END IF;
 
+    PERFORM pg_advisory_xact_lock(hashtextextended(concat_ws(
+      '|',
+      v_user_id::text,
+      v_student_id::text,
+      v_subject_id::text,
+      v_grade_type,
+      COALESCE(v_assignment_id::text, '<null>'),
+      COALESCE(v_semester_id::text, '<null>'),
+      COALESCE(v_academic_year_id::text, '<null>')
+    ), 0));
+
     v_existing := NULL;
     IF v_existing_count = 1 THEN
       SELECT *
@@ -255,31 +259,35 @@ BEGIN
       END IF;
     END IF;
 
-    INSERT INTO public.grades (
-      user_id,
-      student_id,
-      subject_id,
-      assignment_id,
-      academic_year_id,
-      semester_id,
-      grade_type,
-      value
-    )
-    VALUES (
-      v_user_id,
-      v_student_id,
-      v_subject_id,
-      v_assignment_id,
-      v_academic_year_id,
-      v_semester_id,
-      v_grade_type,
-      v_value
-    )
-    ON CONFLICT ON CONSTRAINT grades_unique_owner_scope
-    DO UPDATE SET
-      value = EXCLUDED.value,
-      updated_at = now()
-    RETURNING * INTO v_grade;
+    IF v_existing_count = 1 THEN
+      UPDATE public.grades
+         SET value = v_value,
+             updated_at = now()
+       WHERE id = v_existing.id
+       RETURNING * INTO v_grade;
+    ELSE
+      INSERT INTO public.grades (
+        user_id,
+        student_id,
+        subject_id,
+        assignment_id,
+        academic_year_id,
+        semester_id,
+        grade_type,
+        value
+      )
+      VALUES (
+        v_user_id,
+        v_student_id,
+        v_subject_id,
+        v_assignment_id,
+        v_academic_year_id,
+        v_semester_id,
+        v_grade_type,
+        v_value
+      )
+      RETURNING * INTO v_grade;
+    END IF;
 
     v_saved_count := v_saved_count + 1;
     v_changed_rows := v_changed_rows || jsonb_build_array(jsonb_build_object(
