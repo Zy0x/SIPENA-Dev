@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseGradeHeader, simplifyImportConflicts, type ColumnMapping, type ImportPlan, type StudentMapping } from "./index";
+import { parseGradeHeader, simplifyImportConflicts, type ColumnMapping, type GradeOperation, type ImportPlan, type StudentMapping } from "./index";
 
 function studentMapping(overrides: Partial<StudentMapping> = {}): StudentMapping {
   return {
@@ -28,6 +28,29 @@ function columnMapping(header: string, overrides: Partial<ColumnMapping> = {}): 
     target: parsedHeader.target,
     confidence: parsedHeader.confidence,
     status: "safe",
+    warnings: [],
+    conflicts: [],
+    ...overrides,
+  };
+}
+
+function gradeOperation(overrides: Partial<GradeOperation> = {}): GradeOperation {
+  return {
+    id: "op-1",
+    rowIndex: 2,
+    columnIndex: 4,
+    studentId: "student-1",
+    target: {
+      gradeType: "assignment",
+      chapterId: "chapter-1",
+      chapterName: "BAB 1",
+      assignmentId: "assignment-1",
+      assignmentName: "Tugas 1",
+    },
+    value: 80,
+    existingValue: null,
+    updateMode: "fill_empty_only",
+    action: "fill_empty",
     warnings: [],
     conflicts: [],
     ...overrides,
@@ -76,7 +99,7 @@ describe("gradeImport conflict simplifier", () => {
     expect(result.isReadyForPreview).toBe(true);
   });
 
-  it("groups STS and SAS aliases as auto fixable", () => {
+  it("does not bulk-auto-fix STS and SAS aliases as safe mappings", () => {
     const result = simplifyImportConflicts({
       plan: plan({
         columnMappings: [
@@ -86,11 +109,11 @@ describe("gradeImport conflict simplifier", () => {
       }),
     });
 
-    expect(result.groups[0].items.some((item) => item.title.includes("UTS"))).toBe(true);
-    expect(result.groups[0].items.some((item) => item.title.includes("PAS"))).toBe(true);
+    expect(result.groups[0].items.some((item) => item.title.includes("UTS"))).toBe(false);
+    expect(result.groups[0].items.some((item) => item.title.includes("PAS"))).toBe(false);
   });
 
-  it("uses web student data when student_id matches but name changed", () => {
+  it("requires confirmation when student_id matches but name changed", () => {
     const result = simplifyImportConflicts({
       plan: plan({
         studentMappings: [studentMapping({
@@ -102,10 +125,11 @@ describe("gradeImport conflict simplifier", () => {
       }),
     });
 
-    expect(result.groups[0].items.some((item) => item.recommendedActionLabel === "Gunakan data siswa dari web")).toBe(true);
+    expect(result.needsConfirmationCount).toBe(1);
+    expect(result.groups[0].items.some((item) => item.recommendedActionLabel === "Gunakan data siswa dari web")).toBe(false);
   });
 
-  it("treats students missing in web as safe row skips", () => {
+  it("requires manual choice when a student missing in web row has a value", () => {
     const result = simplifyImportConflicts({
       plan: plan({
         studentMappings: [studentMapping({
@@ -119,6 +143,32 @@ describe("gradeImport conflict simplifier", () => {
           status: "missing_in_web",
           warnings: [{ code: "STUDENT_MISSING_IN_WEB", severity: "warning", message: "Tidak ada di web.", rowIndex: 3 }],
         })],
+        gradeOperations: [gradeOperation({ rowIndex: 3, studentId: undefined, value: 80 })],
+        warnings: [{ code: "STUDENT_MISSING_IN_WEB", severity: "warning", message: "Tidak ada di web.", rowIndex: 3 }],
+      }),
+    });
+
+    expect(result.manualRequiredCount).toBe(1);
+    expect(result.groups[2].items[0].description).toContain("Baris ini punya nilai, tetapi siswanya belum cocok");
+    expect(result.groups[2].items[0].description).toContain("Melewati baris bernilai dapat membuat nilai siswa tidak masuk");
+    expect(result.isReadyForPreview).toBe(false);
+  });
+
+  it("treats students missing in web as safe row skips only when the row has no value", () => {
+    const result = simplifyImportConflicts({
+      plan: plan({
+        studentMappings: [studentMapping({
+          rowIndex: 3,
+          studentId: undefined,
+          webName: undefined,
+          webNisn: undefined,
+          excelName: "Siswa Dari File Lain",
+          excelNisn: "999",
+          matchedBy: "manual",
+          status: "missing_in_web",
+          warnings: [{ code: "STUDENT_MISSING_IN_WEB", severity: "warning", message: "Tidak ada di web.", rowIndex: 3 }],
+        })],
+        gradeOperations: [gradeOperation({ rowIndex: 3, studentId: undefined, value: null, action: "skip_empty" })],
         warnings: [{ code: "STUDENT_MISSING_IN_WEB", severity: "warning", message: "Tidak ada di web.", rowIndex: 3 }],
       }),
     });
@@ -126,6 +176,66 @@ describe("gradeImport conflict simplifier", () => {
     expect(result.manualRequiredCount).toBe(0);
     expect(result.groups[0].items.some((item) => item.recommendedActionLabel === "Lewati baris ini")).toBe(true);
     expect(result.isReadyForPreview).toBe(true);
+  });
+
+  it("groups fuzzy student matches as needs confirmation", () => {
+    const result = simplifyImportConflicts({
+      plan: plan({
+        studentMappings: [studentMapping({
+          status: "warning",
+          matchedBy: "fuzzy",
+          confidence: 91,
+          warnings: [{ code: "STUDENT_FUZZY_MATCH", severity: "warning", message: "Nama mirip.", rowIndex: 2 }],
+        })],
+        warnings: [{ code: "STUDENT_FUZZY_MATCH", severity: "warning", message: "Nama mirip.", rowIndex: 2 }],
+      }),
+    });
+
+    expect(result.needsConfirmationCount).toBe(1);
+    expect(result.autoFixableCount).toBe(1);
+    expect(result.groups[1].items[0].recommendedActionLabel).toBe("Setujui saran SIPENA");
+  });
+
+  it("groups decimal comma normalization as auto fixable", () => {
+    const result = simplifyImportConflicts({
+      plan: plan({
+        gradeOperations: [gradeOperation({
+          value: 80.5,
+          warnings: [{ code: "GRADE_VALUE_DECIMAL_COMMA", severity: "warning", message: "Koma desimal.", rowIndex: 2, columnIndex: 4 }],
+        })],
+        warnings: [{ code: "GRADE_VALUE_DECIMAL_COMMA", severity: "warning", message: "Koma desimal.", rowIndex: 2, columnIndex: 4 }],
+      }),
+    });
+
+    expect(result.groups[0].items.some((item) => item.reason === "Koma desimal.")).toBe(true);
+    expect(result.needsConfirmationCount).toBe(0);
+  });
+
+  it("keeps similar assignment matches as needs confirmation", () => {
+    const result = simplifyImportConflicts({
+      plan: plan({
+        columnMappings: [columnMapping("BAB 1 - Tugas 11", {
+          status: "needs_confirmation",
+          warnings: [{ code: "COLUMN_ASSIGNMENT_SIMILAR_MATCH", severity: "warning", message: "Mirip.", columnIndex: 4 }],
+        })],
+        warnings: [{ code: "COLUMN_ASSIGNMENT_SIMILAR_MATCH", severity: "warning", message: "Mirip.", columnIndex: 4 }],
+      }),
+    });
+
+    expect(result.needsConfirmationCount).toBe(1);
+    expect(result.groups[0].items.some((item) => item.reason === "Mirip.")).toBe(false);
+  });
+
+  it("does not block valid mapping only because the template is unsigned", () => {
+    const result = simplifyImportConflicts({
+      plan: plan({
+        warnings: [{ code: "IMPORT_UNSIGNED_TEMPLATE", severity: "warning", message: "Tidak bertanda tangan." }],
+      }),
+    });
+
+    expect(result.blockingCount).toBe(0);
+    expect(result.isReadyForPreview).toBe(true);
+    expect(result.groups[0].items.some((item) => item.title === "Template tidak bertanda tangan")).toBe(true);
   });
 
   it("groups explicit new assignment suggestion as needs confirmation", () => {

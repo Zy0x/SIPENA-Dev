@@ -83,18 +83,17 @@ export interface SimplifyImportConflictsInput {
 }
 
 const autoFixableConflictCodes = new Set([
-  "STUDENT_ID_NAME_CHANGED",
-  "STUDENT_ID_NISN_CHANGED",
-  "STUDENT_NISN_NORMALIZED_MATCH",
-  "STUDENT_NAME_NORMALIZED_MATCH",
   "STUDENT_MISSING_IN_EXCEL",
-  "STUDENT_MISSING_IN_WEB",
   "GRADE_VALUE_DECIMAL_COMMA",
   "GRADE_VALUE_PERCENT",
   "GRADE_VALUE_FRACTION_100",
 ]);
 
 const confirmationConflictCodes = new Set([
+  "STUDENT_ID_NAME_CHANGED",
+  "STUDENT_ID_NISN_CHANGED",
+  "STUDENT_NISN_NORMALIZED_MATCH",
+  "STUDENT_NAME_NORMALIZED_MATCH",
   "COLUMN_CREATE_ASSIGNMENT_SUGGESTED",
   "COLUMN_CREATE_CHAPTER_AND_ASSIGNMENT_SUGGESTED",
   "COLUMN_ASSIGNMENT_SIMILAR_MATCH",
@@ -103,9 +102,12 @@ const confirmationConflictCodes = new Set([
   "COLUMN_METADATA_VS_HEADER_CHANGED",
   "IMPORT_HEADER_CHANGED",
   "IMPORT_ADDED_HEADER_DETECTED",
-  "IMPORT_UNSIGNED_TEMPLATE",
   "GRADE_VALUE_FRACTION_SCALED",
   "STUDENT_FUZZY_MATCH",
+]);
+
+const nonBlockingInfoConflictCodes = new Set([
+  "IMPORT_UNSIGNED_TEMPLATE",
 ]);
 
 const manualConflictCodes = new Set([
@@ -158,13 +160,6 @@ function columnTitle(mapping?: ColumnMapping): string {
   return `Cek kolom "${mapping.rawHeader}"`;
 }
 
-function columnTargetLabel(mapping?: ColumnMapping): string {
-  if (!mapping?.target) return "Target kolom nilai belum jelas.";
-  if (mapping.target.gradeType === "sts") return "Kolom ini dapat dipakai sebagai nilai STS.";
-  if (mapping.target.gradeType === "sas") return "Kolom ini dapat dipakai sebagai nilai SAS.";
-  return `Kolom ini menuju ${[mapping.target.chapterName, mapping.target.assignmentName].filter(Boolean).join(" - ")}.`;
-}
-
 function studentTitle(mapping?: StudentMapping): string {
   if (!mapping) return "Data siswa perlu dicek";
   return `Cek siswa "${mapping.excelName || mapping.webName || "baris Excel"}"`;
@@ -174,6 +169,22 @@ function operationTitle(operation?: GradeOperation): string {
   if (!operation) return "Nilai perlu dicek";
   if (operation.value === null) return `Lewati nilai kosong baris ${operation.rowIndex}`;
   return `Cek nilai baris ${operation.rowIndex}, kolom ${operation.columnIndex}`;
+}
+
+function operationHasMeaningfulValue(operation: GradeOperation): boolean {
+  return (operation.value !== null && operation.value !== undefined)
+    || operation.suggestedValue !== undefined
+    || operation.conflicts.some((conflict) =>
+      conflict.type === "grade_value"
+      || conflict.code.includes("INVALID")
+      || conflict.code.includes("TEXTUAL")
+    );
+}
+
+export function rowHasImportableValue(plan: ImportPlan, rowIndex: number): boolean {
+  return plan.gradeOperations.some((operation) =>
+    operation.rowIndex === rowIndex && operationHasMeaningfulValue(operation),
+  );
 }
 
 function makeItem(
@@ -228,11 +239,28 @@ function classifyConflict(
   };
 
   if (conflict.code === "STUDENT_MISSING_IN_WEB") {
+    if (conflict.rowIndex && rowHasImportableValue(plan, conflict.rowIndex)) {
+      return makeItem("manual_required", {
+        id,
+        sourceConflictIds,
+        title: `Pilih siswa untuk "${student?.excelName || "baris Excel"}"`,
+        description: "Baris ini punya nilai, tetapi siswanya belum cocok. Pilih siswa atau lewati baris. Melewati baris bernilai dapat membuat nilai siswa tidak masuk.",
+        recommendedActionLabel: "Pilih siswa",
+        secondaryActionLabel: "Lewati baris",
+        detailLabel: "Lihat alasan SIPENA",
+        canApplyRecommended: false,
+        requiresManualChoice: true,
+        reason: conflict.message,
+        rawType: conflict.type,
+        metadata,
+      });
+    }
+
     return makeItem("auto_fixable", {
       id,
       sourceConflictIds,
       title: `Lewati baris "${student?.excelName || "siswa dari Excel"}"`,
-      description: "Siswa ini tidak ada di data web. SIPENA akan melewati baris ini dan tidak membuat siswa baru.",
+      description: "Siswa ini tidak ada di data web dan barisnya tidak berisi nilai yang akan masuk. SIPENA akan melewati baris ini dan tidak membuat siswa baru.",
       recommendedActionLabel: "Lewati baris ini",
       detailLabel: "Lihat alasan SIPENA",
       reason: conflict.message,
@@ -249,6 +277,22 @@ function classifyConflict(
       description: "Siswa ini ada di web tetapi tidak ada di Excel. Nilainya tidak akan diubah dari file ini.",
       recommendedActionLabel: "Biarkan",
       detailLabel: "Lihat alasan SIPENA",
+      reason: conflict.message,
+      rawType: conflict.type,
+      metadata,
+    });
+  }
+
+  if (nonBlockingInfoConflictCodes.has(conflict.code)) {
+    return makeItem("auto_fixable", {
+      id,
+      sourceConflictIds,
+      title: "Template tidak bertanda tangan",
+      description: "File tetap boleh dipreview jika pemetaan siswa dan kolom sudah valid. SIPENA tidak akan menulis nilai sebelum tahap Import.",
+      recommendedActionLabel: "Lanjutkan preview",
+      detailLabel: "Lihat alasan SIPENA",
+      canApplyRecommended: false,
+      requiresManualChoice: false,
       reason: conflict.message,
       rawType: conflict.type,
       metadata,
@@ -391,64 +435,6 @@ function autoItemsFromPlan(plan: ImportPlan, updateMode: UpdateMode): Simplified
       return;
     }
 
-    if (mapping.target?.gradeType === "sts" && /(^|\s)(uts|pts)(\s|$)/i.test(mapping.rawHeader)) {
-      seen.add(id);
-      items.push(makeItem("auto_fixable", {
-        id,
-        title: `Jadikan "${mapping.rawHeader}" sebagai STS`,
-        description: "UTS atau PTS adalah istilah yang dapat dibaca sebagai STS.",
-        recommendedActionLabel: "Pakai sebagai STS",
-        detailLabel: "Lihat alasan SIPENA",
-        reason: "Alias nilai tengah semester terdeteksi.",
-        rawType: "column",
-        metadata: { columnIndex: mapping.columnIndex, rawHeader: mapping.rawHeader },
-      }));
-      return;
-    }
-
-    if (mapping.target?.gradeType === "sas" && /(^|\s)(uas|pas)(\s|$)/i.test(mapping.rawHeader)) {
-      seen.add(id);
-      items.push(makeItem("auto_fixable", {
-        id,
-        title: `Jadikan "${mapping.rawHeader}" sebagai SAS`,
-        description: "UAS atau PAS adalah istilah yang dapat dibaca sebagai SAS.",
-        recommendedActionLabel: "Pakai sebagai SAS",
-        detailLabel: "Lihat alasan SIPENA",
-        reason: "Alias nilai akhir semester terdeteksi.",
-        rawType: "column",
-        metadata: { columnIndex: mapping.columnIndex, rawHeader: mapping.rawHeader },
-      }));
-      return;
-    }
-
-    if (mapping.status === "safe" && mapping.target && mapping.parsedHeader.headerType !== "unknown") {
-      seen.add(id);
-      items.push(makeItem("auto_fixable", {
-        id,
-        title: columnTitle(mapping),
-        description: columnTargetLabel(mapping),
-        recommendedActionLabel: "Gunakan target kolom",
-        detailLabel: "Lihat alasan SIPENA",
-        reason: "Header cocok dengan struktur nilai di web.",
-        rawType: "column",
-        metadata: { columnIndex: mapping.columnIndex, rawHeader: mapping.rawHeader },
-      }));
-    }
-  });
-
-  plan.studentMappings.forEach((mapping) => {
-    if (mapping.matchedBy === "student_id" && mapping.status === "warning" && mapping.studentId) {
-      items.push(makeItem("auto_fixable", {
-        id: `student-web-data-${mapping.rowIndex}`,
-        title: studentTitle(mapping),
-        description: "student_id cocok. Jika nama atau NISN di Excel berbeda, data siswa di web tetap dipakai.",
-        recommendedActionLabel: "Gunakan data siswa dari web",
-        detailLabel: "Lihat alasan SIPENA",
-        reason: "Data web adalah acuan utama untuk siswa.",
-        rawType: "student",
-        metadata: { rowIndex: mapping.rowIndex, studentId: mapping.studentId, excelName: mapping.excelName, webName: mapping.webName },
-      }));
-    }
   });
 
   plan.gradeOperations.forEach((operation) => {

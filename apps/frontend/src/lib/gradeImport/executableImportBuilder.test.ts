@@ -242,6 +242,22 @@ describe("executable import builder", () => {
     expect(result.operations[0]?.studentId).toBe("student-1");
   });
 
+  it("only skips missing students with values after the row is explicitly ignored", () => {
+    const missingStudentPlan = plan({
+      studentMappings: [student({ studentId: undefined, status: "missing_in_web" })],
+      gradeOperations: [operation({ studentId: undefined })],
+    });
+    const blocked = buildExecutableImportOperations({ plan: missingStudentPlan });
+    const ignored = buildExecutableImportOperations({
+      plan: missingStudentPlan,
+      resolverState: { ignoredRows: [2] },
+    });
+
+    expect(blocked.summary.unresolvedStudentCount).toBe(1);
+    expect(ignored.summary.executableCount).toBe(0);
+    expect(ignored.summary.skippedManualCount).toBe(1);
+  });
+
   it("requires confirmation before executable create-structure operations", () => {
     const createPlan = plan({
       columnMappings: [column("BAB 1 - Tugas Baru", {

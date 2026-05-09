@@ -35,6 +35,7 @@ import {
   getSimplifiedConflictSourceId,
   nowSelectionTimestamp,
   readWorkbookFile,
+  rowHasImportableValue,
   simplifyImportConflicts,
   type CellValueMode,
   type ColumnMapping,
@@ -2547,8 +2548,8 @@ export default function GradeImportExportDialog({
           const student = item.rowIndex ? plan?.studentMappings.find((mapping) => mapping.rowIndex === item.rowIndex) : undefined;
           const column = item.columnIndex ? plan?.columnMappings.find((mapping) => mapping.columnIndex === item.columnIndex) : undefined;
           return Boolean(
-            (student && ["safe", "warning"].includes(student.status))
-            || (column && ["safe", "warning"].includes(column.status)),
+            (student && student.status === "safe")
+            || (column && (column.status === "safe" || column.parsedHeader.derived || column.parsedHeader.reserved)),
           );
         }).map(conflictKey),
       ]),
@@ -2575,23 +2576,13 @@ export default function GradeImportExportDialog({
         ignoredRows: uniqueNumbersForState([
           ...current.ignoredRows,
           ...(plan?.studentMappings || [])
-            .filter((mapping) => mapping.status === "missing_in_web")
+            .filter((mapping) => mapping.status === "missing_in_web" && Boolean(plan && !rowHasImportableValue(plan, mapping.rowIndex)))
             .map((mapping) => mapping.rowIndex),
         ]),
-        studentOverrides: {
-          ...current.studentOverrides,
-          ...Object.fromEntries((plan?.studentMappings || [])
-            .filter((mapping) => mapping.matchedBy === "student_id" && mapping.status === "warning" && mapping.studentId)
-            .map((mapping) => [String(mapping.rowIndex), mapping.studentId as string])),
-        },
         resolvedConflictKeys: uniqueStrings([
           ...current.resolvedConflictKeys,
           ...(plan?.warnings || [])
             .filter((item) => [
-              "STUDENT_ID_NAME_CHANGED",
-              "STUDENT_ID_NISN_CHANGED",
-              "STUDENT_NISN_NORMALIZED_MATCH",
-              "STUDENT_NAME_NORMALIZED_MATCH",
               "GRADE_VALUE_DECIMAL_COMMA",
               "GRADE_VALUE_PERCENT",
               "GRADE_VALUE_FRACTION_100",
@@ -2599,14 +2590,9 @@ export default function GradeImportExportDialog({
             .map(simplifiedWarningKey),
           ...(plan?.conflicts || [])
             .filter((item) => {
-              if (item.type === "overwrite") return true;
-              if (item.type === "student") {
-                const student = item.rowIndex ? plan?.studentMappings.find((mapping) => mapping.rowIndex === item.rowIndex) : undefined;
-                return Boolean(student?.matchedBy === "student_id" && student.studentId);
-              }
               if (item.type === "column") {
                 const column = item.columnIndex ? plan?.columnMappings.find((mapping) => mapping.columnIndex === item.columnIndex) : undefined;
-                return Boolean(column?.parsedHeader.derived || column?.parsedHeader.reserved || column?.status === "safe");
+                return Boolean(column?.parsedHeader.derived || column?.parsedHeader.reserved);
               }
               return false;
             })
