@@ -324,8 +324,8 @@ function analyzeCandidate(
   }
   if (headerRow.some((cell, index) => !cellText(cell) && cellText(topHeaderRow?.[index]))) {
     warnings.push(warning(
-      "FREE_EXCEL_MERGED_CELLS_TODO",
-      "TODO: dukungan merged cells kompleks belum sempurna. Analyzer memakai header terdekat tanpa crash.",
+      "FREE_EXCEL_MERGED_CELLS_LIMITED",
+      "Workbook memakai header gabungan. SIPENA memakai header terdekat dan hasilnya perlu ditinjau sebelum import.",
       "header",
       headerRowIndex,
     ));

@@ -42,6 +42,25 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.3",
+    version: "2.4.3",
+    title: "SmartImport Nilai: Import Aman dan Preview Lebih Sinkron",
+    description: "SmartImport nilai kini lebih aman untuk guru: Import Aman menjadi default, Excel bebas dengan kop atau banyak tabel dicek lebih ketat, dan preview memakai keputusan final yang sama dengan proses simpan.",
+    type: "improvement",
+    is_critical: true,
+    released_at: "2026-05-10",
+    details: [
+      "Import Aman kini menjadi mode default: hanya mengisi nilai kosong, tidak menimpa nilai lama, dan tidak membuat BAB atau tugas baru otomatis.",
+      "Excel bebas dengan kop, baris kosong, footer, header bukan baris pertama, atau beberapa tabel nilai kini memakai koordinat asli workbook dan wajib memilih tabel saat ada lebih dari satu region valid.",
+      "Preview dan tombol import sekarang memakai executable import plan yang sama, sehingga kolom, cell, atau baris yang dilewati tidak ikut tersimpan.",
+      "Overwrite nilai lama disembunyikan dari mode sederhana dan wajib dikonfirmasi di Mode Lanjutan sebelum disimpan.",
+      "Siswa atau kolom yang ambigu kini wajib dipilih manual; baris bernilai yang belum cocok dengan siswa web tidak di-skip otomatis.",
+      "Nilai pecahan seperti 18/20 dapat disetujui sebagai nilai saran 90 sebelum disimpan, tetapi tidak disimpan tanpa persetujuan.",
+      "Import batch memakai RPC transaction saat tersedia dan menolak duplikat nilai dengan pesan jelas agar tidak terjadi partial commit diam-diam.",
+      "Copy template resmi, export nilai saat ini, dan backup diperjelas agar pengguna paham file tetap divalidasi terhadap data web.",
+    ],
+  },
+  {
     id: "v2.4.2",
     version: "2.4.2",
     title: "Ranking Per Mapel: Dikunci Sesuai Semester Terpilih",

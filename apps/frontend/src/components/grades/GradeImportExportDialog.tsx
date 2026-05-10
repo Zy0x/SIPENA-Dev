@@ -2162,9 +2162,8 @@ function PreviewStep({
   );
 }
 
-// TODO production import hardening before replacing this safe client executor:
-// RPC batch import, idempotency key, signed server template, audit log,
-// rollback, and server-side validation.
+// This executor prepares UI-approved targets before handing batch persistence to
+// the page callback. Database validation and rollback live in the batch save path.
 async function executeClientSideImport({
   executablePlan,
   onSaveGrade,
