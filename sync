@@ -1,6 +1,0 @@
-# Optional default config untuk workflow manual di SIPENA-Dev.
-TARGET_REPO=tessipena3-f7e2575d
-TARGET_BRANCH=all_recent
-SYNC_MODE=blacklist
-INCLUDE_MAIN=true
-MAX_BRANCHES=50
