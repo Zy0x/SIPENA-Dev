@@ -62,7 +62,6 @@ import {
 import { cn } from "@/lib/utils";
 
 import { ExportOptionCard } from "./import-export/ExportOptionCard";
-import { AdvancedImportOptions } from "./import-export/AdvancedImportOptions";
 import type { ColumnTargetDraft } from "./import-export/ColumnSettingsOverlay";
 import { ImportDropzone } from "./import-export/ImportDropzone";
 import { ImportModeCard } from "./import-export/ImportModeCard";
@@ -115,7 +114,6 @@ interface GradeImportExportDialogProps {
 }
 
 type ImportMode = "official" | "smart";
-type ImportComplexityMode = "simple" | "advanced";
 type ExportMode = "official" | "current" | "backup";
 type ImportExecutionState = "idle" | "analyzing" | "ready" | "failed" | "importing" | "success";
 type ImportHistoryActionState = "idle" | "undoing" | "redoing";
@@ -610,44 +608,6 @@ function uniqueStrings(values: string[]): string[] {
 
 function uniqueNumbersForState(values: number[]): number[] {
   return Array.from(new Set(values)).filter((value) => Number.isFinite(value));
-}
-
-function simpleModeResolverState(state: ImportResolverState): ImportResolverState {
-  const columnOverrides = Object.fromEntries(
-    Object.entries(state.columnOverrides).filter(([, resolution]) =>
-      resolution.kind !== "create_assignment" && resolution.kind !== "create_chapter_and_assignment"
-    ),
-  ) as ImportResolverState["columnOverrides"];
-
-  return {
-    ...state,
-    columnOverrides,
-  };
-}
-
-function simpleModeSelectionState(state: ImportSelectionState): ImportSelectionState {
-  const columnSettings: ImportSelectionState["columnSettings"] = {};
-  Object.entries(state.columnSettings).forEach(([columnId, setting]) => {
-    columnSettings[columnId] = {
-      ...setting,
-      valueMode: "fill_empty_only",
-      overwriteConfirmed: false,
-    };
-  });
-
-  const cellSettings: ImportSelectionState["cellSettings"] = {};
-  Object.entries(state.cellSettings).forEach(([cellId, setting]) => {
-    cellSettings[cellId] = {
-      ...setting,
-      valueMode: setting.valueMode === "overwrite_existing" ? "inherit_column" : setting.valueMode,
-      overwriteConfirmed: false,
-    };
-  });
-
-  return {
-    columnSettings,
-    cellSettings,
-  };
 }
 
 function conflictKey(conflict: ImportConflict): string {
@@ -1151,66 +1111,38 @@ function AnalysisStep({
   );
 }
 
-function ImportComplexityModePanel({
-  mode,
+function ImportGuardrailPanel({
   readyCount,
   skippedExistingCount,
   blockedCount,
-  onModeChange,
+  overwriteNeedsConfirmationCount,
 }: {
-  mode: ImportComplexityMode;
   readyCount: number;
   skippedExistingCount: number;
   blockedCount: number;
-  onModeChange: (mode: ImportComplexityMode) => void;
+  overwriteNeedsConfirmationCount: number;
 }) {
-  const simple = mode === "simple";
-
   return (
-    <section className={cn(
-      "rounded-[24px] border p-4 shadow-sm",
-      simple
-        ? "border-emerald-200 bg-emerald-50/80 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-50"
-        : "border-violet-200 bg-violet-50/80 text-violet-950 dark:border-violet-900/60 dark:bg-violet-950/20 dark:text-violet-50",
-    )}>
+    <section className="rounded-[24px] border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-950 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-50">
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone={simple ? "success" : "info"}>{simple ? "Import Aman" : "Mode Lanjutan"}</StatusBadge>
+            <StatusBadge tone="success">SmartImport terpadu</StatusBadge>
             <StatusBadge tone="safe">Nilai lama tidak ditimpa otomatis</StatusBadge>
+            <StatusBadge tone="warning">Aksi berisiko butuh konfirmasi</StatusBadge>
           </div>
           <h3 className="mt-3 text-sm font-semibold">
-            {simple ? "Mode sederhana untuk guru" : "Kontrol lengkap untuk import kompleks"}
+            Satu alur dengan guardrail kontekstual
           </h3>
           <p className="mt-1 max-w-3xl text-xs leading-5 opacity-85">
-            {simple
-              ? "SIPENA hanya mengisi nilai yang masih kosong. Kolom baru harus dipilih ke tugas yang sudah ada, STS/SAS, atau dilewati."
-              : "Overwrite, pembuatan BAB/tugas baru, dan pengaturan per nilai tersedia. Semua tetap dicek lagi sebelum disimpan."}
+            Default-nya hanya mengisi nilai kosong. Overwrite, buat tugas/BAB, skip baris bernilai, fuzzy student, dan nilai saran tetap tersedia tepat di item yang bermasalah, tetapi harus dikonfirmasi dulu.
           </p>
         </div>
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Button
-            type="button"
-            variant={simple ? "default" : "outline"}
-            className="min-h-10 rounded-full"
-            onClick={() => onModeChange("simple")}
-          >
-            Import Aman
-          </Button>
-          <Button
-            type="button"
-            variant={simple ? "outline" : "default"}
-            className="min-h-10 rounded-full"
-            onClick={() => onModeChange("advanced")}
-          >
-            Buka Mode Lanjutan
-          </Button>
-        </div>
       </div>
-      <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+      <div className="mt-3 grid gap-2 text-xs sm:grid-cols-4">
         <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
           <b>{readyCount}</b>
-          <span className="ml-1">nilai akan diisi</span>
+          <span className="ml-1">aman diimport</span>
         </div>
         <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
           <b>{skippedExistingCount}</b>
@@ -1218,7 +1150,11 @@ function ImportComplexityModePanel({
         </div>
         <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
           <b>{blockedCount}</b>
-          <span className="ml-1">item perlu dipilih</span>
+          <span className="ml-1">perlu dipilih</span>
+        </div>
+        <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
+          <b>{overwriteNeedsConfirmationCount}</b>
+          <span className="ml-1">butuh konfirmasi timpa</span>
         </div>
       </div>
     </section>
@@ -1721,8 +1657,6 @@ function SmartFixStep({
   result,
   context,
   actions,
-  updateMode,
-  complexityMode,
   onBackToMapping,
   onRestartUpload,
 }: {
@@ -1730,8 +1664,6 @@ function SmartFixStep({
   result: ConflictSimplifierResult | null;
   context: ImportPlanContext;
   actions: ConflictResolutionActions;
-  updateMode: UpdateMode;
-  complexityMode: ImportComplexityMode;
   onBackToMapping: () => void;
   onRestartUpload: () => void;
 }) {
@@ -1927,9 +1859,9 @@ function SmartFixStep({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <ResolutionButton onClick={onBackToMapping}>Kembali ke pemetaan</ResolutionButton>
             <ResolutionButton tone="safe" onClick={applySafeFixes}>Terapkan Semua yang Aman</ResolutionButton>
-            {complexityMode === "advanced" ? <ResolutionButton tone="warning" onClick={approveSuggestions}>Setujui Saran SIPENA</ResolutionButton> : null}
+            <ResolutionButton tone="warning" onClick={approveSuggestions}>Setujui saran aman</ResolutionButton>
             <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan Kolom yang Bukan Nilai</ResolutionButton>
-            {complexityMode === "advanced" ? <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan Data Siswa dari Web</ResolutionButton> : null}
+            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa exact dari web</ResolutionButton>
             <ResolutionButton tone="safe" onClick={() => actions.onUpdateModeChange("fill_empty_only")}>Isi Nilai Kosong Saja</ResolutionButton>
             <ResolutionButton tone="warning" onClick={actions.onResetAllChoices}>Ulangi semua pilihan</ResolutionButton>
           </div>
@@ -1942,14 +1874,13 @@ function SmartFixStep({
             <SmartFixGroupCard
               group={group}
               defaultOpen={group.level === "manual_required" && group.itemCount > 0}
-              onPrimaryAction={group.level === "auto_fixable" ? applySafeFixes : group.level === "needs_confirmation" ? approveSuggestions : undefined}
+              onPrimaryAction={group.level === "auto_fixable" ? applySafeFixes : group.canBulkApply ? approveSuggestions : undefined}
               renderItem={renderManualChoice}
             />
           </div>
         ))}
       </div>
 
-      {complexityMode === "advanced" ? <AdvancedImportOptions updateMode={updateMode} onUpdateModeChange={actions.onUpdateModeChange} /> : null}
     </div>
   );
 }
@@ -1975,18 +1906,14 @@ function SpreadsheetPreviewStep({
   plan,
   model,
   actions,
-  updateMode,
   selectionState,
   importContext,
-  complexityMode,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
   actions: ConflictResolutionActions;
-  updateMode: UpdateMode;
   selectionState: ImportSelectionState;
   importContext: ImportPlanContext;
-  complexityMode: ImportComplexityMode;
 }) {
   if (!plan || !model) {
     return <EmptyPanel title="Atur Kolom belum tersedia" description="Preview spreadsheet akan muncul setelah file dianalisis." />;
@@ -2022,8 +1949,6 @@ function SpreadsheetPreviewStep({
   return (
     <SmartSpreadsheetPreview
       model={model}
-      updateMode={updateMode}
-      complexityMode={complexityMode}
       selectionState={selectionState}
       assignments={importContext.assignments.map((assignment) => {
         const chapter = importContext.chapters.find((item) => item.id === assignment.chapter_id);
@@ -2036,7 +1961,6 @@ function SpreadsheetPreviewStep({
         };
       })}
       chapters={importContext.chapters.map((chapter) => ({ id: chapter.id, name: chapter.name }))}
-      onUpdateModeChange={actions.onUpdateModeChange}
       onApplySafeFixes={actions.onApplySafeFixes}
       onApproveSuggestions={actions.onApproveSipenaSuggestions}
       onIgnoreNonGradeColumns={actions.onBulkIgnoreDerived}
@@ -2067,15 +1991,9 @@ function SpreadsheetPreviewStep({
 function PreviewStep({
   plan,
   model,
-  updateMode,
-  onUpdateModeChange,
-  complexityMode,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
-  updateMode: UpdateMode;
-  onUpdateModeChange: (mode: UpdateMode) => void;
-  complexityMode: ImportComplexityMode;
 }) {
   if (!plan) {
     return <EmptyPanel title="Preview belum tersedia" description="Preview operasi akan muncul setelah file selesai dianalisis dan pemetaan aman." />;
@@ -2118,15 +2036,11 @@ function PreviewStep({
         </RiskAlert>
       ) : null}
 
-      {complexityMode === "advanced" ? (
-        <AdvancedImportOptions updateMode={updateMode} onUpdateModeChange={onUpdateModeChange} />
-      ) : (
-        <RiskAlert title="Import Aman aktif" tone="safe">
-          {model
-            ? `${model.summary.includedCells} nilai akan diisi. ${model.summary.skippedCells + model.summary.manualSkippedCells} nilai dilewati karena kosong, sudah ada, atau pilihan manual.`
-            : "Nilai lama tidak ditimpa dan BAB/tugas baru tidak dibuat dari preview ini."}
-        </RiskAlert>
-      )}
+      <RiskAlert title="Guardrail import aktif" tone="safe">
+        {model
+          ? `${model.summary.includedCells} nilai aman diimport. ${model.summary.skippedCells + model.summary.manualSkippedCells} nilai dilewati karena kosong, sudah ada, atau pilihan manual.`
+          : "Nilai lama tidak ditimpa dan BAB/tugas baru tidak dibuat tanpa konfirmasi pada item terkait."}
+      </RiskAlert>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="BAB baru" value={plan.summary.newChapterCount || 0} tone="violet" />
@@ -2186,7 +2100,7 @@ async function executeClientSideImport({
 
   summary.skippedCount = executablePlan.summary.totalOperations - executablePlan.summary.executableCount;
   if (executablePlan.summary.skippedManualCount > 0) warnings.add("Sebagian nilai dilewati sesuai pilihan manual.");
-  if (executablePlan.summary.skippedExistingCount > 0) warnings.add("Sebagian nilai dilewati karena nilai lama sudah ada dan mode aman aktif.");
+  if (executablePlan.summary.skippedExistingCount > 0) warnings.add("Sebagian nilai dilewati karena nilai lama sudah ada dan default aman aktif.");
   if (executablePlan.summary.skippedEmptyCount > 0) warnings.add("Sebagian sel kosong dilewati dan tidak menghapus nilai lama.");
   if (executablePlan.summary.blockedCount > 0) warnings.add("Sebagian nilai dilewati karena masih ada pilihan yang belum selesai dicek.");
   if (executablePlan.summary.overwriteNeedsConfirmationCount > 0) warnings.add("Sebagian nilai lama dilewati karena belum ada konfirmasi timpa.");
@@ -2473,7 +2387,6 @@ export default function GradeImportExportDialog({
   const { info, success, error: showError, warning: showWarning } = useEnhancedToast();
   const [tab, setTab] = useState<GradeImportExportTab>(activeTab);
   const [importMode, setImportMode] = useState<ImportMode>("official");
-  const [importComplexityMode, setImportComplexityMode] = useState<ImportComplexityMode>("simple");
   const [exportMode, setExportMode] = useState<ExportMode>("official");
   const [fileName, setFileName] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
@@ -2502,7 +2415,6 @@ export default function GradeImportExportDialog({
       setBasePlan(null);
       setPlan(null);
       setUpdateMode("fill_empty_only");
-      setImportComplexityMode("simple");
       setResolverState(emptyResolverState);
       setSelectionState(emptyImportSelectionState);
       setExecutionState("idle");
@@ -2514,13 +2426,9 @@ export default function GradeImportExportDialog({
     }
   }, [open]);
 
-  const effectiveUpdateMode = importComplexityMode === "simple" ? "fill_empty_only" : updateMode;
-  const effectiveResolverState = useMemo(() => (
-    importComplexityMode === "simple" ? simpleModeResolverState(resolverState) : resolverState
-  ), [importComplexityMode, resolverState]);
-  const effectiveSelectionState = useMemo(() => (
-    importComplexityMode === "simple" ? simpleModeSelectionState(selectionState) : selectionState
-  ), [importComplexityMode, selectionState]);
+  const effectiveUpdateMode = updateMode;
+  const effectiveResolverState = resolverState;
+  const effectiveSelectionState = selectionState;
 
   useEffect(() => {
     if (!analysis) return;
@@ -2741,24 +2649,12 @@ export default function GradeImportExportDialog({
     onApproveSipenaSuggestions: () => updateResolver((current) => {
       const columnOverrides = { ...current.columnOverrides };
       const resolvedConflictKeys: string[] = [...current.resolvedConflictKeys];
-      const allowAdvancedStructure = importComplexityMode === "advanced";
 
       (plan?.columnMappings || []).forEach((mapping) => {
         const codes = new Set([
           ...mapping.warnings.map((warning) => warning.code),
           ...mapping.conflicts.map((conflict) => conflict.code),
         ]);
-        const canCreateAssignment = allowAdvancedStructure
-          && codes.has("COLUMN_CREATE_ASSIGNMENT_SUGGESTED")
-          && mapping.target?.chapterId
-          && mapping.target?.assignmentName
-          && !codes.has("COLUMN_ASSIGNMENT_WITHOUT_CHAPTER_AMBIGUOUS");
-        const canCreateChapterAndAssignment = allowAdvancedStructure
-          && codes.has("COLUMN_CREATE_CHAPTER_AND_ASSIGNMENT_SUGGESTED")
-          && mapping.target?.chapterName
-          && mapping.target?.assignmentName
-          && !codes.has("COLUMN_CHAPTER_SIMILAR_MATCH")
-          && !codes.has("COLUMN_ASSIGNMENT_SIMILAR_MATCH");
         const canUseExisting = mapping.target?.assignmentId
           && (codes.has("COLUMN_ASSIGNMENT_SIMILAR_MATCH")
             || codes.has("COLUMN_CHAPTER_SIMILAR_MATCH")
@@ -2769,21 +2665,6 @@ export default function GradeImportExportDialog({
           columnOverrides[String(mapping.columnIndex)] = {
             kind: "existing_assignment",
             assignmentId: mapping.target?.assignmentId,
-          };
-        } else if (canCreateAssignment) {
-          columnOverrides[String(mapping.columnIndex)] = {
-            kind: "create_assignment",
-            chapterId: mapping.target?.chapterId,
-            chapterName: mapping.target?.chapterName,
-            assignmentName: mapping.target?.assignmentName,
-            confirmed: true,
-          };
-        } else if (canCreateChapterAndAssignment) {
-          columnOverrides[String(mapping.columnIndex)] = {
-            kind: "create_chapter_and_assignment",
-            chapterName: mapping.target?.chapterName,
-            assignmentName: mapping.target?.assignmentName,
-            confirmed: true,
           };
         }
 
@@ -2807,21 +2688,12 @@ export default function GradeImportExportDialog({
             "IMPORT_ADDED_HEADER_DETECTED",
             "IMPORT_UNSIGNED_TEMPLATE",
             "GRADE_VALUE_FRACTION_SCALED",
-            ...(allowAdvancedStructure ? ["COLUMN_CREATE_ASSIGNMENT_SUGGESTED", "COLUMN_CREATE_CHAPTER_AND_ASSIGNMENT_SUGGESTED", "STUDENT_FUZZY_MATCH"] : []),
           ].includes(warning.code))
           .map(simplifiedWarningKey),
       );
 
-      const studentOverrides = {
-        ...current.studentOverrides,
-        ...Object.fromEntries((plan?.studentMappings || [])
-          .filter((mapping) => allowAdvancedStructure && mapping.matchedBy === "fuzzy" && mapping.status === "warning" && mapping.confidence >= 85 && mapping.studentId)
-          .map((mapping) => [String(mapping.rowIndex), mapping.studentId as string])),
-      };
-
       return {
         ...current,
-        studentOverrides,
         columnOverrides,
         resolvedConflictKeys: uniqueStrings(resolvedConflictKeys),
       };
@@ -2830,13 +2702,7 @@ export default function GradeImportExportDialog({
       updateResolver(() => emptyResolverState);
       setSelectionState(emptyImportSelectionState);
     },
-    onUpdateModeChange: (mode) => {
-      if (importComplexityMode === "simple") {
-        setUpdateMode("fill_empty_only");
-        return;
-      }
-      setUpdateMode(mode);
-    },
+    onUpdateModeChange: (mode) => setUpdateMode(mode),
     onSetColumnInclude: (column, include) => setSelectionState((current) => ({
       ...current,
       columnSettings: {
@@ -2990,7 +2856,7 @@ export default function GradeImportExportDialog({
       delete cellSettings[cell.id];
       return { ...current, cellSettings };
     }),
-  }), [importComplexityMode, importContext.chapters, plan, updateResolver]);
+  }), [importContext.chapters, plan, updateResolver]);
 
   const hasPlan = Boolean(plan || basePlan);
   const blocked = hasBlockedConflicts(plan);
@@ -3035,18 +2901,6 @@ export default function GradeImportExportDialog({
     setTab(nextTab);
     onTabChange(nextTab);
   }, [onTabChange]);
-
-  const handleImportComplexityModeChange = useCallback((mode: ImportComplexityMode) => {
-    setImportComplexityMode(mode);
-    if (mode === "simple") {
-      setUpdateMode("fill_empty_only");
-      setResolverState((current) => simpleModeResolverState(current));
-      setSelectionState((current) => simpleModeSelectionState(current));
-      info("Import Aman aktif", "Nilai lama tidak ditimpa dan BAB/tugas baru tidak dibuat otomatis.");
-    } else {
-      info("Mode Lanjutan aktif", "Overwrite, buat tugas baru, dan pengaturan per nilai tersedia untuk dicek manual.");
-    }
-  }, [info]);
 
   const handleSelectRegion = useCallback((regionId: string) => {
     setAnalysis((current) => {
@@ -3370,7 +3224,7 @@ export default function GradeImportExportDialog({
       if (executableImportPlan.summary.executableCount === 0) return "Tidak ada nilai yang siap diimport.";
       return `${executableImportPlan.summary.executableCount} nilai akan disimpan, ${skipped} dilewati karena kosong/nilai lama.`;
     }
-    return "Mode aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
+    return "Default aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
   }, [executableImportPlan, spreadsheetPreview, stepIndex, tab]);
 
   const primaryLabel = useMemo(() => {
@@ -3382,9 +3236,14 @@ export default function GradeImportExportDialog({
     }
     if (stepIndex === 0) return executionState === "analyzing" ? "Menganalisis..." : "Upload File Dulu";
     if (stepIndex === 4 && executionState === "success") return "Selesai";
-    if (stepIndex === 4) return executionState === "importing" ? "Memproses..." : importComplexityMode === "simple" ? "Import Aman" : "Mulai Import";
+    if (stepIndex === 4) {
+      if (executionState === "importing") return "Memproses...";
+      if ((executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) return "Konfirmasi nilai yang ditimpa";
+      if ((executableImportPlan?.summary.blockedCount || 0) > 0 || (spreadsheetPreview?.summary.manualRequired || 0) > 0) return "Selesaikan pilihan";
+      return "Import nilai";
+    }
     return "Lanjut";
-  }, [executionState, exportActionLoading, exportMode, importComplexityMode, stepIndex, tab]);
+  }, [executionState, executableImportPlan, exportActionLoading, exportMode, spreadsheetPreview, stepIndex, tab]);
   const importPrimaryDisabled = tab === "import" && (
     executionState === "analyzing"
     || executionState === "importing"
@@ -3412,9 +3271,7 @@ export default function GradeImportExportDialog({
                 <DialogTitle className="text-base font-semibold tracking-normal text-slate-950 dark:text-slate-50 sm:text-lg">
                   Export/Import Nilai SIPENA
                 </DialogTitle>
-                <StatusBadge tone={importComplexityMode === "simple" ? "safe" : "info"}>
-                  {importComplexityMode === "simple" ? "Import Aman" : "Mode Lanjutan"}
-                </StatusBadge>
+                <StatusBadge tone="safe">SmartImport terpadu</StatusBadge>
               </div>
               <DialogDescription className="mt-1 max-w-full truncate text-sm text-muted-foreground" title={contextLabel || undefined}>
                 {contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu"}
@@ -3446,12 +3303,11 @@ export default function GradeImportExportDialog({
                     <ImportStepper steps={importSteps} currentIndex={stepIndex} />
                   </section>
 
-                  <ImportComplexityModePanel
-                    mode={importComplexityMode}
+                  <ImportGuardrailPanel
                     readyCount={executableImportPlan?.summary.executableCount || 0}
                     skippedExistingCount={executableImportPlan?.summary.skippedExistingCount || 0}
-                    blockedCount={(executableImportPlan?.summary.blockedCount || 0) + (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0)}
-                    onModeChange={handleImportComplexityModeChange}
+                    blockedCount={executableImportPlan?.summary.blockedCount || 0}
+                    overwriteNeedsConfirmationCount={executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0}
                   />
 
                   {stepIndex === 0 ? (
@@ -3523,19 +3379,14 @@ export default function GradeImportExportDialog({
                       plan={plan}
                       model={spreadsheetPreview}
                       actions={resolverActions}
-                      updateMode={effectiveUpdateMode}
                       selectionState={effectiveSelectionState}
                       importContext={importContext}
-                      complexityMode={importComplexityMode}
                     />
                   ) : null}
                   {stepIndex === 3 ? (
                     <PreviewStep
                       plan={plan}
                       model={spreadsheetPreview}
-                      updateMode={effectiveUpdateMode}
-                      onUpdateModeChange={resolverActions.onUpdateModeChange}
-                      complexityMode={importComplexityMode}
                     />
                   ) : null}
                   {stepIndex === 4 ? (

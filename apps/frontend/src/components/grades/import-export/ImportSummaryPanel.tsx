@@ -38,7 +38,7 @@ export function ImportSummaryPanel({
   return (
     <aside className="min-w-0 space-y-3 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950 lg:sticky lg:top-4 lg:max-h-[calc(92dvh-12rem)] lg:overflow-y-auto">
       <div className="space-y-2">
-        <StatusBadge tone="safe">Mode aman aktif</StatusBadge>
+        <StatusBadge tone="safe">Guardrail aktif</StatusBadge>
         <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Ringkasan Import</h3>
         <p className="text-xs leading-5 text-muted-foreground">
           {currentStep ? `Step aktif: ${currentStep}. ` : ""}Preview akan menampilkan siswa, kolom, dan item yang perlu dicek sebelum ada perubahan data.

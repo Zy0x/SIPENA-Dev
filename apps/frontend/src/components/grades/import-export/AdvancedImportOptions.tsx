@@ -39,10 +39,10 @@ export function AdvancedImportOptions({
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">
-            Mode aman aktif: SIPENA hanya mengisi nilai yang masih kosong.
+            Perlakuan nilai lama
           </h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Mode saat ini: {options.find((item) => item.mode === updateMode)?.title || "Isi nilai kosong saja"}.
+            Pilihan saat ini: {options.find((item) => item.mode === updateMode)?.title || "Isi nilai kosong saja"}. Overwrite tetap butuh konfirmasi eksplisit.
           </p>
         </div>
         <button
@@ -50,7 +50,7 @@ export function AdvancedImportOptions({
           className="min-h-11 rounded-full border border-border bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
           onClick={() => setOpen((current) => !current)}
         >
-          Ubah mode
+          Atur nilai lama
         </button>
       </div>
 
@@ -78,7 +78,7 @@ export function AdvancedImportOptions({
                       onChange={(event) => setOverwriteText(event.target.value)}
                       className="min-h-11 rounded-xl border border-red-200 bg-white px-3 text-sm dark:border-red-900/60 dark:bg-slate-950"
                       placeholder="Ketik TIMPA"
-                      aria-label="Ketik TIMPA untuk memilih mode timpa nilai lama"
+                      aria-label="Ketik TIMPA untuk mengonfirmasi timpa nilai lama"
                     />
                     <button
                       type="button"
@@ -86,7 +86,7 @@ export function AdvancedImportOptions({
                       className="min-h-11 rounded-full bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => onUpdateModeChange(option.mode)}
                     >
-                      Aktifkan timpa nilai lama
+                      Konfirmasi timpa nilai lama
                     </button>
                   </div>
                 ) : (
@@ -95,14 +95,14 @@ export function AdvancedImportOptions({
                     className="min-h-11 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
                     onClick={() => onUpdateModeChange(option.mode)}
                   >
-                    Pilih mode ini
+                    Pilih perlakuan ini
                   </button>
                 )}
               </div>
               {option.risky ? (
                 <div className="mt-3">
-                  <RiskAlert title="Mode ini berisiko" tone="blocked">
-                    Pilih mode ini hanya jika Anda benar-benar ingin mengganti nilai lama dengan nilai dari Excel.
+                  <RiskAlert title="Berisiko menimpa nilai" tone="blocked">
+                    Pilih ini hanya jika Anda benar-benar ingin mengganti nilai lama dengan nilai dari Excel.
                   </RiskAlert>
                 </div>
               ) : null}

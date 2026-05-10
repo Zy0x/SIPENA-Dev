@@ -9,18 +9,13 @@ import type {
   SpreadsheetPreviewColumn,
   SpreadsheetPreviewModel,
   SpreadsheetPreviewRow,
-  UpdateMode,
 } from "@/lib/gradeImport";
-
-import { AdvancedImportOptions } from "./AdvancedImportOptions";
 
 type Selection =
   | { kind: "cell"; cell: SpreadsheetPreviewCell; row: SpreadsheetPreviewRow; column: SpreadsheetPreviewColumn }
   | { kind: "column"; column: SpreadsheetPreviewColumn }
   | { kind: "row"; row: SpreadsheetPreviewRow }
   | null;
-
-type ImportComplexityMode = "simple" | "advanced";
 
 function panelCopy(selection: NonNullable<Selection>) {
   if (selection.kind === "column") {
@@ -40,7 +35,7 @@ function modeLabel(mode: CellValueMode | ColumnValueMode | undefined): string {
 }
 
 function columnModeLabel(mode: ColumnValueMode | undefined): string {
-  if (mode === "overwrite_existing") return "Timpa nilai lama pada kolom ini";
+  if (mode === "overwrite_existing") return "Berisiko menimpa nilai lama pada kolom ini";
   if (mode === "skip_existing") return "Lewati nilai yang sudah ada";
   return "Isi nilai kosong saja";
 }
@@ -88,10 +83,7 @@ function ColumnStats({ column }: { column: SpreadsheetPreviewColumn }) {
 export function PreviewFixPanel({
   model,
   selection,
-  updateMode,
   selectionState,
-  onUpdateModeChange,
-  complexityMode = "simple",
   onApproveColumn,
   onIgnoreColumn,
   onIgnoreCell,
@@ -109,10 +101,7 @@ export function PreviewFixPanel({
 }: {
   model: SpreadsheetPreviewModel;
   selection: Selection;
-  updateMode: UpdateMode;
   selectionState: ImportSelectionState;
-  onUpdateModeChange: (mode: UpdateMode) => void;
-  complexityMode?: ImportComplexityMode;
   onApproveColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
@@ -140,7 +129,6 @@ export function PreviewFixPanel({
   const targetRow = selection?.kind === "cell" ? selection.row : selection?.kind === "row" ? selection.row : null;
   const columnSetting = targetColumn ? selectionState.columnSettings[targetColumn.id] : undefined;
   const cellSetting = targetCell ? selectionState.cellSettings[targetCell.id] : undefined;
-  const advanced = complexityMode === "advanced";
   const isGradeCell = Boolean(targetCell && targetColumn && targetColumn.type !== "identity");
   const needsSuggestedApproval = Boolean(
     targetCell
@@ -169,7 +157,7 @@ export function PreviewFixPanel({
             </>
           ) : null}
           {targetColumn ? <div><span className="font-semibold">Mode kolom: </span>{columnModeLabel(targetColumn.effectiveValueMode)}</div> : null}
-          {targetCell ? <div><span className="font-semibold">Mode nilai: </span>{modeLabel(targetCell.effectiveValueMode)}</div> : null}
+          {targetCell ? <div><span className="font-semibold">Perlakuan nilai: </span>{modeLabel(targetCell.effectiveValueMode)}</div> : null}
         </div>
       ) : (
         <div className="mt-3 grid gap-2 text-xs">
@@ -193,9 +181,7 @@ export function PreviewFixPanel({
             Pakai kolom ini
           </label>
           <div className="mt-3 grid gap-2">
-            {(advanced
-              ? (["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[])
-              : (["fill_empty_only", "skip_existing"] as ColumnValueMode[])).map((mode) => (
+            {(["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[]).map((mode) => (
               <label key={mode} className="flex items-center gap-2 rounded-2xl border border-border p-2 text-xs">
                 <input
                   type="radio"
@@ -213,7 +199,7 @@ export function PreviewFixPanel({
               </label>
             ))}
           </div>
-          {advanced && (columnSetting?.valueMode || targetColumn.effectiveValueMode) === "overwrite_existing" ? (
+          {(columnSetting?.valueMode || targetColumn.effectiveValueMode) === "overwrite_existing" ? (
             <label className="mt-3 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
               <input
                 type="checkbox"
@@ -223,7 +209,7 @@ export function PreviewFixPanel({
                   onSetColumnValueMode(targetColumn, "overwrite_existing", event.target.checked);
                 }}
               />
-              Saya paham semua nilai lama pada kolom ini dapat diganti
+              Berisiko menimpa nilai: saya paham semua nilai lama pada kolom ini dapat diganti
             </label>
           ) : null}
         </div>
@@ -249,9 +235,7 @@ export function PreviewFixPanel({
             </p>
           ) : null}
           <div className="mt-3 grid gap-2">
-            {(advanced
-              ? (["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[])
-              : (["inherit_column", "fill_empty_only", "skip_existing"] as CellValueMode[])).map((mode) => (
+            {(["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[]).map((mode) => (
               <label key={mode} className="flex items-center gap-2 rounded-2xl border border-border p-2 text-xs">
                 <input
                   type="radio"
@@ -270,7 +254,7 @@ export function PreviewFixPanel({
               </label>
             ))}
           </div>
-          {advanced && (cellSetting?.valueMode === "overwrite_existing" || targetCell.requiresConfirmation) ? (
+          {(cellSetting?.valueMode === "overwrite_existing" || targetCell.requiresConfirmation) ? (
             <label className="mt-3 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
               <input
                 type="checkbox"
@@ -280,7 +264,7 @@ export function PreviewFixPanel({
                   onSetCellValueMode(targetCell, targetRow!, targetColumn!, "overwrite_existing", event.target.checked);
                 }}
               />
-              Saya paham nilai ini akan menimpa nilai lama
+              Berisiko menimpa nilai: saya paham nilai ini akan menimpa nilai lama
             </label>
           ) : null}
         </div>
@@ -290,7 +274,7 @@ export function PreviewFixPanel({
         {!selection ? (
           <>
             <SettingButton tone="primary" onClick={onApplySafeFixes}>Terapkan yang aman</SettingButton>
-            {advanced ? <SettingButton onClick={onApproveSuggestions}>Setujui saran</SettingButton> : null}
+            <SettingButton onClick={onApproveSuggestions}>Setujui saran aman</SettingButton>
           </>
         ) : targetCell && isGradeCell ? (
           <>
@@ -309,7 +293,7 @@ export function PreviewFixPanel({
             <SettingButton onClick={() => onBulkColumnAction(targetColumn, "skip_all")}>Lewati semua nilai di kolom ini</SettingButton>
             <SettingButton onClick={() => onBulkColumnAction(targetColumn, "skip_existing")}>Lewati nilai yang sudah ada</SettingButton>
             <SettingButton onClick={() => onBulkColumnAction(targetColumn, "reset")}>Reset pilihan manual</SettingButton>
-            {advanced && targetColumn.status === "new_column" ? <SettingButton tone="primary" onClick={() => onApproveColumn(targetColumn)}>Setujui kolom baru</SettingButton> : null}
+            {targetColumn.status === "new_column" ? <SettingButton tone="primary" onClick={() => onApproveColumn(targetColumn)}>Konfirmasi kolom baru</SettingButton> : null}
             <SettingButton onClick={() => onIgnoreColumn(targetColumn)}>Abaikan kolom</SettingButton>
             <SettingButton onClick={() => onResetColumnSelection(targetColumn)}>Reset kolom</SettingButton>
           </>
@@ -322,15 +306,15 @@ export function PreviewFixPanel({
       </div>
 
       {showDetail ? (
-        <div className="sipena-preview-advanced">
+        <div className="sipena-preview-detail">
           <p className="text-xs leading-5 text-muted-foreground">
             Data tidak disimpan sebelum tahap Import. Pilihan nilai tidak bisa melewati target kolom atau siswa yang belum valid.
           </p>
           {targetCell?.message ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{targetCell.message}</p> : null}
-          {advanced && targetCell?.status === "changed" ? (
-            <div className="mt-3">
-              <AdvancedImportOptions updateMode={updateMode} onUpdateModeChange={onUpdateModeChange} />
-            </div>
+          {targetCell?.status === "changed" ? (
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              Untuk menimpa nilai lama, pilih "Timpa nilai lama" pada nilai ini lalu centang konfirmasi risiko.
+            </p>
           ) : null}
         </div>
       ) : null}

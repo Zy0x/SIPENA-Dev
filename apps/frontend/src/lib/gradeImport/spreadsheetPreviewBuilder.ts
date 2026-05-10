@@ -445,7 +445,7 @@ function cellMessage(status: PreviewCellStatus): string {
 function recommendedAction(status: PreviewCellStatus): string | undefined {
   if (status === "included") return "Biarkan";
   if (status === "new_value") return "Biarkan";
-  if (status === "changed") return "Biarkan mode aman";
+  if (status === "changed") return "Biarkan default aman";
   if (status === "new_column") return "Setujui kolom baru";
   if (status === "needs_check") return "Setujui saran SIPENA";
   if (status === "manual_required") return "Pilih sekarang";

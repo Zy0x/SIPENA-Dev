@@ -407,11 +407,11 @@ function autoItemsFromPlan(plan: ImportPlan, updateMode: UpdateMode): Simplified
   if (updateMode === "fill_empty_only") {
     items.push(makeItem("auto_fixable", {
       id: "update-mode-fill-empty-only",
-      title: "Mode aman aktif",
+      title: "Default aman aktif",
       description: "SIPENA hanya mengisi nilai yang masih kosong.",
-      recommendedActionLabel: "Pertahankan mode aman",
+      recommendedActionLabel: "Pertahankan pilihan aman",
       detailLabel: "Lihat alasan SIPENA",
-      reason: "Mode ini tidak menimpa nilai lama.",
+      reason: "Pilihan ini tidak menimpa nilai lama.",
       rawType: "update_mode",
       metadata: { updateMode },
     }));
@@ -489,7 +489,7 @@ function makeGroup(
       level,
       title: "Butuh Konfirmasi",
       description: "SIPENA punya saran, tetapi perlu persetujuan Anda sebelum dipakai.",
-      recommendedActionLabel: "Setujui Saran SIPENA",
+      recommendedActionLabel: "Setujui saran aman",
       secondaryActionLabel: "Pilih manual",
       canBulkApply: items.some((item) => item.canApplyRecommended),
       itemCount: items.length,
@@ -558,11 +558,11 @@ export function simplifyImportConflicts({
     ? "Selesaikan pilihan manual terlebih dahulu agar nilai tidak masuk ke data yang salah."
     : needsConfirmationCount > 0
       ? "SIPENA hanya membutuhkan beberapa konfirmasi ringan."
-      : "SIPENA tidak menemukan masalah penting. Mode aman aktif.";
+      : "SIPENA tidak menemukan masalah penting. Default aman aktif.";
   const primaryActionLabel = manualRequiredCount > 0
     ? "Pilih Sekarang"
     : needsConfirmationCount > 0
-      ? "Setujui Saran SIPENA"
+      ? "Setujui saran aman"
       : autoFixableCount > 0
         ? "Terapkan Semua yang Aman"
         : "Lanjut ke Preview";

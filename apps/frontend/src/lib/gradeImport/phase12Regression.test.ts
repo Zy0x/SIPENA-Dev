@@ -284,24 +284,27 @@ describe("phase 12 grade import regression suite", () => {
     expect(skippedByRow.summary.skippedManualCount).toBe(1);
   });
 
-  it("guards simple-mode UI policy in source until a component test harness is added", () => {
+  it("guards unified contextual SmartImport policy in source until a component test harness is added", () => {
     const dialogSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/GradeImportExportDialog.tsx"), "utf8");
     const overlaySource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/ColumnSettingsOverlay.tsx"), "utf8");
     const quickActionsSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewQuickActions.tsx"), "utf8");
     const fixPanelSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
 
-    expect(dialogSource).toContain('useState<ImportComplexityMode>("simple")');
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
-    expect(dialogSource).toContain("simpleModeResolverState");
-    expect(overlaySource).toContain('const advanced = complexityMode === "advanced"');
-    expect(overlaySource).toContain('if (complexityMode === "simple") return "ignore"');
-    expect(overlaySource).toContain('!advanced && (targetMode === "new_assignment" || targetMode === "new_chapter_assignment")');
-    expect(overlaySource).toContain('advanced && activeMode === "overwrite_existing"');
-    expect(fixPanelSource).toContain('const advanced = complexityMode === "advanced"');
+    expect(dialogSource).not.toContain("ImportComplexityMode");
+    expect(dialogSource).not.toContain("Mode Lanjutan");
+    expect(dialogSource).toContain("SmartImport terpadu");
+    expect(overlaySource).toContain('if (column.isNewStructure) return "ignore"');
+    expect(overlaySource).toContain('title="Akan membuat tugas baru"');
+    expect(overlaySource).toContain('title="Akan membuat BAB + tugas"');
+    expect(overlaySource).toContain('activeMode === "overwrite_existing"');
+    expect(overlaySource).not.toContain("complexityMode");
     expect(fixPanelSource).toContain('(["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[])');
     expect(fixPanelSource).toContain('(["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[])');
-    expect(fixPanelSource).toContain('advanced && (columnSetting?.valueMode || targetColumn.effectiveValueMode) === "overwrite_existing"');
-    expect(quickActionsSource).toContain('complexityMode === "advanced"');
+    expect(fixPanelSource).toContain('(columnSetting?.valueMode || targetColumn.effectiveValueMode) === "overwrite_existing"');
+    expect(fixPanelSource).not.toContain("complexityMode");
+    expect(quickActionsSource).toContain("Setujui saran aman");
+    expect(quickActionsSource).not.toContain("complexityMode");
   });
 
   it("guards atomic batch import RPC and duplicate-grade hard errors in SQL", () => {

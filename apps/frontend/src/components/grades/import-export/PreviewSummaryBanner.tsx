@@ -19,7 +19,7 @@ export function PreviewSummaryBanner({
     : needsCheckCount > 0
       ? "Pilih kolom yang dipakai. Jika perlu, klik nilai tertentu untuk dilewati atau diatur manual."
       : "Pilih kolom yang dipakai. Jika perlu, klik nilai tertentu untuk dilewati atau diatur manual.";
-  const cta = manualCount > 0 ? "Pilih bagian merah" : needsCheckCount > 0 ? "Setujui Saran SIPENA" : "Terapkan yang aman";
+  const cta = manualCount > 0 ? "Pilih bagian merah" : needsCheckCount > 0 ? "Setujui saran aman" : "Terapkan yang aman";
 
   return (
     <section className="sipena-preview-banner">
