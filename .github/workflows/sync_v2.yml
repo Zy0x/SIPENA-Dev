@@ -7,9 +7,21 @@ on:
         description: "Nama repo di Organization Web-Modder"
         required: true
       target_branch:
-        description: "Branch di Organization"
+        description: "Branch di Organization. Isi main, nama branch, all_recent, atau all."
         required: true
-        default: "main"
+        default: "all_recent"
+      include_main:
+        description: "Ikut sync branch main ke SIPENA-Dev:main?"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      max_branches:
+        description: "Maksimum branch jika target_branch=all_recent. Pakai 0 untuk tanpa batas."
+        required: true
+        default: "50"
       sync_mode:
         description: "Mode sinkronisasi"
         required: true
@@ -25,18 +37,23 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: sync-from-org-${{ github.event_name == 'repository_dispatch' && github.event.client_payload.source_repo_full_name || github.event.inputs.target_repo_name }}
+  cancel-in-progress: false
+
 jobs:
   sync:
+    name: Sync source branches into SIPENA-Dev
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout proyek utama
+      - name: Checkout SIPENA-Dev
         uses: actions/checkout@v4
         with:
           path: main-project
           fetch-depth: 0
 
-      - name: Load config otomatis
+      - name: Load config otomatis dari repository_dispatch
         if: github.event_name == 'repository_dispatch'
         shell: bash
         env:
@@ -44,59 +61,33 @@ jobs:
           PAYLOAD_TARGET_REPO_NAME: ${{ github.event.client_payload.target_repo_name }}
           PAYLOAD_TARGET_BRANCH: ${{ github.event.client_payload.target_branch }}
           PAYLOAD_SYNC_MODE: ${{ github.event.client_payload.sync_mode }}
+          PAYLOAD_INCLUDE_MAIN: ${{ github.event.client_payload.include_main }}
+          PAYLOAD_MAX_BRANCHES: ${{ github.event.client_payload.max_branches }}
+          PAYLOAD_SOURCE_BRANCH: ${{ github.event.client_payload.source_branch }}
+          PAYLOAD_SOURCE_SHA: ${{ github.event.client_payload.source_sha }}
         run: |
           set -euo pipefail
 
-          CONFIG_FILE="main-project/sync"
-
-          read_config() {
-            local key="$1"
-            local value
-            value="$(grep -E "^${key}=" "$CONFIG_FILE" | tail -n 1 | cut -d '=' -f 2- | tr -d '\r' | xargs)"
-            printf "%s" "$value"
-          }
-
-          if [ -n "${PAYLOAD_SOURCE_REPOSITORY}" ]; then
-            SOURCE_REPOSITORY="${PAYLOAD_SOURCE_REPOSITORY}"
-            TARGET_REPO="${PAYLOAD_TARGET_REPO_NAME}"
-            TARGET_BRANCH="${PAYLOAD_TARGET_BRANCH}"
-            SYNC_MODE="${PAYLOAD_SYNC_MODE:-blacklist}"
-          else
-            if [ ! -f "$CONFIG_FILE" ]; then
-              echo "Payload source_repo_full_name kosong dan config tidak ditemukan: $CONFIG_FILE"
-              exit 1
-            fi
-
-            TARGET_REPO="$(read_config TARGET_REPO)"
-            TARGET_BRANCH="$(read_config TARGET_BRANCH)"
-            SYNC_MODE="$(read_config SYNC_MODE)"
-            SOURCE_REPOSITORY="Web-Modder/${TARGET_REPO}"
-          fi
-
-          if [ -z "$TARGET_REPO" ]; then
-            echo "TARGET_REPO kosong di file sync"
+          if [ -z "${PAYLOAD_SOURCE_REPOSITORY:-}" ]; then
+            echo "Payload source_repo_full_name kosong."
             exit 1
           fi
 
-          if [ -z "$TARGET_BRANCH" ]; then
-            echo "TARGET_BRANCH kosong di file sync"
-            exit 1
-          fi
-
-          if [ -z "$SYNC_MODE" ]; then
-            echo "SYNC_MODE kosong di file sync"
-            exit 1
-          fi
-
-          if [[ "$SYNC_MODE" != "whitelist" && "$SYNC_MODE" != "blacklist" ]]; then
-            echo "SYNC_MODE tidak valid: $SYNC_MODE"
-            exit 1
-          fi
+          TARGET_REPO="${PAYLOAD_TARGET_REPO_NAME}"
+          TARGET_BRANCH="${PAYLOAD_TARGET_BRANCH:-all_recent}"
+          SYNC_MODE="${PAYLOAD_SYNC_MODE:-blacklist}"
+          INCLUDE_MAIN="${PAYLOAD_INCLUDE_MAIN:-true}"
+          MAX_BRANCHES="${PAYLOAD_MAX_BRANCHES:-50}"
+          SOURCE_REPOSITORY="${PAYLOAD_SOURCE_REPOSITORY}"
 
           echo "TARGET_REPO=$TARGET_REPO" >> "$GITHUB_ENV"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           echo "SYNC_MODE=$SYNC_MODE" >> "$GITHUB_ENV"
+          echo "INCLUDE_MAIN=$INCLUDE_MAIN" >> "$GITHUB_ENV"
+          echo "MAX_BRANCHES=$MAX_BRANCHES" >> "$GITHUB_ENV"
           echo "SOURCE_REPOSITORY=$SOURCE_REPOSITORY" >> "$GITHUB_ENV"
+          echo "SOURCE_BRANCH=${PAYLOAD_SOURCE_BRANCH:-}" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=${PAYLOAD_SOURCE_SHA:-}" >> "$GITHUB_ENV"
 
       - name: Load input manual
         if: github.event_name == 'workflow_dispatch'
@@ -107,60 +98,118 @@ jobs:
           TARGET_REPO="${{ github.event.inputs.target_repo_name }}"
           TARGET_BRANCH="${{ github.event.inputs.target_branch }}"
           SYNC_MODE="${{ github.event.inputs.sync_mode }}"
+          INCLUDE_MAIN="${{ github.event.inputs.include_main }}"
+          MAX_BRANCHES="${{ github.event.inputs.max_branches }}"
+
+          TARGET_BRANCH="${TARGET_BRANCH:-all_recent}"
+          SYNC_MODE="${SYNC_MODE:-blacklist}"
+          INCLUDE_MAIN="${INCLUDE_MAIN:-true}"
+          MAX_BRANCHES="${MAX_BRANCHES:-50}"
+
+          if [ -z "$TARGET_REPO" ]; then
+            echo "TARGET_REPO kosong."
+            exit 1
+          fi
+
           SOURCE_REPOSITORY="Web-Modder/${TARGET_REPO}"
-
-          if [ -z "$TARGET_REPO" ] || [ -z "$TARGET_BRANCH" ] || [ -z "$SYNC_MODE" ]; then
-            echo "Input manual tidak lengkap"
-            exit 1
-          fi
-
-          if [[ "$SYNC_MODE" != "whitelist" && "$SYNC_MODE" != "blacklist" ]]; then
-            echo "SYNC_MODE tidak valid: $SYNC_MODE"
-            exit 1
-          fi
 
           echo "TARGET_REPO=$TARGET_REPO" >> "$GITHUB_ENV"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           echo "SYNC_MODE=$SYNC_MODE" >> "$GITHUB_ENV"
+          echo "INCLUDE_MAIN=$INCLUDE_MAIN" >> "$GITHUB_ENV"
+          echo "MAX_BRANCHES=$MAX_BRANCHES" >> "$GITHUB_ENV"
           echo "SOURCE_REPOSITORY=$SOURCE_REPOSITORY" >> "$GITHUB_ENV"
+          echo "SOURCE_BRANCH=" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=" >> "$GITHUB_ENV"
 
-      - name: Validasi token
+      - name: Validasi config
         shell: bash
         run: |
           set -euo pipefail
 
           if [ -z "${{ secrets.SYNC_PROJECT_WEB_PAT }}" ]; then
-            echo "Secret SYNC_PROJECT_WEB_PAT belum dikonfigurasi"
+            echo "Secret SYNC_PROJECT_WEB_PAT belum dikonfigurasi di SIPENA-Dev."
             exit 1
           fi
 
-      - name: Debug config
-        shell: bash
-        run: |
-          set -euo pipefail
+          if [[ "${SYNC_MODE}" != "whitelist" && "${SYNC_MODE}" != "blacklist" ]]; then
+            echo "SYNC_MODE tidak valid: ${SYNC_MODE}"
+            exit 1
+          fi
+
+          if [[ "${INCLUDE_MAIN}" != "true" && "${INCLUDE_MAIN}" != "false" ]]; then
+            echo "INCLUDE_MAIN tidak valid: ${INCLUDE_MAIN}"
+            exit 1
+          fi
+
+          if ! [[ "${MAX_BRANCHES}" =~ ^[0-9]+$ ]]; then
+            echo "MAX_BRANCHES harus angka."
+            exit 1
+          fi
 
           echo "===== CONFIG ====="
-          echo "Source : ${SOURCE_REPOSITORY}"
-          echo "Branch : ${TARGET_BRANCH}"
-          echo "Mode   : ${SYNC_MODE}"
-          echo "Target : ${GITHUB_REPOSITORY}"
+          echo "Source repository : ${SOURCE_REPOSITORY}"
+          echo "Triggered branch  : ${SOURCE_BRANCH:-manual}"
+          echo "Triggered sha     : ${SOURCE_SHA:-manual}"
+          echo "Branch selector   : ${TARGET_BRANCH}"
+          echo "Include main      : ${INCLUDE_MAIN}"
+          echo "Max branches      : ${MAX_BRANCHES}"
+          echo "Mode              : ${SYNC_MODE}"
+          echo "Target repository : ${GITHUB_REPOSITORY}"
           echo "=================="
 
-      - name: Checkout repo organization
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.SOURCE_REPOSITORY }}
-          token: ${{ secrets.SYNC_PROJECT_WEB_PAT }}
-          path: org-source
-          ref: ${{ env.TARGET_BRANCH }}
-          fetch-depth: 1
+      - name: Clone source repo dari Web-Modder
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.SYNC_PROJECT_WEB_PAT }}
+        run: |
+          set -euo pipefail
 
-      - name: Sinkronisasi
+          git clone --no-checkout "https://x-access-token:${TOKEN}@github.com/${SOURCE_REPOSITORY}.git" org-source
+          cd org-source
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
+
+      - name: Tentukan daftar branch source
         shell: bash
         run: |
           set -euo pipefail
 
-          cd main-project
+          cd org-source
+
+          if [ "${TARGET_BRANCH}" = "all" ] || [ "${TARGET_BRANCH}" = "all_recent" ]; then
+            git for-each-ref \
+              --sort=-committerdate \
+              --format='%(refname:strip=3)' \
+              refs/remotes/origin \
+              | grep -v '^HEAD$' \
+              > "${GITHUB_WORKSPACE}/branches.all.txt"
+
+            if [ "${INCLUDE_MAIN}" != "true" ]; then
+              grep -v '^main$' "${GITHUB_WORKSPACE}/branches.all.txt" > "${GITHUB_WORKSPACE}/branches.filtered.txt" || true
+              mv "${GITHUB_WORKSPACE}/branches.filtered.txt" "${GITHUB_WORKSPACE}/branches.all.txt"
+            fi
+
+            if [ "${TARGET_BRANCH}" = "all_recent" ] && [ "${MAX_BRANCHES}" != "0" ]; then
+              head -n "${MAX_BRANCHES}" "${GITHUB_WORKSPACE}/branches.all.txt" > "${GITHUB_WORKSPACE}/branches.txt"
+            else
+              cp "${GITHUB_WORKSPACE}/branches.all.txt" "${GITHUB_WORKSPACE}/branches.txt"
+            fi
+          else
+            echo "${TARGET_BRANCH}" > "${GITHUB_WORKSPACE}/branches.txt"
+          fi
+
+          echo "Branch yang akan disinkronkan:"
+          cat "${GITHUB_WORKSPACE}/branches.txt"
+
+          if [ ! -s "${GITHUB_WORKSPACE}/branches.txt" ]; then
+            echo "Tidak ada branch untuk disinkronkan."
+            exit 1
+          fi
+
+      - name: Sinkronisasi branch
+        shell: bash
+        run: |
+          set -euo pipefail
 
           declare -a WHITELIST_PATHS=(
             "shared/"
@@ -182,47 +231,109 @@ jobs:
             "/*.md"
           )
 
-          if [[ "$SYNC_MODE" == "whitelist" ]]; then
-            echo "Mode whitelist"
+          sync_one_branch() {
+            local branch="$1"
 
-            for path in "${WHITELIST_PATHS[@]}"; do
-              if [ -e "../org-source/$path" ]; then
-                mkdir -p "$(dirname "$path")"
-                rsync -a --checksum --delete "../org-source/$path" "$path"
+            echo ""
+            echo "======================================"
+            echo "Sync branch: ${branch}"
+            echo "======================================"
+
+            cd "${GITHUB_WORKSPACE}/org-source"
+
+            if ! git show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
+              echo "Branch source tidak ditemukan: ${branch}"
+              return 1
+            fi
+
+            git checkout -B "${branch}" "origin/${branch}"
+
+            cd "${GITHUB_WORKSPACE}/main-project"
+
+            git fetch origin "${branch}" || true
+
+            if git show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
+              echo "Branch ${branch} sudah ada di SIPENA-Dev. Checkout branch tersebut."
+              git checkout -B "${branch}" "origin/${branch}"
+            else
+              echo "Branch ${branch} belum ada di SIPENA-Dev. Membuat branch baru."
+              if [ "${branch}" = "main" ]; then
+                git checkout -B main
               else
-                echo "Path whitelist tidak ditemukan di source: $path"
+                git fetch origin main || true
+                if git show-ref --verify --quiet "refs/remotes/origin/main"; then
+                  git checkout -B "${branch}" "origin/main"
+                else
+                  git checkout -B "${branch}"
+                fi
               fi
-            done
-          else
-            echo "Mode blacklist"
+            fi
 
-            EXCLUDE_ARGS=(--exclude='.git')
+            if [[ "${SYNC_MODE}" == "whitelist" ]]; then
+              echo "Mode whitelist"
 
-            for p in "${BLACKLIST_PATHS[@]}"; do
-              EXCLUDE_ARGS+=(--exclude "$p")
-            done
+              for path in "${WHITELIST_PATHS[@]}"; do
+                if [ -e "${GITHUB_WORKSPACE}/org-source/$path" ]; then
+                  mkdir -p "$(dirname "$path")"
+                  rsync -a --checksum --delete "${GITHUB_WORKSPACE}/org-source/$path" "$path"
+                else
+                  echo "Path whitelist tidak ditemukan di source: $path"
+                fi
+              done
+            else
+              echo "Mode blacklist"
 
-            rsync -a --checksum --delete "${EXCLUDE_ARGS[@]}" ../org-source/ .
-          fi
+              EXCLUDE_ARGS=(--exclude='.git')
 
-      - name: Commit dan push
+              for p in "${BLACKLIST_PATHS[@]}"; do
+                EXCLUDE_ARGS+=(--exclude "$p")
+              done
+
+              rsync -a --checksum --delete "${EXCLUDE_ARGS[@]}" "${GITHUB_WORKSPACE}/org-source/" .
+            fi
+
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            git add -A
+
+            if git diff --cached --quiet; then
+              echo "Tidak ada perubahan file untuk branch ${branch}."
+              echo "Tetap memastikan branch ${branch} tersedia di remote."
+              git push origin "HEAD:${branch}"
+            else
+              git status --short
+              git commit -m "chore: auto sync from ${SOURCE_REPOSITORY}@${branch}"
+              git push origin "HEAD:${branch}"
+              echo "Sync berhasil ke branch ${branch}"
+            fi
+          }
+
+          while IFS= read -r branch; do
+            if [ -z "$branch" ]; then
+              continue
+            fi
+
+            sync_one_branch "$branch"
+          done < "${GITHUB_WORKSPACE}/branches.txt"
+
+      - name: Ringkasan branch deploy Netlify
         shell: bash
         run: |
           set -euo pipefail
 
-          cd main-project
+          echo "Branch selesai disinkronkan:"
+          while IFS= read -r branch; do
+            if [ -z "$branch" ]; then
+              continue
+            fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+            safe_branch="$(echo "$branch" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed 's#[^a-z0-9-]#-#g' \
+              | sed 's#--*#-#g' \
+              | sed 's#^-##;s#-$##')"
 
-          git add -A
-
-          if git diff --cached --quiet; then
-            echo "Tidak ada perubahan untuk disinkronkan"
-            exit 0
-          fi
-
-          git status --short
-          git commit -m "chore: auto sync from ${SOURCE_REPOSITORY}"
-          git push
-          echo "Sync berhasil"
+            echo "- ${branch}"
+            echo "  Netlify kemungkinan: https://${safe_branch}--sipenadev.netlify.app"
+          done < "${GITHUB_WORKSPACE}/branches.txt"
