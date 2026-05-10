@@ -1,0 +1,317 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+import * as XLSX from "xlsx";
+
+import {
+  analyzeFreeExcelWorkbook,
+  buildExecutableImportOperations,
+  buildImportPlan,
+  buildSpreadsheetPreviewModel,
+  matchColumns,
+  matchStudents,
+  parseGradeValue,
+  readWorkbookBuffer,
+  simplifyImportConflicts,
+  type ImportPlanContext,
+} from "./index";
+
+const students = [
+  { id: "student-1", name: "Siti Aminah", nisn: "0012345678" },
+  { id: "student-2", name: "Muhammad Rizki", nisn: "1234567890" },
+];
+
+const chapters = [
+  { id: "chapter-1", name: "BAB 1", order_index: 1 },
+  { id: "chapter-2", name: "BAB 2", order_index: 2 },
+];
+
+const assignments = [
+  { id: "assignment-1", chapter_id: "chapter-1", name: "Tugas 1", order_index: 1 },
+  { id: "assignment-2", chapter_id: "chapter-2", name: "Tugas 1", order_index: 1 },
+];
+
+const context: ImportPlanContext = { students, chapters, assignments };
+
+function workbookResult(sheets: Record<string, unknown[][]>) {
+  const workbook = XLSX.utils.book_new();
+  Object.entries(sheets).forEach(([name, rows]) => {
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), name);
+  });
+  const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+  return readWorkbookBuffer(buffer, "phase12.xlsx");
+}
+
+describe("phase 12 grade import regression suite", () => {
+  it("keeps workbook coordinates with title rows, blank rows, footers, and zero values", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["KOP SEKOLAH"],
+        [],
+        ["Daftar Nilai Harian"],
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 0],
+        [],
+        [2, "1234567890", "Muhammad Rizki", 90],
+        ["Jumlah", "", "", 90],
+        ["Rata-rata", "", "", 45],
+        ["Mengetahui", "", "", ""],
+      ],
+    }), { students });
+    const plan = buildImportPlan(analysis, context);
+
+    expect(analysis.bestRegion).toMatchObject({
+      headerRowIndex: 4,
+      dataStartRowIndex: 5,
+      dataEndRowIndex: 7,
+    });
+    expect(analysis.bestRegion?.addressedDataRows.map((row) => row.originalRowIndex)).toEqual([5, 7]);
+    expect(plan.gradeOperations.map((operation) => operation.rowIndex)).toEqual([5, 7]);
+    expect(plan.gradeOperations.map((operation) => operation.value)).toEqual([0, 90]);
+    expect(plan.gradeOperations.map((operation) => operation.rawValue)).not.toContain("Jumlah");
+  });
+
+  it("auto-selects a single free Excel region but requires explicit selection for multi-region workbooks", () => {
+    const single = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 88],
+      ],
+    }), { students });
+    const multi = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 99],
+        [2, "1234567890", "Muhammad Rizki", 98],
+        [],
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 70],
+      ],
+    }), { students });
+
+    expect(single.regions).toHaveLength(1);
+    expect(single.requiresRegionSelection).toBe(false);
+    expect(buildImportPlan(single, context).gradeOperations).toHaveLength(1);
+    expect(multi.regions.length).toBeGreaterThan(1);
+    expect(multi.requiresRegionSelection).toBe(true);
+    expect(buildImportPlan(multi, context).conflicts.map((item) => item.code)).toContain("IMPORT_REGION_SELECTION_REQUIRED");
+  });
+
+  it("uses the selected region even when another region has the best score", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 99],
+        [2, "1234567890", "Muhammad Rizki", 98],
+        [],
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 70],
+      ],
+    }), { students });
+    const selectedRegion = analysis.regions.find((region) => region.headerRowIndex === 5);
+    const plan = buildImportPlan(analysis, context, { selectedRegionId: selectedRegion?.id });
+
+    expect(analysis.bestRegion?.headerRowIndex).toBe(1);
+    expect(selectedRegion?.id).toBe("Nilai:5:6:6");
+    expect(plan.conflicts.map((item) => item.code)).not.toContain("IMPORT_REGION_SELECTION_REQUIRED");
+    expect(plan.gradeOperations).toHaveLength(1);
+    expect(plan.gradeOperations[0]).toMatchObject({
+      rowIndex: 6,
+      studentId: "student-1",
+      value: 70,
+    });
+  });
+
+  it("keeps student edge cases safe across exact, normalized, duplicate, missing, and web-only rows", () => {
+    const matchResult = matchStudents([
+      { rowIndex: 2, name: "Siti Aminah", nisn: "0012345678" },
+      { rowIndex: 3, name: "Muhammad Rizki", nisn: "1234567890.0" },
+    ], students);
+    const duplicateWeb = matchStudents([
+      { rowIndex: 2, name: "Siti Aminah", nisn: "0012345678" },
+    ], [
+      students[0],
+      { id: "student-3", name: "Siti Aminah Lain", nisn: "0012345678" },
+    ]);
+    const duplicateExcel = matchStudents([
+      { rowIndex: 2, name: "Siti Aminah", nisn: "0012345678" },
+      { rowIndex: 3, name: "Siti Aminah", nisn: "0012345678" },
+    ], students);
+
+    expect(matchResult.mappings.map((mapping) => mapping.matchedBy)).toEqual(["nisn_exact", "nisn_normalized"]);
+    expect(duplicateWeb.mappings[0]).toMatchObject({ status: "ambiguous" });
+    expect(duplicateWeb.conflicts.map((item) => item.code)).toContain("STUDENT_MATCH_AMBIGUOUS");
+    expect(duplicateExcel.mappings.map((mapping) => mapping.status)).toEqual(["blocked", "blocked"]);
+    expect(duplicateExcel.conflicts.map((item) => item.code)).toContain("STUDENT_DUPLICATE_EXCEL_MATCH");
+
+    const missingWithValuePlan = buildImportPlan(analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "9999999999", "Siswa File Lain", 75],
+      ],
+    }), { students }), context);
+    const missingWithoutValuePlan = buildImportPlan(analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "9999999999", "Siswa File Lain", ""],
+      ],
+    }), { students }), context);
+    const webOnlyPlan = buildImportPlan(analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 80],
+      ],
+    }), { students: [...students, { id: "student-3", name: "Ahmad Fauzi", nisn: "555" }] }), {
+      ...context,
+      students: [...students, { id: "student-3", name: "Ahmad Fauzi", nisn: "555" }],
+    });
+    const missingWithValueExecutable = buildExecutableImportOperations({ plan: missingWithValuePlan });
+    const missingWithoutValueExecutable = buildExecutableImportOperations({ plan: missingWithoutValuePlan });
+    const missingWithValueFixes = simplifyImportConflicts({ plan: missingWithValuePlan });
+    const webOnlyPreview = buildSpreadsheetPreviewModel({ plan: webOnlyPlan });
+
+    expect(missingWithValuePlan.studentMappings[0]?.status).toBe("missing_in_web");
+    expect(missingWithValueFixes.manualRequiredCount).toBeGreaterThan(0);
+    expect(missingWithValueExecutable.summary.unresolvedStudentCount).toBe(1);
+    expect(missingWithoutValueExecutable.summary.blockedCount).toBe(0);
+    expect(missingWithoutValueExecutable.summary.skippedEmptyCount).toBeGreaterThan(0);
+    expect(webOnlyPlan.missingInExcelStudents).toHaveLength(2);
+    expect(webOnlyPlan.studentMappings.map((mapping) => mapping.rowIndex)).not.toContain(-1);
+    expect(new Set(webOnlyPreview.rows.map((row) => row.id)).size).toBe(webOnlyPreview.rows.length);
+  });
+
+  it("keeps column matching canonical and detects duplicate targets", () => {
+    const direct = matchColumns([
+      { columnIndex: 4, rawHeader: "BAB 1 - Tugas 1" },
+      { columnIndex: 5, rawHeader: "Bab I - Tugas 1" },
+      { columnIndex: 6, rawHeader: "Tugas 1" },
+      { columnIndex: 7, rawHeader: "UTS" },
+      { columnIndex: 8, rawHeader: "PTS" },
+      { columnIndex: 9, rawHeader: "UAS" },
+      { columnIndex: 10, rawHeader: "PAS" },
+      { columnIndex: 11, rawHeader: "Rapor" },
+    ], chapters, assignments);
+    const duplicatePlan = buildImportPlan(analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1", "Bab I - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 80, 81],
+      ],
+    }), { students }), context);
+
+    expect(direct.mappings.find((mapping) => mapping.columnIndex === 4)).toMatchObject({ targetType: "existing_assignment", target: { assignmentId: "assignment-1" } });
+    expect(direct.mappings.find((mapping) => mapping.columnIndex === 5)).toMatchObject({ targetType: "existing_assignment", target: { assignmentId: "assignment-1" } });
+    expect(direct.mappings.find((mapping) => mapping.columnIndex === 6)).toMatchObject({ targetType: "unresolved", status: "ambiguous" });
+    expect(direct.mappings.filter((mapping) => ["sts", "sas"].includes(mapping.targetType)).map((mapping) => mapping.targetType)).toEqual(["sts", "sts", "sas", "sas"]);
+    expect(direct.mappings.find((mapping) => mapping.columnIndex === 11)?.targetType).toBe("ignore");
+    expect(duplicatePlan.conflicts.map((item) => item.code)).toContain("IMPORT_DUPLICATE_COLUMN_TARGET");
+  });
+
+  it("keeps value parser edge cases explicit", () => {
+    expect(parseGradeValue(0)).toMatchObject({ status: "valid", value: 0 });
+    expect(parseGradeValue("85,5")).toMatchObject({ status: "valid", value: 85.5 });
+    expect(parseGradeValue("85%")).toMatchObject({ status: "valid", value: 85 });
+    expect(parseGradeValue("90/100")).toMatchObject({ status: "valid", value: 90 });
+    expect(parseGradeValue("18/20")).toMatchObject({ status: "needs_confirmation", value: null, suggestedValue: 90 });
+    expect(parseGradeValue("#VALUE!").status).toBe("invalid");
+    expect(["Tuntas", "Remedial", "A"].map((value) => parseGradeValue(value).status)).toEqual(["textual", "textual", "textual"]);
+  });
+
+  it("keeps executable builder and preview aligned for mixed safe, skipped, overwrite, and suggested values", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 80],
+        [2, "1234567890", "Muhammad Rizki", "18/20"],
+      ],
+    }), { students });
+    const plan = buildImportPlan(analysis, {
+      ...context,
+      existingGrades: [{ student_id: "student-1", grade_type: "assignment", assignment_id: "assignment-1", value: 70 }],
+    }, { updateMode: "overwrite_existing" });
+    const blocked = buildExecutableImportOperations({ plan, updateMode: "overwrite_existing" });
+    const acceptedSelection = {
+      columnSettings: {
+        "excel-col-4": {
+          columnId: "excel-col-4",
+          columnIndex: 4,
+          include: true,
+          valueMode: "overwrite_existing" as const,
+          overwriteConfirmed: true,
+        },
+      },
+      cellSettings: {
+        "row-3:excel-col-4": {
+          cellId: "row-3:excel-col-4",
+          rowId: "row-3",
+          columnId: "excel-col-4",
+          include: true,
+          valueMode: "inherit_column" as const,
+          acceptedSuggestedValue: true,
+          resolvedValue: 90,
+        },
+      },
+    };
+    const executable = buildExecutableImportOperations({ plan, updateMode: "overwrite_existing", selectionState: acceptedSelection });
+    const preview = buildSpreadsheetPreviewModel({ plan, updateMode: "overwrite_existing", selectionState: acceptedSelection });
+    const skippedByColumn = buildExecutableImportOperations({
+      plan,
+      selectionState: {
+        columnSettings: {
+          "excel-col-4": { columnId: "excel-col-4", columnIndex: 4, include: false, valueMode: "fill_empty_only" },
+        },
+        cellSettings: {},
+      },
+    });
+    const skippedByCell = buildExecutableImportOperations({
+      plan,
+      selectionState: {
+        columnSettings: {},
+        cellSettings: {
+          "row-2:excel-col-4": { cellId: "row-2:excel-col-4", rowId: "row-2", columnId: "excel-col-4", include: false, valueMode: "inherit_column" },
+        },
+      },
+    });
+    const skippedByRow = buildExecutableImportOperations({ plan, resolverState: { ignoredRows: [2] } });
+
+    expect(blocked.summary.overwriteNeedsConfirmationCount).toBe(1);
+    expect(blocked.summary.blockedCount).toBe(2);
+    expect(executable.summary.executableCount).toBe(2);
+    expect(executable.summary.overwriteCount).toBe(1);
+    expect(executable.operations.find((operation) => operation.rowIndex === 3)?.value).toBe(90);
+    expect(preview.summary.includedCells).toBe(executable.summary.executableCount);
+    expect(skippedByColumn.summary.skippedManualCount).toBe(2);
+    expect(skippedByCell.summary.skippedManualCount).toBe(1);
+    expect(skippedByRow.summary.skippedManualCount).toBe(1);
+  });
+
+  it("guards simple-mode UI policy in source until a component test harness is added", () => {
+    const dialogSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/GradeImportExportDialog.tsx"), "utf8");
+    const overlaySource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/ColumnSettingsOverlay.tsx"), "utf8");
+    const quickActionsSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewQuickActions.tsx"), "utf8");
+    const fixPanelSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
+
+    expect(dialogSource).toContain('useState<ImportComplexityMode>("simple")');
+    expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
+    expect(dialogSource).toContain("simpleModeResolverState");
+    expect(overlaySource).toContain('const advanced = complexityMode === "advanced"');
+    expect(overlaySource).toContain('if (complexityMode === "simple") return "ignore"');
+    expect(overlaySource).toContain('!advanced && (targetMode === "new_assignment" || targetMode === "new_chapter_assignment")');
+    expect(overlaySource).toContain('advanced && activeMode === "overwrite_existing"');
+    expect(fixPanelSource).toContain('const advanced = complexityMode === "advanced"');
+    expect(fixPanelSource).toContain('(["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[])');
+    expect(fixPanelSource).toContain('(["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[])');
+    expect(fixPanelSource).toContain('advanced && (columnSetting?.valueMode || targetColumn.effectiveValueMode) === "overwrite_existing"');
+    expect(quickActionsSource).toContain('complexityMode === "advanced"');
+  });
+
+  it("guards atomic batch import RPC and duplicate-grade hard errors in SQL", () => {
+    const sql = readFileSync(resolve(process.cwd(), "supabase/migrations/20260509142802_atomic_grade_import.sql"), "utf8");
+
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION public.import_grades_batch(p_items jsonb)");
+    expect(sql).toContain("pg_advisory_xact_lock");
+    expect(sql).toContain("Data nilai duplikat ditemukan. Perlu perbaikan database sebelum menyimpan.");
+    expect(sql).toContain("Nilai tugas pada item ke-% wajib memiliki assignment_id.");
+    expect(sql).toContain("Nilai % pada item ke-% tidak boleh memiliki assignment_id.");
+    expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.import_grades_batch(jsonb) TO authenticated");
+  });
+});
