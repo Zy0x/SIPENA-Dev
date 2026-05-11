@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const DEFAULT_MODEL = "llama-3.1-8b-instant";
+const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 const MAX_BODY_BYTES = 500 * 1024;
 const MAX_STUDENTS = 200;
 const MAX_CHAPTERS = 100;
@@ -421,13 +421,13 @@ serve(async (req) => {
     }));
   } catch (error) {
     console.warn(JSON.stringify({ requestId, errorType: error instanceof Error ? error.message : "payload_invalid" }));
-    return fallbackResponse("Payload saran AI tidak valid.", 400);
+    return fallbackResponse("AI tidak tersedia atau hasilnya tidak valid. Lanjutkan dengan pemeriksaan manual.", 200);
   }
 
   const groqApiKey = Deno.env.get("GROQ_API_KEY");
   if (!groqApiKey) {
     console.warn(JSON.stringify({ requestId, errorType: "missing_groq_api_key" }));
-    return fallbackResponse("Saran AI belum tersedia karena kunci API belum dikonfigurasi.", 503);
+    return fallbackResponse("AI tidak tersedia atau hasilnya tidak valid. Lanjutkan dengan pemeriksaan manual.", 200);
   }
 
   try {
@@ -451,7 +451,7 @@ serve(async (req) => {
 
     if (!aiResponse.ok) {
       console.warn(JSON.stringify({ requestId, errorType: "ai_http_error", status: aiResponse.status }));
-      return fallbackResponse("AI tidak tersedia atau hasilnya tidak valid. Lanjutkan dengan pemeriksaan manual.", 502);
+      return fallbackResponse("AI tidak tersedia atau hasilnya tidak valid. Lanjutkan dengan pemeriksaan manual.", 200);
     }
 
     const aiData = await aiResponse.json();

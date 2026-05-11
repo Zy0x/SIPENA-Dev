@@ -18,6 +18,11 @@ interface SmartImportAssistClientOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 20_000;
+const SAFE_FALLBACK_NOTE = "AI tidak tersedia. Lanjutkan dengan pemeriksaan manual.";
+const TIMEOUT_FALLBACK_NOTE = "AI membutuhkan waktu terlalu lama. Lanjutkan dengan pemeriksaan manual.";
+const AUTH_FALLBACK_NOTE = "Login diperlukan sebelum meminta saran AI.";
+
+const TECHNICAL_ERROR_PATTERN = /\b(edge function|non-2xx|functionshttp|failed to fetch|networkerror|fetch failed|internal server error|http status|status code|groq|json|payload|timeout \d+\s*ms)\b/i;
 
 function timeoutFallback(timeoutMs: number): Promise<SmartImportAssistInvokeResult> {
   return new Promise((resolve) => {
@@ -33,7 +38,17 @@ function fallbackFromError(error: unknown): SmartImportAssistResponse {
     : error && typeof error === "object" && "message" in error
       ? String((error as { message?: unknown }).message || "")
       : "";
-  return createSmartImportAssistFallback(message || "AI tidak tersedia. Lanjutkan dengan pemeriksaan manual.");
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes("login diperlukan") || lowerMessage.includes("authorization") || lowerMessage.includes("auth")) {
+    return createSmartImportAssistFallback(AUTH_FALLBACK_NOTE);
+  }
+  if (lowerMessage.includes("melewati batas waktu") || lowerMessage.includes("timeout")) {
+    return createSmartImportAssistFallback(TIMEOUT_FALLBACK_NOTE);
+  }
+  if (!message || TECHNICAL_ERROR_PATTERN.test(message)) {
+    return createSmartImportAssistFallback(SAFE_FALLBACK_NOTE);
+  }
+  return createSmartImportAssistFallback(SAFE_FALLBACK_NOTE);
 }
 
 export async function requestSmartImportAssist(

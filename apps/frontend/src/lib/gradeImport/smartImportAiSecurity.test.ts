@@ -40,6 +40,7 @@ describe("smart import AI edge function security guards", () => {
     expect(source).toContain("const MAX_BODY_BYTES = 500 * 1024");
     expect(source).toContain("const MAX_STUDENTS = 200");
     expect(source).toContain("const MAX_ASSIGNMENTS = 300");
+    expect(source).toContain('const DEFAULT_MODEL = "llama-3.3-70b-versatile"');
     expect(source).toContain('req.method === "OPTIONS"');
     expect(source).toContain('"Content-Type": "application/json"');
     expect(source).toContain("fallbackResponse");

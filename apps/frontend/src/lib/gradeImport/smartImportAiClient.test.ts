@@ -404,6 +404,18 @@ describe("smart import AI client", () => {
     expect(result.suggestions).toEqual([]);
     expect(result.summary.confidence).toBe(0);
     expect(result.summary.riskLevel).toBe("high");
-    expect(result.summary.notes[0]).toContain("Function gagal");
+    expect(result.summary.notes[0]).toBe("AI tidak tersedia. Lanjutkan dengan pemeriksaan manual.");
+  });
+
+  it("tidak membocorkan error teknis Edge Function ke UI", async () => {
+    const result = await requestSmartImportAssist(baseRequest, {
+      invoke: async () => ({ error: new Error("Edge Function returned a non-2xx status code") }),
+      timeoutMs: 1000,
+    });
+
+    expect(result.suggestions).toEqual([]);
+    expect(result.summary.notes[0]).toBe("AI tidak tersedia. Lanjutkan dengan pemeriksaan manual.");
+    expect(result.summary.notes[0]).not.toContain("Edge Function");
+    expect(result.summary.notes[0]).not.toContain("non-2xx");
   });
 });
