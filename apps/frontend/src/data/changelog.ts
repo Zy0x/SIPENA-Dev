@@ -42,6 +42,36 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.5",
+    version: "2.4.5",
+    title: "Auth Login: Waiting Time Bertingkat dan Request Reset Admin",
+    description: "Lockout login kini meningkat bertahap per tiga kegagalan, dari 15 detik sampai 24 jam, dengan request reset waiting time yang masuk ke Admin SIPENA setelah mencapai level 6 jam.",
+    type: "security",
+    is_critical: true,
+    released_at: "2026-05-11",
+    details: [
+      "Durasi lockout bertingkat: 15 detik, 1 menit, 5 menit, 30 menit, 1 jam, 6 jam, 12 jam, lalu 24 jam.",
+      "Request reset waiting time tersedia mulai lockout level keenam, wajib menulis ulang email, alasan, dan menyelesaikan reCAPTCHA.",
+      "Request masuk ke halaman Admin SIPENA dengan aksi setujui/tolak dan proses auto approve 1x24 jam.",
+      "Admin dapat menonaktifkan auto approve secara massal dari panel Reset Waiting Time Login.",
+    ],
+  },
+  {
+    id: "v2.4.4",
+    version: "2.4.4",
+    title: "Auth Login: Kunci Sementara Setelah 3x Password Salah",
+    description: "Halaman login kini memberi penanganan khusus saat password salah berulang: percobaan dihitung per identitas, login dikunci sementara setelah tiga kegagalan, dan pengguna diarahkan ke Lupa password.",
+    type: "security",
+    is_critical: true,
+    released_at: "2026-05-11",
+    details: [
+      "Percobaan login salah kini dinormalisasi per email atau identitas admin agar variasi huruf besar/kecil tidak mereset hitungan.",
+      "Setelah tiga kali password salah, form login untuk identitas tersebut dikunci sementara selama lima menit dan tidak lagi mengirim request auth baru sebelum cooldown selesai.",
+      "Status lockout disimpan di browser agar refresh halaman tidak langsung menghapus penanganan keamanan.",
+      "Login sukses membersihkan riwayat kegagalan, sedangkan pesan error menampilkan sisa percobaan dan jalur Lupa password yang jelas.",
+    ],
+  },
+  {
     id: "v2.4.3",
     version: "2.4.3",
     title: "SmartImport Nilai: Import Aman dan Preview Lebih Sinkron",

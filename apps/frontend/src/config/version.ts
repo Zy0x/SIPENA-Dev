@@ -1,8 +1,11 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.2";
-export const VERSION_DATE = "2026-05-07";
+export const APP_VERSION = "2.4.5";
+export const VERSION_DATE = "2026-05-11";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.5": "Proteksi login bertingkat ditambahkan dengan request reset waiting time melalui reCAPTCHA dan panel Admin SIPENA.",
+  "2.4.4": "Proteksi login diperkuat dengan kunci sementara setelah tiga kali password salah dan arahan reset password yang lebih jelas.",
+  "2.4.3": "SmartImport nilai dibuat lebih aman dengan Import Aman default, validasi Excel lebih ketat, dan preview yang lebih sinkron.",
   "2.4.2": "Ranking per mata pelajaran dikunci mengikuti semester yang dipilih dan data legacy tanpa semester hanya dipakai sebagai fallback.",
   "2.4.1": "Perhitungan Ranking Siswa diperbaiki agar ranking keseluruhan dan ranking per mata pelajaran akurat pada filter mapel dan mode semua semester.",
   "2.4.0": "Rombakan Studio Ekspor Presensi: side panel dipadatkan, keterangan vertikal PDF kini benar-benar tampil sebagai cell merged, jarak garis pada Style Signature dipresisi, dan kontrol presisi TTD (drag + D-Pad) dirombak agar bekerja akurat di setiap zoom preview.",

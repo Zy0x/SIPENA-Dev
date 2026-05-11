@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Loader2, GraduationCap, Shield, CheckCircle } from "lucide-react";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { SipenaLogo } from "@/components/SipenaLogo";
@@ -14,11 +15,25 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { useReCaptcha, ReCaptchaBadgeHider, ReCaptchaDisclosure } from "@/components/auth/ReCaptcha";
 import { ReCaptchaV2Widget, useReCaptchaV2 } from "@/components/auth/ReCaptchaV2";
+import {
+  clearLoginAttempt,
+  clearLoginLockout,
+  formatLoginLockDuration,
+  getLoginAttemptSnapshot,
+  recordFailedLoginAttempt,
+  type LoginAttemptSnapshot,
+} from "@/lib/authLoginAttemptGuard";
+import {
+  checkAuthLockoutResetRequest,
+  clearStoredAuthLockoutResetRequest,
+  createAuthLockoutResetRequest,
+  getStoredAuthLockoutResetRequest,
+  storeAuthLockoutResetRequest,
+  type AuthLockoutResetRequest,
+} from "@/lib/authLockoutResetRequests";
 
 const ADMIN_EMAILS = ["admin", "admin@sipena.local"];
-
-// Login attempt tracker per email
-const loginAttempts: Record<string, number> = {};
+const LOGIN_LOCK_FIELD_ERROR = "Login dikunci sementara karena 3x password salah";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -36,6 +51,12 @@ const Auth = () => {
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [registerForm, setRegisterForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [loginLockState, setLoginLockState] = useState<LoginAttemptSnapshot>(() => getLoginAttemptSnapshot(""));
+  const [resetRequestEmail, setResetRequestEmail] = useState("");
+  const [resetRequestReason, setResetRequestReason] = useState("");
+  const [resetRequest, setResetRequest] = useState<AuthLockoutResetRequest | null>(null);
+  const [isSubmittingResetRequest, setIsSubmittingResetRequest] = useState(false);
+  const [isCheckingResetRequest, setIsCheckingResetRequest] = useState(false);
 
 
   // GSAP Refs
@@ -67,6 +88,70 @@ const Auth = () => {
     if (formType === 'login') setLoginForm(prev => ({ ...prev, email }));
     else setRegisterForm(prev => ({ ...prev, email }));
   };
+
+  const isEmailLogin = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  useEffect(() => {
+    if (activeTab !== "login") return;
+
+    const refreshLockState = () => {
+      const snapshot = getLoginAttemptSnapshot(loginForm.email);
+      setLoginLockState(snapshot);
+      if (!snapshot.isLocked) {
+        setFieldErrors(prev => {
+          if (prev["login-pw"] !== LOGIN_LOCK_FIELD_ERROR) return prev;
+          const next = { ...prev };
+          delete next["login-pw"];
+          return next;
+        });
+      }
+    };
+
+    refreshLockState();
+    const timer = window.setInterval(refreshLockState, 1000);
+    return () => window.clearInterval(timer);
+  }, [activeTab, loginForm.email]);
+
+  useEffect(() => {
+    if (activeTab !== "login" || !loginLockState.isLocked || !loginLockState.canRequestReset) return;
+
+    const stored = getStoredAuthLockoutResetRequest();
+    if (!stored || stored.email.toLowerCase() !== loginForm.email.trim().toLowerCase()) {
+      setResetRequest(null);
+      return;
+    }
+
+    let cancelled = false;
+    const checkStoredRequest = async () => {
+      setIsCheckingResetRequest(true);
+      try {
+        const result = await checkAuthLockoutResetRequest({
+          requestId: stored.id,
+          email: stored.email,
+        });
+        if (cancelled) return;
+
+        setResetRequest(result.request);
+        if (result.request.status === "approved" || result.request.status === "auto_approved") {
+          clearLoginLockout(stored.email);
+          clearStoredAuthLockoutResetRequest();
+          setLoginLockState(getLoginAttemptSnapshot(stored.email));
+          showSuccess("Waiting time direset", "Request Anda sudah disetujui. Silakan login kembali.");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("[Auth] Failed to check lockout reset request:", error);
+        }
+      } finally {
+        if (!cancelled) setIsCheckingResetRequest(false);
+      }
+    };
+
+    checkStoredRequest();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, loginForm.email, loginLockState.canRequestReset, loginLockState.isLocked, showSuccess]);
 
   // Redirect if logged in
   useEffect(() => { if (user) navigate("/dashboard"); }, [user, navigate]);
@@ -289,22 +374,30 @@ const Auth = () => {
     setFieldErrors(prev => { const n = { ...prev }; delete n[fieldId]; return n; });
   }, []);
 
+  const isInvalidCredentialError = (errorMsg: string): boolean => {
+    const msg = errorMsg.toLowerCase();
+    return msg.includes("invalid login") || msg.includes("invalid_credentials");
+  };
+
+  const getLoginAttemptError = (snapshot: LoginAttemptSnapshot): { title: string; message: string } => {
+    if (snapshot.isLocked) {
+      return {
+        title: "Login dikunci sementara",
+        message: `Password salah berulang pada level ${snapshot.lockoutLevel}. Coba lagi dalam ${formatLoginLockDuration(snapshot.remainingMs)} atau gunakan Lupa password.`,
+      };
+    }
+
+    return {
+      title: "Email atau password salah",
+      message: `Periksa kembali email dan password Anda. Sisa percobaan: ${snapshot.attemptsRemaining}.`,
+    };
+  };
+
   const getAuthErrorMessage = (errorMsg: string, context: "login" | "register" = "login", email?: string): { title: string; message: string } => {
     const msg = errorMsg.toLowerCase();
     
     // Supabase returns "invalid_credentials" for both wrong password AND non-existent email
-    if (msg.includes("invalid login") || msg.includes("invalid_credentials")) {
-      if (email) {
-        loginAttempts[email] = (loginAttempts[email] || 0) + 1;
-      }
-      const attempts = email ? loginAttempts[email] || 0 : 0;
-      
-      if (attempts >= 3) {
-        return {
-          title: "Login gagal",
-          message: `Anda sudah ${attempts}x gagal. Cek kembali email & password, atau gunakan Lupa Password.`,
-        };
-      }
+    if (isInvalidCredentialError(errorMsg)) {
       return {
         title: "Email atau password salah",
         message: "Periksa kembali email dan password Anda.",
@@ -367,10 +460,19 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateLoginFields()) { animateFeedback(false); return; }
+    const currentLock = getLoginAttemptSnapshot(loginForm.email);
+    if (currentLock.isLocked) {
+      setLoginLockState(currentLock);
+      setFieldErrors(prev => ({ ...prev, "login-pw": LOGIN_LOCK_FIELD_ERROR }));
+      animateFeedback(false);
+      const err = getLoginAttemptError(currentLock);
+      showError(err.title, err.message);
+      return;
+    }
     setIsLoading(true);
     try {
       // reCAPTCHA v3 — soft check, tidak hard-block user legitimate
-      // Proteksi utama ada di: Supabase rate limit + RLS + loginAttempts tracker
+      // Proteksi utama ada di: Supabase rate limit + RLS + login attempt guard
       if (recaptchaConfigured) {
         try {
           const captchaOk = await executeAndVerify("login");
@@ -386,17 +488,43 @@ const Auth = () => {
 
       if (isAdminLogin(loginForm.email)) {
         const ok = await handleAdminLogin(loginForm.password);
-        if (ok) { animateFeedback(true); showSuccess("Berhasil!", "Selamat datang, Administrator"); setTimeout(() => navigate("/admin"), 400); }
-        else { animateFeedback(false); showError("Login Gagal", "Password yang Anda masukkan tidak sesuai. Pastikan password benar dan coba lagi."); }
+        if (ok) {
+          clearLoginAttempt(loginForm.email);
+          setLoginLockState(getLoginAttemptSnapshot(loginForm.email));
+          animateFeedback(true);
+          showSuccess("Berhasil!", "Selamat datang, Administrator");
+          setTimeout(() => navigate("/admin"), 400);
+        }
+        else {
+          const attempt = recordFailedLoginAttempt(loginForm.email);
+          setLoginLockState(attempt);
+          if (attempt.isLocked) {
+            setFieldErrors(prev => ({ ...prev, "login-pw": LOGIN_LOCK_FIELD_ERROR }));
+          }
+          animateFeedback(false);
+          const err = getLoginAttemptError(attempt);
+          showError(err.title, err.message);
+        }
         setIsLoading(false); return;
       }
       const { error } = await signIn(loginForm.email, loginForm.password);
       if (error) {
         animateFeedback(false);
+        if (isInvalidCredentialError(error.message || "")) {
+          const attempt = recordFailedLoginAttempt(loginForm.email);
+          setLoginLockState(attempt);
+          if (attempt.isLocked) {
+            setFieldErrors(prev => ({ ...prev, "login-pw": LOGIN_LOCK_FIELD_ERROR }));
+          }
+          const err = getLoginAttemptError(attempt);
+          showError(err.title, err.message);
+          return;
+        }
         const err = getAuthErrorMessage(error.message || "", "login", loginForm.email);
         showError(err.title, err.message);
       } else { 
-        if (loginForm.email) delete loginAttempts[loginForm.email];
+        clearLoginAttempt(loginForm.email);
+        setLoginLockState(getLoginAttemptSnapshot(loginForm.email));
         animateFeedback(true); 
         showSuccess("Berhasil!", "Selamat datang kembali"); 
         setTimeout(() => navigate("/dashboard"), 400); 
@@ -408,6 +536,56 @@ const Auth = () => {
       showError(err.title, err.message);
     }
     finally { setIsLoading(false); }
+  };
+
+  const handleSubmitLockoutResetRequest = async () => {
+    const loginEmail = loginForm.email.trim().toLowerCase();
+    const confirmationEmail = resetRequestEmail.trim().toLowerCase();
+
+    if (!loginLockState.isLocked || !loginLockState.canRequestReset) {
+      showError("Request belum tersedia", "Request reset waiting time baru tersedia saat lockout mencapai level 6 jam.");
+      return;
+    }
+    if (!isEmailLogin(loginEmail) || confirmationEmail !== loginEmail) {
+      showError("Email tidak cocok", "Tulis ulang email login yang terkunci dengan benar.");
+      return;
+    }
+    if (resetRequestReason.trim().length < 12) {
+      showError("Alasan terlalu singkat", "Tulis alasan minimal 12 karakter agar admin dapat menilai request.");
+      return;
+    }
+    if (recaptchaV2.isConfigured && !recaptchaV2.verified) {
+      showError("Verifikasi diperlukan", "Selesaikan reCAPTCHA terlebih dahulu sebelum mengirim request.");
+      return;
+    }
+
+    setIsSubmittingResetRequest(true);
+    try {
+      if (recaptchaV2.isConfigured) {
+        const captchaOk = await recaptchaV2.verifyOnServer();
+        if (!captchaOk) {
+          recaptchaV2.reset();
+          showError("Verifikasi gagal", "CAPTCHA tidak valid. Silakan coba lagi.");
+          return;
+        }
+      }
+
+      const result = await createAuthLockoutResetRequest({
+        email: loginForm.email,
+        reason: resetRequestReason.trim(),
+        captchaToken: recaptchaV2.token,
+        snapshot: loginLockState,
+      });
+
+      setResetRequest(result.request);
+      storeAuthLockoutResetRequest({ id: result.request.id, email: result.request.email });
+      recaptchaV2.reset();
+      showSuccess("Request terkirim", result.message);
+    } catch (error) {
+      showError("Request gagal", error instanceof Error ? error.message : "Gagal mengirim request reset waiting time.");
+    } finally {
+      setIsSubmittingResetRequest(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -628,11 +806,95 @@ const Auth = () => {
                   />
                   <AuthField label="Password" id="login-pw" icon={Lock}
                     type={showPassword ? "text" : "password"} placeholder="••••••••" value={loginForm.password}
-                    onChange={(v) => { setLoginForm(p => ({ ...p, password: v })); clearFieldError('login-pw'); }} disabled={isLoading} onFocus={focusField}
+                    onChange={(v) => { setLoginForm(p => ({ ...p, password: v })); clearFieldError('login-pw'); }} disabled={isLoading || loginLockState.isLocked} onFocus={focusField}
                     showToggle showPassword={showPassword} onTogglePassword={() => setShowPassword(!showPassword)}
                     error={fieldErrors["login-pw"]}
                   />
-                  <SubmitButton loading={isLoading} label="Masuk ke SIPENA" onHover={hoverScale} />
+                  {loginLockState.isLocked && (
+                    <div className="space-y-3 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3.5 py-3 text-xs text-amber-100">
+                      <p>
+                        Login untuk identitas ini dikunci sementara level {loginLockState.lockoutLevel}. Coba lagi dalam{" "}
+                        <span className="font-semibold">{formatLoginLockDuration(loginLockState.remainingMs)}</span>{" "}
+                        atau gunakan Lupa password.
+                      </p>
+                      {!loginLockState.canRequestReset && (
+                        <p className="text-amber-100/70">
+                          Request reset waiting time baru tersedia saat kegagalan mencapai level keenam (durasi 6 jam).
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {loginLockState.isLocked && loginLockState.canRequestReset && isEmailLogin(loginForm.email) && (
+                    <div className="space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.04] p-3.5">
+                      <div>
+                        <p className="text-xs font-semibold text-white/80">Request reset waiting time</p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-white/45">
+                          Tulis ulang email dan alasan, lalu selesaikan reCAPTCHA. Request masuk ke Admin SIPENA dan akan auto-approve dalam 1x24 jam jika fitur auto-approve aktif.
+                        </p>
+                      </div>
+                      {resetRequest && (
+                        <div className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-[11px] text-white/70">
+                          Status request: <span className="font-semibold text-white">{resetRequest.status}</span>
+                          {isCheckingResetRequest && <span className="ml-1 text-white/40">memeriksa...</span>}
+                        </div>
+                      )}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lockout-reset-email" className="text-xs text-white/60">Tulis ulang email</Label>
+                        <Input
+                          id="lockout-reset-email"
+                          type="email"
+                          value={resetRequestEmail}
+                          onChange={(e) => setResetRequestEmail(e.target.value)}
+                          placeholder="nama@email.com"
+                          disabled={isSubmittingResetRequest}
+                          className="h-11 rounded-xl border-white/[0.08] bg-white/[0.05] text-white placeholder:text-white/25"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lockout-reset-reason" className="text-xs text-white/60">Alasan request</Label>
+                        <Textarea
+                          id="lockout-reset-reason"
+                          value={resetRequestReason}
+                          onChange={(e) => setResetRequestReason(e.target.value)}
+                          placeholder="Contoh: Saya pemilik akun dan salah memasukkan password berulang saat mengganti password."
+                          rows={3}
+                          disabled={isSubmittingResetRequest}
+                          className="rounded-xl border-white/[0.08] bg-white/[0.05] text-white placeholder:text-white/25"
+                        />
+                      </div>
+                      {recaptchaV2.isConfigured && (
+                        <ReCaptchaV2Widget
+                          onVerify={recaptchaV2.onVerify}
+                          onExpire={recaptchaV2.onExpire}
+                          onError={recaptchaV2.onError}
+                        />
+                      )}
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full rounded-xl"
+                        onClick={handleSubmitLockoutResetRequest}
+                        disabled={isSubmittingResetRequest || resetRequest?.status === "pending"}
+                      >
+                        {isSubmittingResetRequest ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Mengirim request...
+                          </>
+                        ) : resetRequest?.status === "pending" ? (
+                          "Request sudah dikirim"
+                        ) : (
+                          "Kirim request ke Admin"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                  <SubmitButton
+                    loading={isLoading}
+                    disabled={loginLockState.isLocked}
+                    label={loginLockState.isLocked ? `Tunggu ${formatLoginLockDuration(loginLockState.remainingMs)}` : "Masuk ke SIPENA"}
+                    onHover={hoverScale}
+                  />
                   
                   {/* Forgot Password Link */}
                   <div className="text-center pt-1">
@@ -758,14 +1020,14 @@ function AuthField({ label, id, icon: Icon, type, placeholder, value, onChange, 
   );
 }
 
-function SubmitButton({ loading, label, onHover }: {
-  loading: boolean; label: string; onHover: (el: HTMLElement | null, enter: boolean) => void;
+function SubmitButton({ loading, disabled = false, label, onHover }: {
+  loading: boolean; disabled?: boolean; label: string; onHover: (el: HTMLElement | null, enter: boolean) => void;
 }) {
   return (
     <Button
       type="submit"
       className="w-full h-12 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 mt-2 transition-all duration-200"
-      disabled={loading}
+      disabled={loading || disabled}
       onPointerEnter={(e) => onHover(e.currentTarget, true)}
       onPointerLeave={(e) => onHover(e.currentTarget, false)}
     >

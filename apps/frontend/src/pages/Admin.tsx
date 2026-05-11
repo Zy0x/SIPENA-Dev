@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Shield, Lock, Eye, EyeOff, LogOut, Database, Users, 
   Key, ArrowLeft, Loader2, CheckCircle, XCircle,
-  AlertTriangle, Server, HardDrive, Clock, Megaphone, UserPlus
+  AlertTriangle, Server, HardDrive, Clock, Megaphone, UserPlus, TimerReset
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -26,6 +26,7 @@ import { AdminNotificationsPanel } from "@/components/admin/AdminNotificationsPa
 import { MaintenanceAlertPanel } from "@/components/admin/MaintenanceAlertPanel";
 import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
 import { TeamManagementPanel } from "@/components/admin/TeamManagementPanel";
+import { AuthLockoutResetRequestsManager } from "@/components/admin/AuthLockoutResetRequestsManager";
 
 // Admin session storage keys - must match Auth.tsx
 const ADMIN_SESSION_TOKEN_KEY = "admin_session_token";
@@ -337,7 +338,7 @@ const Admin = () => {
       {/* Main content */}
       <main className="container px-4 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 lg:w-auto lg:inline-flex">
             <TabsTrigger value="overview" className="gap-2">
               <Database className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -361,6 +362,10 @@ const Admin = () => {
             <TabsTrigger value="deletion" className="gap-2">
               <AlertTriangle className="w-4 h-4" />
               <span className="hidden sm:inline">Penghapusan</span>
+            </TabsTrigger>
+            <TabsTrigger value="auth-reset" className="gap-2">
+              <TimerReset className="w-4 h-4" />
+              <span className="hidden sm:inline">Auth Reset</span>
             </TabsTrigger>
             <TabsTrigger value="credentials" className="gap-2">
               <Key className="w-4 h-4" />
@@ -418,6 +423,12 @@ const Admin = () => {
           <TabsContent value="deletion" className="space-y-6">
             <h2 className="text-2xl font-bold">Permintaan Penghapusan Akun</h2>
             <DeletionRequestsManager adminPassword={getBackendPassword()} />
+          </TabsContent>
+
+          {/* Auth Lockout Reset Requests Tab */}
+          <TabsContent value="auth-reset" className="space-y-6">
+            <h2 className="text-2xl font-bold">Reset Waiting Time Login</h2>
+            <AuthLockoutResetRequestsManager adminPassword={getBackendPassword()} />
           </TabsContent>
 
           {/* Credentials Tab */}
