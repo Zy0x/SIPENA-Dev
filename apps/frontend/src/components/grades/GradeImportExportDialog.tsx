@@ -2142,6 +2142,10 @@ function aiConfidenceLabel(confidence: number): string {
   return "Perlu dicek";
 }
 
+function isGenericAiFallbackNote(note: string): boolean {
+  return /AI (tidak tersedia|belum bisa membuat saran|tidak menemukan saran|tidak valid)/i.test(note);
+}
+
 function aiSuggestionKey(suggestion: SmartImportAssistSuggestion): string {
   return [
     suggestion.type,
@@ -2178,6 +2182,7 @@ function AiSuggestionPanel({
   const tableById = new Map(buildCandidateTables(analysis).map((table) => [table.id, table]));
   const suggestions = (aiState.response?.suggestions || []).filter((suggestion) => !dismissed.has(aiSuggestionKey(suggestion)));
   const notes = aiState.response?.summary.notes || [];
+  const visibleNotes = suggestions.length ? notes : notes.filter((note) => !isGenericAiFallbackNote(note));
 
   const dismissSuggestion = (suggestion: SmartImportAssistSuggestion) => {
     setDismissed((current) => new Set([...current, aiSuggestionKey(suggestion)]));
@@ -2334,12 +2339,12 @@ function AiSuggestionPanel({
             </article>
           )) : (
             <p className="rounded-2xl border border-border bg-white p-3 text-xs leading-5 text-muted-foreground dark:bg-slate-950">
-              AI tidak menemukan saran yang cukup aman. Lanjutkan dengan pemeriksaan manual.
+              AI belum bisa membuat saran otomatis untuk file ini. Lanjutkan dengan pemeriksaan manual.
             </p>
           )}
-          {notes.length ? (
+          {visibleNotes.length ? (
             <div className="rounded-2xl border border-blue-100 bg-white p-3 text-xs leading-5 text-muted-foreground dark:border-blue-900/50 dark:bg-slate-950">
-              {notes.map((note, index) => <p key={`${note}-${index}`}>{note}</p>)}
+              {visibleNotes.map((note, index) => <p key={`${note}-${index}`}>{note}</p>)}
             </div>
           ) : null}
         </div>

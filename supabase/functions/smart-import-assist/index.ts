@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const JSON_OBJECT_FALLBACK_MODEL = "llama-3.3-70b-versatile";
 const MAX_BODY_BYTES = 500 * 1024;
 const MAX_STUDENTS = 200;
 const MAX_CHAPTERS = 100;
@@ -71,16 +72,92 @@ interface AssistSuggestion {
   requiresConfirmation: true;
 }
 
+interface ModelAttempt {
+  model: string;
+  schemaMode: "strict" | "best_effort" | "json_object";
+}
+
 const allowedTypes = new Set<AssistType>(["student", "column", "value", "table", "structure"]);
 const allowedTargetTypes = new Set<TargetType>(["student", "assignment", "chapter", "table", "ignore", "value"]);
 const allowedRiskLevels = new Set<RiskLevel>(["low", "medium", "high"]);
 const allowedModels = new Set([
   DEFAULT_MODEL,
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-safeguard-20b",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
   "llama-3.3-70b-versatile",
   "qwen/qwen3-32b",
   "qwen-2.5-32b",
 ]);
 const blockedTextPattern = /\b(select|insert|update|delete|drop|alter|create\s+table|create\s+function|rpc|deploy|migration)\b/i;
+
+const strictStructuredOutputModels = new Set([
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b",
+]);
+const bestEffortStructuredOutputModels = new Set([
+  "openai/gpt-oss-safeguard-20b",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+]);
+const defaultModelCascade = [
+  DEFAULT_MODEL,
+  "openai/gpt-oss-20b",
+  JSON_OBJECT_FALLBACK_MODEL,
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+];
+
+const assistResponseSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    suggestions: {
+      type: "array",
+      maxItems: 30,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          type: { type: "string", enum: ["student", "column", "value", "table", "structure"] },
+          rowIndex: { type: ["number", "null"] },
+          columnIndex: { type: ["number", "null"] },
+          sourceId: { type: ["string", "null"] },
+          suggestedAction: { type: "string" },
+          targetId: { type: ["string", "null"] },
+          targetType: { type: "string", enum: ["student", "assignment", "chapter", "table", "ignore", "value"] },
+          suggestedValue: { type: ["number", "null"] },
+          confidence: { type: "number", minimum: 0, maximum: 1 },
+          reason: { type: "string" },
+          requiresConfirmation: { type: "boolean" },
+        },
+        required: [
+          "type",
+          "rowIndex",
+          "columnIndex",
+          "sourceId",
+          "suggestedAction",
+          "targetId",
+          "targetType",
+          "suggestedValue",
+          "confidence",
+          "reason",
+          "requiresConfirmation",
+        ],
+      },
+    },
+    summary: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        confidence: { type: "number", minimum: 0, maximum: 1 },
+        riskLevel: { type: "string", enum: ["low", "medium", "high"] },
+        notes: { type: "array", maxItems: 8, items: { type: "string" } },
+      },
+      required: ["confidence", "riskLevel", "notes"],
+    },
+  },
+  required: ["suggestions", "summary"],
+};
 
 function responseJson(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -337,12 +414,67 @@ function sanitizeAiResponse(value: unknown, request: NormalizedRequest): { sugge
   };
 }
 
+function hasAssistableInput(request: NormalizedRequest): boolean {
+  return request.deterministicPlan.conflicts.length > 0
+    || request.deterministicPlan.warnings.length > 0
+    || request.deterministicPlan.studentMappings.length > 0
+    || request.deterministicPlan.columnMappings.length > 0
+    || request.workbookSummary.candidateTables.length > 1;
+}
+
+function schemaModeForModel(model: string): ModelAttempt["schemaMode"] {
+  if (strictStructuredOutputModels.has(model)) return "strict";
+  if (bestEffortStructuredOutputModels.has(model)) return "best_effort";
+  return "json_object";
+}
+
+function buildModelCascade(preferredModel: string): ModelAttempt[] {
+  const models = [preferredModel, ...defaultModelCascade];
+  const uniqueModels = [...new Set(models)].filter((model) => allowedModels.has(model));
+  return uniqueModels.map((model) => ({ model, schemaMode: schemaModeForModel(model) }));
+}
+
+function responseFormatForAttempt(attempt: ModelAttempt): Record<string, unknown> {
+  if (attempt.schemaMode === "json_object") return { type: "json_object" };
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "smart_import_assist_response",
+      strict: attempt.schemaMode === "strict",
+      schema: assistResponseSchema,
+    },
+  };
+}
+
+function completionBodyForAttempt(request: NormalizedRequest, attempt: ModelAttempt): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    model: attempt.model,
+    messages: [
+      { role: "system", content: buildSystemPrompt() },
+      { role: "user", content: buildUserPrompt(request) },
+    ],
+    temperature: 0.1,
+    max_completion_tokens: 2048,
+    response_format: responseFormatForAttempt(attempt),
+  };
+
+  if (attempt.model.startsWith("openai/gpt-oss-")) {
+    body.reasoning_effort = "low";
+  }
+
+  return body;
+}
+
 function buildSystemPrompt(): string {
   return [
     "Kamu adalah asisten import nilai SIPENA.",
     "Tugasmu hanya memberi saran JSON untuk membantu guru memetakan workbook Excel ke data kelas aktif.",
     "Jangan menulis database. Jangan mengubah nilai final. Jangan membuat siswa. Jangan mengarang ID.",
     "Gunakan hanya ID yang tersedia di webContext.",
+    "Untuk saran siswa, targetId harus id siswa dari webContext.students.",
+    "Untuk saran kolom nilai, targetId harus id tugas dari webContext.assignments atau targetType ignore.",
+    "Untuk saran tabel, targetId harus id dari workbookSummary.candidateTables.",
+    "Untuk saran nilai, suggestedValue harus angka 0 sampai 100.",
     "Jika ragu, minta konfirmasi.",
     "Semua saran dengan confidence di bawah 0.90 wajib requiresConfirmation true.",
     "Kembalikan JSON valid sesuai schema tanpa markdown.",
@@ -352,7 +484,13 @@ function buildSystemPrompt(): string {
 
 function buildUserPrompt(request: NormalizedRequest): string {
   return JSON.stringify({
-    instruction: "Berikan saran hanya untuk item unresolved/ambiguous pada deterministicPlan.conflicts dan deterministicPlan.warnings. Jangan memberi saran untuk item safe kecuali ada risiko jelas.",
+    instruction: [
+      "Berikan saran praktis untuk item unresolved/ambiguous pada deterministicPlan.conflicts dan deterministicPlan.warnings.",
+      "Jika ada kandidat siswa/kolom/tabel yang masuk akal berdasarkan nama, NISN, header, atau contoh baris, berikan saran dengan confidence dan reason.",
+      "Jangan memberi saran untuk item safe kecuali ada risiko jelas.",
+      "Jika tidak cukup yakin, tetap boleh memberi saran confidence rendah dengan requiresConfirmation true, selama targetId berasal dari data yang tersedia.",
+      "Jangan mengarang ID dan jangan memberi saran yang dapat menyimpan nilai otomatis.",
+    ].join(" "),
     outputSchema: {
       suggestions: [{
         type: "student|column|value|table|structure",
@@ -430,41 +568,59 @@ serve(async (req) => {
     return fallbackResponse("AI tidak tersedia atau hasilnya tidak valid. Lanjutkan dengan pemeriksaan manual.", 200);
   }
 
-  try {
-    const aiResponse = await fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${groqApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: normalized.model,
-        messages: [
-          { role: "system", content: buildSystemPrompt() },
-          { role: "user", content: buildUserPrompt(normalized) },
-        ],
-        temperature: 0.1,
-        max_tokens: 2048,
-        response_format: { type: "json_object" },
-      }),
-    }, AI_TIMEOUT_MS);
+  const attempts = buildModelCascade(normalized.model);
+  const shouldRetryEmptySuggestions = hasAssistableInput(normalized);
 
-    if (!aiResponse.ok) {
-      console.warn(JSON.stringify({ requestId, errorType: "ai_http_error", status: aiResponse.status }));
-      return fallbackResponse("AI tidak tersedia atau hasilnya tidak valid. Lanjutkan dengan pemeriksaan manual.", 200);
+  for (const attempt of attempts) {
+    try {
+      const aiResponse = await fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${groqApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(completionBodyForAttempt(normalized, attempt)),
+      }, AI_TIMEOUT_MS);
+
+      if (!aiResponse.ok) {
+        console.warn(JSON.stringify({
+          requestId,
+          errorType: "ai_http_error",
+          status: aiResponse.status,
+          model: attempt.model,
+          schemaMode: attempt.schemaMode,
+        }));
+        continue;
+      }
+
+      const aiData = await aiResponse.json();
+      const content = String(aiData.choices?.[0]?.message?.content || "");
+      const parsed = extractJson(content);
+      const sanitized = sanitizeAiResponse(parsed, normalized);
+      if (sanitized.suggestions.length > 0 || !shouldRetryEmptySuggestions) {
+        return responseJson(sanitized);
+      }
+
+      console.warn(JSON.stringify({
+        requestId,
+        errorType: "ai_empty_suggestions",
+        model: attempt.model,
+        schemaMode: attempt.schemaMode,
+      }));
+    } catch (error) {
+      const errorType = error instanceof Error && error.name === "AbortError"
+        ? "ai_timeout"
+        : error instanceof Error
+          ? error.message
+          : "ai_failure";
+      console.warn(JSON.stringify({
+        requestId,
+        errorType,
+        model: attempt.model,
+        schemaMode: attempt.schemaMode,
+      }));
     }
-
-    const aiData = await aiResponse.json();
-    const content = String(aiData.choices?.[0]?.message?.content || "");
-    const parsed = extractJson(content);
-    return responseJson(sanitizeAiResponse(parsed, normalized));
-  } catch (error) {
-    const errorType = error instanceof Error && error.name === "AbortError"
-      ? "ai_timeout"
-      : error instanceof Error
-        ? error.message
-        : "ai_failure";
-    console.warn(JSON.stringify({ requestId, errorType }));
-    return fallbackResponse("AI tidak tersedia atau hasilnya tidak valid. Lanjutkan dengan pemeriksaan manual.", 200);
   }
+
+  return fallbackResponse("AI belum bisa membuat saran yang cukup aman. Lanjutkan dengan pemeriksaan manual.", 200);
 });

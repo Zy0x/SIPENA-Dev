@@ -40,11 +40,15 @@ describe("smart import AI edge function security guards", () => {
     expect(source).toContain("const MAX_BODY_BYTES = 500 * 1024");
     expect(source).toContain("const MAX_STUDENTS = 200");
     expect(source).toContain("const MAX_ASSIGNMENTS = 300");
-    expect(source).toContain('const DEFAULT_MODEL = "llama-3.3-70b-versatile"');
+    expect(source).toContain('const DEFAULT_MODEL = "openai/gpt-oss-120b"');
+    expect(source).toContain('const JSON_OBJECT_FALLBACK_MODEL = "llama-3.3-70b-versatile"');
+    expect(source).toContain("buildModelCascade");
+    expect(source).toContain("responseFormatForAttempt");
     expect(source).toContain('req.method === "OPTIONS"');
     expect(source).toContain('"Content-Type": "application/json"');
     expect(source).toContain("fallbackResponse");
-    expect(source).toContain("response_format: { type: \"json_object\" }");
+    expect(source).toContain('type: "json_schema"');
+    expect(source).toContain('type: "json_object"');
     expect(source).toContain("fetchWithTimeout");
     expect(source).toContain("GROQ_API_KEY");
   });
