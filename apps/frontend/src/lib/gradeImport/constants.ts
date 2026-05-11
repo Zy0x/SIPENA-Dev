@@ -17,11 +17,16 @@ export const UPDATE_MODES = [
 export const RESERVED_COLUMN_HEADERS = [
   "no",
   "nomor",
+  "nomor induk",
+  "nomor induk siswa",
+  "nis nisn",
   "nisn",
   "nis",
   "nama",
   "nama siswa",
   "nama peserta didik",
+  "peserta didik",
+  "siswa",
   "kelas",
   "rombel",
   "gender",
@@ -31,14 +36,19 @@ export const RESERVED_COLUMN_HEADERS = [
 
 export const DERIVED_COLUMN_HEADERS = [
   "predikat",
+  "keterangan",
   "status",
   "rata rata",
+  "rerata",
   "average",
   "jumlah",
   "total",
   "nilai akhir",
+  "nilai tertinggi",
+  "nilai terendah",
   "rapor",
   "ranking",
+  "rank",
   "peringkat",
   "kkm",
 ] as const;
@@ -63,6 +73,12 @@ export const TEXTUAL_GRADE_VALUES = [
   "tuntas",
   "tidak tuntas",
   "remedial",
+  "lulus",
+  "tidak lulus",
+  "sangat baik",
+  "baik",
+  "cukup",
+  "kurang",
   "a",
   "b",
   "c",
@@ -80,6 +96,21 @@ export const EXCEL_ERROR_VALUES = [
   "#null!",
 ] as const;
 
+export const EMPTY_GRADE_VALUES = [
+  "-",
+  "–",
+  "—",
+  "n/a",
+  "na",
+  "null",
+  "kosong",
+  "belum",
+  "belum dinilai",
+  "belum ada",
+  "tdk ada",
+  "tidak ada",
+] as const;
+
 export const ROMAN_NUMERAL_VALUES: Record<string, number> = {
   i: 1,
   ii: 2,
@@ -95,4 +126,4 @@ export const ROMAN_NUMERAL_VALUES: Record<string, number> = {
   xii: 12,
 };
 
-export const MUHAMMAD_NAME_ALIASES = ["muh", "muh.", "mhd", "muhammad"] as const;
+export const MUHAMMAD_NAME_ALIASES = ["m", "muh", "muh.", "mhd", "muhammad"] as const;

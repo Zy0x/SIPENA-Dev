@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.morphe-chat]
 verify_jwt = false
 
+[functions.smart-import-assist]
+verify_jwt = true
+
 [functions.predict-grades]
 verify_jwt = false
 

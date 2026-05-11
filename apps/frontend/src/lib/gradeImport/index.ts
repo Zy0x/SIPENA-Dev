@@ -10,6 +10,8 @@ export * from "./importPlanBuilder";
 export * from "./officialTemplateReader";
 export * from "./spreadsheetPreviewBuilder";
 export * from "./studentMatcher";
+export * from "./smartImportAiClient";
+export * from "./smartImportAiTypes";
 export * from "./templateExporter";
 export * from "./textNormalizer";
 export * from "./types";

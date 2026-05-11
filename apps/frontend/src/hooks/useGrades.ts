@@ -63,7 +63,7 @@ export interface GradeBatchUpsertResult {
   changedRows: GradeBatchChangedRow[];
 }
 
-type GradeBatchRpcItem = {
+export type GradeBatchRpcItem = {
   studentId: string;
   subjectId: string;
   assignmentId: string | null;
@@ -72,6 +72,8 @@ type GradeBatchRpcItem = {
   gradeType: string;
   value: number | null;
 };
+
+const BATCH_GRADE_TYPES = new Set(["assignment", "sts", "sas"]);
 
 type RpcErrorLike = {
   code?: string;
@@ -87,53 +89,107 @@ type ImportGradesBatchRpcClient = {
   ) => Promise<{ data: Json; error: RpcErrorLike | null }>;
 };
 
-function parseNullableNumber(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
+function parseNullableNumber(value: unknown): { isValid: boolean; value: number | null } {
+  if (value === null || value === undefined || value === "") return { isValid: true, value: null };
   const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
+  if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) {
+    return { isValid: false, value: null };
+  }
+  return { isValid: true, value: numeric };
 }
 
 function parseOptionalString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function parseBatchChangedRows(value: unknown): GradeBatchChangedRow[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
-    .map((item) => ({
-      gradeId: parseOptionalString(item.gradeId) || undefined,
-      studentId: parseOptionalString(item.studentId) || "",
-      subjectId: parseOptionalString(item.subjectId) || "",
-      assignmentId: parseOptionalString(item.assignmentId),
-      academicYearId: parseOptionalString(item.academicYearId),
-      semesterId: parseOptionalString(item.semesterId),
-      gradeType: parseOptionalString(item.gradeType) || "",
-      oldValue: parseNullableNumber(item.oldValue),
-      newValue: parseNullableNumber(item.newValue),
-    }))
-    .filter((item) => item.studentId && item.subjectId && item.gradeType);
+function parseSafeCount(value: unknown): number {
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) && numeric > 0 ? Math.trunc(numeric) : 0;
 }
 
-function parseBatchUpsertResult(value: Json): GradeBatchUpsertResult {
+export function parseBatchChangedRows(value: unknown): GradeBatchChangedRow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .flatMap((item): GradeBatchChangedRow[] => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const record = item as Record<string, unknown>;
+      const studentId = parseOptionalString(record.studentId);
+      const subjectId = parseOptionalString(record.subjectId);
+      const gradeType = parseOptionalString(record.gradeType);
+      const oldValue = parseNullableNumber(record.oldValue);
+      const newValue = parseNullableNumber(record.newValue);
+
+      if (!studentId || !subjectId || !gradeType || !BATCH_GRADE_TYPES.has(gradeType)) return [];
+      if (!oldValue.isValid || !newValue.isValid) return [];
+
+      return [{
+        gradeId: parseOptionalString(record.gradeId) || undefined,
+        studentId,
+        subjectId,
+        assignmentId: parseOptionalString(record.assignmentId),
+        academicYearId: parseOptionalString(record.academicYearId),
+        semesterId: parseOptionalString(record.semesterId),
+        gradeType,
+        oldValue: oldValue.value,
+        newValue: newValue.value,
+      }];
+    });
+}
+
+export function parseBatchUpsertResult(value: Json): GradeBatchUpsertResult {
   const record = value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
   return {
-    savedCount: Number(record.savedCount || 0),
-    skippedUnchangedCount: Number(record.skippedUnchangedCount || 0),
+    savedCount: parseSafeCount(record.savedCount),
+    skippedUnchangedCount: parseSafeCount(record.skippedUnchangedCount),
     changedRows: parseBatchChangedRows(record.changedRows),
   };
 }
 
-function gradeRpcErrorMessage(error: RpcErrorLike): string {
-  if (error.code === "PGRST202" || error.message.includes("import_grades_batch")) {
+export function gradeRpcErrorMessage(error: RpcErrorLike): string {
+  const message = error.message || "";
+  const normalizedMessage = message.toLowerCase();
+  if (error.code === "PGRST202" || message.includes("import_grades_batch")) {
     return "Fungsi database import_grades_batch belum tersedia. Jalankan migration terbaru sebelum import nilai batch.";
   }
-  if (error.message.includes("duplikat") || error.message.includes("duplicate")) {
+  if (normalizedMessage.includes("duplikat") || normalizedMessage.includes("duplicate")) {
     return "Data nilai duplikat ditemukan. Perlu perbaikan database sebelum menyimpan.";
   }
-  return error.message;
+  if (error.code === "22P02" || normalizedMessage.includes("invalid input syntax for type uuid")) {
+    return "Format data import tidak valid. Periksa ulang preview sebelum menyimpan.";
+  }
+  if (error.code === "22003" || normalizedMessage.includes("rentang 0 sampai 100")) {
+    return "Ada nilai di luar rentang 0 sampai 100. Periksa item yang perlu dicek sebelum menyimpan.";
+  }
+  if (
+    error.code === "42501" ||
+    normalizedMessage.includes("tidak ditemukan") ||
+    normalizedMessage.includes("bukan milik") ||
+    normalizedMessage.includes("tidak valid")
+  ) {
+    return "Data import tidak sesuai dengan kelas, mapel, siswa, semester, atau tugas aktif. Periksa kembali pilihan import.";
+  }
+  if (normalizedMessage.includes("failed to fetch") || normalizedMessage.includes("network")) {
+    return "Koneksi ke database terputus saat menyimpan. Muat ulang data untuk memastikan status terakhir sebelum mencoba lagi.";
+  }
+  return message || "Import nilai gagal. Periksa kembali data dan coba lagi.";
+}
+
+export function mapBulkGradesToRpcItems(
+  inputs: BulkGradeInput[],
+  activeYearId?: string | null,
+  activeSemesterId?: string | null,
+): GradeBatchRpcItem[] {
+  return inputs.map((input) => ({
+    studentId: input.student_id,
+    subjectId: input.subject_id,
+    assignmentId: input.assignment_id || null,
+    academicYearId: input.academic_year_id || activeYearId || null,
+    semesterId: input.semester_id || activeSemesterId || null,
+    gradeType: input.grade_type,
+    value: input.value,
+  }));
 }
 
 /**
@@ -441,15 +497,7 @@ export function useGrades(
       if (!user) throw new Error("Pengguna tidak terautentikasi. Silakan login kembali.");
       if (inputs.length === 0) return { savedCount: 0, skippedUnchangedCount: 0, changedRows: [] };
 
-      const rpcItems: GradeBatchRpcItem[] = inputs.map((input) => ({
-        studentId: input.student_id,
-        subjectId: input.subject_id,
-        assignmentId: input.assignment_id || null,
-        academicYearId: input.academic_year_id || activeYearId || null,
-        semesterId: input.semester_id || activeSemesterId || null,
-        gradeType: input.grade_type,
-        value: input.value,
-      }));
+      const rpcItems = mapBulkGradesToRpcItems(inputs, activeYearId, activeSemesterId);
 
       const rpcClient = supabase as unknown as ImportGradesBatchRpcClient;
       const { data, error } = await rpcClient.rpc("import_grades_batch", { p_items: rpcItems });

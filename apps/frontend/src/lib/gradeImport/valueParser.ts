@@ -1,4 +1,4 @@
-import { EXCEL_ERROR_VALUES, TEXTUAL_GRADE_VALUES } from "./constants";
+import { EMPTY_GRADE_VALUES, EXCEL_ERROR_VALUES, TEXTUAL_GRADE_VALUES } from "./constants";
 import type { GradeValueParseResult, ImportConflict, ImportWarning } from "./types";
 import { normalizeText, normalizeWhitespace } from "./textNormalizer";
 
@@ -44,8 +44,15 @@ export function parseGradeValue(value: unknown): GradeValueParseResult {
   const normalized = normalizeText(rawString);
 
   if (!visible) return emptyResult(value);
+  if (EMPTY_GRADE_VALUES.includes(visible.toLowerCase() as typeof EMPTY_GRADE_VALUES[number])
+    || EMPTY_GRADE_VALUES.includes(normalized as typeof EMPTY_GRADE_VALUES[number])
+  ) {
+    return emptyResult(value);
+  }
 
-  if (EXCEL_ERROR_VALUES.includes(normalized as typeof EXCEL_ERROR_VALUES[number])) {
+  if (EXCEL_ERROR_VALUES.includes(visible.toLowerCase() as typeof EXCEL_ERROR_VALUES[number])
+    || EXCEL_ERROR_VALUES.includes(normalized as typeof EXCEL_ERROR_VALUES[number])
+  ) {
     return invalidResult(value, normalized, "Cell berisi error Excel dan tidak bisa diimport.");
   }
 

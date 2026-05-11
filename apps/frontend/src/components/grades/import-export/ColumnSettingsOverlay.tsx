@@ -312,7 +312,7 @@ export function ColumnSettingsOverlay({
               <TargetQuickButton
                 active={targetMode === "ignore"}
                 title="Lewati"
-                description="Kolom tidak diimport"
+                description="Kolom tidak disimpan"
                 onClick={() => setTargetMode("ignore")}
               />
             </div>

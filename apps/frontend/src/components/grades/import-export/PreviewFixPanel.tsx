@@ -121,7 +121,7 @@ export function PreviewFixPanel({
   const [columnOverwriteChecked, setColumnOverwriteChecked] = useState(false);
   const [cellOverwriteChecked, setCellOverwriteChecked] = useState(false);
   const [title, description] = useMemo(() => (
-    selection ? panelCopy(selection) : ["Atur kolom dan nilai", "Klik header kolom atau cell nilai pada tabel untuk memilih apa yang akan diimport."]
+    selection ? panelCopy(selection) : ["Atur kolom dan nilai", "Klik header kolom atau cell nilai pada tabel untuk memilih apa yang akan disimpan."]
   ), [selection]);
 
   const targetCell = selection?.kind === "cell" ? selection.cell : null;

@@ -255,7 +255,7 @@ describe("gradeImport conflict simplifier", () => {
     });
 
     expect(result.needsConfirmationCount).toBe(1);
-    expect(result.headline).toBe("Hampir siap diimport");
+    expect(result.headline).toBe("Hampir siap import");
   });
 
   it("groups task without BAB across many BAB as manual required", () => {
@@ -333,6 +333,6 @@ describe("gradeImport conflict simplifier", () => {
 
     expect(result.blockingCount).toBe(0);
     expect(result.isReadyForPreview).toBe(true);
-    expect(result.headline).toBe("Siap diimport");
+    expect(result.headline).toBe("Siap import");
   });
 });

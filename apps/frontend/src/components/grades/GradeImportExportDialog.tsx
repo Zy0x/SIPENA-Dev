@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Archive,
   ArrowRight,
-  Bot,
   CheckCircle2,
   Clock,
   Download,
@@ -29,13 +28,16 @@ import {
   buildExecutableImportOperations,
   buildImportPlan,
   buildSpreadsheetPreviewModel,
+  createSmartImportAssistFallback,
   defaultCellImportSetting,
   defaultColumnImportSetting,
   emptyImportSelectionState,
   getSimplifiedConflictSourceId,
   nowSelectionTimestamp,
   readWorkbookFile,
+  requestSmartImportAssist,
   rowHasImportableValue,
+  sanitizeSmartImportAssistResponse,
   simplifyImportConflicts,
   type CellValueMode,
   type ColumnMapping,
@@ -52,6 +54,9 @@ import {
   type ImportSelectionState,
   type ImportSourceType,
   type ImportWarning,
+  type SmartImportAssistRequest,
+  type SmartImportAssistResponse,
+  type SmartImportAssistSuggestion,
   type SpreadsheetPreviewCell,
   type SpreadsheetPreviewColumn,
   type SpreadsheetPreviewModel,
@@ -64,7 +69,6 @@ import { cn } from "@/lib/utils";
 import { ExportOptionCard } from "./import-export/ExportOptionCard";
 import type { ColumnTargetDraft } from "./import-export/ColumnSettingsOverlay";
 import { ImportDropzone } from "./import-export/ImportDropzone";
-import { ImportModeCard } from "./import-export/ImportModeCard";
 import { ImportStepper } from "./import-export/ImportStepper";
 import { ImportSummaryPanel } from "./import-export/ImportSummaryPanel";
 import { ManualChoiceCard } from "./import-export/ManualChoiceCard";
@@ -113,10 +117,10 @@ interface GradeImportExportDialogProps {
   importContext: ImportPlanContext;
 }
 
-type ImportMode = "official" | "smart";
 type ExportMode = "official" | "current" | "backup";
 type ImportExecutionState = "idle" | "analyzing" | "ready" | "failed" | "importing" | "success";
 type ImportHistoryActionState = "idle" | "undoing" | "redoing";
+type AiAssistState = "idle" | "loading" | "success" | "error";
 type ColumnResolutionKind = "existing_assignment" | "create_assignment" | "create_chapter_and_assignment" | "sts" | "sas" | "ignore";
 type ImportUiErrorCode =
   | "IMPORT_FILE_TOO_LARGE"
@@ -170,6 +174,19 @@ interface ImportExecutionProgress {
   total: number;
 }
 
+interface ImportFileMeta {
+  name: string;
+  size: number;
+  lastModified: number;
+}
+
+interface AiAssistPanelState {
+  status: AiAssistState;
+  response: SmartImportAssistResponse | null;
+  error: string | null;
+  cacheKey: string | null;
+}
+
 const emptyResolverState: ImportResolverState = {
   ignoredRows: [],
   unresolvedRows: [],
@@ -180,16 +197,23 @@ const emptyResolverState: ImportResolverState = {
   resolvedConflictKeys: [],
 };
 
-const importSteps = ["Upload", "Analisis", "Atur Kolom", "Preview", "Import"];
+const emptyAiAssistPanelState: AiAssistPanelState = {
+  status: "idle",
+  response: null,
+  error: null,
+  cacheKey: null,
+};
+
+const importSteps = ["Upload", "Pemeriksaan", "Perbaiki", "Preview", "Simpan"];
 const maxImportFileBytes = 20 * 1024 * 1024;
 
 const sourceLabels: Record<ImportSourceType, string> = {
-  official_exact: "Template resmi cocok",
-  official_modified: "Template resmi dimodifikasi",
-  official_damaged: "Template resmi rusak",
-  free_structured: "Excel bebas terstruktur",
-  free_unstructured: "Excel bebas belum terstruktur",
-  unsupported: "Tidak didukung",
+  official_exact: "Template SIPENA cocok",
+  official_modified: "Template SIPENA berubah, perlu dicek",
+  official_damaged: "Template SIPENA tidak lengkap, perlu pemeriksaan",
+  free_structured: "Excel bebas terdeteksi",
+  free_unstructured: "Format belum dikenali",
+  unsupported: "Format belum bisa dibaca",
 };
 
 const updateModeLabels: Record<UpdateMode, string> = {
@@ -261,7 +285,7 @@ const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message:
 const importNoticeMessages: Record<string, { title: string; message: string }> = {
   IMPORT_PLAN_BLOCKED: {
     title: "Import belum bisa dilanjutkan",
-    message: "Masih ada pilihan yang perlu diselesaikan. Buka bagian Atur Kolom, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
+    message: "Masih ada pilihan yang perlu diselesaikan. Buka langkah Perbaiki, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
   },
   IMPORT_NO_GRADE_COLUMNS: {
     title: "Kolom nilai belum ditemukan",
@@ -359,6 +383,10 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
     title: "Siswa harus dipastikan",
     message: "Baris ini memiliki nilai, tetapi siswanya belum aman dipetakan. Pilih siswa atau abaikan baris.",
   },
+  IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE: {
+    title: "Siswa belum ada di kelas",
+    message: "Baris Excel ini memiliki nilai, tetapi siswanya tidak ditemukan di kelas aktif. Pilih siswa yang benar, abaikan baris, atau tambahkan siswa dulu.",
+  },
   IMPORT_COLUMN_NOT_SAFE_FOR_VALUE: {
     title: "Kolom nilai harus dipastikan",
     message: "Kolom ini memiliki nilai, tetapi targetnya belum aman. Pilih tugas, STS, SAS, atau abaikan kolom.",
@@ -395,8 +423,8 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
     message: "SIPENA akan tetap memvalidasi isinya terhadap data web sebelum import.",
   },
   IMPORT_NO_FREE_EXCEL_REGION: {
-    title: "Area nilai belum ditemukan",
-    message: "SIPENA belum menemukan tabel nilai yang jelas di workbook. Pastikan ada kolom Nama/NISN dan kolom nilai.",
+    title: "Tabel nilai belum ditemukan",
+    message: "SIPENA belum menemukan tabel nilai yang jelas di file. Pastikan ada kolom Nama/NISN dan kolom nilai.",
   },
   IMPORT_REGION_SELECTION_REQUIRED: {
     title: "Pilih tabel nilai dulu",
@@ -413,8 +441,8 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
     message: "Ada nilai berupa teks seperti Tuntas, Remedial, atau huruf. Ubah menjadi angka 0 sampai 100 sebelum import.",
   },
   GRADE_VALUE_TEXTUAL_BLOCKED: {
-    title: "Nilai teks tidak bisa diimport",
-    message: "Nilai berupa teks tidak diimport otomatis. Ubah menjadi angka 0 sampai 100.",
+    title: "Nilai teks belum bisa disimpan",
+    message: "Nilai berupa teks tidak disimpan otomatis. Ubah menjadi angka 0 sampai 100.",
   },
   GRADE_VALUE_FRACTION_SCALED: {
     title: "Nilai pecahan perlu dicek",
@@ -595,6 +623,152 @@ function sampleStudentLabels(region: FreeExcelRegionAnalysis): string[] {
     .filter(Boolean);
 }
 
+function selectedFreeExcelRegion(analysis: ImportPlanInputAnalysis | null): FreeExcelRegionAnalysis | null {
+  if (!isFreeExcelAnalysis(analysis)) return null;
+  return analysis.regions.find((item) => item.id === analysis.selectedRegionId) || analysis.bestRegion || analysis.regions[0] || null;
+}
+
+function buildCandidateTables(analysis: ImportPlanInputAnalysis | null) {
+  if (!isFreeExcelAnalysis(analysis)) return [];
+  return analysis.regions.slice(0, 10).map((region) => ({
+    id: region.id,
+    sheetName: region.sheetName,
+    headerRowIndex: region.headerRowIndex,
+    dataStartRowIndex: region.dataStartRowIndex,
+    dataEndRowIndex: region.dataEndRowIndex,
+    matchedStudentCount: region.matchedStudentCount,
+    gradeColumnCount: region.gradeColumns.length,
+    sampleStudents: sampleStudentLabels(region),
+    headers: region.gradeColumns.map((column) => column.rawHeader).filter(Boolean).slice(0, 100),
+  }));
+}
+
+function buildWorkbookSummaryForAi(
+  analysis: ImportPlanInputAnalysis,
+  plan: ImportPlan,
+  fileMeta: ImportFileMeta | null,
+) {
+  const selectedRegion = selectedFreeExcelRegion(analysis);
+  const workbook = analysis.workbook;
+  const sampleRows = selectedRegion
+    ? selectedRegion.addressedDataRows.slice(0, 25).map((row) => ({
+        rowIndex: row.originalRowIndex,
+        values: row.values.slice(0, 100),
+      }))
+    : "inputSheet" in analysis && analysis.inputSheet
+      ? analysis.inputSheet.addressedRows.slice(0, 25).map((row) => ({
+          rowIndex: row.originalRowIndex,
+          values: row.values.slice(0, 100),
+        }))
+      : [];
+
+  return {
+    fileName: fileMeta?.name || workbook.fileName,
+    sheets: workbook.sheets.map((sheet) => ({
+      name: sheet.name,
+      rowCount: sheet.rowCount,
+      columnCount: sheet.columnCount,
+    })),
+    candidateTables: buildCandidateTables(analysis),
+    headers: plan.columnMappings.slice(0, 100).map((mapping) => ({
+      columnIndex: mapping.columnIndex,
+      rawHeader: mapping.rawHeader,
+    })),
+    sampleRows,
+  };
+}
+
+function buildDeterministicPlanForAi(plan: ImportPlan) {
+  return {
+    studentMappings: plan.studentMappings.map((mapping) => ({
+      rowIndex: mapping.rowIndex,
+      excelName: mapping.excelName,
+      excelNisn: mapping.excelNisn,
+      studentId: mapping.studentId,
+      webName: mapping.webName,
+      webNisn: mapping.webNisn,
+      status: mapping.status,
+      confidence: mapping.confidence,
+      matchedBy: mapping.matchedBy,
+      warnings: mapping.warnings.map((item) => ({ code: item.code, message: item.message })),
+      conflicts: mapping.conflicts.map((item) => ({ code: item.code, message: item.message })),
+    })),
+    columnMappings: plan.columnMappings.map((mapping) => ({
+      columnIndex: mapping.columnIndex,
+      rawHeader: mapping.rawHeader,
+      status: mapping.status,
+      confidence: mapping.confidence,
+      target: mapping.target,
+      headerType: mapping.parsedHeader.headerType,
+      warnings: mapping.warnings.map((item) => ({ code: item.code, message: item.message })),
+      conflicts: mapping.conflicts.map((item) => ({ code: item.code, message: item.message })),
+    })),
+    conflicts: plan.conflicts.map((conflict) => ({
+      code: conflict.code,
+      type: conflict.type,
+      severity: conflict.severity,
+      message: conflict.message,
+      rowIndex: conflict.rowIndex,
+      columnIndex: conflict.columnIndex,
+      options: conflict.options,
+    })),
+    warnings: plan.warnings.map((warning) => ({
+      code: warning.code,
+      severity: warning.severity,
+      message: warning.message,
+      rowIndex: warning.rowIndex,
+      columnIndex: warning.columnIndex,
+    })),
+  };
+}
+
+function buildSmartImportAssistRequest(
+  analysis: ImportPlanInputAnalysis,
+  plan: ImportPlan,
+  context: ImportPlanContext,
+  fileMeta: ImportFileMeta | null,
+): SmartImportAssistRequest {
+  return {
+    mode: "grade_import_assist",
+    workbookSummary: buildWorkbookSummaryForAi(analysis, plan, fileMeta),
+    webContext: {
+      students: context.students.map((student) => ({
+        id: student.id,
+        name: student.name,
+        nisn: student.nisn || undefined,
+      })),
+      chapters: context.chapters.map((chapter) => ({
+        id: chapter.id,
+        name: chapter.name,
+      })),
+      assignments: context.assignments.map((assignment) => ({
+        id: assignment.id,
+        chapter_id: assignment.chapter_id,
+        name: assignment.name,
+      })),
+    },
+    deterministicPlan: buildDeterministicPlanForAi(plan),
+  };
+}
+
+function smartImportAssistCacheKey(
+  fileMeta: ImportFileMeta | null,
+  plan: ImportPlan | null,
+  analysis: ImportPlanInputAnalysis | null,
+): string | null {
+  if (!plan) return null;
+  const filePart = fileMeta ? `${fileMeta.name}:${fileMeta.size}:${fileMeta.lastModified}` : "unknown-file";
+  const sourcePart = `${plan.sourceType}:${isFreeExcelAnalysis(analysis) ? analysis.selectedRegionId || analysis.bestRegion?.id || "no-region" : "official"}`;
+  const summaryPart = [
+    plan.summary.conflictCount || plan.conflicts.length,
+    plan.summary.needsConfirmation,
+    plan.summary.blockedOperations,
+    plan.summary.readyImportCount || 0,
+    plan.summary.skippedValueCount || 0,
+  ].join(":");
+  return `${filePart}|${sourcePart}|${summaryPart}`;
+}
+
 function selectedRegionLabel(analysis: FreeExcelAnalysis): string | null {
   if (!analysis.selectedRegionId) return null;
   const region = analysis.regions.find((item) => item.id === analysis.selectedRegionId);
@@ -759,7 +933,7 @@ function applyResolverToPlan(
           severity: "blocked" as const,
           type: "student" as const,
           rowIndex: mapping.rowIndex,
-          message: "Baris siswa ditandai unresolved oleh user.",
+          message: "Baris siswa ditandai belum selesai.",
         }],
       };
     }
@@ -857,7 +1031,7 @@ function applyResolverToPlan(
         type: "student" as const,
         rowIndex: operation.rowIndex,
         columnIndex: operation.columnIndex,
-        message: "Baris siswa ditandai unresolved oleh user.",
+        message: "Baris siswa ditandai belum selesai.",
       }];
     }
 
@@ -960,13 +1134,13 @@ function RegionSelectionPanel({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge tone="warning">Perlu pilih tabel</StatusBadge>
-            <StatusBadge tone="safe">{analysis.regions.length} tabel terdeteksi</StatusBadge>
+            <StatusBadge tone="safe">{analysis.regions.length} tabel nilai</StatusBadge>
           </div>
           <h3 className="mt-3 text-sm font-semibold text-slate-950 dark:text-slate-50">
-            Pilih tabel nilai yang akan diimport
+            Kami menemukan beberapa tabel nilai
           </h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            SIPENA menemukan lebih dari satu tabel nilai valid. Tabel terbaik diberi tanda, tetapi import tidak dilanjutkan sampai Anda memilih tabel yang benar.
+            Pilih tabel yang ingin dipakai. Tabel paling mungkin diberi tanda, tetapi nilai belum akan disimpan sebelum Anda memilih.
           </p>
         </div>
       </div>
@@ -992,22 +1166,19 @@ function RegionSelectionPanel({
                     <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={region.sheetName}>
                       {region.sheetName}
                     </p>
-                    {best ? <StatusBadge tone="safe">Rekomendasi</StatusBadge> : null}
+                    {best ? <StatusBadge tone="safe">Paling mungkin</StatusBadge> : <StatusBadge tone="warning">Perlu dicek</StatusBadge>}
                     {selected ? <StatusBadge tone="success">Dipilih</StatusBadge> : null}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Header baris {region.headerRowIndex} - data baris {region.dataStartRowIndex}-{region.dataEndRowIndex}
+                    Header baris {region.headerRowIndex}
                   </p>
-                </div>
-                <div className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                  Skor {region.score}
                 </div>
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-900/70">
-                  <p className="text-muted-foreground">Data siswa</p>
-                  <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">{region.addressedDataRows.length}</p>
+                  <p className="text-muted-foreground">Siswa cocok</p>
+                  <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">{region.matchedStudentCount}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-2 dark:bg-slate-900/70">
                   <p className="text-muted-foreground">Kolom nilai</p>
@@ -1111,6 +1282,67 @@ function AnalysisStep({
   );
 }
 
+function ImportStartPanel({
+  fileName,
+  canDownloadOfficialTemplate,
+  isDownloadingTemplate,
+  onDownloadOfficialTemplate,
+  onFileSelected,
+  downloadReason,
+}: {
+  fileName?: string | null;
+  canDownloadOfficialTemplate: boolean;
+  isDownloadingTemplate: boolean;
+  onDownloadOfficialTemplate?: () => void | Promise<void>;
+  onFileSelected: (file: File) => void;
+  downloadReason?: string | null;
+}) {
+  const downloadDisabled = !canDownloadOfficialTemplate || !onDownloadOfficialTemplate || isDownloadingTemplate;
+  return (
+    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)]">
+      <section className="rounded-[24px] border border-emerald-200 bg-emerald-50/55 p-4 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/20">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm ring-1 ring-emerald-100 dark:bg-slate-950 dark:ring-emerald-900/70">
+          <FileSpreadsheet className="h-6 w-6" />
+        </div>
+        <div className="mt-4 space-y-2">
+          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">Template Resmi</h3>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Paling aman karena sudah sesuai kelas, mapel, semester, dan tahun ajaran aktif.
+          </p>
+        </div>
+        <Button
+          type="button"
+          className="mt-4 min-h-11 w-full rounded-full"
+          disabled={downloadDisabled}
+          aria-describedby={downloadReason ? "sipena-template-download-reason" : undefined}
+          onClick={onDownloadOfficialTemplate}
+        >
+          {isDownloadingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          {isDownloadingTemplate ? "Menyiapkan template..." : "Download Template Resmi"}
+        </Button>
+        {downloadReason ? (
+          <p id="sipena-template-download-reason" className="mt-3 text-xs leading-5 text-muted-foreground">
+            {downloadReason}
+          </p>
+        ) : null}
+      </section>
+
+      <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+        <div className="mb-3 space-y-2">
+          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">Upload Excel</h3>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Bisa memakai template SIPENA, file Excel dari sumber lain, atau CSV.
+          </p>
+        </div>
+        <ImportDropzone fileName={fileName} onFileSelected={onFileSelected} />
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+          Format file: .xlsx, .xls, atau .csv. Ukuran maksimal 20 MB.
+        </p>
+      </section>
+    </div>
+  );
+}
+
 function ImportGuardrailPanel({
   readyCount,
   skippedExistingCount,
@@ -1127,22 +1359,22 @@ function ImportGuardrailPanel({
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone="success">SmartImport terpadu</StatusBadge>
+            <StatusBadge tone="success">Pemeriksaan otomatis</StatusBadge>
             <StatusBadge tone="safe">Nilai lama tidak ditimpa otomatis</StatusBadge>
             <StatusBadge tone="warning">Aksi berisiko butuh konfirmasi</StatusBadge>
           </div>
           <h3 className="mt-3 text-sm font-semibold">
-            Satu alur dengan guardrail kontekstual
+            Satu alur pemeriksaan aman
           </h3>
           <p className="mt-1 max-w-3xl text-xs leading-5 opacity-85">
-            Default-nya hanya mengisi nilai kosong. Overwrite, buat tugas/BAB, skip baris bernilai, fuzzy student, dan nilai saran tetap tersedia tepat di item yang bermasalah, tetapi harus dikonfirmasi dulu.
+            Default-nya hanya mengisi nilai kosong. Nilai lama, BAB/tugas baru, baris siswa yang belum pasti, dan nilai saran harus dicek dulu sebelum disimpan.
           </p>
         </div>
       </div>
       <div className="mt-3 grid gap-2 text-xs sm:grid-cols-4">
         <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
           <b>{readyCount}</b>
-          <span className="ml-1">aman diimport</span>
+          <span className="ml-1">siap import</span>
         </div>
         <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
           <b>{skippedExistingCount}</b>
@@ -1212,7 +1444,7 @@ function ColumnMappingCard({ mapping }: { mapping: ColumnMapping }) {
 
 function MappingStep({ plan }: { plan: ImportPlan | null }) {
   if (!plan) {
-    return <EmptyPanel title="Pemetaan belum tersedia" description="Preview akan menampilkan pemetaan siswa dan kolom setelah file selesai dianalisis." />;
+    return <EmptyPanel title="Pemeriksaan belum tersedia" description="Preview akan menampilkan hasil cocok siswa dan target kolom setelah file selesai diperiksa." />;
   }
 
   return (
@@ -1220,11 +1452,11 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-blue-600" />
-          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Mapping Siswa</h3>
+          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Cocokkan Siswa</h3>
         </div>
         <div className="grid gap-3 md:hidden">
           {plan.studentMappings.length ? plan.studentMappings.slice(0, 24).map((mapping) => <StudentMappingCard key={mapping.rowIndex} mapping={mapping} />) : (
-            <EmptyPanel title="Belum ada siswa" description="Workbook tidak memuat baris siswa yang bisa dipetakan. Pastikan ada kolom Nama Siswa atau NISN." />
+            <EmptyPanel title="Belum ada siswa" description="File tidak memuat baris siswa yang bisa dicocokkan. Pastikan ada kolom Nama Siswa atau NISN." />
           )}
         </div>
         <div className="hidden overflow-x-auto rounded-[24px] border border-border bg-white dark:bg-slate-950 md:block">
@@ -1256,13 +1488,13 @@ function MappingStep({ plan }: { plan: ImportPlan | null }) {
       <section className="space-y-3">
         <div className="flex items-center gap-2">
           <MapPinned className="h-4 w-4 text-violet-600" />
-          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Mapping Kolom/BAB/Tugas</h3>
+          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Target Kolom/BAB/Tugas</h3>
         </div>
         <div className="grid gap-3 md:hidden">
           {plan.columnMappings.filter((mapping) => !mapping.parsedHeader.reserved && !mapping.parsedHeader.derived).length ? plan.columnMappings.filter((mapping) => !mapping.parsedHeader.reserved && !mapping.parsedHeader.derived).map((mapping) => (
             <ColumnMappingCard key={mapping.columnIndex} mapping={mapping} />
           )) : (
-            <EmptyPanel title="Tidak ada kolom nilai" description="Tambahkan kolom seperti BAB 1 - Tugas 1, STS, atau SAS agar import dapat dipetakan." />
+            <EmptyPanel title="Tidak ada kolom nilai" description="Tambahkan kolom seperti BAB 1 - Tugas 1, STS, atau SAS agar nilai bisa diarahkan ke target yang benar." />
           )}
         </div>
         <div className="hidden overflow-x-auto rounded-[24px] border border-border bg-white dark:bg-slate-950 md:block">
@@ -1320,6 +1552,7 @@ interface ConflictResolutionActions {
   onApproveSipenaSuggestions: () => void;
   onResetAllChoices: () => void;
   onUpdateModeChange: (mode: UpdateMode) => void;
+  onSelectRegion: (regionId: string) => void;
   onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
   onSetColumnHeader: (column: SpreadsheetPreviewColumn, header: string) => void;
   onSetColumnTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
@@ -1329,6 +1562,7 @@ interface ConflictResolutionActions {
   onSetCellInclude: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, include: boolean) => void;
   onSetCellValueMode: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, mode: CellValueMode, overwriteConfirmed?: boolean) => void;
   onAcceptSuggestedValue: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => void;
+  onUseSuggestedValue: (rowIndex: number, columnIndex: number, value: number) => void;
   onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
 }
 
@@ -1902,6 +2136,218 @@ function previewCellPosition(cell: SpreadsheetPreviewCell): { rowIndex: number; 
   return { rowIndex, columnIndex };
 }
 
+function aiConfidenceLabel(confidence: number): string {
+  if (confidence >= 0.9) return "Sangat yakin";
+  if (confidence >= 0.75) return "Cukup yakin";
+  return "Perlu dicek";
+}
+
+function aiSuggestionKey(suggestion: SmartImportAssistSuggestion): string {
+  return [
+    suggestion.type,
+    suggestion.rowIndex ?? "",
+    suggestion.columnIndex ?? "",
+    suggestion.targetType,
+    suggestion.targetId ?? "",
+    suggestion.suggestedValue ?? "",
+    suggestion.suggestedAction,
+  ].join("|");
+}
+
+function AiSuggestionPanel({
+  aiState,
+  canRequest,
+  onRequest,
+  plan,
+  analysis,
+  context,
+  actions,
+}: {
+  aiState: AiAssistPanelState;
+  canRequest: boolean;
+  onRequest: () => void;
+  plan: ImportPlan;
+  analysis: ImportPlanInputAnalysis | null;
+  context: ImportPlanContext;
+  actions: ConflictResolutionActions;
+}) {
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const chapterById = new Map(context.chapters.map((chapter) => [chapter.id, chapter]));
+  const assignmentById = new Map(context.assignments.map((assignment) => [assignment.id, assignment]));
+  const studentById = new Map(context.students.map((student) => [student.id, student]));
+  const tableById = new Map(buildCandidateTables(analysis).map((table) => [table.id, table]));
+  const suggestions = (aiState.response?.suggestions || []).filter((suggestion) => !dismissed.has(aiSuggestionKey(suggestion)));
+  const notes = aiState.response?.summary.notes || [];
+
+  const dismissSuggestion = (suggestion: SmartImportAssistSuggestion) => {
+    setDismissed((current) => new Set([...current, aiSuggestionKey(suggestion)]));
+  };
+
+  const applySuggestion = (suggestion: SmartImportAssistSuggestion) => {
+    if (suggestion.type === "student" && suggestion.targetType === "student" && suggestion.targetId && suggestion.rowIndex) {
+      if (!studentById.has(suggestion.targetId)) return;
+      actions.onChooseStudent(suggestion.rowIndex, suggestion.targetId);
+      dismissSuggestion(suggestion);
+      return;
+    }
+
+    if ((suggestion.type === "column" || suggestion.type === "structure") && suggestion.columnIndex) {
+      if (suggestion.targetType === "assignment" && suggestion.targetId && assignmentById.has(suggestion.targetId)) {
+        actions.onUseExistingAssignment(suggestion.columnIndex, suggestion.targetId);
+        dismissSuggestion(suggestion);
+        return;
+      }
+      if (suggestion.targetType === "chapter" && suggestion.targetId && chapterById.has(suggestion.targetId)) {
+        const mapping = plan.columnMappings.find((item) => item.columnIndex === suggestion.columnIndex);
+        const assignmentName = mapping?.target?.assignmentName || mapping?.target?.sourceAssignmentName || mapping?.rawHeader || "Tugas";
+        actions.onConfirmCreateAssignment(suggestion.columnIndex, suggestion.targetId, assignmentName);
+        dismissSuggestion(suggestion);
+        return;
+      }
+      if (suggestion.targetType === "ignore") {
+        actions.onIgnoreColumn(suggestion.columnIndex);
+        dismissSuggestion(suggestion);
+      }
+      return;
+    }
+
+    if (suggestion.type === "table" && suggestion.targetType === "table" && suggestion.targetId && tableById.has(suggestion.targetId)) {
+      actions.onSelectRegion(suggestion.targetId);
+      dismissSuggestion(suggestion);
+      return;
+    }
+
+    if (suggestion.type === "value" && suggestion.targetType === "value" && suggestion.rowIndex && suggestion.columnIndex && typeof suggestion.suggestedValue === "number") {
+      actions.onUseSuggestedValue(suggestion.rowIndex, suggestion.columnIndex, suggestion.suggestedValue);
+      dismissSuggestion(suggestion);
+      return;
+    }
+
+    if (suggestion.type === "value" && suggestion.targetType === "ignore" && suggestion.rowIndex && suggestion.columnIndex) {
+      actions.onIgnoreCell(suggestion.rowIndex, suggestion.columnIndex);
+      dismissSuggestion(suggestion);
+    }
+  };
+
+  const renderTarget = (suggestion: SmartImportAssistSuggestion): string => {
+    if (suggestion.targetType === "student" && suggestion.targetId) {
+      const student = studentById.get(suggestion.targetId);
+      return student ? `${student.name}${student.nisn ? ` (${student.nisn})` : ""}` : "Siswa tidak tersedia";
+    }
+    if (suggestion.targetType === "assignment" && suggestion.targetId) {
+      const assignment = assignmentById.get(suggestion.targetId);
+      if (!assignment) return "Tugas tidak tersedia";
+      return [chapterById.get(assignment.chapter_id)?.name, assignment.name].filter(Boolean).join(" - ");
+    }
+    if (suggestion.targetType === "chapter" && suggestion.targetId) {
+      return chapterById.get(suggestion.targetId)?.name || "BAB tidak tersedia";
+    }
+    if (suggestion.targetType === "table" && suggestion.targetId) {
+      const table = tableById.get(suggestion.targetId);
+      return table ? `${table.sheetName}, header baris ${table.headerRowIndex}` : "Tabel tidak tersedia";
+    }
+    if (suggestion.targetType === "value" && typeof suggestion.suggestedValue === "number") {
+      const operation = plan.gradeOperations.find((item) => item.rowIndex === suggestion.rowIndex && item.columnIndex === suggestion.columnIndex);
+      return `Nilai ${operation?.rawValue ?? "-"} -> ${suggestion.suggestedValue}`;
+    }
+    if (suggestion.targetType === "ignore") return "Abaikan";
+    return "Perlu dicek manual";
+  };
+
+  const actionLabel = (suggestion: SmartImportAssistSuggestion): string => {
+    if (suggestion.type === "student") return "Gunakan siswa ini";
+    if (suggestion.type === "table") return "Gunakan tabel ini";
+    if (suggestion.type === "value" && suggestion.targetType === "value") return "Gunakan nilai saran";
+    if (suggestion.type === "value" && suggestion.targetType === "ignore") return "Abaikan sel";
+    if (suggestion.targetType === "ignore") return "Abaikan kolom";
+    if (suggestion.type === "structure") return "Buat tugas baru";
+    return "Gunakan target ini";
+  };
+
+  return (
+    <section className="rounded-[24px] border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+      <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-blue-700 dark:text-blue-200">
+            <Sparkles className="h-4 w-4 shrink-0" />
+            <h3 className="text-sm font-semibold">Saran AI</h3>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            AI menyarankan pilihan untuk membantu pemeriksaan. Saran ini tetap perlu dicek dan tidak akan menyimpan nilai.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={!canRequest || aiState.status === "loading"}
+          onClick={onRequest}
+          className="min-h-11 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {aiState.status === "loading" ? "AI sedang memeriksa..." : "Minta Saran AI"}
+        </button>
+      </div>
+
+      {aiState.status === "idle" ? (
+        <p className="mt-3 rounded-2xl border border-blue-100 bg-white p-3 text-xs leading-5 text-muted-foreground dark:border-blue-900/50 dark:bg-slate-950">
+          Klik tombol untuk meminta bantuan AI setelah hasil pemeriksaan otomatis tersedia.
+        </p>
+      ) : null}
+
+      {aiState.status === "loading" ? (
+        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-blue-100 bg-white p-3 text-sm text-blue-700 dark:border-blue-900/50 dark:bg-slate-950 dark:text-blue-100">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          AI sedang membantu memeriksa file...
+        </div>
+      ) : null}
+
+      {aiState.status === "error" ? (
+        <RiskAlert title="AI tidak tersedia" tone="warning">
+          AI tidak tersedia. Anda tetap bisa lanjut dengan pemeriksaan manual.
+        </RiskAlert>
+      ) : null}
+
+      {aiState.status === "success" ? (
+        <div className="mt-3 space-y-3">
+          {suggestions.length ? suggestions.map((suggestion) => (
+            <article key={aiSuggestionKey(suggestion)} className="rounded-2xl border border-border bg-white p-3 dark:bg-slate-950">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge tone={suggestion.confidence >= 0.9 ? "success" : suggestion.confidence >= 0.75 ? "warning" : "danger"}>
+                      {aiConfidenceLabel(suggestion.confidence)}
+                    </StatusBadge>
+                    <StatusBadge tone="warning">Saran ini tetap perlu dicek</StatusBadge>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{suggestion.suggestedAction}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{suggestion.reason}</p>
+                  <p className="mt-2 text-xs text-slate-700 dark:text-slate-200">
+                    <span className="font-semibold">AI menyarankan: </span>{renderTarget(suggestion)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col gap-2 sm:min-w-44">
+                  <ResolutionButton tone="safe" onClick={() => applySuggestion(suggestion)}>{actionLabel(suggestion)}</ResolutionButton>
+                  <ResolutionButton onClick={() => dismissSuggestion(suggestion)}>Abaikan saran</ResolutionButton>
+                  <ResolutionButton onClick={() => document.getElementById("sipena-smart-fix-manual")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+                    Pilih manual
+                  </ResolutionButton>
+                </div>
+              </div>
+            </article>
+          )) : (
+            <p className="rounded-2xl border border-border bg-white p-3 text-xs leading-5 text-muted-foreground dark:bg-slate-950">
+              AI tidak menemukan saran yang cukup aman. Lanjutkan dengan pemeriksaan manual.
+            </p>
+          )}
+          {notes.length ? (
+            <div className="rounded-2xl border border-blue-100 bg-white p-3 text-xs leading-5 text-muted-foreground dark:border-blue-900/50 dark:bg-slate-950">
+              {notes.map((note, index) => <p key={`${note}-${index}`}>{note}</p>)}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function SpreadsheetPreviewStep({
   plan,
   model,
@@ -1916,7 +2362,7 @@ function SpreadsheetPreviewStep({
   importContext: ImportPlanContext;
 }) {
   if (!plan || !model) {
-    return <EmptyPanel title="Atur Kolom belum tersedia" description="Preview spreadsheet akan muncul setelah file dianalisis." />;
+    return <EmptyPanel title="Perbaikan belum tersedia" description="Preview spreadsheet akan muncul setelah file dianalisis." />;
   }
 
   const approveColumn = (column: SpreadsheetPreviewColumn) => {
@@ -2036,9 +2482,9 @@ function PreviewStep({
         </RiskAlert>
       ) : null}
 
-      <RiskAlert title="Guardrail import aktif" tone="safe">
+      <RiskAlert title="Pemeriksaan import aktif" tone="safe">
         {model
-          ? `${model.summary.includedCells} nilai aman diimport. ${model.summary.skippedCells + model.summary.manualSkippedCells} nilai dilewati karena kosong, sudah ada, atau pilihan manual.`
+          ? `${model.summary.includedCells} nilai siap import. ${model.summary.skippedCells + model.summary.manualSkippedCells} nilai dilewati karena kosong, sudah ada, atau pilihan manual.`
           : "Nilai lama tidak ditimpa dan BAB/tugas baru tidak dibuat tanpa konfirmasi pada item terkait."}
       </RiskAlert>
 
@@ -2046,7 +2492,7 @@ function PreviewStep({
         <MetricCard label="BAB baru" value={plan.summary.newChapterCount || 0} tone="violet" />
         <MetricCard label="Tugas baru" value={plan.summary.newAssignmentCount || 0} tone="violet" />
         <MetricCard label="Siap import" value={plan.summary.readyImportCount || 0} tone="green" />
-        <MetricCard label="Skipped/invalid" value={(plan.summary.skippedValueCount || 0) + (plan.summary.invalidValueCount || 0)} tone="orange" />
+        <MetricCard label="Dilewati/invalid" value={(plan.summary.skippedValueCount || 0) + (plan.summary.invalidValueCount || 0)} tone="orange" />
       </div>
 
       <section className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
@@ -2386,9 +2832,9 @@ export default function GradeImportExportDialog({
 }: GradeImportExportDialogProps) {
   const { info, success, error: showError, warning: showWarning } = useEnhancedToast();
   const [tab, setTab] = useState<GradeImportExportTab>(activeTab);
-  const [importMode, setImportMode] = useState<ImportMode>("official");
   const [exportMode, setExportMode] = useState<ExportMode>("official");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileMeta, setFileMeta] = useState<ImportFileMeta | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [analysis, setAnalysis] = useState<ImportPlanInputAnalysis | null>(null);
   const [basePlan, setBasePlan] = useState<ImportPlan | null>(null);
@@ -2402,6 +2848,8 @@ export default function GradeImportExportDialog({
   const [executionProgress, setExecutionProgress] = useState<ImportExecutionProgress>({ current: 0, total: 0 });
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisErrorCode, setAnalysisErrorCode] = useState<ImportUiErrorCode | null>(null);
+  const [aiAssist, setAiAssist] = useState<AiAssistPanelState>(emptyAiAssistPanelState);
+  const [aiAssistCache, setAiAssistCache] = useState<Record<string, SmartImportAssistResponse>>({});
 
   useEffect(() => {
     if (open) setTab(activeTab);
@@ -2411,6 +2859,7 @@ export default function GradeImportExportDialog({
     if (!open) {
       setStepIndex(0);
       setFileName(null);
+      setFileMeta(null);
       setAnalysis(null);
       setBasePlan(null);
       setPlan(null);
@@ -2423,6 +2872,7 @@ export default function GradeImportExportDialog({
       setExecutionProgress({ current: 0, total: 0 });
       setAnalysisError(null);
       setAnalysisErrorCode(null);
+      setAiAssist(emptyAiAssistPanelState);
     }
   }, [open]);
 
@@ -2443,6 +2893,22 @@ export default function GradeImportExportDialog({
   const contextLabel = useMemo(() => (
     [classNameLabel, subjectName, semesterName || "Semester aktif"].filter(Boolean).join(" / ")
   ), [classNameLabel, semesterName, subjectName]);
+
+  const selectImportRegion = useCallback((regionId: string) => {
+    setAnalysis((current) => {
+      if (!isFreeExcelAnalysis(current)) return current;
+      const region = current.regions.find((item) => item.id === regionId);
+      if (!region) return current;
+      return {
+        ...current,
+        selectedRegionId: regionId,
+      };
+    });
+    setResolverState(emptyResolverState);
+    setSelectionState(emptyImportSelectionState);
+    setAiAssist(emptyAiAssistPanelState);
+    success("Tabel nilai dipilih", "Preview import diperbarui dari tabel yang Anda pilih.");
+  }, [success]);
 
   const updateResolver = useCallback((updater: (current: ImportResolverState) => ImportResolverState) => {
     setResolverState((current) => updater(current));
@@ -2703,6 +3169,7 @@ export default function GradeImportExportDialog({
       setSelectionState(emptyImportSelectionState);
     },
     onUpdateModeChange: (mode) => setUpdateMode(mode),
+    onSelectRegion: selectImportRegion,
     onSetColumnInclude: (column, include) => setSelectionState((current) => ({
       ...current,
       columnSettings: {
@@ -2851,12 +3318,33 @@ export default function GradeImportExportDialog({
         },
       }));
     },
+    onUseSuggestedValue: (rowIndex, columnIndex, value) => {
+      if (!Number.isFinite(value) || value < 0 || value > 100) return;
+      const rowId = `row-${rowIndex}`;
+      const columnId = `excel-col-${columnIndex}`;
+      const cellId = `${rowId}:${columnId}`;
+      const studentId = plan?.studentMappings.find((mapping) => mapping.rowIndex === rowIndex)?.studentId;
+      setSelectionState((current) => ({
+        ...current,
+        cellSettings: {
+          ...current.cellSettings,
+          [cellId]: {
+            ...(current.cellSettings[cellId] || defaultCellImportSetting(cellId, rowId, columnId, studentId)),
+            include: true,
+            acceptedSuggestedValue: true,
+            resolvedValue: value,
+            reason: `Pakai nilai saran AI ${value}`,
+            updatedAt: nowSelectionTimestamp(),
+          },
+        },
+      }));
+    },
     onResetCellSelection: (cell) => setSelectionState((current) => {
       const cellSettings = { ...current.cellSettings };
       delete cellSettings[cell.id];
       return { ...current, cellSettings };
     }),
-  }), [importContext.chapters, plan, updateResolver]);
+  }), [importContext.chapters, plan, selectImportRegion, updateResolver]);
 
   const hasPlan = Boolean(plan || basePlan);
   const blocked = hasBlockedConflicts(plan);
@@ -2871,6 +3359,75 @@ export default function GradeImportExportDialog({
   const executableImportPlan = useMemo(() => (
     plan ? buildExecutableImportOperations({ plan, resolverState: effectiveResolverState, selectionState: effectiveSelectionState, updateMode: effectiveUpdateMode }) : null
   ), [effectiveResolverState, effectiveSelectionState, effectiveUpdateMode, plan]);
+  const aiAssistCacheKey = useMemo(() => (
+    smartImportAssistCacheKey(fileMeta, plan, analysis)
+  ), [analysis, fileMeta, plan]);
+  const hasAiAssistableItems = Boolean(
+    plan
+    && !unsupported
+    && !regionSelectionPending
+    && (
+      (smartFixResult?.manualRequiredCount || 0) > 0
+      || (smartFixResult?.needsConfirmationCount || 0) > 0
+      || plan.conflicts.length > 0
+      || plan.warnings.some((warning) => warning.severity !== "info")
+    ),
+  );
+  const handleRequestAiAssist = useCallback(async () => {
+    if (!plan || !analysis) {
+      showWarning("Saran AI belum siap", "Upload file dan tunggu pemeriksaan otomatis selesai dulu.");
+      return;
+    }
+    if (!hasAiAssistableItems) {
+      info("Belum ada item untuk AI", "Tidak ada item ambigu atau konflik yang perlu dimintakan saran AI.");
+      return;
+    }
+    const cacheKey = aiAssistCacheKey || smartImportAssistCacheKey(fileMeta, plan, analysis);
+    if (cacheKey && aiAssistCache[cacheKey]) {
+      setAiAssist({ status: "success", response: aiAssistCache[cacheKey], error: null, cacheKey });
+      info("Saran AI ditampilkan lagi", "Saran sebelumnya dipakai dari cache file ini.");
+      return;
+    }
+
+    setAiAssist({ status: "loading", response: null, error: null, cacheKey });
+    try {
+      const request = buildSmartImportAssistRequest(analysis, plan, importContext, fileMeta);
+      const response = sanitizeSmartImportAssistResponse(
+        await requestSmartImportAssist(request),
+        request,
+      );
+      setAiAssist({ status: "success", response, error: null, cacheKey });
+      if (cacheKey) {
+        setAiAssistCache((current) => ({ ...current, [cacheKey]: response }));
+      }
+      if (response.suggestions.length === 0) {
+        info("Saran AI belum menemukan pilihan aman", "Lanjutkan dengan pemeriksaan manual.");
+      }
+    } catch (caught) {
+      const fallback = createSmartImportAssistFallback("AI tidak tersedia. Lanjutkan dengan pemeriksaan manual.");
+      setAiAssist({
+        status: "error",
+        response: fallback,
+        error: caught instanceof Error ? caught.message : "AI tidak tersedia.",
+        cacheKey,
+      });
+      showWarning("AI tidak tersedia", "Anda tetap bisa lanjut dengan pemeriksaan manual.");
+    }
+  }, [
+    aiAssistCache,
+    aiAssistCacheKey,
+    analysis,
+    fileMeta,
+    hasAiAssistableItems,
+    importContext,
+    info,
+    plan,
+    regionSelectionPending,
+    showWarning,
+    smartFixResult?.manualRequiredCount,
+    smartFixResult?.needsConfirmationCount,
+    unsupported,
+  ]);
   const canGoNext = useMemo(() => {
     if (stepIndex === 0) return hasPlan && !unsupported && !regionSelectionPending;
     if (stepIndex === 1) return hasPlan && !unsupported && !regionSelectionPending;
@@ -2903,19 +3460,8 @@ export default function GradeImportExportDialog({
   }, [onTabChange]);
 
   const handleSelectRegion = useCallback((regionId: string) => {
-    setAnalysis((current) => {
-      if (!isFreeExcelAnalysis(current)) return current;
-      const region = current.regions.find((item) => item.id === regionId);
-      if (!region) return current;
-      return {
-        ...current,
-        selectedRegionId: regionId,
-      };
-    });
-    setResolverState(emptyResolverState);
-    setSelectionState(emptyImportSelectionState);
-    success("Tabel nilai dipilih", "Preview import diperbarui dari tabel yang Anda pilih.");
-  }, [success]);
+    selectImportRegion(regionId);
+  }, [selectImportRegion]);
 
   const showPlaceholder = useCallback((title: string, description: string) => {
     info(title, description);
@@ -2923,6 +3469,7 @@ export default function GradeImportExportDialog({
 
   const handleFileSelected = useCallback(async (file: File) => {
     setFileName(file.name);
+    setFileMeta({ name: file.name, size: file.size, lastModified: file.lastModified });
     setStepIndex(0);
     setAnalysis(null);
     setBasePlan(null);
@@ -2933,6 +3480,7 @@ export default function GradeImportExportDialog({
     setExecutionSummary(null);
     setExecutionProgress({ current: 0, total: 0 });
     setHistoryActionState("idle");
+    setAiAssist(emptyAiAssistPanelState);
     setExecutionState("analyzing");
 
     try {
@@ -2977,7 +3525,6 @@ export default function GradeImportExportDialog({
       setAnalysis(nextAnalysis);
       setBasePlan(nextPlan);
       setPlan(applyResolverToPlan(nextPlan, emptyResolverState, importContext, effectiveUpdateMode));
-      setImportMode(isOfficial ? "official" : "smart");
       setStepIndex(1);
       setExecutionState("ready");
       setAnalysisErrorCode(null);
@@ -3060,22 +3607,22 @@ export default function GradeImportExportDialog({
         if (executablePlan.summary.overwriteNeedsConfirmationCount > 0) {
           setStepIndex(3);
           showWarning(
-            "Overwrite harus dikonfirmasi dulu.",
-            `Import dibatalkan karena ${executablePlan.summary.overwriteNeedsConfirmationCount} nilai lama belum dikonfirmasi untuk ditimpa.`,
+            "Nilai lama perlu dikonfirmasi dulu.",
+            `Simpan belum bisa karena ${executablePlan.summary.overwriteNeedsConfirmationCount} nilai lama belum dikonfirmasi untuk diganti.`,
           );
           return;
         }
         if (executablePlan.summary.blockedCount > 0) {
           setStepIndex(3);
           showWarning(
-            "Import dibatalkan karena masih ada item yang perlu dipilih.",
+            "Simpan belum bisa karena masih ada item yang perlu dipilih.",
             `${executablePlan.summary.blockedCount} item masih perlu dicek sebelum nilai disimpan.`,
           );
           return;
         }
         if (executablePlan.summary.executableCount === 0) {
           showWarning(
-            "Tidak ada nilai yang siap diimport.",
+            "Tidak ada nilai siap import.",
             `0 nilai akan disimpan, ${executablePlan.summary.skippedEmptyCount + executablePlan.summary.skippedExistingCount + executablePlan.summary.skippedManualCount} dilewati karena kosong/nilai lama/pilihan manual.`,
           );
           return;
@@ -3122,7 +3669,7 @@ export default function GradeImportExportDialog({
             ? `Lanjut belum bisa - perbaiki atau lewati ${spreadsheetPreview?.summary.invalidCells || 0} nilai tidak valid.`
             : "Upload file yang valid dulu untuk membuat preview import.";
         showWarning(
-          stepIndex === 2 ? "Atur Kolom belum selesai" : "Preview import belum siap",
+          stepIndex === 2 ? "Perbaikan belum selesai" : "Preview import belum siap",
           stepIndex === 2 ? smartFixMessage : "Upload file yang valid dulu untuk membuat preview import.",
         );
         return;
@@ -3200,13 +3747,32 @@ export default function GradeImportExportDialog({
     : exportMode === "current"
       ? isExportingCurrentGrades
       : isExportingBackup;
+  const templateDownloadReason = useMemo(() => {
+    if (!onDownloadOfficialTemplate) return "Download template belum tersedia dari halaman ini.";
+    if (!canDownloadOfficialTemplate) return "Lengkapi kelas, mapel, semester, dan tahun ajaran aktif sebelum download template.";
+    return null;
+  }, [canDownloadOfficialTemplate, onDownloadOfficialTemplate]);
+  const readyImportCount = executableImportPlan?.summary.executableCount ?? plan?.summary.readyImportCount ?? 0;
+  const needsCheckCount = (smartFixResult?.needsConfirmationCount || 0)
+    + (smartFixResult?.manualRequiredCount || 0)
+    + (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0);
+  const blockedItemCount = executableImportPlan?.summary.blockedCount
+    ?? plan?.conflicts.filter((item) => item.severity === "blocked").length
+    ?? 0;
+  const skippedItemCount = executableImportPlan
+    ? executableImportPlan.summary.skippedEmptyCount
+      + executableImportPlan.summary.skippedExistingCount
+      + executableImportPlan.summary.skippedManualCount
+    : plan?.summary.skippedValueCount ?? 0;
   const importReadinessMessage = useMemo(() => {
     if (tab !== "import") return "Data tidak akan ditimpa tanpa konfirmasi.";
+    if (regionSelectionPending) return "Pilih tabel nilai yang ingin dipakai.";
+    if (unsupported) return "Format file belum bisa dibaca.";
     if (stepIndex >= 2 && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) {
-      return "Overwrite harus dikonfirmasi dulu.";
+      return "Nilai lama yang akan diganti harus dikonfirmasi dulu.";
     }
     if (stepIndex >= 2 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
-      return `Import dibatalkan karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
+      return `Simpan belum bisa karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
     }
     if ((stepIndex === 2 || stepIndex === 3) && spreadsheetPreview?.summary.manualRequired) {
       return `Lanjut belum bisa - pilih target atau atur ${spreadsheetPreview.summary.manualRequired} bagian merah.`;
@@ -3221,11 +3787,11 @@ export default function GradeImportExportDialog({
       const skipped = executableImportPlan.summary.skippedEmptyCount
         + executableImportPlan.summary.skippedExistingCount
         + executableImportPlan.summary.skippedManualCount;
-      if (executableImportPlan.summary.executableCount === 0) return "Tidak ada nilai yang siap diimport.";
+      if (executableImportPlan.summary.executableCount === 0) return "Tidak ada nilai siap import.";
       return `${executableImportPlan.summary.executableCount} nilai akan disimpan, ${skipped} dilewati karena kosong/nilai lama.`;
     }
     return "Default aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
-  }, [executableImportPlan, spreadsheetPreview, stepIndex, tab]);
+  }, [executableImportPlan, regionSelectionPending, spreadsheetPreview, stepIndex, tab, unsupported]);
 
   const primaryLabel = useMemo(() => {
     if (tab === "export") {
@@ -3234,21 +3800,58 @@ export default function GradeImportExportDialog({
       if (exportMode === "current") return "Download Export Nilai";
       return "Download Backup";
     }
-    if (stepIndex === 0) return executionState === "analyzing" ? "Menganalisis..." : "Upload File Dulu";
+    if (stepIndex === 0) return executionState === "analyzing" ? "Menganalisis..." : "Upload Excel dulu";
     if (stepIndex === 4 && executionState === "success") return "Selesai";
     if (stepIndex === 4) {
       if (executionState === "importing") return "Memproses...";
-      if ((executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) return "Konfirmasi nilai yang ditimpa";
+      if ((executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) return "Konfirmasi nilai lama";
       if ((executableImportPlan?.summary.blockedCount || 0) > 0 || (spreadsheetPreview?.summary.manualRequired || 0) > 0) return "Selesaikan pilihan";
-      return "Import nilai";
+      return "Simpan nilai";
     }
     return "Lanjut";
   }, [executionState, executableImportPlan, exportActionLoading, exportMode, spreadsheetPreview, stepIndex, tab]);
+  const importPrimaryDisabledReason = useMemo(() => {
+    if (tab !== "import") return null;
+    if (executionState === "analyzing") return "File sedang diperiksa.";
+    if (executionState === "importing") return "Nilai sedang disimpan.";
+    if (regionSelectionPending) return "Pilih tabel nilai yang ingin dipakai.";
+    if (unsupported) return "Format file belum bisa dibaca.";
+    if (stepIndex > 0 && stepIndex < 4 && !canGoNext) {
+      if ((plan?.conflicts || []).some((item) => item.code.includes("CONTEXT") || item.code.includes("SEMESTER"))) {
+        return "Download template baru jika file berasal dari kelas/mapel/semester lain.";
+      }
+      if (blockedItemCount > 0 || blocked) return "Selesaikan item yang diblokir terlebih dahulu.";
+      if ((spreadsheetPreview?.summary.manualRequired || 0) > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
+      return "Periksa item yang perlu dicek terlebih dahulu.";
+    }
+    if (stepIndex === 4) {
+      if (blocked || blockedItemCount > 0) return "Selesaikan item yang diblokir terlebih dahulu.";
+      if ((spreadsheetPreview?.summary.invalidCells || 0) > 0) return "Selesaikan item yang diblokir terlebih dahulu.";
+      if ((spreadsheetPreview?.summary.manualRequired || 0) > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
+      if (readyImportCount === 0) return "Tidak ada nilai siap import.";
+    }
+    return null;
+  }, [
+    blocked,
+    blockedItemCount,
+    canGoNext,
+    executionState,
+    needsCheckCount,
+    plan?.conflicts,
+    readyImportCount,
+    regionSelectionPending,
+    spreadsheetPreview?.summary.invalidCells,
+    spreadsheetPreview?.summary.manualRequired,
+    stepIndex,
+    tab,
+    unsupported,
+  ]);
   const importPrimaryDisabled = tab === "import" && (
     executionState === "analyzing"
     || executionState === "importing"
     || (stepIndex > 0 && stepIndex < 4 && !canGoNext)
-    || (stepIndex === 4 && (blocked || (spreadsheetPreview?.summary.manualRequired || 0) > 0))
+    || (stepIndex === 4 && (blocked || (spreadsheetPreview?.summary.manualRequired || 0) > 0 || (spreadsheetPreview?.summary.invalidCells || 0) > 0))
+    || (stepIndex === 4 && readyImportCount === 0)
   );
   const exportPrimaryDisabled = tab === "export" && (
     exportActionLoading
@@ -3270,12 +3873,14 @@ export default function GradeImportExportDialog({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <DialogTitle className="text-base font-semibold tracking-normal text-slate-950 dark:text-slate-50 sm:text-lg">
-                  Export/Import Nilai SIPENA
+                  {tab === "import" ? "Import Nilai" : "Export Nilai"}
                 </DialogTitle>
-                <StatusBadge tone="safe">SmartImport terpadu</StatusBadge>
+                <StatusBadge tone="safe">Pemeriksaan otomatis</StatusBadge>
               </div>
-              <DialogDescription className="mt-1 max-w-full truncate text-sm text-muted-foreground" title={contextLabel || undefined}>
-                {contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu"}
+              <DialogDescription className="mt-1 max-w-full text-sm leading-5 text-muted-foreground" title={contextLabel || undefined}>
+                {tab === "import"
+                  ? "Upload template SIPENA atau Excel bebas. SIPENA akan membaca dan memeriksa otomatis sebelum nilai disimpan."
+                  : contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu"}
               </DialogDescription>
             </div>
           </div>
@@ -3313,32 +3918,18 @@ export default function GradeImportExportDialog({
 
                   {stepIndex === 0 ? (
                     <>
-                      <div className="grid min-w-0 gap-3 md:grid-cols-2">
-                        <ImportModeCard
-                          title="Template Resmi SIPENA"
-                          description="Gunakan template dari kelas, mapel, dan semester yang sedang aktif."
-                          details={["Saat upload tetap dicocokkan dengan data web", "Cocok untuk BAB, tugas, STS, dan SAS", "Sel kosong tidak menghapus nilai lama"]}
-                          selected={importMode === "official"}
-                          tone="official"
-                          icon={<FileSpreadsheet className="h-5 w-5" />}
-                          onClick={() => setImportMode("official")}
-                        />
-                        <ImportModeCard
-                          title="Smart Import"
-                          description="Untuk Excel bebas yang perlu dianalisis dan dipetakan dulu."
-                          details={["Data ambigu wajib dipilih", "Tidak membuat BAB/tugas tanpa persetujuan", "Tidak menyimpan otomatis setelah upload"]}
-                          selected={importMode === "smart"}
-                          tone="smart"
-                          icon={<Bot className="h-5 w-5" />}
-                          onClick={() => setImportMode("smart")}
-                        />
-                      </div>
-
-                      <ImportDropzone fileName={fileName} onFileSelected={handleFileSelected} />
+                      <ImportStartPanel
+                        fileName={fileName}
+                        canDownloadOfficialTemplate={canDownloadOfficialTemplate}
+                        isDownloadingTemplate={isDownloadingTemplate}
+                        onDownloadOfficialTemplate={onDownloadOfficialTemplate}
+                        onFileSelected={handleFileSelected}
+                        downloadReason={templateDownloadReason}
+                      />
 
                       {executionState === "analyzing" ? (
                         <RiskAlert title="File sedang dianalisis" tone="info">
-                          SIPENA membaca workbook, mendeteksi template resmi atau Smart Import, lalu membuat preview import.
+                          SIPENA membaca workbook, mendeteksi jenis file, lalu membuat preview import.
                         </RiskAlert>
                       ) : null}
 
@@ -3351,17 +3942,12 @@ export default function GradeImportExportDialog({
                       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                         {studentCount === 0 ? (
                           <RiskAlert title="Belum ada siswa" tone="warning">
-                            Tambahkan siswa pada kelas aktif sebelum import nilai agar mapping siswa bisa dibuat.
+                            Tambahkan siswa pada kelas aktif sebelum import nilai agar data siswa bisa dicocokkan.
                           </RiskAlert>
                         ) : null}
                         {chapterCount === 0 || assignmentCount === 0 ? (
                           <RiskAlert title="Belum ada BAB/tugas" tone="warning">
-                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di step Atur Kolom sebelum import.
-                          </RiskAlert>
-                        ) : null}
-                        {importMode === "smart" ? (
-                          <RiskAlert title="AI tidak tersedia" tone="info">
-                            Smart Import tahap ini memakai analyzer workbook lokal. Data ambigu tetap perlu dipilih manual.
+                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di langkah Perbaiki sebelum import.
                           </RiskAlert>
                         ) : null}
                         <RiskAlert title="Data tidak akan ditimpa tanpa konfirmasi" tone="safe">
@@ -3376,13 +3962,26 @@ export default function GradeImportExportDialog({
 
                   {stepIndex === 1 ? <AnalysisStep plan={plan} analysis={analysis} onSelectRegion={handleSelectRegion} /> : null}
                   {stepIndex === 2 ? (
-                    <SpreadsheetPreviewStep
-                      plan={plan}
-                      model={spreadsheetPreview}
-                      actions={resolverActions}
-                      selectionState={effectiveSelectionState}
-                      importContext={importContext}
-                    />
+                    <div className="space-y-4">
+                      {plan ? (
+                        <AiSuggestionPanel
+                          aiState={aiAssist}
+                          canRequest={hasAiAssistableItems}
+                          onRequest={handleRequestAiAssist}
+                          plan={plan}
+                          analysis={analysis}
+                          context={importContext}
+                          actions={resolverActions}
+                        />
+                      ) : null}
+                      <SpreadsheetPreviewStep
+                        plan={plan}
+                        model={spreadsheetPreview}
+                        actions={resolverActions}
+                        selectionState={effectiveSelectionState}
+                        importContext={importContext}
+                      />
+                    </div>
                   ) : null}
                   {stepIndex === 3 ? (
                     <PreviewStep
@@ -3415,6 +4014,10 @@ export default function GradeImportExportDialog({
                     fileName={fileName}
                     plan={plan}
                     currentStep={importSteps[stepIndex]}
+                    readyImportCount={readyImportCount}
+                    needsCheckCount={needsCheckCount}
+                    blockedCount={blockedItemCount}
+                    skippedCount={skippedItemCount}
                   />
                 )}
               </div>
@@ -3480,9 +4083,16 @@ export default function GradeImportExportDialog({
 
         <footer className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-950/95 sm:px-6">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground sm:flex">
+            <div className="min-w-0 space-y-1 text-xs text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-2">
               <ShieldCheck className="h-4 w-4 shrink-0 text-blue-600" />
               <span className="truncate" title={importReadinessMessage}>{importReadinessMessage}</span>
+              </div>
+              {importPrimaryDisabledReason ? (
+                <p id="sipena-import-disabled-reason" className="text-orange-700 dark:text-orange-300">
+                  {importPrimaryDisabledReason}
+                </p>
+              ) : null}
             </div>
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {tab === "import" && stepIndex > 0 ? (
@@ -3502,7 +4112,7 @@ export default function GradeImportExportDialog({
                   className="min-h-11 w-full rounded-full sm:min-h-10 sm:w-auto"
                   onClick={onOpenLegacyImport}
                 >
-                  Import lama
+                  Buka import lama
                 </Button>
               ) : null}
               <Button
@@ -3519,9 +4129,9 @@ export default function GradeImportExportDialog({
                   exportPrimaryDisabled
                   || importPrimaryDisabled
                 }
+                aria-describedby={importPrimaryDisabledReason ? "sipena-import-disabled-reason" : undefined}
                 className={cn(
                   "min-h-11 w-full min-w-0 gap-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:min-h-10 sm:w-auto",
-                  tab === "import" && importMode === "smart" && "bg-violet-600 hover:bg-violet-700",
                 )}
                 onClick={handlePrimaryAction}
               >

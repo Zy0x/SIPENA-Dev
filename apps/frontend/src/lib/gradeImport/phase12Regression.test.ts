@@ -171,8 +171,12 @@ describe("phase 12 grade import regression suite", () => {
     const webOnlyPreview = buildSpreadsheetPreviewModel({ plan: webOnlyPlan });
 
     expect(missingWithValuePlan.studentMappings[0]?.status).toBe("missing_in_web");
+    expect(missingWithValuePlan.gradeOperations[0]?.action).toBe("blocked");
+    expect(missingWithValuePlan.gradeOperations[0]?.conflicts.map((item) => item.code)).toContain("IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE");
     expect(missingWithValueFixes.manualRequiredCount).toBeGreaterThan(0);
     expect(missingWithValueExecutable.summary.unresolvedStudentCount).toBe(1);
+    expect(missingWithValueExecutable.operations).toHaveLength(0);
+    expect(missingWithoutValuePlan.gradeOperations[0]?.action).toBe("skip_empty");
     expect(missingWithoutValueExecutable.summary.blockedCount).toBe(0);
     expect(missingWithoutValueExecutable.summary.skippedEmptyCount).toBeGreaterThan(0);
     expect(webOnlyPlan.missingInExcelStudents).toHaveLength(2);
@@ -207,13 +211,29 @@ describe("phase 12 grade import regression suite", () => {
   });
 
   it("keeps value parser edge cases explicit", () => {
+    expect(parseGradeValue(85)).toMatchObject({ status: "valid", value: 85 });
     expect(parseGradeValue(0)).toMatchObject({ status: "valid", value: 0 });
     expect(parseGradeValue("85,5")).toMatchObject({ status: "valid", value: 85.5 });
+    expect(parseGradeValue("85,5").warnings.map((item) => item.code)).toContain("GRADE_VALUE_DECIMAL_COMMA");
     expect(parseGradeValue("85%")).toMatchObject({ status: "valid", value: 85 });
+    expect(parseGradeValue("85%").warnings.map((item) => item.code)).toContain("GRADE_VALUE_PERCENT");
     expect(parseGradeValue("90/100")).toMatchObject({ status: "valid", value: 90 });
+    expect(parseGradeValue("90/100").warnings.map((item) => item.code)).toContain("GRADE_VALUE_FRACTION_100");
+    expect(parseGradeValue("8/10")).toMatchObject({ status: "needs_confirmation", value: null, suggestedValue: 80 });
+    expect(parseGradeValue("4/5")).toMatchObject({ status: "needs_confirmation", value: null, suggestedValue: 80 });
     expect(parseGradeValue("18/20")).toMatchObject({ status: "needs_confirmation", value: null, suggestedValue: 90 });
+    expect(parseGradeValue("-")).toMatchObject({ status: "empty", value: null });
+    expect(parseGradeValue("N/A")).toMatchObject({ status: "empty", value: null });
+    expect(parseGradeValue("belum dinilai")).toMatchObject({ status: "empty", value: null });
     expect(parseGradeValue("#VALUE!").status).toBe("invalid");
-    expect(["Tuntas", "Remedial", "A"].map((value) => parseGradeValue(value).status)).toEqual(["textual", "textual", "textual"]);
+    expect(["Tuntas", "Remedial", "A"].map((value) => parseGradeValue(value))).toEqual([
+      expect.objectContaining({ status: "textual", value: null }),
+      expect.objectContaining({ status: "textual", value: null }),
+      expect.objectContaining({ status: "textual", value: null }),
+    ]);
+    expect(parseGradeValue("101").status).toBe("invalid");
+    expect(parseGradeValue("-1").status).toBe("invalid");
+    expect(parseGradeValue("18/0").status).toBe("invalid");
   });
 
   it("keeps executable builder and preview aligned for mixed safe, skipped, overwrite, and suggested values", () => {
@@ -284,7 +304,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(skippedByRow.summary.skippedManualCount).toBe(1);
   });
 
-  it("guards unified contextual SmartImport policy in source until a component test harness is added", () => {
+  it("guards unified contextual import policy in source until a component test harness is added", () => {
     const dialogSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/GradeImportExportDialog.tsx"), "utf8");
     const overlaySource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/ColumnSettingsOverlay.tsx"), "utf8");
     const quickActionsSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewQuickActions.tsx"), "utf8");
@@ -293,7 +313,33 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).not.toContain("ImportComplexityMode");
     expect(dialogSource).not.toContain("Mode Lanjutan");
-    expect(dialogSource).toContain("SmartImport terpadu");
+    expect(dialogSource).toContain('const importSteps = ["Upload", "Pemeriksaan", "Perbaiki", "Preview", "Simpan"]');
+    expect(dialogSource).toContain("Import Nilai");
+    expect(dialogSource).toContain("Download Template Resmi");
+    expect(dialogSource).toContain("Upload Excel");
+    expect(dialogSource).toContain("Pemeriksaan otomatis");
+    expect(dialogSource).toContain("Saran AI");
+    expect(dialogSource).toContain("requestSmartImportAssist");
+    expect(dialogSource).toContain("AI menyarankan pilihan untuk membantu pemeriksaan");
+    expect(dialogSource).toContain("Saran ini tetap perlu dicek");
+    expect(dialogSource).toContain("Minta Saran AI");
+    expect(dialogSource).toContain("AI sedang membantu memeriksa file");
+    expect(dialogSource).toContain("Gunakan siswa ini");
+    expect(dialogSource).toContain("Gunakan target ini");
+    expect(dialogSource).toContain("Gunakan tabel ini");
+    expect(dialogSource).toContain("Gunakan nilai saran");
+    expect(dialogSource).toContain("Abaikan saran");
+    expect(dialogSource).toContain("Pilih manual");
+    expect(dialogSource).toContain("Tidak ada nilai siap import.");
+    expect(dialogSource).toContain("Pilih tabel nilai yang ingin dipakai.");
+    expect(dialogSource).toContain("Selesaikan item yang diblokir terlebih dahulu.");
+    expect(dialogSource).toContain("Periksa item yang perlu dicek terlebih dahulu.");
+    expect(dialogSource).toContain("Download template baru jika file berasal dari kelas/mapel/semester lain.");
+    expect(dialogSource).toContain("Pilihan di sini hanya mengubah preview. Tidak ada nilai yang disimpan sebelum tahap import.");
+    expect(dialogSource).toContain("Import batch dibatalkan. Tidak ada nilai yang disimpan karena proses atomic gagal.");
+    expect(dialogSource).not.toContain("morphe-chat");
+    expect(dialogSource).not.toContain("<ImportModeCard");
+    expect(dialogSource).not.toContain("setImportMode");
     expect(overlaySource).toContain('if (column.isNewStructure) return "ignore"');
     expect(overlaySource).toContain('title="Akan membuat tugas baru"');
     expect(overlaySource).toContain('title="Akan membuat BAB + tugas"');

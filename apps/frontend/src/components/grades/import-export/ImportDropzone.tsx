@@ -55,7 +55,7 @@ export function ImportDropzone({ fileName, onFileSelected }: ImportDropzoneProps
         {fileName || "Letakkan file nilai di sini"}
       </p>
       <p id={descriptionId} className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-        File akan dianalisis dulu menjadi preview. Data tidak akan ditimpa tanpa konfirmasi.
+        File akan diperiksa otomatis lalu ditampilkan sebagai preview. Data tidak akan ditimpa tanpa konfirmasi.
       </p>
     </button>
   );

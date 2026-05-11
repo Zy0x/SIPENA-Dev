@@ -286,6 +286,22 @@ function hasBlockingStudentProblem(mapping: StudentMapping | undefined): boolean
   return !hasImportableStudent(mapping);
 }
 
+function hasPotentialGradeValue(rawValue: WorkbookCell | undefined, parsedValue: ReturnType<typeof parseGradeValue>): boolean {
+  return parsedValue.value !== null
+    || parsedValue.status === "needs_confirmation"
+    || parsedValue.status === "invalid"
+    || parsedValue.status === "textual"
+    || cellText(rawValue) !== "";
+}
+
+function missingStudentOptions(mapping: StudentMapping | undefined): string[] | undefined {
+  const options = [
+    mapping?.excelName ? `Nama Excel: ${mapping.excelName}` : "",
+    mapping?.excelNisn ? `NISN Excel: ${mapping.excelNisn}` : "",
+  ].filter(Boolean);
+  return options.length ? options : undefined;
+}
+
 function hasImportableColumn(mapping: MatchedColumn): boolean {
   return Boolean(mapping.target && ["safe", "warning"].includes(mapping.status) && ["existing_assignment", "sts", "sas"].includes(mapping.targetType));
 }
@@ -372,12 +388,14 @@ export function buildImportPlan(
     ...studentResult.warnings,
     ...columnResult.warnings,
   ];
+  const planLevelContextConflicts = contextConflicts(analysis);
+  const duplicateColumnTargetConflicts = collectDuplicateColumnTargetConflicts(columnResult.mappings);
   const conflicts: ImportConflict[] = [
     ...(analysis.conflicts || []),
     ...studentResult.conflicts,
     ...columnResult.conflicts,
-    ...contextConflicts(analysis),
-    ...collectDuplicateColumnTargetConflicts(columnResult.mappings),
+    ...planLevelContextConflicts,
+    ...duplicateColumnTargetConflicts,
   ];
 
   const studentByRow = new Map(studentResult.mappings.map((mapping) => [mapping.rowIndex, mapping]));
@@ -391,13 +409,38 @@ export function buildImportPlan(
       const rawValue = getRawCellValueForOperation(extracted, studentRow, column);
       const parsedValue = parseGradeValue(rawValue);
       const operationWarnings = [...parsedValue.warnings];
-      const operationConflicts: ImportConflict[] = [...parsedValue.conflicts];
+      const operationConflicts: ImportConflict[] = [
+        ...parsedValue.conflicts,
+        ...planLevelContextConflicts.map((item) => ({
+          ...item,
+          rowIndex: studentRow.rowIndex,
+          columnIndex: column.columnIndex,
+        })),
+        ...duplicateColumnTargetConflicts
+          .filter((item) => item.columnIndex === column.columnIndex)
+          .map((item) => ({
+            ...item,
+            rowIndex: studentRow.rowIndex,
+          })),
+      ];
       const sourceRowIndex = studentRow.originalRowIndex ?? studentRow.rowIndex;
       const sourceColumnIndex = column.originalColumnIndex ?? column.columnIndex;
+      const hasValue = hasPotentialGradeValue(rawValue, parsedValue);
 
       const skipStudentRow = shouldSkipStudentRow(studentMapping);
+      if (studentMapping?.status === "missing_in_web" && hasValue) {
+        operationConflicts.push(conflict(
+          "IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE",
+          "Siswa ada di Excel tetapi belum ada di data web. Pilih siswa yang benar, abaikan baris, atau tambahkan siswa dulu.",
+          "student",
+          studentRow.rowIndex,
+          column.columnIndex,
+          missingStudentOptions(studentMapping),
+        ));
+      }
+
       if (hasBlockingStudentProblem(studentMapping)) {
-        if (parsedValue.value !== null || parsedValue.status === "needs_confirmation") {
+        if (hasValue) {
           operationConflicts.push(conflict(
             "IMPORT_STUDENT_NOT_SAFE_FOR_VALUE",
             "Baris siswa belum cocok aman tetapi memiliki nilai yang akan diimport.",
@@ -409,7 +452,7 @@ export function buildImportPlan(
       }
 
       if (!hasImportableColumn(column)) {
-        if (parsedValue.value !== null || parsedValue.status === "needs_confirmation") {
+        if (hasValue) {
           operationConflicts.push(conflict(
             column.targetType === "create_assignment" || column.targetType === "create_chapter_and_assignment"
               ? "IMPORT_NEW_STRUCTURE_NOT_CONFIRMED"
@@ -434,10 +477,10 @@ export function buildImportPlan(
         : undefined;
       const selected = selectedColumns.size === 0 || selectedColumns.has(column.columnIndex);
       const baseAction = decideOperationAction(parsedValue.value, existing?.value, updateMode, selected);
-      const action: GradeOperation["action"] = skipStudentRow
-        ? "skip_existing"
-        : operationConflicts.length
+      const action: GradeOperation["action"] = operationConflicts.length
         ? "blocked"
+        : skipStudentRow
+        ? "skip_empty"
         : parsedValue.status === "needs_confirmation" || column.status === "needs_confirmation" || studentMapping?.status === "ambiguous"
           ? "needs_confirmation"
           : baseAction;

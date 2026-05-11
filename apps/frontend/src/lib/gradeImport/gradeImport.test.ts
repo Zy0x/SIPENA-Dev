@@ -527,6 +527,13 @@ describe("SIPENA student matcher", () => {
 
     const normalized = matchStudents([{ rowIndex: 2, name: "Muhammad Rizki", nisn: "1234567890.0" }], students);
     expect(normalized.mappings[0]).toMatchObject({ studentId: "student-2", status: "warning", matchedBy: "nisn_normalized" });
+    expect(normalized.mappings[0].warnings.map((item) => item.code)).toEqual(
+      expect.arrayContaining(["NISN_TRAILING_DECIMAL_REMOVED", "STUDENT_NISN_NORMALIZED_MATCH"]),
+    );
+
+    const leadingZero = matchStudents([{ rowIndex: 2, name: "Siti", nisn: "0012345678.0" }], students);
+    expect(["warning", "needs_confirmation"]).toContain(leadingZero.mappings[0].status);
+    expect(leadingZero.mappings[0].warnings.map((item) => item.code)).toContain("STUDENT_NISN_LEADING_ZERO_RISK");
   });
 
   it("does not safe-match duplicate web NISN or duplicate normalized names", () => {
@@ -541,6 +548,33 @@ describe("SIPENA student matcher", () => {
       { id: "b", name: "Muh Rizki", nisn: "2" },
     ]);
     expect(duplicateName.mappings[0].status).toBe("ambiguous");
+  });
+
+  it("keeps normalized, alias, fuzzy, and short-name matches conservative", () => {
+    const normalizedName = matchStudents([{ rowIndex: 2, name: "Siti   Aminah" }], students);
+    expect(["warning", "needs_confirmation"]).toContain(normalizedName.mappings[0].status);
+    expect(normalizedName.mappings[0].matchedBy).toBe("name_normalized");
+
+    const alias = matchStudents([{ rowIndex: 2, name: "Muh Rizki" }], students);
+    expect(alias.mappings[0]).toMatchObject({ status: "needs_confirmation", matchedBy: "fuzzy" });
+    expect(alias.mappings[0].warnings.map((item) => item.code)).toContain("STUDENT_ALIAS_NEEDS_CONFIRMATION");
+
+    const fuzzy = matchStudents([{ rowIndex: 2, name: "Siti Amin" }], students);
+    expect(fuzzy.mappings[0]).toMatchObject({ status: "needs_confirmation", matchedBy: "fuzzy" });
+    expect(fuzzy.mappings[0].warnings.map((item) => item.code)).toContain("STUDENT_FUZZY_NEEDS_CONFIRMATION");
+
+    const shortName = matchStudents([{ rowIndex: 2, name: "Siti" }], students);
+    expect(["needs_confirmation", "ambiguous"]).toContain(shortName.mappings[0].status);
+    if (shortName.mappings[0].status === "needs_confirmation") {
+      expect(shortName.mappings[0].warnings.map((item) => item.code)).toContain("STUDENT_SHORT_NAME_RISK");
+    }
+
+    const closeCandidates = matchStudents([{ rowIndex: 2, name: "Siti Amin" }], [
+      { id: "a", name: "Siti Amina", nisn: "1" },
+      { id: "b", name: "Siti Amino", nisn: "2" },
+    ]);
+    expect(closeCandidates.mappings[0].status).toBe("ambiguous");
+    expect(closeCandidates.conflicts.map((item) => item.code)).toContain("STUDENT_MATCH_AMBIGUOUS");
   });
 
   it("blocks duplicate Excel rows matched to one web student", () => {
@@ -605,6 +639,32 @@ describe("SIPENA column matcher", () => {
     expect(result.mappings.map((mapping) => mapping.targetType)).toEqual(["ignore", "ignore", "sts", "sas"]);
   });
 
+  it("ignores reserved identity and derived summary columns", () => {
+    const reserved = ["No.", "Nomor", "Nama Peserta Didik", "Peserta Didik", "Siswa", "NIS", "NISN", "NIS/NISN", "Nomor Induk", "Nomor Induk Siswa"];
+    const derived = ["Rata-rata", "Rerata", "Average", "Jumlah", "Total", "Nilai Akhir", "Rapor", "Ranking", "Rank", "Predikat", "Keterangan", "Status", "KKM", "Nilai Tertinggi", "Nilai Terendah"];
+    const result = matchColumns([
+      ...reserved.map((rawHeader, index) => ({ columnIndex: index + 1, rawHeader })),
+      ...derived.map((rawHeader, index) => ({ columnIndex: reserved.length + index + 1, rawHeader })),
+    ], chapters, assignments);
+
+    expect(result.mappings.every((mapping) => mapping.targetType === "ignore")).toBe(true);
+  });
+
+  it("detects STS and SAS aliases", () => {
+    const result = matchColumns([
+      { columnIndex: 1, rawHeader: "STS" },
+      { columnIndex: 2, rawHeader: "Sumatif Tengah Semester" },
+      { columnIndex: 3, rawHeader: "Tengah Semester" },
+      { columnIndex: 4, rawHeader: "PTS" },
+      { columnIndex: 5, rawHeader: "SAS" },
+      { columnIndex: 6, rawHeader: "Sumatif Akhir Semester" },
+      { columnIndex: 7, rawHeader: "Akhir Semester" },
+      { columnIndex: 8, rawHeader: "PAS" },
+    ], chapters, assignments);
+
+    expect(result.mappings.map((mapping) => mapping.targetType)).toEqual(["sts", "sts", "sts", "sts", "sas", "sas", "sas", "sas"]);
+  });
+
   it("suggests create_assignment when BAB exists but task is new", () => {
     const result = matchColumns([{ columnIndex: 4, rawHeader: "BAB 1 - Proyek" }], chapters, assignments);
 
@@ -625,6 +685,33 @@ describe("SIPENA column matcher", () => {
 
     const chapter = matchColumns([{ columnIndex: 4, rawHeader: "BAB I - Tugas 2" }], chapters, assignments);
     expect(chapter.mappings[0].targetType).toBe("existing_assignment");
+  });
+
+  it("parses explicit assignment headers across BAB, Unit, and Materi forms", () => {
+    const result = matchColumns([
+      { columnIndex: 4, rawHeader: "BAB 1 - Tugas 1" },
+      { columnIndex: 5, rawHeader: "BAB I - UH 1" },
+      { columnIndex: 6, rawHeader: "Unit 1 - Quiz 1" },
+      { columnIndex: 7, rawHeader: "Materi 2 - Praktik" },
+    ], [
+      ...chapters,
+      { id: "unit-1", name: "Unit 1", order_index: 3 },
+      { id: "materi-2", name: "Materi 2", order_index: 4 },
+    ], [
+      ...assignments,
+      { id: "assignment-4", chapter_id: "chapter-1", name: "UH 1", order_index: 3 },
+      { id: "assignment-5", chapter_id: "unit-1", name: "Quiz 1", order_index: 1 },
+      { id: "assignment-6", chapter_id: "materi-2", name: "Praktik", order_index: 1 },
+    ]);
+
+    expect(result.mappings.map((mapping) => mapping.targetType)).toEqual(["existing_assignment", "existing_assignment", "existing_assignment", "existing_assignment"]);
+    expect(result.mappings.every((mapping) => mapping.status === "safe")).toBe(true);
+  });
+
+  it("requires confirmation for assignment-only single matches", () => {
+    const result = matchColumns([{ columnIndex: 4, rawHeader: "Tugas 2" }], chapters, assignments);
+
+    expect(result.mappings[0]).toMatchObject({ targetType: "existing_assignment", status: "needs_confirmation" });
   });
 
   it("marks assignment-only headers as ambiguous when found in many chapters", () => {
@@ -1002,21 +1089,42 @@ describe("SIPENA free Excel analyzer and ImportPlan builder", () => {
     });
   });
 
-  it("skips Excel rows that are missing in web instead of blocking every value", () => {
-    const freeAnalysis = analyzeFreeExcelWorkbook(workbookResult({
+  it("blocks Excel rows missing in web when the row has a grade value", () => {
+    const buildMissingStudentPlan = (cellValue: unknown) => buildImportPlan(analyzeFreeExcelWorkbook(workbookResult({
       Nilai: [
         ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
         [1, "0012345678", "Siti Aminah", 90],
-        [2, "9999999999", "Siswa Dari File Lain", 75],
+        [2, "9999999999", "Siswa Dari File Lain", cellValue],
       ],
-    }), { students });
-    const plan = buildImportPlan(freeAnalysis, { students, chapters, assignments });
-    const skippedRowOperation = plan.gradeOperations.find((operation) => operation.rowIndex === 3);
+    }), { students }), { students, chapters, assignments });
 
-    expect(plan.studentMappings.find((mapping) => mapping.rowIndex === 3)?.status).toBe("missing_in_web");
-    expect(skippedRowOperation?.action).toBe("skip_existing");
-    expect(skippedRowOperation?.conflicts.map((item) => item.code)).not.toContain("IMPORT_STUDENT_NOT_SAFE_FOR_VALUE");
-    expect(plan.conflicts.map((item) => item.code)).not.toContain("IMPORT_STUDENT_NOT_SAFE_FOR_VALUE");
+    const validPlan = buildMissingStudentPlan(85);
+    const validOperation = validPlan.gradeOperations.find((operation) => operation.rowIndex === 3);
+    expect(validPlan.studentMappings.find((mapping) => mapping.rowIndex === 3)?.status).toBe("missing_in_web");
+    expect(validOperation?.action).toBe("blocked");
+    expect(validOperation?.studentId).toBeUndefined();
+    expect(validOperation?.conflicts.map((item) => item.code)).toContain("IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE");
+    expect(validPlan.conflicts.map((item) => item.code)).toContain("IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE");
+    expect(validPlan.summary.blockedOperations).toBeGreaterThan(0);
+    expect(validPlan.summary.safeOperations).not.toBe(validPlan.gradeOperations.length);
+
+    const invalidOperation = buildMissingStudentPlan(101).gradeOperations.find((operation) => operation.rowIndex === 3);
+    expect(invalidOperation?.action).toBe("blocked");
+    expect(invalidOperation?.conflicts.some((item) => item.code === "IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE")).toBe(true);
+    expect(invalidOperation?.conflicts.some((item) => item.type === "grade_value")).toBe(true);
+
+    const textualOperation = buildMissingStudentPlan("Tuntas").gradeOperations.find((operation) => operation.rowIndex === 3);
+    expect(textualOperation?.action).toBe("blocked");
+    expect(textualOperation?.conflicts.map((item) => item.code)).toContain("IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE");
+
+    const emptyOperation = buildMissingStudentPlan("").gradeOperations.find((operation) => operation.rowIndex === 3);
+    expect(emptyOperation?.action).toBe("skip_empty");
+    expect(emptyOperation?.conflicts.map((item) => item.code)).not.toContain("IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE");
+
+    const fractionOperation = buildMissingStudentPlan("8/10").gradeOperations.find((operation) => operation.rowIndex === 3);
+    expect(fractionOperation?.action).toBe("blocked");
+    expect(fractionOperation?.suggestedValue).toBe(80);
+    expect(fractionOperation?.conflicts.map((item) => item.code)).toContain("IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE");
   });
 
   it("blocks new BAB/task suggestions and invalid values in strict mode", () => {

@@ -164,6 +164,20 @@ describe("executable import builder", () => {
     expect(result.summary.skippedExistingCount).toBe(1);
   });
 
+  it("does not make skip_empty or skip_existing operations executable", () => {
+    const skippedEmpty = buildExecutableImportOperations({
+      plan: plan({ gradeOperations: [operation({ value: null, action: "skip_empty" })] }),
+    });
+    const skippedExisting = buildExecutableImportOperations({
+      plan: plan({ gradeOperations: [operation({ action: "skip_existing" })] }),
+    });
+
+    expect(skippedEmpty.summary.executableCount).toBe(0);
+    expect(skippedEmpty.summary.skippedEmptyCount).toBe(1);
+    expect(skippedExisting.summary.executableCount).toBe(0);
+    expect(skippedExisting.summary.skippedExistingCount).toBe(1);
+  });
+
   it("blocks overwrite without confirmation", () => {
     const result = buildExecutableImportOperations({
       plan: plan({
@@ -232,6 +246,17 @@ describe("executable import builder", () => {
     expect(result.summary.executableCount).toBe(0);
     expect(result.summary.blockedCount).toBe(1);
     expect(result.blockedItems[0]?.message).toContain("Nilai saran perlu disetujui");
+  });
+
+  it("blocks needs-confirmation operations until the user confirms them", () => {
+    const result = buildExecutableImportOperations({
+      plan: plan({
+        gradeOperations: [operation({ action: "needs_confirmation" })],
+      }),
+    });
+
+    expect(result.summary.executableCount).toBe(0);
+    expect(result.summary.blockedCount).toBe(1);
   });
 
   it("uses accepted suggested values as executable values", () => {
@@ -339,7 +364,7 @@ describe("executable import builder", () => {
     expect(ignored.summary.skippedManualCount).toBe(1);
   });
 
-  it("requires confirmation before executable create-structure operations", () => {
+  it("requires an assignmentId before executable create-structure operations", () => {
     const createPlan = plan({
       columnMappings: [column("BAB 1 - Tugas Baru", {
         status: "needs_confirmation",
@@ -356,7 +381,8 @@ describe("executable import builder", () => {
     });
 
     expect(blocked.summary.unresolvedColumnCount).toBe(1);
-    expect(confirmed.summary.executableCount).toBe(1);
+    expect(confirmed.summary.executableCount).toBe(0);
+    expect(confirmed.summary.unresolvedColumnCount).toBe(1);
   });
 
   it("does not make skipped create-structure columns executable", () => {
@@ -395,6 +421,18 @@ describe("executable import builder", () => {
 
     expect(result.summary.executableCount).toBe(1);
     expect(result.operations[0]?.target).toEqual({ gradeType: "sts" });
+  });
+
+  it("blocks STS and SAS targets that still carry an assignmentId", () => {
+    const result = buildExecutableImportOperations({
+      plan: plan({
+        columnMappings: [column("STS", { target: { gradeType: "sts", assignmentId: "assignment-1" } })],
+        gradeOperations: [operation({ target: { gradeType: "sts", assignmentId: "assignment-1" } })],
+      }),
+    });
+
+    expect(result.summary.executableCount).toBe(0);
+    expect(result.summary.unresolvedColumnCount).toBe(1);
   });
 
   it("executes safe new values as fill empty", () => {

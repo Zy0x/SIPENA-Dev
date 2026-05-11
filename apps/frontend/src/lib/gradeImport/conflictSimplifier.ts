@@ -104,6 +104,12 @@ const confirmationConflictCodes = new Set([
   "IMPORT_ADDED_HEADER_DETECTED",
   "GRADE_VALUE_FRACTION_SCALED",
   "STUDENT_FUZZY_MATCH",
+  "STUDENT_FUZZY_NEEDS_CONFIRMATION",
+  "STUDENT_NISN_LEADING_ZERO_RISK",
+  "STUDENT_SHORT_NAME_RISK",
+  "STUDENT_ALIAS_NEEDS_CONFIRMATION",
+  "NISN_TRAILING_DECIMAL_REMOVED",
+  "NISN_LEADING_ZERO",
 ]);
 
 const nonBlockingInfoConflictCodes = new Set([
@@ -127,6 +133,7 @@ const manualConflictCodes = new Set([
   "IMPORT_NO_GRADE_COLUMNS",
   "IMPORT_NO_SUPPORTED_TEMPLATE_STRUCTURE",
   "IMPORT_SEMESTER_MISMATCH",
+  "IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE",
   "IMPORT_STUDENT_NOT_SAFE_FOR_VALUE",
   "STUDENT_DUPLICATE_EXCEL_MATCH",
   "STUDENT_FUZZY_AMBIGUOUS",
@@ -354,8 +361,26 @@ function classifyConflict(
             : isStudent
               ? "Nama dari Excel cocok dengan beberapa siswa atau belum ditemukan di web."
               : "Target kolom nilai belum cukup aman untuk dipilih otomatis.",
-      recommendedActionLabel: isContext ? "Batalkan dan upload template baru" : "Pilih sekarang",
-      secondaryActionLabel: "Abaikan data ini",
+      recommendedActionLabel: isContext
+        ? "Download template baru"
+        : isDuplicateTarget
+          ? "Pilih salah satu kolom"
+          : isInvalidValue
+            ? operation?.suggestedValue !== undefined ? "Gunakan nilai saran" : "Ubah nilai"
+            : isStudent
+              ? "Pilih siswa"
+              : conflict.code === "IMPORT_NEW_STRUCTURE_NOT_CONFIRMED"
+                ? "Buat tugas baru"
+                : "Pilih target kolom",
+      secondaryActionLabel: isDuplicateTarget
+        ? "Abaikan kolom duplikat"
+        : isInvalidValue
+          ? "Abaikan sel"
+          : isStudent
+            ? "Abaikan baris"
+            : isContext
+              ? undefined
+              : "Abaikan kolom",
       detailLabel: "Lihat alasan SIPENA",
       canApplyRecommended: false,
       requiresManualChoice: true,
@@ -428,7 +453,7 @@ function autoItemsFromPlan(plan: ImportPlan, updateMode: UpdateMode): Simplified
         description: "Kolom ini bukan kolom nilai input dan aman untuk diabaikan.",
         recommendedActionLabel: "Abaikan kolom ini",
         detailLabel: "Lihat alasan SIPENA",
-        reason: "Kolom ringkasan seperti Rapor, Ranking, Rata-rata, Total, Predikat, Status, atau KKM tidak diimport sebagai nilai tugas.",
+        reason: "Kolom ringkasan seperti Rapor, Ranking, Rata-rata, Total, Predikat, Status, atau KKM tidak disimpan sebagai nilai tugas.",
         rawType: "column",
         metadata: { columnIndex: mapping.columnIndex, rawHeader: mapping.rawHeader },
       }));
@@ -552,8 +577,8 @@ export function simplifyImportConflicts({
   const headline = manualRequiredCount > 0
     ? "Perlu dicek sebelum import"
     : needsConfirmationCount > 0
-      ? "Hampir siap diimport"
-      : "Siap diimport";
+      ? "Hampir siap import"
+      : "Siap import";
   const description = manualRequiredCount > 0
     ? "Selesaikan pilihan manual terlebih dahulu agar nilai tidak masuk ke data yang salah."
     : needsConfirmationCount > 0

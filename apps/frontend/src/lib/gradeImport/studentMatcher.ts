@@ -113,6 +113,18 @@ function similarity(left: string, right: string): number {
   return Math.round((1 - distance / maxLength) * 100);
 }
 
+function compactLength(value: string): number {
+  return value.replace(/\s+/g, "").length;
+}
+
+function isShortName(value: string): boolean {
+  return compactLength(value) > 0 && compactLength(value) < 6;
+}
+
+function studentNames(records: StudentIndexRecord[]): string[] {
+  return records.map((item) => item.student.name);
+}
+
 export function extractStudentRowsFromWorkbook(
   rows: WorkbookCell[][],
   options: StudentMatcherOptions = {},
@@ -201,8 +213,10 @@ function matchSingleStudent(
 ): StudentMapping {
   const rowName = String(row.name || "").trim();
   const rowNisn = String(row.nisn || "").trim();
-  const normalizedName = normalizeName(rowName).normalized;
-  const normalizedNisn = normalizeNisn(rowNisn).normalized;
+  const nameNormalization = normalizeName(rowName);
+  const nisnNormalization = normalizeNisn(rowNisn);
+  const normalizedName = nameNormalization.normalized;
+  const normalizedNisn = nisnNormalization.normalized;
 
   if (row.studentId) {
     const record = indexes.id.get(row.studentId);
@@ -235,13 +249,20 @@ function matchSingleStudent(
       row.rowIndex,
     );
     if (normalized.record) {
+      const normalizedWarnings = [
+        ...nisnNormalization.warnings,
+        warning("STUDENT_NISN_NORMALIZED_MATCH", "NISN cocok setelah normalisasi. Perlu ditinjau bila ada leading zero atau format Excel berubah.", row.rowIndex, "nisn"),
+      ];
+      if (/^0+\d+/.test(rowNisn) || /^0+\d+/.test(normalized.record.student.nisn || "")) {
+        normalizedWarnings.push(warning("STUDENT_NISN_LEADING_ZERO_RISK", "NISN memiliki nol di awal. Pastikan format Excel tidak menghapus angka penting.", row.rowIndex, "nisn"));
+      }
       return createMapping(
         row,
         normalized.record.student,
-        "warning",
+        normalizedNisn.length < 10 ? "needs_confirmation" : "warning",
         "nisn_normalized",
         94,
-        [warning("STUDENT_NISN_NORMALIZED_MATCH", "NISN cocok setelah normalisasi. Perlu ditinjau bila ada leading zero atau format Excel berubah.", row.rowIndex, "nisn")],
+        normalizedWarnings,
       );
     }
     if (normalized.status) return createMapping(row, undefined, normalized.status, undefined, 0, normalized.warnings, normalized.conflicts);
@@ -289,23 +310,45 @@ function matchSingleStudent(
     }
     if (normalized.status) return createMapping(row, undefined, normalized.status, undefined, 0, normalized.warnings, normalized.conflicts);
 
+    const aliasCandidates = nameNormalization.candidates.filter((candidate) => candidate && candidate !== normalizedName);
+    if (aliasCandidates.length > 0) {
+      const aliasMatches = unique(aliasCandidates)
+        .flatMap((candidate) => indexes.nameNormalized.get(candidate) || []);
+      const uniqueAliasMatches = Array.from(new Map(aliasMatches.map((item) => [item.student.id, item])).values());
+      if (uniqueAliasMatches.length === 1) {
+        return createMapping(
+          row,
+          uniqueAliasMatches[0].student,
+          "needs_confirmation",
+          "fuzzy",
+          88,
+          [
+            ...nameNormalization.warnings,
+            warning("STUDENT_ALIAS_NEEDS_CONFIRMATION", "Variasi nama seperti Muh/Muhammad hanya menjadi saran dan perlu dikonfirmasi.", row.rowIndex, "name"),
+          ],
+        );
+      }
+      if (uniqueAliasMatches.length > 1) {
+        const message = "Variasi nama cocok ke beberapa siswa web. Pilih siswa yang benar secara manual.";
+        return createMapping(
+          row,
+          undefined,
+          "ambiguous",
+          "manual",
+          0,
+          [warning("STUDENT_ALIAS_NEEDS_CONFIRMATION", message, row.rowIndex, "name")],
+          [conflict("STUDENT_MATCH_AMBIGUOUS", message, row.rowIndex, studentNames(uniqueAliasMatches))],
+        );
+      }
+    }
+
     const fuzzyMatches = records
       .map((record) => ({ record, score: similarity(normalizedName, record.normalizedName) }))
       .filter((item) => item.score >= 72)
       .sort((left, right) => right.score - left.score);
     const best = fuzzyMatches[0];
     const second = fuzzyMatches[1];
-    if (best && (!second || best.score - second.score >= 8)) {
-      return createMapping(
-        row,
-        best.record.student,
-        "warning",
-        "fuzzy",
-        best.score,
-        [warning("STUDENT_FUZZY_MATCH", "Nama siswa cocok secara fuzzy dan perlu konfirmasi manual sebelum import final.", row.rowIndex, "name")],
-      );
-    }
-    if (best && second) {
+    if (best && second && best.score - second.score < 10) {
       return createMapping(
         row,
         undefined,
@@ -314,6 +357,22 @@ function matchSingleStudent(
         best.score,
         [warning("STUDENT_FUZZY_AMBIGUOUS", "Beberapa siswa web mirip dengan baris Excel ini.", row.rowIndex, "name")],
         [conflict("STUDENT_MATCH_AMBIGUOUS", "Beberapa kandidat siswa ditemukan. Pilih manual sebelum import.", row.rowIndex, fuzzyMatches.slice(0, 5).map((item) => item.record.student.name))],
+      );
+    }
+    if (best) {
+      const fuzzyWarnings = [
+        warning("STUDENT_FUZZY_NEEDS_CONFIRMATION", "Nama siswa mirip dan perlu dikonfirmasi sebelum import.", row.rowIndex, "name"),
+      ];
+      if (isShortName(normalizedName)) {
+        fuzzyWarnings.push(warning("STUDENT_SHORT_NAME_RISK", "Nama terlalu pendek untuk dipastikan otomatis.", row.rowIndex, "name"));
+      }
+      return createMapping(
+        row,
+        best.record.student,
+        "needs_confirmation",
+        "fuzzy",
+        best.score,
+        fuzzyWarnings,
       );
     }
   }

@@ -42,7 +42,7 @@ export function AdvancedImportOptions({
             Perlakuan nilai lama
           </h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Pilihan saat ini: {options.find((item) => item.mode === updateMode)?.title || "Isi nilai kosong saja"}. Overwrite tetap butuh konfirmasi eksplisit.
+            Pilihan saat ini: {options.find((item) => item.mode === updateMode)?.title || "Isi nilai kosong saja"}. Mengganti nilai lama tetap butuh konfirmasi eksplisit.
           </p>
         </div>
         <button

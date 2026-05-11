@@ -10,10 +10,10 @@ export function PreviewSummaryBanner({
   const manualCount = model.summary.manualRequired;
   const needsCheckCount = model.summary.needsCheck;
   const title = manualCount > 0
-    ? "Atur kolom dan nilai yang akan diimport"
+    ? "Atur kolom dan nilai yang akan disimpan"
     : needsCheckCount > 0
-      ? "Atur kolom dan nilai yang akan diimport"
-      : "Atur kolom dan nilai yang akan diimport";
+      ? "Atur kolom dan nilai yang akan disimpan"
+      : "Atur kolom dan nilai yang akan disimpan";
   const description = manualCount > 0
     ? `Pilih kolom yang dipakai. Masih ada ${manualCount} bagian merah yang perlu dipilih.`
     : needsCheckCount > 0

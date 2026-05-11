@@ -189,6 +189,25 @@ function isStructureConfirmed(
   return Boolean(override && ["create_assignment", "create_chapter_and_assignment"].includes(override.kind || "") && override.confirmed);
 }
 
+function hasExecutableAssignmentTarget(target: GradeTarget | undefined): boolean {
+  if (!target) return false;
+  if (target.gradeType === "assignment") return Boolean(target.assignmentId);
+  return !target.assignmentId;
+}
+
+function hasExplicitConfirmation(
+  operation: GradeOperation,
+  cellSetting: CellImportSetting | undefined,
+  hasStudentOverride: boolean,
+  hasColumnOverride: boolean,
+): boolean {
+  return operation.action !== "needs_confirmation"
+    || hasStudentOverride
+    || hasColumnOverride
+    || Boolean(cellSetting?.acceptedSuggestedValue)
+    || isValidGradeNumber(cellSetting?.resolvedValue);
+}
+
 function effectiveValueMode(
   operation: GradeOperation,
   updateMode: UpdateMode,
@@ -290,12 +309,26 @@ export function buildExecutableImportOperations({
       return;
     }
 
+    if (operation.action === "skip_empty") {
+      if (conflicts.length > 0) {
+        blockedItems.push(blockedItem(operation, "blocked_operation", "Operasi masih memiliki konflik yang belum selesai.", conflicts));
+        return;
+      }
+      skippedItems.push(skippedItem(operation, "empty_value", "Nilai kosong dilewati dan tidak menghapus nilai lama."));
+      return;
+    }
+
     if (resolvedValue === null) {
       if (operation.suggestedValue !== undefined) {
         blockedItems.push(blockedItem(operation, "blocked_operation", "Nilai saran perlu disetujui sebelum disimpan.", conflicts));
         return;
       }
       skippedItems.push(skippedItem(operation, "empty_value", "Nilai kosong dilewati dan tidak menghapus nilai lama."));
+      return;
+    }
+
+    if (!hasExplicitConfirmation(operation, cellSetting, hasStudentOverride, hasColumnOverride)) {
+      blockedItems.push(blockedItem(operation, "blocked_operation", "Item ini perlu dicek sebelum disimpan.", conflicts));
       return;
     }
 
@@ -312,6 +345,15 @@ export function buildExecutableImportOperations({
       return;
     }
 
+    if (operation.action === "skip_existing") {
+      if (conflicts.length > 0) {
+        blockedItems.push(blockedItem(operation, "blocked_operation", "Operasi masih memiliki konflik yang belum selesai.", conflicts));
+        return;
+      }
+      skippedItems.push(skippedItem(operation, "existing_value", "Nilai lama sudah ada dan mode import tidak mengizinkan overwrite."));
+      return;
+    }
+
     if (
       !target
       || (!hasColumnOverride && (columnMapping?.status === "ambiguous" || columnMapping?.status === "blocked" || columnMapping?.status === "missing"))
@@ -320,8 +362,22 @@ export function buildExecutableImportOperations({
       return;
     }
 
+    if (!hasExecutableAssignmentTarget(target)) {
+      const reason = target.gradeType === "assignment" ? "structure_unconfirmed" : "unresolved_column";
+      const message = target.gradeType === "assignment"
+        ? "Target tugas belum lengkap."
+        : "Target STS/SAS tidak boleh memakai tugas.";
+      blockedItems.push(blockedItem(operation, reason, message, conflicts));
+      return;
+    }
+
     if (!isStructureConfirmed(target, columnOverride)) {
       blockedItems.push(blockedItem(operation, "structure_unconfirmed", "BAB atau tugas baru belum dikonfirmasi.", conflicts));
+      return;
+    }
+
+    if (!isValidGradeNumber(resolvedValue)) {
+      blockedItems.push(blockedItem(operation, "invalid_value", "Nilai invalid tidak boleh disimpan.", conflicts));
       return;
     }
 
