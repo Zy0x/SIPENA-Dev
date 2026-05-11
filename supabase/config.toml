@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.smart-import-assist]
 verify_jwt = true
 
+[functions.auth-lockout-reset]
+verify_jwt = false
+
 [functions.predict-grades]
 verify_jwt = false
 

@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const AUTO_APPROVE_HOURS = 24;
 const MIN_RESET_LOCKOUT_LEVEL = 6;
+const MIN_RESET_FAILURE_COUNT = 18;
 
 type RequestStatus = "pending" | "approved" | "rejected" | "auto_approved";
 
@@ -51,8 +52,8 @@ function isEmail(value: string): boolean {
 async function verifyRecaptcha(token: string | null | undefined, req: Request): Promise<boolean> {
   const secretKey = Deno.env.get("RECAPTCHA_V2_SECRET_KEY");
   if (!secretKey) {
-    console.warn("[auth-lockout-reset] RECAPTCHA_V2_SECRET_KEY missing, allowing request with warning");
-    return true;
+    console.warn("[auth-lockout-reset] RECAPTCHA_V2_SECRET_KEY missing, rejecting public request");
+    return false;
   }
 
   if (!token) return false;
@@ -75,6 +76,20 @@ async function verifyRecaptcha(token: string | null | undefined, req: Request): 
 async function verifyAdminPassword(providedPassword: string | undefined): Promise<boolean> {
   const adminPassword = Deno.env.get("ADMIN_DB_PASSWORD");
   return Boolean(adminPassword && providedPassword && providedPassword === adminPassword);
+}
+
+function publicErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (/auth_lockout_reset_(requests|settings)|relation .* does not exist/i.test(message)) {
+    return "Fitur request reset waiting time belum siap. Hubungi admin untuk menyelesaikan pembaruan sistem.";
+  }
+  if (/duplicate key|violates unique constraint/i.test(message)) {
+    return "Request serupa sudah tercatat. Cek status request sebelumnya.";
+  }
+  if (/check constraint|violates check constraint/i.test(message)) {
+    return "Data request belum memenuhi syarat reset waiting time.";
+  }
+  return "Gagal memproses request reset waiting time. Silakan coba lagi.";
 }
 
 async function getSettings(supabaseAdmin: ReturnType<typeof createClient>) {
@@ -141,6 +156,9 @@ serve(async (req) => {
       if (reason.length < 12) return json({ success: false, error: "Alasan minimal 12 karakter" }, 400);
       if (lockoutLevel < MIN_RESET_LOCKOUT_LEVEL) {
         return json({ success: false, error: "Request reset waiting time baru tersedia pada lockout level 6 jam" }, 400);
+      }
+      if (failureCount < MIN_RESET_FAILURE_COUNT) {
+        return json({ success: false, error: "Request reset waiting time belum memenuhi syarat jumlah kegagalan login." }, 400);
       }
 
       const captchaOk = await verifyRecaptcha(body.captchaToken, req);
@@ -290,6 +308,6 @@ serve(async (req) => {
     return json({ success: false, error: "Action tidak dikenal" }, 400);
   } catch (error) {
     console.error("[auth-lockout-reset] Error:", error);
-    return json({ success: false, error: error instanceof Error ? error.message : "Server error" }, 500);
+    return json({ success: false, error: publicErrorMessage(error) }, 500);
   }
 });
