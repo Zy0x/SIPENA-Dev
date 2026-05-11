@@ -36,8 +36,8 @@ function previewStatusClass(status: string): string {
 
 function stickyStyle(index: number): CSSProperties | undefined {
   if (index === 0) return { left: 0 };
-  if (index === 1) return { left: 52 };
-  if (index === 2) return { left: 164 };
+  if (index === 1) return { left: "var(--sipena-preview-sticky-2)" };
+  if (index === 2) return { left: "var(--sipena-preview-sticky-3)" };
   return undefined;
 }
 
@@ -148,7 +148,7 @@ export function SmartSpreadsheetPreview({
       />
       <PreviewLegend />
 
-      <div className={cn("grid min-w-0 gap-3", showFixPanel && "2xl:grid-cols-[minmax(0,1fr)_340px]")}>
+      <div className={cn("grid min-w-0 gap-4", showFixPanel && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
         <section className="sipena-preview-grid-wrap">
           <div className="sipena-preview-scroll">
             <table className="sipena-preview-table">

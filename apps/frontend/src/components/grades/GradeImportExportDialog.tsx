@@ -3257,10 +3257,11 @@ export default function GradeImportExportDialog({
     || (exportMode === "backup" && !onDownloadBackup)
   );
   const isPreviewFixStep = tab === "import" && stepIndex === 2;
+  const isWideImportWorkspace = tab === "import" && (stepIndex === 2 || stepIndex === 3);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[calc(100dvh-0.5rem)] max-h-[860px] w-[calc(100vw-0.5rem)] max-w-[1500px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-white/80 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(92dvh,860px)] sm:w-[calc(100vw-1rem)]">
+      <DialogContent className="flex h-[calc(100dvh-0.25rem)] max-h-[980px] w-[calc(100vw-0.25rem)] max-w-[1880px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-white/80 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(96dvh,980px)] sm:w-[calc(100vw-0.75rem)] xl:w-[min(98vw,1880px)]">
         <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-950/95 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-start gap-3 pr-10">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/70 sm:h-12 sm:w-12">
@@ -3296,7 +3297,7 @@ export default function GradeImportExportDialog({
             <TabsContent value="import" className="m-0 min-w-0 focus-visible:ring-0 focus-visible:ring-offset-0">
               <div className={cn(
                 "grid min-w-0 gap-4",
-                isPreviewFixStep ? "grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_280px]",
+                isWideImportWorkspace ? "grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_280px]",
               )}>
                 <main className="min-w-0 space-y-4">
                   <section className="min-w-0 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
@@ -3406,7 +3407,7 @@ export default function GradeImportExportDialog({
                   ) : null}
                 </main>
 
-                {isPreviewFixStep ? null : (
+                {isWideImportWorkspace ? null : (
                   <ImportSummaryPanel
                     studentCount={studentCount}
                     chapterCount={chapterCount}

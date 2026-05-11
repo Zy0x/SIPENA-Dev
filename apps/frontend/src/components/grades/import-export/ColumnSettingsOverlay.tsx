@@ -253,7 +253,7 @@ export function ColumnSettingsOverlay({
             </label>
           </div>
 
-          <div className="sipena-column-field">
+          <div className="sipena-column-field sipena-column-target-section">
             <span>Target kolom nilai</span>
             {column.isNewStructure ? (
               <div className="sipena-column-suggestion-card">
