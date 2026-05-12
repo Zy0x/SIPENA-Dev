@@ -23,8 +23,6 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import {
-  analyzeFreeExcelWorkbook,
-  analyzeOfficialTemplateWorkbook,
   buildExecutableImportOperations,
   buildImportPlan,
   buildSpreadsheetPreviewModel,
@@ -64,6 +62,14 @@ import {
   type StudentMapping,
   type UpdateMode,
 } from "@/lib/gradeImport";
+import {
+  buildFinalReviewModel,
+  buildImportDecisionGraph,
+  detectGradeImportSource,
+  resolveImportDecisionGraphWithAi,
+  type FinalReviewModel,
+  type ImportDecisionGraph,
+} from "@/lib/gradeImportAgent";
 import { cn } from "@/lib/utils";
 
 import { ExportOptionCard } from "./import-export/ExportOptionCard";
@@ -206,7 +212,7 @@ const emptyAiAssistPanelState: AiAssistPanelState = {
   cacheKey: null,
 };
 
-const importSteps = ["Upload", "Pemeriksaan", "Perbaiki", "Preview", "Simpan"];
+const importSteps = ["Upload", "SIPENA Mengecek", "AI Agent Menyelesaikan", "Review Akhir", "Simpan"];
 const maxImportFileBytes = 20 * 1024 * 1024;
 
 const sourceLabels: Record<ImportSourceType, string> = {
@@ -2295,7 +2301,7 @@ function AiSuggestionPanel({
             <h3 className="text-sm font-semibold">Saran AI</h3>
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            AI menyarankan pilihan untuk membantu pemeriksaan. Saran ini tetap perlu dicek dan tidak akan menyimpan nilai.
+            AI Agent membantu menyelesaikan item yang belum jelas. Keputusan tetap bisa dicek dan tidak akan menyimpan nilai.
           </p>
         </div>
         <button
@@ -2304,13 +2310,13 @@ function AiSuggestionPanel({
           onClick={onRequest}
           className="min-h-11 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {aiState.status === "loading" ? "AI sedang memeriksa..." : "Minta Saran AI"}
+          {aiState.status === "loading" ? "AI Agent sedang memeriksa..." : "Jalankan AI Agent"}
         </button>
       </div>
 
       {aiState.status === "idle" ? (
         <p className="mt-3 rounded-2xl border border-blue-100 bg-white p-3 text-xs leading-5 text-muted-foreground dark:border-blue-900/50 dark:bg-slate-950">
-          Klik tombol untuk meminta bantuan AI setelah hasil pemeriksaan otomatis tersedia.
+          Jalankan AI Agent setelah pemeriksaan otomatis tersedia untuk membantu memberi keputusan aman.
         </p>
       ) : null}
 
@@ -2459,9 +2465,11 @@ function SpreadsheetPreviewStep({
 function PreviewStep({
   plan,
   model,
+  review,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
+  review: FinalReviewModel | null;
 }) {
   if (!plan) {
     return <EmptyPanel title="Preview belum tersedia" description="Preview operasi akan muncul setelah file selesai dianalisis dan pemetaan aman." />;
@@ -2478,6 +2486,32 @@ function PreviewStep({
 
   return (
     <div className="space-y-4">
+      {review ? (
+        <section className="rounded-[24px] border border-blue-200 bg-blue-50/70 p-4 shadow-sm dark:border-blue-900/60 dark:bg-blue-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-blue-950 dark:text-blue-100">Review akhir keputusan import</h3>
+              <p className="mt-1 text-xs leading-5 text-blue-900/75 dark:text-blue-100/75">
+                Review ini dibangun dari decision graph final. Item yang belum jelas tidak akan masuk proses simpan.
+              </p>
+            </div>
+            <StatusBadge tone={review.canExecute ? "success" : "warning"}>
+              {review.canExecute ? "Siap simpan" : "Perlu dicek"}
+            </StatusBadge>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <MetricCard label="Akan disimpan" value={review.summary.save} tone="green" />
+            <MetricCard label="Dikonversi" value={review.summary.convert} tone="blue" />
+            <MetricCard label="Ditimpa" value={review.summary.overwrite} tone={review.summary.overwrite ? "orange" : "info"} />
+            <MetricCard label="Di-skip" value={review.summary.skip} tone="info" />
+            <MetricCard label="Perlu perhatian" value={review.summary.manualChoiceRequired + review.summary.blocked} tone={review.summary.manualChoiceRequired + review.summary.blocked ? "red" : "green"} />
+          </div>
+          {review.disabledReason ? (
+            <p className="mt-3 text-xs leading-5 text-orange-700 dark:text-orange-200">{review.disabledReason}</p>
+          ) : null}
+        </section>
+      ) : null}
+
       {model ? (
         <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -3383,11 +3417,23 @@ export default function GradeImportExportDialog({
   const executableImportPlan = useMemo(() => (
     plan ? buildExecutableImportOperations({ plan, resolverState: effectiveResolverState, selectionState: effectiveSelectionState, updateMode: effectiveUpdateMode }) : null
   ), [effectiveResolverState, effectiveSelectionState, effectiveUpdateMode, plan]);
+  const importDecisionGraph = useMemo<ImportDecisionGraph | null>(() => {
+    if (!plan || !executableImportPlan) return null;
+    const graph = buildImportDecisionGraph(plan, executableImportPlan);
+    if (aiAssist.response && aiAssist.status === "success") {
+      return resolveImportDecisionGraphWithAi(graph, aiAssist.response, { mode: "fast" });
+    }
+    return graph;
+  }, [aiAssist.response, aiAssist.status, executableImportPlan, plan]);
+  const finalReviewModel = useMemo(() => (
+    importDecisionGraph ? buildFinalReviewModel(importDecisionGraph) : null
+  ), [importDecisionGraph]);
   const aiAssistCacheKey = useMemo(() => (
     smartImportAssistCacheKey(fileMeta, plan, analysis)
   ), [analysis, fileMeta, plan]);
   const hasAiAssistableItems = Boolean(
     plan
+    && plan.sourceType !== "official_exact"
     && !unsupported
     && !regionSelectionPending
     && (
@@ -3530,16 +3576,8 @@ export default function GradeImportExportDialog({
         return;
       }
 
-      const officialAnalysis = analyzeOfficialTemplateWorkbook(workbook, {
-        classId: importContext.classId,
-        subjectId: importContext.subjectId,
-        semesterId: importContext.semesterId,
-        academicYearId: importContext.academicYearId,
-      });
-      const isOfficial = officialAnalysis.sourceType.startsWith("official_");
-      const nextAnalysis = isOfficial
-        ? officialAnalysis
-        : analyzeFreeExcelWorkbook(workbook, { students: importContext.students });
+      const detectedSource = detectGradeImportSource(workbook, importContext);
+      const nextAnalysis = detectedSource.analysis;
       const nextPlan = buildImportPlan(nextAnalysis, importContext, {
         updateMode: effectiveUpdateMode,
         selectedRegionId: isFreeExcelAnalysis(nextAnalysis) ? nextAnalysis.selectedRegionId : undefined,
@@ -3550,11 +3588,13 @@ export default function GradeImportExportDialog({
       setAnalysis(nextAnalysis);
       setBasePlan(nextPlan);
       setPlan(applyResolverToPlan(nextPlan, emptyResolverState, importContext, effectiveUpdateMode));
-      setStepIndex(1);
+      setStepIndex(nextPlan.sourceType === "official_exact" && !needsRegionSelection ? 3 : 1);
       setExecutionState("ready");
       setAnalysisErrorCode(null);
       if (needsRegionSelection) {
         showWarning("Pilih tabel nilai dulu", "Workbook memiliki beberapa tabel nilai. Pilih tabel yang benar sebelum lanjut.");
+      } else if (nextPlan.sourceType === "official_exact") {
+        success("Template resmi siap direview", "Metadata SIPENA valid. Siswa dan kolom diproses otomatis tanpa AI atau mapping manual.");
       } else {
         success("Preview import siap", "File sudah dianalisis sebagai preview. Belum ada data yang disimpan.");
       }
@@ -3777,18 +3817,21 @@ export default function GradeImportExportDialog({
     if (!canDownloadOfficialTemplate) return "Lengkapi kelas, mapel, semester, dan tahun ajaran aktif sebelum download template.";
     return null;
   }, [canDownloadOfficialTemplate, onDownloadOfficialTemplate]);
-  const readyImportCount = executableImportPlan?.summary.executableCount ?? plan?.summary.readyImportCount ?? 0;
+  const readyImportCount = finalReviewModel
+    ? finalReviewModel.summary.save + finalReviewModel.summary.convert + finalReviewModel.summary.overwrite
+    : executableImportPlan?.summary.executableCount ?? plan?.summary.readyImportCount ?? 0;
   const needsCheckCount = (smartFixResult?.needsConfirmationCount || 0)
     + (smartFixResult?.manualRequiredCount || 0)
     + (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0);
-  const blockedItemCount = executableImportPlan?.summary.blockedCount
+  const blockedItemCount = finalReviewModel?.summary.blocked
+    ?? executableImportPlan?.summary.blockedCount
     ?? plan?.conflicts.filter((item) => item.severity === "blocked").length
     ?? 0;
-  const skippedItemCount = executableImportPlan
+  const skippedItemCount = finalReviewModel?.summary.skip ?? (executableImportPlan
     ? executableImportPlan.summary.skippedEmptyCount
       + executableImportPlan.summary.skippedExistingCount
       + executableImportPlan.summary.skippedManualCount
-    : plan?.summary.skippedValueCount ?? 0;
+    : plan?.summary.skippedValueCount ?? 0);
   const importReadinessMessage = useMemo(() => {
     if (tab !== "import") return "Data tidak akan ditimpa tanpa konfirmasi.";
     if (regionSelectionPending) return "Pilih tabel nilai yang ingin dipakai.";
@@ -4041,6 +4084,7 @@ export default function GradeImportExportDialog({
                     <PreviewStep
                       plan={plan}
                       model={spreadsheetPreview}
+                      review={finalReviewModel}
                     />
                   ) : null}
                   {stepIndex === 4 ? (

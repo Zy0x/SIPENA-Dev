@@ -90,6 +90,15 @@ function getSheetByName(analysis: OfficialTemplateAnalysis, name: string): Workb
 }
 
 function readOfficialStudentMetadata(analysis: OfficialTemplateAnalysis): OfficialStudentRowMetadata[] {
+  if (analysis.studentsMetadata?.length) {
+    return analysis.studentsMetadata.map((item, index) => ({
+      rowIndex: item.rowNumber || index + 2,
+      studentId: item.studentId,
+      name: item.name,
+      nisn: item.nisn,
+    }));
+  }
+
   const sheet = getSheetByName(analysis, "_students");
   if (!sheet || sheet.rows.length < 2) return [];
   const headers = sheet.rows[0].map((cell) => cellText(cell).toLowerCase());
@@ -97,10 +106,11 @@ function readOfficialStudentMetadata(analysis: OfficialTemplateAnalysis): Offici
   const studentIdIndex = indexOf("student_id");
   const nameIndex = indexOf("name");
   const nisnIndex = indexOf("nisn");
+  const rowNumberIndex = indexOf("row_number");
 
   return sheet.rows.slice(1)
     .map((row, index) => ({
-      rowIndex: index + 2,
+      rowIndex: Number(row[rowNumberIndex]) || index + 2,
       studentId: cellText(row[studentIdIndex]),
       name: cellText(row[nameIndex]),
       nisn: cellText(row[nisnIndex]),

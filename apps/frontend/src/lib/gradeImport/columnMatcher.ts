@@ -40,6 +40,7 @@ export interface ColumnMatcherMetadata {
   chapterId?: string;
   assignmentId?: string;
   targetKey?: string;
+  locked?: boolean;
 }
 
 export interface ColumnMatcherHeaderInput {
@@ -258,6 +259,28 @@ function resolveAssignmentHeader(
   const target = parsedHeader.target;
   const chapterName = target?.chapterName;
   const assignmentName = target?.assignmentName;
+  if (!chapterName && assignmentName) {
+    const assignmentOnly = resolveAssignmentOnlyHeader(input, parsedHeader, records);
+    if (assignmentOnly) return { mapping: assignmentOnly };
+    return {
+      mapping: makeMapping(
+        input,
+        parsedHeader,
+        "unresolved",
+        "needs_confirmation",
+        parsedHeader.confidence || 50,
+        target,
+        [
+          ...parsedHeader.warnings,
+          warning(
+            "COLUMN_ASSIGNMENT_WITHOUT_CHAPTER_TARGET_REQUIRED",
+            "Header nilai tidak menyebut BAB. Pilih target, buat tugas baru, atau lewati kolom ini.",
+            input.columnIndex,
+          ),
+        ],
+      ),
+    };
+  }
   const normalizedChapter = normalizeText(toCanonicalChapterName(chapterName || ""));
   const normalizedAssignment = normalizeText(assignmentName || "");
 

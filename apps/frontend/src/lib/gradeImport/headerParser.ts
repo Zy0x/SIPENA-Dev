@@ -1,5 +1,7 @@
 import {
+  DAILY_SCORE_ALIASES,
   DERIVED_COLUMN_HEADERS,
+  REMEDIAL_ALIASES,
   RESERVED_COLUMN_HEADERS,
   SAS_ALIASES,
   STS_ALIASES,
@@ -15,6 +17,8 @@ const reservedSet = new Set<string>(RESERVED_COLUMN_HEADERS);
 const derivedSet = new Set<string>(DERIVED_COLUMN_HEADERS);
 const stsSet = new Set<string>(STS_ALIASES);
 const sasSet = new Set<string>(SAS_ALIASES);
+const dailyScoreSet = new Set<string>(DAILY_SCORE_ALIASES);
+const remedialSet = new Set<string>(REMEDIAL_ALIASES);
 
 function baseHeader(raw: string, normalized: string, headerType: ParsedHeaderType): ParsedGradeHeader {
   return {
@@ -75,6 +79,47 @@ function parseAssignmentHeader(raw: string, normalized: string): ParsedGradeHead
   };
 }
 
+function parseAssignmentOnlyHeader(raw: string, normalized: string): ParsedGradeHeader | null {
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const base = [
+    tokens.slice(0, 3).join(" "),
+    tokens.slice(0, 2).join(" "),
+    tokens[0],
+  ].find((candidate) => dailyScoreSet.has(candidate as typeof DAILY_SCORE_ALIASES[number])
+    || remedialSet.has(candidate as typeof REMEDIAL_ALIASES[number])) || "";
+  if (!base) return null;
+
+  const isDailyScore = dailyScoreSet.has(base as typeof DAILY_SCORE_ALIASES[number]);
+  const isRemedial = remedialSet.has(base as typeof REMEDIAL_ALIASES[number]);
+  if (!isDailyScore && !isRemedial) return null;
+
+  const assignmentName = normalizeWhitespace(raw);
+  return {
+    raw,
+    normalized,
+    headerType: "assignment",
+    target: {
+      gradeType: "assignment",
+      assignmentName,
+      sourceAssignmentName: raw,
+    },
+    confidence: isDailyScore ? 64 : 48,
+    reserved: false,
+    derived: false,
+    reasons: [
+      isDailyScore
+        ? "Header terlihat seperti nilai harian tanpa BAB."
+        : "Header remedial belum menyebut BAB atau tugas asal.",
+    ],
+    warnings: [warning(
+      isDailyScore ? "HEADER_ASSIGNMENT_WITHOUT_CHAPTER" : "HEADER_REMEDIAL_NEEDS_TARGET",
+      isDailyScore
+        ? "Header seperti UH/PH perlu dipilihkan BAB atau tugas target."
+        : "Header remedial perlu target manual atau dilewati.",
+    )],
+  };
+}
+
 export function parseGradeHeader(value: unknown): ParsedGradeHeader {
   const raw = value === null || value === undefined ? "" : String(value);
   const normalized = normalizeText(raw);
@@ -132,6 +177,9 @@ export function parseGradeHeader(value: unknown): ParsedGradeHeader {
 
   const assignmentHeader = parseAssignmentHeader(raw, normalized);
   if (assignmentHeader) return assignmentHeader;
+
+  const assignmentOnlyHeader = parseAssignmentOnlyHeader(raw, normalized);
+  if (assignmentOnlyHeader) return assignmentOnlyHeader;
 
   return {
     ...baseHeader(raw, normalized, "unknown"),

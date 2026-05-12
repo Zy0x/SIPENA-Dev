@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 
+import { hashImportMetadata } from "./metadataHash";
 import { normalizeName, normalizeNisn, normalizeText, toCanonicalChapterName } from "./textNormalizer";
 
 export const OFFICIAL_TEMPLATE_VERSION = "2.0.0";
@@ -76,27 +77,8 @@ function sanitizeFileSegment(value: string): string {
   return cleaned || "Data";
 }
 
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  if (value && typeof value === "object") {
-    return `{${Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
 function hashPayload(value: unknown): string {
-  const payload = stableStringify(value);
-  let hash = 0x811c9dc5;
-
-  for (let i = 0; i < payload.length; i += 1) {
-    hash ^= payload.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-
-  return `fnv1a32:${(hash >>> 0).toString(16).padStart(8, "0")}`;
+  return hashImportMetadata(value);
 }
 
 function setColumnWidths(ws: XLSX.WorkSheet, widths: number[]) {
@@ -351,19 +333,20 @@ function createManifestSheet(context: OfficialGradeTemplateContext, columns: Tem
 
 function createStudentsSheet(context: OfficialGradeTemplateContext) {
   const rows = [
-    ["student_id", "name", "normalized_name", "nisn", "normalized_nisn"],
-    ...context.students.map((student) => [
+    ["student_id", "nisn", "name", "normalized_name", "normalized_nisn", "row_number"],
+    ...context.students.map((student, index) => [
       student.id,
+      safeText(student.nisn),
       safeText(student.name),
       normalizeName(student.name).normalized,
-      safeText(student.nisn),
       normalizeNisn(student.nisn || "").normalized,
+      index + 2,
     ]),
   ];
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  setColumnWidths(ws, [40, 32, 32, 18, 18]);
-  styleHeaderRow(ws, 0, 5);
-  forceTextColumn(ws, 3, 1, rows.length - 1);
+  setColumnWidths(ws, [40, 18, 32, 32, 18, 14]);
+  styleHeaderRow(ws, 0, 6);
+  forceTextColumn(ws, 1, 1, rows.length - 1);
   forceTextColumn(ws, 4, 1, rows.length - 1);
   return ws;
 }
@@ -374,11 +357,13 @@ function createStructureSheet(context: OfficialGradeTemplateContext) {
     [
       "chapter_id",
       "chapter_name",
+      "chapter_order",
       "normalized_chapter_name",
       "assignment_id",
       "assignment_name",
+      "assignment_order",
       "normalized_assignment_name",
-      "order",
+      "grade_type",
     ],
   ];
 
@@ -388,11 +373,13 @@ function createStructureSheet(context: OfficialGradeTemplateContext) {
       rows.push([
         chapter.id,
         chapter.name,
+        chapter.order_index ?? "",
         normalizeText(toCanonicalChapterName(chapter.name)),
         "",
         "",
         "",
-        chapter.order_index ?? "",
+        "",
+        "assignment",
       ]);
       return;
     }
@@ -401,24 +388,26 @@ function createStructureSheet(context: OfficialGradeTemplateContext) {
       rows.push([
         chapter.id,
         chapter.name,
+        chapter.order_index ?? "",
         normalizeText(toCanonicalChapterName(chapter.name)),
         assignment.id,
         assignment.name,
+        assignment.order_index ?? "",
         normalizeText(assignment.name),
-        assignment.order_index ?? chapter.order_index ?? "",
+        "assignment",
       ]);
     });
   });
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  setColumnWidths(ws, [40, 24, 28, 40, 28, 32, 12]);
-  styleHeaderRow(ws, 0, 7);
+  setColumnWidths(ws, [40, 24, 14, 28, 40, 28, 16, 32, 16]);
+  styleHeaderRow(ws, 0, 9);
   return ws;
 }
 
 function createColumnMapSheet(columns: TemplateColumn[]) {
   const rows = [
-    ["column_index", "visible_header", "grade_type", "chapter_id", "assignment_id", "target_key"],
+    ["column_index", "visible_header", "grade_type", "chapter_id", "assignment_id", "target_key", "locked"],
     ...columns.map((column, index) => [
       index + 4,
       column.visibleHeader,
@@ -426,11 +415,12 @@ function createColumnMapSheet(columns: TemplateColumn[]) {
       column.chapterId,
       column.assignmentId,
       column.targetKey,
+      "true",
     ]),
   ];
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  setColumnWidths(ws, [14, 32, 16, 40, 40, 28]);
-  styleHeaderRow(ws, 0, 6);
+  setColumnWidths(ws, [14, 32, 16, 40, 40, 28, 12]);
+  styleHeaderRow(ws, 0, 7);
   return ws;
 }
 

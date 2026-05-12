@@ -69,6 +69,21 @@ export const SAS_ALIASES = [
   "akhir semester",
 ] as const;
 
+export const DAILY_SCORE_ALIASES = [
+  "uh",
+  "ph",
+  "harian",
+  "nilai harian",
+  "ulangan harian",
+  "penilaian harian",
+] as const;
+
+export const REMEDIAL_ALIASES = [
+  "remedial",
+  "remidi",
+  "perbaikan",
+] as const;
+
 export const TEXTUAL_GRADE_VALUES = [
   "tuntas",
   "tidak tuntas",
