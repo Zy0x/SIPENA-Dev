@@ -88,6 +88,7 @@ export function PreviewFixPanel({
   onIgnoreColumn,
   onIgnoreCell,
   onIgnoreRow,
+  onResetRowSelection,
   onApplySafeFixes,
   onApproveSuggestions,
   onSetColumnInclude,
@@ -106,6 +107,7 @@ export function PreviewFixPanel({
   onIgnoreColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
   onIgnoreRow: (row: SpreadsheetPreviewRow) => void;
+  onResetRowSelection: (row: SpreadsheetPreviewRow) => void;
   onApplySafeFixes: () => void;
   onApproveSuggestions: () => void;
   onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
@@ -299,6 +301,7 @@ export function PreviewFixPanel({
           </>
         ) : targetRow ? (
           <>
+            <SettingButton tone="primary" onClick={() => onResetRowSelection(targetRow)}>Kembalikan baris</SettingButton>
             <SettingButton onClick={() => onIgnoreRow(targetRow)}>Abaikan baris</SettingButton>
           </>
         ) : null}

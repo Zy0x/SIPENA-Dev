@@ -1589,6 +1589,7 @@ interface ConflictResolutionActions {
   onUseCurrentStudent: (rowIndex: number, studentId: string) => void;
   onChooseStudent: (rowIndex: number, studentId: string) => void;
   onIgnoreRow: (rowIndex: number) => void;
+  onResetRowSelection: (rowIndex: number) => void;
   onMarkRowUnresolved: (rowIndex: number) => void;
   onUseExistingAssignment: (columnIndex: number, assignmentId: string) => void;
   onConfirmCreateAssignment: (columnIndex: number, chapterId: string, assignmentName: string) => void;
@@ -2487,6 +2488,7 @@ function SpreadsheetPreviewStep({
         if (position) actions.onIgnoreCell(position.rowIndex, position.columnIndex);
       }}
       onIgnoreRow={(row) => actions.onIgnoreRow(previewRowIndex(row))}
+      onResetRowSelection={(row) => actions.onResetRowSelection(previewRowIndex(row))}
       onSetColumnInclude={actions.onSetColumnInclude}
       onSetColumnHeader={actions.onSetColumnHeader}
       onSetColumnTarget={actions.onSetColumnTarget}
@@ -3075,6 +3077,26 @@ export default function GradeImportExportDialog({
         studentOverrides,
       };
     }),
+    onResetRowSelection: (rowIndex) => {
+      updateResolver((current) => {
+        const { [rowIndex]: _removed, ...studentOverrides } = current.studentOverrides;
+        return {
+          ...current,
+          ignoredRows: current.ignoredRows.filter((item) => item !== rowIndex),
+          unresolvedRows: current.unresolvedRows.filter((item) => item !== rowIndex),
+          ignoredCells: current.ignoredCells.filter((item) => !item.startsWith(`${rowIndex}:`)),
+          studentOverrides,
+          resolvedConflictKeys: current.resolvedConflictKeys.filter((item) => !item.includes(`:${rowIndex}:`)),
+        };
+      });
+      setSelectionState((current) => {
+        const cellSettings = { ...current.cellSettings };
+        Object.keys(cellSettings).forEach((cellId) => {
+          if (cellSettings[cellId]?.rowId === `row-${rowIndex}`) delete cellSettings[cellId];
+        });
+        return { ...current, cellSettings };
+      });
+    },
     onMarkRowUnresolved: (rowIndex) => updateResolver((current) => {
       const { [rowIndex]: _removed, ...studentOverrides } = current.studentOverrides;
       return {
@@ -3309,17 +3331,28 @@ export default function GradeImportExportDialog({
     },
     onUpdateModeChange: (mode) => setUpdateMode(mode),
     onSelectRegion: selectImportRegion,
-    onSetColumnInclude: (column, include) => setSelectionState((current) => ({
-      ...current,
-      columnSettings: {
-        ...current.columnSettings,
-        [column.id]: {
-          ...(current.columnSettings[column.id] || defaultColumnImportSetting(column.id, previewColumnIndex(column) || undefined)),
-          include,
-          updatedAt: nowSelectionTimestamp(),
+    onSetColumnInclude: (column, include) => {
+      const columnIndex = previewColumnIndex(column);
+      if (columnIndex) {
+        updateResolver((current) => ({
+          ...current,
+          ignoredColumns: include
+            ? current.ignoredColumns.filter((item) => item !== columnIndex)
+            : uniqueNumbersForState([...current.ignoredColumns, columnIndex]),
+        }));
+      }
+      setSelectionState((current) => ({
+        ...current,
+        columnSettings: {
+          ...current.columnSettings,
+          [column.id]: {
+            ...(current.columnSettings[column.id] || defaultColumnImportSetting(column.id, columnIndex || undefined)),
+            include,
+            updatedAt: nowSelectionTimestamp(),
+          },
         },
-      },
-    })),
+      }));
+    },
     onSetColumnHeader: (column, header) => setSelectionState((current) => {
       const trimmedHeader = header.trim();
       const existing = current.columnSettings[column.id] || defaultColumnImportSetting(column.id, previewColumnIndex(column) || undefined);
@@ -3382,49 +3415,87 @@ export default function GradeImportExportDialog({
         },
       },
     })),
-    onBulkColumnAction: (column, action) => setSelectionState((current) => {
-      const nextColumnSettings = { ...current.columnSettings };
-      const nextCellSettings = { ...current.cellSettings };
+    onBulkColumnAction: (column, action) => {
       const columnIndex = previewColumnIndex(column) || undefined;
-      if (action === "reset") {
-        delete nextColumnSettings[column.id];
-        Object.keys(nextCellSettings).forEach((cellId) => {
-          if (nextCellSettings[cellId]?.columnId === column.id) delete nextCellSettings[cellId];
-        });
-        return { columnSettings: nextColumnSettings, cellSettings: nextCellSettings };
+      if (columnIndex) {
+        updateResolver((current) => ({
+          ...current,
+          ignoredColumns: action === "skip_all"
+            ? uniqueNumbersForState([...current.ignoredColumns, columnIndex])
+            : current.ignoredColumns.filter((item) => item !== columnIndex),
+          columnOverrides: action === "reset"
+            ? Object.fromEntries(Object.entries(current.columnOverrides).filter(([key]) => Number(key) !== columnIndex))
+            : current.columnOverrides,
+          ignoredCells: action === "reset"
+            ? current.ignoredCells.filter((item) => !item.endsWith(`:${columnIndex}`))
+            : current.ignoredCells,
+        }));
       }
-      nextColumnSettings[column.id] = {
-        ...(nextColumnSettings[column.id] || defaultColumnImportSetting(column.id, columnIndex)),
-        include: action !== "skip_all",
-        valueMode: action === "skip_existing" ? "skip_existing" : nextColumnSettings[column.id]?.valueMode || "fill_empty_only",
-        overwriteConfirmed: action === "skip_all" ? false : nextColumnSettings[column.id]?.overwriteConfirmed,
-        updatedAt: nowSelectionTimestamp(),
-      };
-      return { columnSettings: nextColumnSettings, cellSettings: nextCellSettings };
-    }),
-    onResetColumnSelection: (column) => setSelectionState((current) => {
-      const columnSettings = { ...current.columnSettings };
-      const cellSettings = { ...current.cellSettings };
-      delete columnSettings[column.id];
-      Object.keys(cellSettings).forEach((cellId) => {
-        if (cellSettings[cellId]?.columnId === column.id) delete cellSettings[cellId];
-      });
-      return { columnSettings, cellSettings };
-    }),
-    onSetCellInclude: (cell, row, column, include) => setSelectionState((current) => ({
-      ...current,
-      cellSettings: {
-        ...current.cellSettings,
-        [cell.id]: {
-          ...(current.cellSettings[cell.id] || defaultCellImportSetting(cell.id, row.id, column.id, row.studentId)),
-          include,
-          overwriteConfirmed: include ? current.cellSettings[cell.id]?.overwriteConfirmed : false,
-          acceptedSuggestedValue: include ? current.cellSettings[cell.id]?.acceptedSuggestedValue : false,
-          resolvedValue: include ? current.cellSettings[cell.id]?.resolvedValue : null,
+      setSelectionState((current) => {
+        const nextColumnSettings = { ...current.columnSettings };
+        const nextCellSettings = { ...current.cellSettings };
+        if (action === "reset") {
+          delete nextColumnSettings[column.id];
+          Object.keys(nextCellSettings).forEach((cellId) => {
+            if (nextCellSettings[cellId]?.columnId === column.id) delete nextCellSettings[cellId];
+          });
+          return { columnSettings: nextColumnSettings, cellSettings: nextCellSettings };
+        }
+        nextColumnSettings[column.id] = {
+          ...(nextColumnSettings[column.id] || defaultColumnImportSetting(column.id, columnIndex)),
+          include: action !== "skip_all",
+          valueMode: action === "skip_existing" ? "skip_existing" : nextColumnSettings[column.id]?.valueMode || "fill_empty_only",
+          overwriteConfirmed: action === "skip_all" ? false : nextColumnSettings[column.id]?.overwriteConfirmed,
           updatedAt: nowSelectionTimestamp(),
+        };
+        return { columnSettings: nextColumnSettings, cellSettings: nextCellSettings };
+      });
+    },
+    onResetColumnSelection: (column) => {
+      const columnIndex = previewColumnIndex(column);
+      if (columnIndex) {
+        updateResolver((current) => ({
+          ...current,
+          ignoredColumns: current.ignoredColumns.filter((item) => item !== columnIndex),
+          ignoredCells: current.ignoredCells.filter((item) => !item.endsWith(`:${columnIndex}`)),
+          columnOverrides: Object.fromEntries(Object.entries(current.columnOverrides).filter(([key]) => Number(key) !== columnIndex)),
+        }));
+      }
+      setSelectionState((current) => {
+        const columnSettings = { ...current.columnSettings };
+        const cellSettings = { ...current.cellSettings };
+        delete columnSettings[column.id];
+        Object.keys(cellSettings).forEach((cellId) => {
+          if (cellSettings[cellId]?.columnId === column.id) delete cellSettings[cellId];
+        });
+        return { columnSettings, cellSettings };
+      });
+    },
+    onSetCellInclude: (cell, row, column, include) => {
+      const position = previewCellPosition(cell);
+      if (position) {
+        updateResolver((current) => ({
+          ...current,
+          ignoredCells: include
+            ? current.ignoredCells.filter((item) => item !== `${position.rowIndex}:${position.columnIndex}`)
+            : uniqueStrings([...current.ignoredCells, `${position.rowIndex}:${position.columnIndex}`]),
+        }));
+      }
+      setSelectionState((current) => ({
+        ...current,
+        cellSettings: {
+          ...current.cellSettings,
+          [cell.id]: {
+            ...(current.cellSettings[cell.id] || defaultCellImportSetting(cell.id, row.id, column.id, row.studentId)),
+            include,
+            overwriteConfirmed: include ? current.cellSettings[cell.id]?.overwriteConfirmed : false,
+            acceptedSuggestedValue: include ? current.cellSettings[cell.id]?.acceptedSuggestedValue : false,
+            resolvedValue: include ? current.cellSettings[cell.id]?.resolvedValue : null,
+            updatedAt: nowSelectionTimestamp(),
+          },
         },
-      },
-    })),
+      }));
+    },
     onSetCellValueMode: (cell, row, column, mode, overwriteConfirmed = false) => setSelectionState((current) => ({
       ...current,
       cellSettings: {
@@ -3441,6 +3512,13 @@ export default function GradeImportExportDialog({
     onAcceptSuggestedValue: (cell, row, column) => {
       if (typeof cell.suggestedValue !== "number" || !Number.isFinite(cell.suggestedValue) || cell.suggestedValue < 0 || cell.suggestedValue > 100) {
         return;
+      }
+      const position = previewCellPosition(cell);
+      if (position) {
+        updateResolver((current) => ({
+          ...current,
+          ignoredCells: current.ignoredCells.filter((item) => item !== `${position.rowIndex}:${position.columnIndex}`),
+        }));
       }
       setSelectionState((current) => ({
         ...current,
@@ -3463,6 +3541,10 @@ export default function GradeImportExportDialog({
       const columnId = `excel-col-${columnIndex}`;
       const cellId = `${rowId}:${columnId}`;
       const studentId = plan?.studentMappings.find((mapping) => mapping.rowIndex === rowIndex)?.studentId;
+      updateResolver((current) => ({
+        ...current,
+        ignoredCells: current.ignoredCells.filter((item) => item !== `${rowIndex}:${columnIndex}`),
+      }));
       setSelectionState((current) => ({
         ...current,
         cellSettings: {
@@ -3478,11 +3560,20 @@ export default function GradeImportExportDialog({
         },
       }));
     },
-    onResetCellSelection: (cell) => setSelectionState((current) => {
-      const cellSettings = { ...current.cellSettings };
-      delete cellSettings[cell.id];
-      return { ...current, cellSettings };
-    }),
+    onResetCellSelection: (cell) => {
+      const position = previewCellPosition(cell);
+      if (position) {
+        updateResolver((current) => ({
+          ...current,
+          ignoredCells: current.ignoredCells.filter((item) => item !== `${position.rowIndex}:${position.columnIndex}`),
+        }));
+      }
+      setSelectionState((current) => {
+        const cellSettings = { ...current.cellSettings };
+        delete cellSettings[cell.id];
+        return { ...current, cellSettings };
+      });
+    },
   }), [importContext.chapters, plan, selectImportRegion, updateResolver]);
 
   const hasPlan = Boolean(plan || basePlan);

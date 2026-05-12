@@ -329,6 +329,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("<SpreadsheetPreviewStep");
     expect(previewSource).toContain("sipena-preview-header-button");
     expect(previewSource).toContain("ColumnSettingsOverlay");
+    expect(previewSource).toContain('type PreviewMode = "quick" | "detail"');
+    expect(previewSource).toContain("Mode Cepat");
+    expect(previewSource).toContain("Mode Detail");
+    expect(previewSource).toContain("sipena-preview-mode-toggle");
+    expect(previewSource).toContain("sipena-preview-status-pill");
     expect(previewSource).toContain("Klik header untuk atur kolom");
     expect(previewSource).toContain("Klik sel untuk pakai/lewati");
     expect(previewSource).toContain("previewCellDetailLines");
@@ -338,9 +343,16 @@ describe("phase 12 grade import regression suite", () => {
     expect(previewSource).toContain("Lama:");
     expect(previewSource).toContain("Saran:");
     expect(previewSource).toContain("Perlu cek");
+    expect(previewSource).toContain("onResetCellSelection(cell)");
+    expect(dialogSource).toContain("onResetRowSelection");
+    expect(dialogSource).toContain("ignoredCells: current.ignoredCells.filter");
+    expect(fixPanelSource).toContain("Kembalikan baris");
     expect(globalStyles).toContain("sipena-preview-header-target");
     expect(globalStyles).toContain("sipena-preview-cell-details");
     expect(globalStyles).toContain("sipena-preview-cell-actions");
+    expect(globalStyles).toContain("sipena-preview-modebar");
+    expect(globalStyles).toContain("sipena-preview-status-pill--ready");
+    expect(globalStyles).toContain("sipena-preview-shell--quick");
     expect(globalStyles).toContain("--sipena-preview-sticky-3: 152px");
     expect(globalStyles).toContain("width: 184px");
     expect(previewBadgeSource).toContain("Tidak valid");

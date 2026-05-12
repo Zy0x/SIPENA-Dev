@@ -222,6 +222,55 @@
   flex-wrap: wrap;
 }
 
+.sipena-preview-modebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 10px 12px;
+}
+
+.sipena-preview-modebar-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.sipena-preview-modebar-desc {
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.sipena-preview-mode-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.sipena-preview-mode-button {
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #2563eb;
+}
+
+.sipena-preview-mode-button-active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
 .sipena-preview-legend {
   display: flex;
   align-items: center;
@@ -353,7 +402,7 @@
 
 .sipena-preview-header-meta {
   display: inline-flex;
-  max-width: 82px;
+  max-width: 92px;
   flex: 0 0 auto;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -404,6 +453,44 @@
   color: #64748b;
 }
 
+.sipena-preview-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  padding: 2px 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.sipena-preview-status-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.sipena-preview-status-pill--ready {
+  color: #15803d;
+}
+
+.sipena-preview-status-pill--skip,
+.sipena-preview-status-pill--neutral {
+  color: #64748b;
+}
+
+.sipena-preview-status-pill--check {
+  color: #b45309;
+}
+
+.sipena-preview-status-pill--danger {
+  color: #be123c;
+}
+
 .sipena-preview-cell {
   position: relative;
   cursor: pointer;
@@ -437,9 +524,9 @@
 }
 
 .sipena-preview-cell--new-column {
-  background: #eef2ff !important;
-  color: #3730a3;
-  box-shadow: inset 0 0 0 1px #6366f1;
+  background: #fff7ed !important;
+  color: #9a3412;
+  box-shadow: inset 0 0 0 1px #fb923c;
 }
 
 .sipena-preview-cell--needs-check {
@@ -616,6 +703,48 @@
 
 .sipena-preview-cell-action-safe:hover {
   background: #dcfce7;
+}
+
+.sipena-preview-shell--quick .sipena-preview-table th,
+.sipena-preview-shell--quick .sipena-preview-table td {
+  min-width: 118px;
+  height: 38px;
+  padding: 6px 8px;
+}
+
+.sipena-preview-shell--quick .sipena-preview-header-button {
+  min-height: 28px;
+  max-width: 210px;
+  align-items: center;
+  padding: 3px 4px;
+}
+
+.sipena-preview-shell--quick .sipena-preview-header-meta {
+  max-width: 76px;
+}
+
+.sipena-preview-shell--quick .sipena-preview-header-action {
+  padding: 2px 5px;
+  font-size: 9px;
+}
+
+.sipena-preview-shell--quick .sipena-preview-cell-main {
+  align-items: center;
+  gap: 5px;
+}
+
+.sipena-preview-shell--quick .sipena-preview-cell-value {
+  font-size: 11.5px;
+}
+
+.sipena-preview-shell--quick .sipena-preview-cell-badges {
+  max-width: 64px;
+}
+
+.sipena-preview-shell--quick .sipena-preview-cell-badge,
+.sipena-preview-shell--quick .sipena-import-cell-mini-badge {
+  padding: 1px 5px;
+  font-size: 9px;
 }
 
 .sipena-preview-fix-panel {
@@ -952,6 +1081,19 @@
 @media (max-width: 899px) {
   .sipena-preview-banner {
     flex-direction: column;
+  }
+
+  .sipena-preview-modebar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sipena-preview-mode-toggle {
+    width: 100%;
+  }
+
+  .sipena-preview-mode-button {
+    flex: 1 1 0;
   }
 
   .sipena-preview-actions {

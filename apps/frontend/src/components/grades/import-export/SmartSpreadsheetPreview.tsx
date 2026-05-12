@@ -30,8 +30,27 @@ type Selection =
   | { kind: "row"; row: SpreadsheetPreviewRow }
   | null;
 
+type PreviewMode = "quick" | "detail";
+
 function previewStatusClass(status: string): string {
   return `sipena-preview-cell--${status.replace(/_/g, "-")}`;
+}
+
+function previewStatusTone(status: string, include = true): "ready" | "skip" | "check" | "danger" | "neutral" {
+  if (!include || ["ignored", "skipped", "manual_skipped"].includes(status)) return "skip";
+  if (["invalid", "blocked", "manual_required"].includes(status)) return "danger";
+  if (["changed", "overwrite", "needs_check", "new_column"].includes(status)) return "check";
+  if (["new_value", "included", "manual_included"].includes(status)) return "ready";
+  return "neutral";
+}
+
+function previewStatusLabel(status: string, include = true): string {
+  if (!include || ["ignored", "skipped", "manual_skipped"].includes(status)) return "Dilewati";
+  if (["invalid", "blocked", "manual_required"].includes(status)) return "Perlu dicek";
+  if (status === "overwrite" || status === "changed") return "Timpa";
+  if (status === "needs_check" || status === "new_column") return "Perlu dicek";
+  if (status === "new_value" || status === "included" || status === "manual_included") return "Dipakai";
+  return "Info";
 }
 
 function stickyStyle(index: number): CSSProperties | undefined {
@@ -99,6 +118,8 @@ function needsCompactCellActions(cell: SpreadsheetPreviewCell, column: Spreadshe
     || cell.status === "manual_required"
     || cell.status === "needs_check"
     || cell.status === "overwrite"
+    || cell.isManuallyIncluded
+    || cell.isManuallySkipped
     || cell.requiresConfirmation
     || typeof cell.suggestedValue === "number";
 }
@@ -112,6 +133,7 @@ export function SmartSpreadsheetPreview({
   onIgnoreColumn,
   onIgnoreCell,
   onIgnoreRow,
+  onResetRowSelection,
   selectionState,
   assignments,
   chapters,
@@ -137,6 +159,7 @@ export function SmartSpreadsheetPreview({
   onIgnoreColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
   onIgnoreRow: (row: SpreadsheetPreviewRow) => void;
+  onResetRowSelection: (row: SpreadsheetPreviewRow) => void;
   onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
   onSetColumnHeader: (column: SpreadsheetPreviewColumn, header: string) => void;
   onSetColumnTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
@@ -149,6 +172,8 @@ export function SmartSpreadsheetPreview({
   onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
 }) {
   const [selection, setSelection] = useState<Selection>(null);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("quick");
+  const isDetailMode = previewMode === "detail";
   const firstManual = useMemo(() => {
     for (const row of model.rows) {
       const cell = row.cells.find((item) =>
@@ -201,8 +226,34 @@ export function SmartSpreadsheetPreview({
   };
 
   return (
-    <div className="sipena-preview-shell">
+    <div className={cn("sipena-preview-shell", `sipena-preview-shell--${previewMode}`)} data-preview-mode={previewMode}>
       <PreviewSummaryBanner model={model} onPrimaryAction={primarySummaryAction} />
+      <div className="sipena-preview-modebar" aria-label="Mode tampilan tabel import">
+        <div className="min-w-0">
+          <p className="sipena-preview-modebar-title">Tampilan tabel</p>
+          <p className="sipena-preview-modebar-desc">
+            Mode Cepat lebih ringkas. Mode Detail menampilkan alasan, target, dan tombol per sel.
+          </p>
+        </div>
+        <div className="sipena-preview-mode-toggle" role="group" aria-label="Pilih mode tampilan tabel">
+          <button
+            type="button"
+            className={cn("sipena-preview-mode-button", previewMode === "quick" && "sipena-preview-mode-button-active")}
+            aria-pressed={previewMode === "quick"}
+            onClick={() => setPreviewMode("quick")}
+          >
+            Mode Cepat
+          </button>
+          <button
+            type="button"
+            className={cn("sipena-preview-mode-button", previewMode === "detail" && "sipena-preview-mode-button-active")}
+            aria-pressed={previewMode === "detail"}
+            onClick={() => setPreviewMode("detail")}
+          >
+            Mode Detail
+          </button>
+        </div>
+      </div>
       <PreviewQuickActions
         onApplySafeFixes={onApplySafeFixes}
         onApproveSuggestions={() => firstManual && setSelection(firstManual)}
@@ -234,7 +285,7 @@ export function SmartSpreadsheetPreview({
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block truncate">{column.header}</span>
-                          {column.type !== "identity" ? (
+                          {column.type !== "identity" && isDetailMode ? (
                             <>
                               <span className="sipena-preview-header-target" title={columnTargetDetail(column)}>
                                 {columnTargetDetail(column)}
@@ -249,15 +300,17 @@ export function SmartSpreadsheetPreview({
                         </span>
                         {column.type !== "identity" ? (
                           <span className="sipena-preview-header-meta">
-                            {column.isNewStructure ? <span className="sipena-import-cell-mini-badge">Kolom baru</span> : null}
-                            <span className="sipena-import-cell-mini-badge">
-                              {column.effectiveInclude === false ? "Dilewati" : "Dipakai"}
+                            <span className={cn(
+                              "sipena-preview-status-pill",
+                              `sipena-preview-status-pill--${previewStatusTone(column.status, column.effectiveInclude !== false)}`,
+                            )}>
+                              {column.isNewStructure ? "Kolom baru" : previewStatusLabel(column.status, column.effectiveInclude !== false)}
                             </span>
                             <span className="sipena-preview-header-action">Atur</span>
                           </span>
                         ) : null}
                       </button>
-                      {column.type !== "identity" ? (
+                      {column.type !== "identity" && isDetailMode ? (
                         <span className="sipena-preview-header-hint">{headerHint(column)}</span>
                       ) : null}
                     </th>
@@ -291,7 +344,7 @@ export function SmartSpreadsheetPreview({
                           <div className="sipena-preview-cell-main">
                             <span className="min-w-0 flex-1">
                               <span className="sipena-preview-cell-value">{previewCellDisplayValue(cell, column)}</span>
-                              {detailLines.length ? (
+                              {isDetailMode && detailLines.length ? (
                                 <span className="sipena-preview-cell-details">
                                   {detailLines.map((detail) => (
                                     <span key={detail} className="sipena-preview-cell-detail-line">{detail}</span>
@@ -307,7 +360,7 @@ export function SmartSpreadsheetPreview({
                               {cell.requiresConfirmation ? <span className="sipena-import-cell-mini-badge">Perlu cek</span> : null}
                             </span>
                           </div>
-                          {showCellActions ? (
+                          {isDetailMode && showCellActions ? (
                             <div className="sipena-preview-cell-actions">
                               <button
                                 type="button"
@@ -329,6 +382,18 @@ export function SmartSpreadsheetPreview({
                                   }}
                                 >
                                   Skip
+                                </button>
+                              ) : null}
+                              {(cell.isManuallySkipped || cell.isManuallyIncluded) ? (
+                                <button
+                                  type="button"
+                                  className="sipena-preview-cell-action"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onResetCellSelection(cell);
+                                  }}
+                                >
+                                  Kembalikan
                                 </button>
                               ) : null}
                               {typeof cell.suggestedValue === "number" ? (
@@ -370,6 +435,7 @@ export function SmartSpreadsheetPreview({
             onIgnoreColumn={onIgnoreColumn}
             onIgnoreCell={onIgnoreCell}
             onIgnoreRow={onIgnoreRow}
+            onResetRowSelection={onResetRowSelection}
             onApplySafeFixes={onApplySafeFixes}
             onApproveSuggestions={() => firstManual && setSelection(firstManual)}
             onSetColumnInclude={onSetColumnInclude}
