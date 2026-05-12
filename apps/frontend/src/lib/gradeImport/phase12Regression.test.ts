@@ -307,6 +307,8 @@ describe("phase 12 grade import regression suite", () => {
   it("guards unified contextual import policy in source until a component test harness is added", () => {
     const dialogSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/GradeImportExportDialog.tsx"), "utf8");
     const overlaySource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/ColumnSettingsOverlay.tsx"), "utf8");
+    const previewSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/SmartSpreadsheetPreview.tsx"), "utf8");
+    const previewBannerSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewSummaryBanner.tsx"), "utf8");
     const quickActionsSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewQuickActions.tsx"), "utf8");
     const fixPanelSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
 
@@ -321,17 +323,17 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("Identitas template SIPENA valid. Siswa dan kolom diproses otomatis tanpa AI atau pencocokan manual.");
     expect(dialogSource).toContain("buildImportDecisionGraph");
     expect(dialogSource).toContain("buildFinalReviewModel");
-    expect(dialogSource).toContain("Verifikasi tabel import");
-    expect(dialogSource).toContain("Ini adalah tabel kerja untuk mengecek nilai sebelum review akhir");
-    expect(dialogSource).toContain("Sel dipakai");
-    expect(dialogSource).toContain("Dipakai");
-    expect(dialogSource).toContain("Dilewati");
-    expect(dialogSource).toContain("Legenda:");
-    expect(dialogSource).toContain("Geser tabel untuk melihat semua kolom.");
-    expect(dialogSource).toContain("finalCellSurfaceClass");
+    expect(dialogSource).not.toContain("FinalReviewSpreadsheetTable");
+    expect(dialogSource).toContain("<SpreadsheetPreviewStep");
+    expect(previewSource).toContain("sipena-preview-header-button");
+    expect(previewSource).toContain("ColumnSettingsOverlay");
+    expect(previewSource).toContain("Klik header untuk atur kolom");
+    expect(previewSource).toContain("Klik sel untuk pakai/lewati");
+    expect(previewBannerSource).toContain("Klik header untuk atur kolom");
     expect(dialogSource).toContain("Keputusan penting");
     expect(dialogSource).toContain("Buka Verifikasi Tabel");
     expect(dialogSource).toContain("Ringkasan tabel terverifikasi");
+    expect(dialogSource).toContain("Review Akhir hanya menampilkan ringkasan sebelum simpan");
     expect(dialogSource).toContain("Nilai final:");
     expect(dialogSource).toContain("Buka Verifikasi Tabel");
     expect(dialogSource).not.toContain("warning utama");

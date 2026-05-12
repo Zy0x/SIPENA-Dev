@@ -15,10 +15,10 @@ export function PreviewSummaryBanner({
       ? "Atur kolom dan nilai yang akan disimpan"
       : "Atur kolom dan nilai yang akan disimpan";
   const description = manualCount > 0
-    ? `Pilih kolom yang dipakai. Masih ada ${manualCount} bagian merah yang perlu dipilih.`
+    ? `Klik header untuk atur kolom. Masih ada ${manualCount} bagian merah yang perlu dipilih.`
     : needsCheckCount > 0
-      ? "Pilih kolom yang dipakai. Jika perlu, klik nilai tertentu untuk dilewati atau diatur manual."
-      : "Pilih kolom yang dipakai. Jika perlu, klik nilai tertentu untuk dilewati atau diatur manual.";
+      ? "Klik header untuk atur kolom. Klik sel untuk pakai/lewati atau diatur manual."
+      : "Klik header untuk atur kolom. Klik sel untuk pakai/lewati atau diatur manual.";
   const cta = manualCount > 0 ? "Pilih bagian merah" : needsCheckCount > 0 ? "Tinjau item perlu dicek" : "Terapkan pemeriksaan otomatis";
 
   return (
@@ -35,7 +35,7 @@ export function PreviewSummaryBanner({
           <span className="sipena-preview-stat">{model.summary.overwriteCells} nilai akan ditimpa</span>
           <span className="sipena-preview-stat">{model.summary.manualRequired} perlu dipilih</span>
           {model.summary.missingInExcelStudents > 0 ? (
-            <span className="sipena-preview-stat">{model.summary.missingInExcelStudents} siswa di web tidak ada di Excel; nilainya tidak akan berubah.</span>
+            <span className="sipena-preview-stat">{model.summary.missingInExcelStudents} siswa di kelas aktif tidak ada di Excel; nilainya tidak akan berubah.</span>
           ) : null}
         </div>
       </div>

@@ -615,65 +615,6 @@ function decisionRiskTone(risk: FinalReviewModel["sections"][number]["decisions"
   return "danger";
 }
 
-function finalCellDecision(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): { label: string; tone: StatusBadgeTone } {
-  if (column.type === "identity") return { label: "Identitas", tone: "info" };
-  if (cell.status === "overwrite") return { label: "Akan ditimpa", tone: "warning" };
-  if (cell.status === "invalid" || cell.status === "blocked" || cell.status === "manual_required" || cell.requiresConfirmation) {
-    return { label: "Perlu dicek", tone: "danger" };
-  }
-  if (cell.effectiveInclude) return { label: "Dipakai", tone: "success" };
-  return { label: "Dilewati", tone: "info" };
-}
-
-function finalCellValue(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string {
-  if (column.type === "identity") return cell.displayValue || "-";
-  if (!cell.effectiveInclude) return cell.displayValue || "-";
-  const value = cell.resolvedValue ?? cell.newValue ?? cell.suggestedValue ?? cell.displayValue;
-  if (value === null || value === undefined || value === "") return "-";
-  return String(value);
-}
-
-function finalCellMeta(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string {
-  if (column.type === "identity") return "";
-  const parts: string[] = [];
-  if (cell.oldValue !== null && cell.oldValue !== undefined && cell.oldValue !== "") {
-    parts.push(`Lama: ${cell.oldValue}`);
-  }
-  if (cell.rawValue !== null && cell.rawValue !== undefined && cell.rawValue !== "") {
-    parts.push(`Excel: ${cell.rawValue}`);
-  }
-  if (cell.message) parts.push(cell.message);
-  return parts.join(" / ");
-}
-
-function finalCellSurfaceClass(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string {
-  if (column.type === "identity") {
-    return "bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-50";
-  }
-  if (cell.status === "invalid" || cell.status === "blocked" || cell.status === "manual_required" || cell.requiresConfirmation) {
-    return "bg-red-50/80 text-red-950 ring-1 ring-inset ring-red-100 dark:bg-red-950/25 dark:text-red-50 dark:ring-red-900/60";
-  }
-  if (cell.status === "overwrite") {
-    return "bg-orange-50/80 text-orange-950 ring-1 ring-inset ring-orange-100 dark:bg-orange-950/25 dark:text-orange-50 dark:ring-orange-900/60";
-  }
-  if (cell.effectiveInclude) {
-    return "bg-emerald-50/75 text-emerald-950 ring-1 ring-inset ring-emerald-100 dark:bg-emerald-950/25 dark:text-emerald-50 dark:ring-emerald-900/60";
-  }
-  return "bg-slate-50 text-slate-600 dark:bg-slate-900/70 dark:text-slate-300";
-}
-
-function finalCellNeedsInlineActions(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): boolean {
-  if (column.type === "identity") return false;
-  return (
-    cell.status === "invalid" ||
-    cell.status === "blocked" ||
-    cell.status === "manual_required" ||
-    cell.status === "overwrite" ||
-    cell.requiresConfirmation ||
-    typeof cell.suggestedValue === "number"
-  );
-}
-
 function emptyExecutionSummary(): ImportExecutionSummary {
   return {
     successCount: 0,
@@ -2560,153 +2501,6 @@ function SpreadsheetPreviewStep({
   );
 }
 
-function FinalReviewSpreadsheetTable({
-  model,
-  actions,
-  onOpenFixStep,
-}: {
-  model: SpreadsheetPreviewModel | null;
-  actions: ConflictResolutionActions;
-  onOpenFixStep: () => void;
-}) {
-  return (
-    <section className="rounded-[24px] border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/60 dark:bg-slate-950">
-      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Verifikasi tabel import</h3>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Ini adalah tabel kerja untuk mengecek nilai sebelum review akhir. Nilai yang dipakai, dilewati, ditimpa, dan perlu dicek ditampilkan langsung pada selnya.
-          </p>
-        </div>
-        {model ? (
-          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-            <MetricCard label="Sel dipakai" value={model.summary.includedCells} tone="green" />
-            <MetricCard label="Sel dilewati" value={model.summary.skippedCells + model.summary.manualSkippedCells} tone="info" />
-            <MetricCard label="Akan ditimpa" value={model.summary.overwriteCells} tone={model.summary.overwriteCells ? "orange" : "info"} />
-            <MetricCard label="Perlu dicek" value={model.summary.manualRequired + model.summary.invalidCells + model.summary.blockedCells} tone={model.summary.manualRequired + model.summary.invalidCells + model.summary.blockedCells ? "red" : "green"} />
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="font-semibold text-slate-700 dark:text-slate-200">Legenda:</span>
-        <StatusBadge tone="success" className="min-h-6 px-2 py-0.5 text-[11px]">Dipakai</StatusBadge>
-        <StatusBadge tone="info" className="min-h-6 px-2 py-0.5 text-[11px]">Dilewati</StatusBadge>
-        <StatusBadge tone="warning" className="min-h-6 px-2 py-0.5 text-[11px]">Akan ditimpa</StatusBadge>
-        <StatusBadge tone="danger" className="min-h-6 px-2 py-0.5 text-[11px]">Perlu dicek</StatusBadge>
-        <span className="ml-auto hidden text-[11px] sm:inline">Geser tabel untuk melihat semua kolom.</span>
-      </div>
-
-      {model ? (
-        <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-slate-50/60 dark:bg-slate-900/30">
-          <div className="max-h-[62vh] overflow-auto">
-            <table className="w-max min-w-full border-separate border-spacing-0 text-left text-xs">
-              <thead className="sticky top-0 z-30 bg-slate-100 text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-100">
-                <tr>
-                  {model.columns.map((column, index) => (
-                    <th
-                      key={column.id}
-                      className={cn(
-                        "border-b border-border px-3 py-3 align-top font-semibold",
-                        index < 3 && "sticky z-40 bg-slate-100 shadow-[1px_0_0_0_rgba(148,163,184,0.35)] dark:bg-slate-900",
-                        index === 0 && "left-0 w-16 min-w-16 max-w-16",
-                        index === 1 && "left-16 w-40 min-w-40 max-w-40",
-                        index === 2 && "left-56 w-64 min-w-64 max-w-64",
-                        index >= 3 && "min-w-[13rem] max-w-[16rem]",
-                      )}
-                    >
-                      <div className="space-y-1">
-                        <div className="truncate" title={column.header}>{column.header}</div>
-                        {column.type !== "identity" ? (
-                          <div className="line-clamp-2 text-[11px] font-medium leading-4 text-muted-foreground" title={column.targetLabel || column.sourceHeader || column.header}>
-                            {column.targetLabel || column.sourceHeader || "Target belum jelas"}
-                          </div>
-                        ) : null}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {model.rows.length ? model.rows.map((row) => (
-                  <tr key={row.id} className="align-top hover:bg-blue-50/35 dark:hover:bg-blue-950/10">
-                    {row.cells.map((cell, index) => {
-                      const column = model.columns[index];
-                      const decision = finalCellDecision(cell, column);
-                      const meta = finalCellMeta(cell, column);
-                      const isIdentity = column.type === "identity";
-                      const showInlineActions = finalCellNeedsInlineActions(cell, column);
-                      const displayValue = finalCellValue(cell, column);
-                      return (
-                        <td
-                          key={cell.id}
-                          className={cn(
-                            "border-b border-border px-3 py-3",
-                            finalCellSurfaceClass(cell, column),
-                            index < 3 && "sticky z-20 shadow-[1px_0_0_0_rgba(148,163,184,0.25)]",
-                            index === 0 && "left-0",
-                            index === 1 && "left-16",
-                            index === 2 && "left-56",
-                          )}
-                        >
-                          {isIdentity ? (
-                            <div className="truncate font-semibold" title={displayValue}>{displayValue}</div>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="flex min-w-0 flex-col gap-2">
-                                <div className="min-w-0">
-                                  <div className="truncate text-sm font-semibold" title={displayValue}>
-                                    {displayValue}
-                                  </div>
-                                  {meta ? <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted-foreground" title={meta}>{meta}</div> : null}
-                                </div>
-                                <StatusBadge tone={decision.tone} className="min-h-6 w-fit max-w-full px-2 py-0.5 text-[11px]">{decision.label}</StatusBadge>
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                <ResolutionButton size="compact" onClick={onOpenFixStep}>{showInlineActions ? "Ubah" : "Atur"}</ResolutionButton>
-                                {cell.effectiveInclude ? (
-                                  <ResolutionButton size="compact" tone="warning" onClick={() => {
-                                    const position = previewCellPosition(cell);
-                                    if (position) actions.onIgnoreCell(position.rowIndex, position.columnIndex);
-                                  }}>
-                                    Skip
-                                  </ResolutionButton>
-                                ) : null}
-                                {cell.suggestedValue !== undefined ? (
-                                  <ResolutionButton size="compact" tone="safe" onClick={() => {
-                                    const position = previewCellPosition(cell);
-                                    if (position) actions.onUseSuggestedValue(position.rowIndex, position.columnIndex, cell.suggestedValue as number);
-                                  }}>
-                                    Pakai saran
-                                  </ResolutionButton>
-                                ) : null}
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={model.columns.length} className="bg-white px-3 py-10 text-center text-sm text-muted-foreground dark:bg-slate-950">
-                      Belum ada data spreadsheet final untuk ditampilkan.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <RiskAlert title="Tabel akhir belum tersedia" tone="warning">
-          Preview spreadsheet belum bisa dibuat. Periksa kembali hasil analisis file.
-        </RiskAlert>
-      )}
-    </section>
-  );
-}
-
 function reviewDecisionValueLabel(decision: FinalReviewModel["sections"][number]["decisions"][number]) {
   const existing = decision.operation?.existingValue;
   const next = decision.value ?? decision.suggestedValue;
@@ -2799,7 +2593,7 @@ function PreviewStep({
             <div>
               <h3 className="text-sm font-semibold text-blue-950 dark:text-blue-100">Review akhir sebelum simpan</h3>
               <p className="mt-1 text-xs leading-5 text-blue-900/75 dark:text-blue-100/75">
-                Ringkasan ini menunjukkan hasil akhir dari Verifikasi Tabel. Item yang belum jelas tidak akan masuk proses simpan.
+                Review Akhir hanya menampilkan ringkasan sebelum simpan. Ubah kolom atau nilai dari Verifikasi Tabel.
               </p>
             </div>
             <StatusBadge tone={review.canExecute ? "success" : "warning"}>
@@ -4365,13 +4159,6 @@ export default function GradeImportExportDialog({
                         selectionState={effectiveSelectionState}
                         importContext={importContext}
                       />
-                      {finalReviewModel ? (
-                        <FinalReviewSpreadsheetTable
-                          model={spreadsheetPreview}
-                          actions={resolverActions}
-                          onOpenFixStep={() => setStepIndex(2)}
-                        />
-                      ) : null}
                     </div>
                   ) : null}
                   {stepIndex === 3 ? (

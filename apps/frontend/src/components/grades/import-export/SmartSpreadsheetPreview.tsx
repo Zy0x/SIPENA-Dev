@@ -135,7 +135,7 @@ export function SmartSpreadsheetPreview({
     if (column.type === "identity") return "Klik untuk memilih baris.";
     if (column.isNewStructure) return "Klik untuk setujui atau ubah BAB/tugas baru.";
     if (column.effectiveInclude === false) return "Klik untuk mengatur kolom yang dilewati.";
-    return "Klik untuk atur kolom, target tugas, dan mode nilai.";
+    return "Klik header untuk atur kolom, target tugas, dan mode nilai.";
   };
 
   return (
@@ -208,7 +208,7 @@ export function SmartSpreadsheetPreview({
                           style={stickyStyle(index)}
                           onClick={() => toggleCellInclude(cell, row, column)}
                           onDoubleClick={() => setSelection({ kind: "cell", cell, row, column })}
-                          title={column.type === "identity" ? cell.displayValue : "Klik untuk include/lewati. Klik dua kali untuk detail."}
+                          title={column.type === "identity" ? cell.displayValue : "Klik sel untuk pakai/lewati. Klik dua kali untuk detail."}
                         >
                           <div className="sipena-preview-cell-main">
                             <span className="sipena-preview-cell-value">{cell.displayValue || "-"}</span>
