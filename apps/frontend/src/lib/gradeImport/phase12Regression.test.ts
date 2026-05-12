@@ -333,12 +333,16 @@ describe("phase 12 grade import regression suite", () => {
     expect(previewSource).toContain("Klik sel untuk pakai/lewati");
     expect(previewSource).toContain("previewCellDetailLines");
     expect(previewSource).toContain("columnStatsDetail");
+    expect(previewSource).toContain("needsCompactCellActions");
     expect(previewSource).toContain("Excel:");
     expect(previewSource).toContain("Lama:");
     expect(previewSource).toContain("Saran:");
     expect(previewSource).toContain("Perlu cek");
     expect(globalStyles).toContain("sipena-preview-header-target");
     expect(globalStyles).toContain("sipena-preview-cell-details");
+    expect(globalStyles).toContain("sipena-preview-cell-actions");
+    expect(globalStyles).toContain("--sipena-preview-sticky-3: 152px");
+    expect(globalStyles).toContain("width: 184px");
     expect(previewBadgeSource).toContain("Tidak valid");
     expect(previewBannerSource).toContain("Klik header untuk atur kolom");
     expect(dialogSource).toContain("Keputusan penting");

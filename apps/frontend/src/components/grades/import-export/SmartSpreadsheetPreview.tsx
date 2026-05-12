@@ -70,7 +70,7 @@ function previewCellDetailLines(cell: SpreadsheetPreviewCell, column: Spreadshee
   if (cell.effectiveInclude === false || cell.isManuallySkipped) details.push("Tidak akan disimpan");
   if (cell.status === "overwrite") details.push("Nilai lama akan ditimpa");
 
-  return Array.from(new Set(details)).slice(0, 4);
+  return Array.from(new Set(details)).slice(0, 3);
 }
 
 function columnTargetDetail(column: SpreadsheetPreviewColumn): string {
@@ -90,6 +90,17 @@ function columnStatsDetail(column: SpreadsheetPreviewColumn): string {
   if (stats.overwrite > 0) parts.push(`${stats.overwrite} timpa`);
   if (stats.invalid + stats.blocked > 0) parts.push(`${stats.invalid + stats.blocked} perlu dicek`);
   return parts.join(" / ");
+}
+
+function needsCompactCellActions(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): boolean {
+  if (column.type === "identity") return false;
+  return cell.status === "invalid"
+    || cell.status === "blocked"
+    || cell.status === "manual_required"
+    || cell.status === "needs_check"
+    || cell.status === "overwrite"
+    || cell.requiresConfirmation
+    || typeof cell.suggestedValue === "number";
 }
 
 export function SmartSpreadsheetPreview({
@@ -258,6 +269,8 @@ export function SmartSpreadsheetPreview({
                   <tr key={row.id}>
                     {row.cells.map((cell, index) => {
                       const column = model.columns[index];
+                      const detailLines = previewCellDetailLines(cell, column);
+                      const showCellActions = needsCompactCellActions(cell, column);
                       return (
                         <td
                           key={cell.id}
@@ -273,14 +286,14 @@ export function SmartSpreadsheetPreview({
                           style={stickyStyle(index)}
                           onClick={() => toggleCellInclude(cell, row, column)}
                           onDoubleClick={() => setSelection({ kind: "cell", cell, row, column })}
-                          title={column.type === "identity" ? cell.displayValue : previewCellDetailLines(cell, column).join(" / ") || "Klik sel untuk pakai/lewati. Klik dua kali untuk detail."}
+                          title={column.type === "identity" ? cell.displayValue : detailLines.join(" / ") || "Klik sel untuk pakai/lewati. Klik dua kali untuk detail."}
                         >
                           <div className="sipena-preview-cell-main">
                             <span className="min-w-0 flex-1">
                               <span className="sipena-preview-cell-value">{previewCellDisplayValue(cell, column)}</span>
-                              {previewCellDetailLines(cell, column).length ? (
+                              {detailLines.length ? (
                                 <span className="sipena-preview-cell-details">
-                                  {previewCellDetailLines(cell, column).map((detail) => (
+                                  {detailLines.map((detail) => (
                                     <span key={detail} className="sipena-preview-cell-detail-line">{detail}</span>
                                   ))}
                                 </span>
@@ -294,6 +307,44 @@ export function SmartSpreadsheetPreview({
                               {cell.requiresConfirmation ? <span className="sipena-import-cell-mini-badge">Perlu cek</span> : null}
                             </span>
                           </div>
+                          {showCellActions ? (
+                            <div className="sipena-preview-cell-actions">
+                              <button
+                                type="button"
+                                className="sipena-preview-cell-action"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelection({ kind: "cell", cell, row, column });
+                                }}
+                              >
+                                Atur
+                              </button>
+                              {cell.effectiveInclude ? (
+                                <button
+                                  type="button"
+                                  className="sipena-preview-cell-action sipena-preview-cell-action-muted"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onIgnoreCell(cell);
+                                  }}
+                                >
+                                  Skip
+                                </button>
+                              ) : null}
+                              {typeof cell.suggestedValue === "number" ? (
+                                <button
+                                  type="button"
+                                  className="sipena-preview-cell-action sipena-preview-cell-action-safe"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onAcceptSuggestedValue(cell, row, column);
+                                  }}
+                                >
+                                  Saran
+                                </button>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </td>
                       );
                     })}

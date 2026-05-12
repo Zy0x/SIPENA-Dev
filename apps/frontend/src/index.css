@@ -272,8 +272,8 @@
 }
 
 .sipena-preview-table {
-  --sipena-preview-sticky-2: 64px;
-  --sipena-preview-sticky-3: 196px;
+  --sipena-preview-sticky-2: 48px;
+  --sipena-preview-sticky-3: 152px;
   width: max-content;
   min-width: 100%;
   border-collapse: separate;
@@ -285,29 +285,32 @@
 .sipena-preview-table td {
   border-right: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
-  padding: 11px 12px;
-  min-width: 152px;
-  height: 52px;
+  padding: 8px 9px;
+  min-width: 136px;
+  height: 46px;
   vertical-align: middle;
   background: #ffffff;
 }
 
 .sipena-preview-table th:nth-child(1),
 .sipena-preview-table td:nth-child(1) {
-  min-width: 64px;
-  width: 64px;
+  min-width: 48px;
+  width: 48px;
+  max-width: 48px;
 }
 
 .sipena-preview-table th:nth-child(2),
 .sipena-preview-table td:nth-child(2) {
-  min-width: 132px;
-  width: 132px;
+  min-width: 104px;
+  width: 104px;
+  max-width: 104px;
 }
 
 .sipena-preview-table th:nth-child(3),
 .sipena-preview-table td:nth-child(3) {
-  min-width: 280px;
-  width: 280px;
+  min-width: 184px;
+  width: 184px;
+  max-width: 184px;
 }
 
 .sipena-preview-table th {
@@ -334,13 +337,13 @@
 .sipena-preview-header-button {
   display: flex;
   width: 100%;
-  max-width: 320px;
-  min-height: 42px;
+  max-width: 250px;
+  min-height: 34px;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
-  border-radius: 10px;
-  padding: 6px 7px;
+  gap: 6px;
+  border-radius: 9px;
+  padding: 4px 5px;
   text-align: left;
 }
 
@@ -350,11 +353,11 @@
 
 .sipena-preview-header-meta {
   display: inline-flex;
-  max-width: 132px;
+  max-width: 82px;
   flex: 0 0 auto;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 3px;
+  gap: 2px;
 }
 
 .sipena-preview-header-action {
@@ -362,8 +365,8 @@
   align-items: center;
   border-radius: 999px;
   background: #dbeafe;
-  padding: 3px 7px;
-  font-size: 10px;
+  padding: 2px 6px;
+  font-size: 9.5px;
   font-weight: 800;
   color: #1d4ed8;
 }
@@ -371,11 +374,11 @@
 .sipena-preview-header-hint {
   display: block;
   margin-top: 2px;
-  max-width: 315px;
+  max-width: 250px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: #64748b;
 }
@@ -384,11 +387,11 @@
 .sipena-preview-header-stats {
   display: block;
   margin-top: 3px;
-  max-width: 220px;
+  max-width: 168px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 650;
   line-height: 1.25;
 }
@@ -509,19 +512,19 @@
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 3px 6px;
-  font-size: 10px;
+  padding: 2px 5px;
+  font-size: 9.5px;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid currentColor;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 .sipena-preview-cell-main {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -530,24 +533,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 750;
   line-height: 1.25;
 }
 
 .sipena-preview-cell-details {
   display: flex;
-  margin-top: 4px;
-  max-width: 230px;
+  margin-top: 3px;
+  max-width: 168px;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .sipena-preview-cell-detail-line {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
   line-height: 1.25;
   opacity: 0.78;
@@ -555,21 +558,64 @@
 
 .sipena-preview-cell-badges {
   display: inline-flex;
-  max-width: 110px;
+  max-width: 78px;
   flex: 0 0 auto;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 3px;
+  gap: 2px;
 }
 
 .sipena-preview-cell-badge {
   flex: 0 0 auto;
   border-radius: 999px;
-  padding: 4px 7px;
-  font-size: 11px;
+  padding: 2px 6px;
+  font-size: 10px;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid currentColor;
+}
+
+.sipena-preview-cell-actions {
+  display: flex;
+  margin-top: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sipena-preview-cell-action {
+  min-height: 22px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background: rgba(239, 246, 255, 0.9);
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  color: #1d4ed8;
+}
+
+.sipena-preview-cell-action:hover {
+  background: #dbeafe;
+}
+
+.sipena-preview-cell-action-muted {
+  border-color: #cbd5e1;
+  background: rgba(248, 250, 252, 0.92);
+  color: #475569;
+}
+
+.sipena-preview-cell-action-muted:hover {
+  background: #e2e8f0;
+}
+
+.sipena-preview-cell-action-safe {
+  border-color: #bbf7d0;
+  background: rgba(240, 253, 244, 0.92);
+  color: #15803d;
+}
+
+.sipena-preview-cell-action-safe:hover {
+  background: #dcfce7;
 }
 
 .sipena-preview-fix-panel {
@@ -959,23 +1005,29 @@
   }
 
   .sipena-preview-table {
-    --sipena-preview-sticky-2: 44px;
-    --sipena-preview-sticky-3: 130px;
+    --sipena-preview-sticky-2: 38px;
+    --sipena-preview-sticky-3: 116px;
   }
 
   .sipena-preview-table th:nth-child(1),
   .sipena-preview-table td:nth-child(1) {
-    min-width: 44px;
+    min-width: 38px;
+    width: 38px;
+    max-width: 38px;
   }
 
   .sipena-preview-table th:nth-child(2),
   .sipena-preview-table td:nth-child(2) {
-    min-width: 86px;
+    min-width: 78px;
+    width: 78px;
+    max-width: 78px;
   }
 
   .sipena-preview-table th:nth-child(3),
   .sipena-preview-table td:nth-child(3) {
-    min-width: 132px;
+    min-width: 128px;
+    width: 128px;
+    max-width: 128px;
   }
 
   .sipena-preview-fix-panel {
