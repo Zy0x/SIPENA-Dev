@@ -5,6 +5,7 @@ import type {
   CellValueMode,
   ColumnValueMode,
   ImportSelectionState,
+  SmartImportAssistResponse,
   SpreadsheetPreviewCell,
   SpreadsheetPreviewColumn,
   SpreadsheetPreviewModel,
@@ -147,6 +148,7 @@ export function SmartSpreadsheetPreview({
   onSetCellValueMode,
   onAcceptSuggestedValue,
   onResetCellSelection,
+  aiAssist,
 }: {
   model: SpreadsheetPreviewModel;
   selectionState: ImportSelectionState;
@@ -170,6 +172,7 @@ export function SmartSpreadsheetPreview({
   onSetCellValueMode: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, mode: CellValueMode, overwriteConfirmed?: boolean) => void;
   onAcceptSuggestedValue: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => void;
   onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
+  aiAssist?: SmartImportAssistResponse | null;
 }) {
   const [selection, setSelection] = useState<Selection>(null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("quick");
@@ -446,6 +449,7 @@ export function SmartSpreadsheetPreview({
             onSetCellValueMode={onSetCellValueMode}
             onAcceptSuggestedValue={onAcceptSuggestedValue}
             onResetCellSelection={onResetCellSelection}
+            aiAssist={aiAssist}
           />
         ) : null}
       </div>
@@ -462,6 +466,7 @@ export function SmartSpreadsheetPreview({
           onSetValueMode={onSetColumnValueMode}
           onBulkColumnAction={onBulkColumnAction}
           onResetColumnSelection={onResetColumnSelection}
+          aiAssist={aiAssist}
         />
       ) : null}
     </div>

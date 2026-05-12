@@ -768,6 +768,99 @@
   line-height: 1.45;
 }
 
+.sipena-reason-card {
+  grid-column: 1 / -1;
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.sipena-reason-card--compact {
+  margin-top: 12px;
+}
+
+.sipena-reason-card--safe {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.sipena-reason-card--warning {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.sipena-reason-card--danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.sipena-reason-card--info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.sipena-reason-kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.sipena-reason-help {
+  display: inline-flex;
+  height: 18px;
+  width: 18px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sipena-reason-title {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.sipena-reason-desc {
+  margin-top: 3px;
+  display: -webkit-box;
+  max-width: 62rem;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.sipena-reason-action {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #0f172a;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+}
+
 .sipena-preview-fix-actions {
   display: flex;
   gap: 8px;
@@ -875,7 +968,9 @@
 
 .sipena-column-mode-list,
 .sipena-column-danger-confirm,
-.sipena-column-stat-grid {
+.sipena-column-stat-grid,
+.sipena-column-primary-actions,
+.sipena-column-advanced-toggle {
   grid-column: 1 / -1;
 }
 
@@ -1002,6 +1097,26 @@
   background: #eff6ff;
   padding: 10px 14px;
   color: #1d4ed8;
+}
+
+.sipena-column-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sipena-column-advanced-toggle {
+  min-height: 40px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sipena-column-advanced-toggle:hover {
+  background: #f8fafc;
 }
 
 .sipena-column-split {

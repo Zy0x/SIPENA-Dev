@@ -2422,12 +2422,14 @@ function SpreadsheetPreviewStep({
   actions,
   selectionState,
   importContext,
+  aiAssistResponse,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
   actions: ConflictResolutionActions;
   selectionState: ImportSelectionState;
   importContext: ImportPlanContext;
+  aiAssistResponse?: SmartImportAssistResponse | null;
 }) {
   if (!plan || !model) {
     return <EmptyPanel title="Verifikasi belum tersedia" description="Tabel verifikasi akan muncul setelah file dianalisis." />;
@@ -2499,6 +2501,7 @@ function SpreadsheetPreviewStep({
       onSetCellValueMode={actions.onSetCellValueMode}
       onAcceptSuggestedValue={actions.onAcceptSuggestedValue}
       onResetCellSelection={actions.onResetCellSelection}
+      aiAssist={aiAssistResponse}
     />
   );
 }
@@ -4309,6 +4312,7 @@ export default function GradeImportExportDialog({
                         actions={resolverActions}
                         selectionState={effectiveSelectionState}
                         importContext={importContext}
+                        aiAssistResponse={aiAssist.response}
                       />
                     </div>
                   ) : null}

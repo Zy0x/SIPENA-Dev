@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import type {
   ColumnValueMode,
+  SmartImportAssistResponse,
   SpreadsheetPreviewColumn,
 } from "@/lib/gradeImport";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+import { buildColumnReasonHint, reasonToneClass } from "./importReasonHints";
 
 type TargetMode =
   | "keep"
@@ -36,9 +40,9 @@ export interface ColumnSettingsChapterOption {
 }
 
 function columnModeLabel(mode: ColumnValueMode): string {
-  if (mode === "overwrite_existing") return "Berisiko menimpa nilai lama pada kolom ini";
-  if (mode === "skip_existing") return "Lewati nilai yang sudah ada";
-  return "Isi nilai kosong saja";
+  if (mode === "overwrite_existing") return "Timpa setelah konfirmasi";
+  if (mode === "skip_existing") return "Lewati nilai lama";
+  return "Isi jika kosong";
 }
 
 function cleanName(value: string): string {
@@ -106,6 +110,7 @@ export function ColumnSettingsOverlay({
   onSetTarget,
   onBulkColumnAction,
   onResetColumnSelection,
+  aiAssist,
 }: {
   column: SpreadsheetPreviewColumn;
   assignments: ColumnSettingsAssignmentOption[];
@@ -117,6 +122,7 @@ export function ColumnSettingsOverlay({
   onSetTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
   onBulkColumnAction: (column: SpreadsheetPreviewColumn, action: "include_valid" | "skip_all" | "skip_existing" | "reset") => void;
   onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
+  aiAssist?: SmartImportAssistResponse | null;
 }) {
   const [headerLabel, setHeaderLabel] = useState(column.header);
   const [targetMode, setTargetMode] = useState<TargetMode>(() => defaultTargetMode(column));
@@ -124,6 +130,7 @@ export function ColumnSettingsOverlay({
   const [newChapterName, setNewChapterName] = useState(sourceChapterName(column));
   const [newAssignmentName, setNewAssignmentName] = useState(sourceTaskName(column));
   const [overwriteChecked, setOverwriteChecked] = useState(Boolean(column.overwriteConfirmed));
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     setHeaderLabel(column.header);
@@ -135,6 +142,7 @@ export function ColumnSettingsOverlay({
   }, [chapters, column]);
 
   const activeMode = column.effectiveValueMode || "fill_empty_only";
+  const reason = useMemo(() => buildColumnReasonHint(column, aiAssist), [aiAssist, column]);
   const canApplyTarget = useMemo(() => {
     if (targetMode === "keep") return true;
     if (targetMode === "new_assignment") return Boolean(selectedChapterId && cleanName(newAssignmentName));
@@ -228,20 +236,33 @@ export function ColumnSettingsOverlay({
         </div>
 
         <div className="sipena-column-overlay-body">
-          <label className="sipena-column-field">
-            <span>Nama kolom di preview</span>
-            <input
-              value={headerLabel}
-              onChange={(event) => setHeaderLabel(event.target.value)}
-              placeholder="Contoh: BAB 1 - Tugas 2"
-            />
-            <small>Nama ini hanya mengatur preview import, bukan mengganti nama tugas existing di database.</small>
-          </label>
+          <div className={`sipena-reason-card ${reasonToneClass(reason.tone)}`}>
+            <div className="min-w-0">
+              <div className="sipena-reason-kicker">
+                <span>{reason.source === "hybrid" ? "Analisis SIPENA + AI" : "Analisis SIPENA"}</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="sipena-reason-help" aria-label="Lihat alasan lengkap">
+                      i
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[280px] text-xs leading-5">
+                    {reason.description}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="sipena-reason-title">{reason.label}</p>
+              <p className="sipena-reason-desc">{reason.description}</p>
+            </div>
+            <span className="sipena-reason-action">{reason.actionLabel}</span>
+          </div>
 
           <div className="sipena-column-switch-row">
             <div>
               <p className="sipena-column-section-title">Status kolom</p>
-              <p className="sipena-column-muted">{column.effectiveInclude === false ? "Kolom dilewati." : "Kolom dipakai untuk import."}</p>
+              <p className="sipena-column-muted">
+                {column.effectiveInclude === false ? "Kolom dilewati." : `Target: ${column.targetLabel || "belum jelas"}`}
+              </p>
             </div>
             <label className="sipena-column-switch">
               <input
@@ -252,6 +273,55 @@ export function ColumnSettingsOverlay({
               <span>{column.effectiveInclude === false ? "Dilewati" : "Dipakai"}</span>
             </label>
           </div>
+
+          <div className="sipena-column-stat-grid">
+            <span><b>{column.stats?.validValues || 0}</b> nilai terbaca</span>
+            <span><b>{column.stats?.willFill || 0}</b> akan diisi</span>
+            <span><b>{(column.stats?.skippedExisting || 0) + (column.stats?.skippedManual || 0)}</b> dilewati</span>
+            <span><b>{column.stats?.overwrite || 0}</b> akan ditimpa</span>
+          </div>
+
+          <div className="sipena-column-primary-actions">
+            <button
+              type="button"
+              className="sipena-column-btn sipena-column-btn-primary"
+              onClick={() => {
+                onSetInclude(column, true);
+                onBulkColumnAction(column, "include_valid");
+              }}
+            >
+              Pakai kolom
+            </button>
+            <button
+              type="button"
+              className="sipena-column-btn sipena-column-btn-warning"
+              onClick={() => {
+                onSetTarget(column, { kind: "ignore" });
+                onSetInclude(column, false);
+              }}
+            >
+              Lewati kolom
+            </button>
+            <button type="button" className="sipena-column-btn" onClick={() => setShowAdvanced(true)}>
+              Ubah target
+            </button>
+          </div>
+
+          <button type="button" className="sipena-column-advanced-toggle" onClick={() => setShowAdvanced((current) => !current)}>
+            {showAdvanced ? "Sembunyikan opsi lanjutan" : "Opsi lanjutan"}
+          </button>
+
+          {showAdvanced ? (
+            <>
+          <label className="sipena-column-field">
+            <span>Nama kolom di preview</span>
+            <input
+              value={headerLabel}
+              onChange={(event) => setHeaderLabel(event.target.value)}
+              placeholder="Contoh: BAB 1 - Tugas 2"
+            />
+            <small>Nama ini hanya mengatur preview import, bukan mengganti nama tugas existing di database.</small>
+          </label>
 
           <div className="sipena-column-field sipena-column-target-section">
             <span>Target kolom nilai</span>
@@ -391,13 +461,8 @@ export function ColumnSettingsOverlay({
               <span>Berisiko menimpa nilai: saya paham nilai lama pada kolom ini dapat diganti.</span>
             </label>
           ) : null}
-
-          <div className="sipena-column-stat-grid">
-            <span><b>{column.stats?.validValues || 0}</b> nilai terbaca</span>
-            <span><b>{column.stats?.willFill || 0}</b> akan diisi</span>
-            <span><b>{column.stats?.skippedManual || 0}</b> dilewati manual</span>
-            <span><b>{column.stats?.overwrite || 0}</b> akan ditimpa</span>
-          </div>
+            </>
+          ) : null}
         </div>
 
         <div className="sipena-column-overlay-actions">

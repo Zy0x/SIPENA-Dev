@@ -5,11 +5,15 @@ import type {
   CellValueMode,
   ColumnValueMode,
   ImportSelectionState,
+  SmartImportAssistResponse,
   SpreadsheetPreviewCell,
   SpreadsheetPreviewColumn,
   SpreadsheetPreviewModel,
   SpreadsheetPreviewRow,
 } from "@/lib/gradeImport";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+import { buildCellReasonHint, buildColumnReasonHint, reasonToneClass } from "./importReasonHints";
 
 type Selection =
   | { kind: "cell"; cell: SpreadsheetPreviewCell; row: SpreadsheetPreviewRow; column: SpreadsheetPreviewColumn }
@@ -28,16 +32,16 @@ function panelCopy(selection: NonNullable<Selection>) {
 }
 
 function modeLabel(mode: CellValueMode | ColumnValueMode | undefined): string {
-  if (mode === "overwrite_existing") return "Timpa nilai lama";
-  if (mode === "skip_existing") return "Lewati jika sudah ada";
+  if (mode === "overwrite_existing") return "Timpa setelah konfirmasi";
+  if (mode === "skip_existing") return "Lewati nilai lama";
   if (mode === "fill_empty_only") return "Isi jika kosong";
   return "Ikuti pengaturan kolom";
 }
 
 function columnModeLabel(mode: ColumnValueMode | undefined): string {
-  if (mode === "overwrite_existing") return "Berisiko menimpa nilai lama pada kolom ini";
-  if (mode === "skip_existing") return "Lewati nilai yang sudah ada";
-  return "Isi nilai kosong saja";
+  if (mode === "overwrite_existing") return "Timpa setelah konfirmasi";
+  if (mode === "skip_existing") return "Lewati nilai lama";
+  return "Isi jika kosong";
 }
 
 function SettingButton({
@@ -99,6 +103,7 @@ export function PreviewFixPanel({
   onSetCellValueMode,
   onAcceptSuggestedValue,
   onResetCellSelection,
+  aiAssist,
 }: {
   model: SpreadsheetPreviewModel;
   selection: Selection;
@@ -118,6 +123,7 @@ export function PreviewFixPanel({
   onSetCellValueMode: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn, mode: CellValueMode, overwriteConfirmed?: boolean) => void;
   onAcceptSuggestedValue: (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => void;
   onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
+  aiAssist?: SmartImportAssistResponse | null;
 }) {
   const [showDetail, setShowDetail] = useState(false);
   const [columnOverwriteChecked, setColumnOverwriteChecked] = useState(false);
@@ -138,11 +144,63 @@ export function PreviewFixPanel({
     && targetCell.resolvedValue === null
     && !targetCell.acceptedSuggestedValue
   );
+  const activeHint = useMemo(() => {
+    if (targetCell && targetRow && targetColumn) return buildCellReasonHint(targetCell, targetRow, targetColumn, aiAssist);
+    if (targetColumn) return buildColumnReasonHint(targetColumn, aiAssist);
+    return null;
+  }, [aiAssist, targetCell, targetColumn, targetRow]);
+  const shouldConfirmOverwrite = Boolean(
+    targetCell
+    && isGradeCell
+    && (
+      targetCell.status === "changed"
+      || targetCell.requiresConfirmation
+      || cellSetting?.valueMode === "overwrite_existing"
+    ),
+  );
+
+  const handlePrimaryCellAction = () => {
+    if (!targetCell || !targetRow || !targetColumn) return;
+    if (needsSuggestedApproval) {
+      onAcceptSuggestedValue(targetCell, targetRow, targetColumn);
+      return;
+    }
+    if (shouldConfirmOverwrite) {
+      setCellOverwriteChecked(true);
+      onSetCellValueMode(targetCell, targetRow, targetColumn, "overwrite_existing", true);
+      onSetCellInclude(targetCell, targetRow, targetColumn, true);
+      return;
+    }
+    onSetCellInclude(targetCell, targetRow, targetColumn, true);
+  };
 
   return (
     <aside className="sipena-preview-fix-panel" aria-live="polite">
       <h4 className="sipena-preview-fix-title">{title}</h4>
       <p className="sipena-preview-fix-desc">{description}</p>
+
+      {activeHint ? (
+        <div className={`sipena-reason-card sipena-reason-card--compact ${reasonToneClass(activeHint.tone)}`}>
+          <div className="min-w-0">
+            <div className="sipena-reason-kicker">
+              <span>{activeHint.source === "hybrid" ? "Analisis SIPENA + AI" : "Analisis SIPENA"}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="sipena-reason-help" aria-label="Lihat alasan lengkap">
+                    i
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[280px] text-xs leading-5">
+                  {activeHint.description}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <p className="sipena-reason-title">{activeHint.label}</p>
+            <p className="sipena-reason-desc">{activeHint.description}</p>
+          </div>
+          <span className="sipena-reason-action">{activeHint.actionLabel}</span>
+        </div>
+      ) : null}
 
       {selection ? (
         <div className="mt-3 grid gap-2 text-xs">
@@ -150,12 +208,12 @@ export function PreviewFixPanel({
           {targetColumn ? <div><span className="font-semibold">Kolom: </span>{targetColumn.header}</div> : null}
           {targetCell ? (
             <>
-              <div><span className="font-semibold">Nilai lama di SIPENA: </span>{targetCell.oldValue ?? "kosong"}</div>
               <div><span className="font-semibold">Nilai Excel: </span>{targetCell.displayValue || "kosong"}</div>
+              <div><span className="font-semibold">Nilai SIPENA: </span>{targetCell.oldValue ?? "kosong"}</div>
               {targetCell.suggestedValue !== undefined ? (
                 <div><span className="font-semibold">Nilai saran: </span>{targetCell.suggestedValue}</div>
               ) : null}
-              <div><span className="font-semibold">Status saat ini: </span>{targetCell.effectiveInclude ? "Nilai dipilih" : "Nilai dilewati"}</div>
+              <div><span className="font-semibold">Keputusan: </span>{targetCell.effectiveInclude ? "Dipakai" : "Dilewati"}</div>
             </>
           ) : null}
           {targetColumn ? <div><span className="font-semibold">Mode kolom: </span>{columnModeLabel(targetColumn.effectiveValueMode)}</div> : null}
@@ -219,15 +277,7 @@ export function PreviewFixPanel({
 
       {targetCell && isGradeCell ? (
         <div className="mt-4 rounded-2xl border border-border p-3">
-          <label className="flex items-center gap-2 text-xs font-semibold">
-            <input
-              type="checkbox"
-              checked={targetCell.effectiveInclude !== false}
-              disabled={targetCell.isBlockedByColumn || targetCell.isBlockedByRow || targetCell.isBlockedByTarget}
-              onChange={(event) => onSetCellInclude(targetCell, targetRow!, targetColumn!, event.target.checked)}
-            />
-            Include nilai ini
-          </label>
+          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">Aturan nilai ini</p>
           {targetCell.effectiveInclude === false ? (
             <p className="mt-2 text-xs text-muted-foreground">Nilai ini akan dilewati dan tidak akan mengubah data.</p>
           ) : null}
@@ -236,6 +286,7 @@ export function PreviewFixPanel({
               SIPENA membaca nilai pecahan sebagai saran. Setujui dulu agar angka ini bisa disimpan.
             </p>
           ) : null}
+          {showDetail ? (
           <div className="mt-3 grid gap-2">
             {(["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[]).map((mode) => (
               <label key={mode} className="flex items-center gap-2 rounded-2xl border border-border p-2 text-xs">
@@ -256,6 +307,7 @@ export function PreviewFixPanel({
               </label>
             ))}
           </div>
+          ) : null}
           {(cellSetting?.valueMode === "overwrite_existing" || targetCell.requiresConfirmation) ? (
             <label className="mt-3 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
               <input
@@ -280,12 +332,13 @@ export function PreviewFixPanel({
           </>
         ) : targetCell && isGradeCell ? (
           <>
-            {needsSuggestedApproval ? (
-              <SettingButton tone="primary" onClick={() => onAcceptSuggestedValue(targetCell, targetRow!, targetColumn!)}>
-                Pakai nilai saran {targetCell.suggestedValue}
-              </SettingButton>
-            ) : null}
-            <SettingButton tone="primary" onClick={() => onSetCellInclude(targetCell, targetRow!, targetColumn!, true)} disabled={targetCell.isBlockedByColumn || targetCell.isBlockedByRow || targetCell.isBlockedByTarget || needsSuggestedApproval}>Simpan</SettingButton>
+            <SettingButton
+              tone="primary"
+              onClick={handlePrimaryCellAction}
+              disabled={targetCell.isBlockedByColumn || targetCell.isBlockedByRow || targetCell.isBlockedByTarget}
+            >
+              {needsSuggestedApproval ? "Pakai saran" : shouldConfirmOverwrite ? "Konfirmasi timpa" : "Pakai nilai"}
+            </SettingButton>
             <SettingButton onClick={() => onSetCellInclude(targetCell, targetRow!, targetColumn!, false)}>Lewati nilai ini</SettingButton>
             <SettingButton onClick={() => onResetCellSelection(targetCell)}>Reset pilihan</SettingButton>
           </>
@@ -305,7 +358,9 @@ export function PreviewFixPanel({
             <SettingButton onClick={() => onIgnoreRow(targetRow)}>Abaikan baris</SettingButton>
           </>
         ) : null}
-        <SettingButton onClick={() => setShowDetail((current) => !current)}>Lihat alasan SIPENA</SettingButton>
+        <SettingButton onClick={() => setShowDetail((current) => !current)}>
+          {showDetail ? "Sembunyikan detail" : "Lihat detail"}
+        </SettingButton>
       </div>
 
       {showDetail ? (

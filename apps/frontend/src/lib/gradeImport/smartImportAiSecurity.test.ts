@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("smart import AI edge function security guards", () => {
+  const normalizeNewlines = (value: string) => value.replace(/\r\n/g, "\n");
   const functionSource = () => readFileSync(
     resolve(process.cwd(), "supabase/functions/smart-import-assist/index.ts"),
     "utf8",
@@ -18,7 +19,7 @@ describe("smart import AI edge function security guards", () => {
 
   it("requires JWT in both per-function and global Supabase config", () => {
     expect(functionConfig()).toContain("verify_jwt = true");
-    expect(supabaseConfig()).toContain("[functions.smart-import-assist]\nverify_jwt = true");
+    expect(normalizeNewlines(supabaseConfig())).toContain("[functions.smart-import-assist]\nverify_jwt = true");
   });
 
   it("does not use service role or database writes in the smart import assist function", () => {
