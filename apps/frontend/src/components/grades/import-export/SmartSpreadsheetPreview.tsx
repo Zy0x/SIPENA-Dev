@@ -41,6 +41,57 @@ function stickyStyle(index: number): CSSProperties | undefined {
   return undefined;
 }
 
+function formatPreviewValue(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "-";
+  return String(value);
+}
+
+function previewCellDisplayValue(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string {
+  if (column.type === "identity") return cell.displayValue || "-";
+  if (cell.effectiveInclude === false || cell.isManuallySkipped) return cell.displayValue || "-";
+  return formatPreviewValue(cell.resolvedValue ?? cell.newValue ?? cell.suggestedValue ?? cell.displayValue);
+}
+
+function previewCellDetailLines(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string[] {
+  if (column.type === "identity") return [];
+
+  const details: string[] = [];
+  const raw = formatPreviewValue(cell.rawValue ?? cell.displayValue);
+  if (raw !== "-") details.push(`Excel: ${raw}`);
+
+  const oldValue = formatPreviewValue(cell.oldValue);
+  if (oldValue !== "-") details.push(`Lama: ${oldValue}`);
+
+  if (cell.suggestedValue !== undefined && cell.suggestedValue !== null) {
+    details.push(`Saran: ${cell.suggestedValue}`);
+  }
+
+  if (cell.message) details.push(cell.message);
+  if (cell.effectiveInclude === false || cell.isManuallySkipped) details.push("Tidak akan disimpan");
+  if (cell.status === "overwrite") details.push("Nilai lama akan ditimpa");
+
+  return Array.from(new Set(details)).slice(0, 4);
+}
+
+function columnTargetDetail(column: SpreadsheetPreviewColumn): string {
+  if (column.type === "identity") return "Identitas siswa";
+  if (column.effectiveInclude === false || column.isIgnored) return "Kolom dilewati";
+  return column.targetLabel || column.sourceHeader || "Target belum jelas";
+}
+
+function columnStatsDetail(column: SpreadsheetPreviewColumn): string {
+  if (column.type === "identity" || !column.stats) return "";
+
+  const stats = column.stats;
+  const parts = [
+    `${stats.willImport} dipakai`,
+    `${stats.skippedManual + stats.skippedExisting} dilewati`,
+  ];
+  if (stats.overwrite > 0) parts.push(`${stats.overwrite} timpa`);
+  if (stats.invalid + stats.blocked > 0) parts.push(`${stats.invalid + stats.blocked} perlu dicek`);
+  return parts.join(" / ");
+}
+
 export function SmartSpreadsheetPreview({
   model,
   onApplySafeFixes,
@@ -170,7 +221,21 @@ export function SmartSpreadsheetPreview({
                         title={headerHint(column)}
                         onClick={() => setSelection({ kind: "column", column })}
                       >
-                        <span className="truncate">{column.header}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">{column.header}</span>
+                          {column.type !== "identity" ? (
+                            <>
+                              <span className="sipena-preview-header-target" title={columnTargetDetail(column)}>
+                                {columnTargetDetail(column)}
+                              </span>
+                              {columnStatsDetail(column) ? (
+                                <span className="sipena-preview-header-stats" title={columnStatsDetail(column)}>
+                                  {columnStatsDetail(column)}
+                                </span>
+                              ) : null}
+                            </>
+                          ) : null}
+                        </span>
                         {column.type !== "identity" ? (
                           <span className="sipena-preview-header-meta">
                             {column.isNewStructure ? <span className="sipena-import-cell-mini-badge">Kolom baru</span> : null}
@@ -208,14 +273,26 @@ export function SmartSpreadsheetPreview({
                           style={stickyStyle(index)}
                           onClick={() => toggleCellInclude(cell, row, column)}
                           onDoubleClick={() => setSelection({ kind: "cell", cell, row, column })}
-                          title={column.type === "identity" ? cell.displayValue : "Klik sel untuk pakai/lewati. Klik dua kali untuk detail."}
+                          title={column.type === "identity" ? cell.displayValue : previewCellDetailLines(cell, column).join(" / ") || "Klik sel untuk pakai/lewati. Klik dua kali untuk detail."}
                         >
                           <div className="sipena-preview-cell-main">
-                            <span className="sipena-preview-cell-value">{cell.displayValue || "-"}</span>
-                            <PreviewCellBadge status={cell.status} />
-                            {cell.isManuallyIncluded ? <span className="sipena-import-cell-mini-badge">Dipilih</span> : null}
-                            {cell.isManuallySkipped ? <span className="sipena-import-cell-mini-badge">Dilewati</span> : null}
-                            {cell.status === "overwrite" ? <span className="sipena-import-cell-mini-badge">Timpa</span> : null}
+                            <span className="min-w-0 flex-1">
+                              <span className="sipena-preview-cell-value">{previewCellDisplayValue(cell, column)}</span>
+                              {previewCellDetailLines(cell, column).length ? (
+                                <span className="sipena-preview-cell-details">
+                                  {previewCellDetailLines(cell, column).map((detail) => (
+                                    <span key={detail} className="sipena-preview-cell-detail-line">{detail}</span>
+                                  ))}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="sipena-preview-cell-badges">
+                              <PreviewCellBadge status={cell.status} />
+                              {cell.isManuallyIncluded ? <span className="sipena-import-cell-mini-badge">Dipilih</span> : null}
+                              {cell.isManuallySkipped ? <span className="sipena-import-cell-mini-badge">Dilewati</span> : null}
+                              {cell.status === "overwrite" ? <span className="sipena-import-cell-mini-badge">Timpa</span> : null}
+                              {cell.requiresConfirmation ? <span className="sipena-import-cell-mini-badge">Perlu cek</span> : null}
+                            </span>
                           </div>
                         </td>
                       );

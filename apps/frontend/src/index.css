@@ -380,6 +380,27 @@
   color: #64748b;
 }
 
+.sipena-preview-header-target,
+.sipena-preview-header-stats {
+  display: block;
+  margin-top: 3px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.sipena-preview-header-target {
+  color: #334155;
+}
+
+.sipena-preview-header-stats {
+  color: #64748b;
+}
+
 .sipena-preview-cell {
   position: relative;
   cursor: pointer;
@@ -498,16 +519,47 @@
 
 .sipena-preview-cell-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   min-width: 0;
 }
 
 .sipena-preview-cell-value {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.sipena-preview-cell-details {
+  display: flex;
+  margin-top: 4px;
+  max-width: 230px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sipena-preview-cell-detail-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  opacity: 0.78;
+}
+
+.sipena-preview-cell-badges {
+  display: inline-flex;
+  max-width: 110px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
 }
 
 .sipena-preview-cell-badge {

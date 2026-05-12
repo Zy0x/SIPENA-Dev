@@ -309,8 +309,10 @@ describe("phase 12 grade import regression suite", () => {
     const overlaySource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/ColumnSettingsOverlay.tsx"), "utf8");
     const previewSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/SmartSpreadsheetPreview.tsx"), "utf8");
     const previewBannerSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewSummaryBanner.tsx"), "utf8");
+    const previewBadgeSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewCellBadge.tsx"), "utf8");
     const quickActionsSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewQuickActions.tsx"), "utf8");
     const fixPanelSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
+    const globalStyles = readFileSync(resolve(process.cwd(), "apps/frontend/src/index.css"), "utf8");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).not.toContain("ImportComplexityMode");
@@ -329,6 +331,15 @@ describe("phase 12 grade import regression suite", () => {
     expect(previewSource).toContain("ColumnSettingsOverlay");
     expect(previewSource).toContain("Klik header untuk atur kolom");
     expect(previewSource).toContain("Klik sel untuk pakai/lewati");
+    expect(previewSource).toContain("previewCellDetailLines");
+    expect(previewSource).toContain("columnStatsDetail");
+    expect(previewSource).toContain("Excel:");
+    expect(previewSource).toContain("Lama:");
+    expect(previewSource).toContain("Saran:");
+    expect(previewSource).toContain("Perlu cek");
+    expect(globalStyles).toContain("sipena-preview-header-target");
+    expect(globalStyles).toContain("sipena-preview-cell-details");
+    expect(previewBadgeSource).toContain("Tidak valid");
     expect(previewBannerSource).toContain("Klik header untuk atur kolom");
     expect(dialogSource).toContain("Keputusan penting");
     expect(dialogSource).toContain("Buka Verifikasi Tabel");

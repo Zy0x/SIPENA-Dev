@@ -9,7 +9,7 @@ const labelByStatus: Record<PreviewCellStatus, string> = {
   needs_check: "Cek",
   manual_required: "Pilih",
   ignored: "Lewati",
-  invalid: "Invalid",
+  invalid: "Tidak valid",
   skipped: "Lewati",
   manual_included: "Dipilih",
   manual_skipped: "Dilewati",
