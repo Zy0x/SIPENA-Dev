@@ -212,7 +212,7 @@ const emptyAiAssistPanelState: AiAssistPanelState = {
   cacheKey: null,
 };
 
-const importSteps = ["Upload", "SIPENA Mengecek", "AI Agent Menyelesaikan", "Review Akhir", "Simpan"];
+const importSteps = ["Upload", "Pemeriksaan", "Verifikasi Tabel", "Review Akhir", "Simpan"];
 const maxImportFileBytes = 20 * 1024 * 1024;
 
 const sourceLabels: Record<ImportSourceType, string> = {
@@ -266,7 +266,7 @@ const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message:
   },
   IMPORT_DUPLICATE_STUDENT_MAPPING: {
     title: "Siswa terduplikasi",
-    message: "Ada lebih dari satu baris Excel yang menuju siswa web yang sama. Pilih satu baris atau abaikan duplikat.",
+    message: "Ada lebih dari satu baris Excel yang menuju siswa kelas aktif yang sama. Pilih satu baris atau abaikan duplikat.",
   },
   IMPORT_DUPLICATE_COLUMN_TARGET: {
     title: "Kolom nilai terduplikasi",
@@ -274,7 +274,7 @@ const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message:
   },
   IMPORT_INVALID_GRADE_VALUE: {
     title: "Nilai tidak valid",
-    message: "Ada nilai invalid. Nilai harus berupa angka 0 sampai 100.",
+    message: "Ada nilai tidak valid. Nilai harus berupa angka 0 sampai 100.",
   },
   IMPORT_NO_VALID_SHEET: {
     title: "Sheet nilai tidak ditemukan",
@@ -292,8 +292,8 @@ const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message:
 
 const importNoticeMessages: Record<string, { title: string; message: string }> = {
   IMPORT_PLAN_BLOCKED: {
-    title: "Import belum bisa dilanjutkan",
-    message: "Masih ada pilihan yang perlu diselesaikan. Buka langkah Perbaiki, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
+    title: "Masih ada pilihan yang perlu diselesaikan",
+    message: "Buka Verifikasi Tabel, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
   },
   IMPORT_NO_GRADE_COLUMNS: {
     title: "Kolom nilai belum ditemukan",
@@ -301,11 +301,11 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
   },
   COLUMN_CREATE_ASSIGNMENT_SUGGESTED: {
     title: "Tugas baru perlu konfirmasi",
-    message: "BAB sudah ada di web, tetapi nama tugas dari Excel belum ada. Konfirmasi dulu sebelum tugas baru dipakai.",
+    message: "BAB sudah ada di kelas aktif, tetapi nama tugas dari Excel belum ada. Konfirmasi dulu sebelum tugas baru dipakai.",
   },
   COLUMN_CREATE_CHAPTER_AND_ASSIGNMENT_SUGGESTED: {
     title: "BAB dan tugas baru perlu konfirmasi",
-    message: "BAB dan tugas dari Excel belum ada di web. Konfirmasi atau ubah namanya dulu sebelum dipakai.",
+    message: "BAB dan tugas dari Excel belum ada di kelas aktif. Konfirmasi atau ubah namanya dulu sebelum dipakai.",
   },
   COLUMN_ASSIGNMENT_SIMILAR_MATCH: {
     title: "Nama tugas mirip",
@@ -329,11 +329,11 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
   },
   COLUMN_METADATA_VS_HEADER_CHANGED: {
     title: "Header template berubah",
-    message: "Metadata template masih terbaca, tetapi nama kolom terlihat berubah. Periksa target kolom sebelum lanjut.",
+    message: "Identitas template masih terbaca, tetapi nama kolom terlihat berubah. Periksa target kolom sebelum lanjut.",
   },
   COLUMN_METADATA_INVALID_HEADER_CLEAR: {
-    title: "Metadata kolom perlu dicek",
-    message: "Metadata template tidak cocok dengan struktur web, tetapi header Excel cukup jelas. Pilih target kolom untuk memastikan.",
+    title: "Identitas kolom perlu dicek",
+    message: "Identitas template tidak cocok dengan struktur kelas aktif, tetapi header Excel cukup jelas. Pilih target kolom untuk memastikan.",
   },
   COLUMN_UNRESOLVED: {
     title: "Kolom belum dipetakan",
@@ -341,11 +341,11 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
   },
   STUDENT_ID_NAME_CHANGED: {
     title: "Nama siswa berbeda",
-    message: "ID siswa cocok, tetapi nama di Excel berbeda dengan data web. SIPENA akan memakai data siswa dari web setelah Anda konfirmasi.",
+    message: "ID siswa cocok, tetapi nama di Excel berbeda dengan data kelas aktif. SIPENA akan memakai data siswa dari kelas aktif setelah Anda konfirmasi.",
   },
   STUDENT_ID_NISN_CHANGED: {
     title: "NISN siswa berbeda",
-    message: "ID siswa cocok, tetapi NISN di Excel berbeda dengan data web. SIPENA akan memakai data siswa dari web setelah Anda konfirmasi.",
+    message: "ID siswa cocok, tetapi NISN di Excel berbeda dengan data kelas aktif. SIPENA akan memakai data siswa dari kelas aktif setelah Anda konfirmasi.",
   },
   STUDENT_MATCH_AMBIGUOUS: {
     title: "Siswa belum pasti",
@@ -356,11 +356,11 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
     message: "Lebih dari satu baris Excel mengarah ke siswa yang sama. Pilih baris yang dipakai atau abaikan duplikat.",
   },
   STUDENT_MATCH_DUPLICATE_WEB_CANDIDATE: {
-    title: "Data siswa web mirip",
-    message: "Ada beberapa siswa web dengan data yang mirip. Pilih siswa yang benar secara manual.",
+    title: "Data siswa kelas aktif mirip",
+    message: "Ada beberapa siswa kelas aktif dengan data yang mirip. Pilih siswa yang benar secara manual.",
   },
   STUDENT_MISSING_IN_WEB: {
-    title: "Siswa belum ada di web",
+    title: "Siswa belum ada di kelas aktif",
     message: "Baris Excel ini tidak cocok dengan siswa di kelas aktif. SIPENA tidak akan membuat siswa baru dari import nilai.",
   },
   STUDENT_MISSING_IN_EXCEL: {
@@ -369,7 +369,7 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
   },
   STUDENT_FUZZY_AMBIGUOUS: {
     title: "Nama siswa mirip",
-    message: "Nama siswa mirip dengan beberapa data web. Pilih siswa yang benar secara manual.",
+    message: "Nama siswa mirip dengan beberapa data kelas aktif. Pilih siswa yang benar secara manual.",
   },
   STUDENT_FUZZY_MATCH: {
     title: "Nama siswa mirip",
@@ -377,11 +377,11 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
   },
   STUDENT_NAME_NORMALIZED_MATCH: {
     title: "Nama siswa disesuaikan",
-    message: "Nama siswa cocok setelah normalisasi ejaan/spasi. Data web tetap menjadi acuan.",
+    message: "Nama siswa cocok setelah ejaan atau spasi dirapikan. Data kelas aktif tetap menjadi acuan.",
   },
   STUDENT_NISN_NORMALIZED_MATCH: {
     title: "NISN disesuaikan",
-    message: "NISN cocok setelah formatnya dibersihkan. Data web tetap menjadi acuan.",
+    message: "NISN cocok setelah formatnya dibersihkan. Data kelas aktif tetap menjadi acuan.",
   },
   STUDENT_MARKED_UNRESOLVED: {
     title: "Baris siswa belum selesai",
@@ -412,11 +412,11 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
   },
   IMPORT_METADATA_SHEET_MISSING: {
     title: "Sheet validasi tidak lengkap",
-    message: "Beberapa sheet validasi template tidak ditemukan. Periksa pemetaan sebelum lanjut.",
+    message: "Beberapa sheet validasi template tidak ditemukan. Periksa pencocokan sebelum lanjut.",
   },
   IMPORT_HEADER_CHANGED: {
     title: "Header berubah",
-    message: "Ada header yang berubah dari template awal. Periksa pemetaan kolom sebelum import.",
+    message: "Ada header yang berubah dari template awal. Periksa pencocokan kolom sebelum import.",
   },
   IMPORT_ADDED_HEADER_DETECTED: {
     title: "Kolom tambahan terdeteksi",
@@ -428,7 +428,7 @@ const importNoticeMessages: Record<string, { title: string; message: string }> =
   },
   IMPORT_UNSIGNED_TEMPLATE: {
     title: "Template dibuat dari browser",
-    message: "SIPENA akan tetap memvalidasi isinya terhadap data web sebelum import.",
+    message: "SIPENA akan tetap memvalidasi isinya terhadap data kelas aktif sebelum import.",
   },
   IMPORT_NO_FREE_EXCEL_REGION: {
     title: "Tabel nilai belum ditemukan",
@@ -487,12 +487,17 @@ function cleanBackendText(text?: string) {
   if (!text) return "";
   return text
     .replace(/ImportPlan/gi, "Rencana import")
+    .replace(/\bwarning\b/gi, "hal yang perlu dicek")
     .replace(/\bblocking\b/gi, "yang wajib diselesaikan")
     .replace(/\bblocked\b/gi, "belum bisa dilanjutkan")
     .replace(/\bresolved\b/gi, "selesai dicek")
     .replace(/\bexecutor\b/gi, "proses simpan")
     .replace(/\bderived columns?\b/gi, "kolom hasil rumus")
-    .replace(/\bmapping\b/gi, "pemetaan")
+    .replace(/\bmetadata\b/gi, "identitas template")
+    .replace(/\bmapping\b/gi, "pencocokan")
+    .replace(/\bpemetaan\b/gi, "pencocokan")
+    .replace(/\bweb\b/gi, "kelas aktif")
+    .replace(/\binvalid\b/gi, "tidak valid")
     .replace(/\bsafe\b/gi, "aman")
     .replace(/\bstudent_id\b/gi, "ID siswa")
     .replace(/\bcreate_chapter_and_assignment\b/gi, "membuat BAB dan tugas baru")
@@ -500,12 +505,32 @@ function cleanBackendText(text?: string) {
     .replace(/_/g, " ");
 }
 
-function getImportNotice(code?: string | null, fallback?: string) {
+function fallbackNoticeTitle(code?: string | null, type?: ImportConflict["type"]): string {
+  if (type === "student" || code?.includes("STUDENT")) return "Siswa perlu dicek";
+  if (type === "column" || type === "structure" || code?.includes("COLUMN") || code?.includes("HEADER")) return "Kolom perlu dicek";
+  if (type === "grade_value" || code?.includes("GRADE") || code?.includes("VALUE")) return "Nilai perlu dicek";
+  if (
+    type === "context" ||
+    type === "unsupported" ||
+    code?.includes("CONTEXT") ||
+    code?.includes("SEMESTER") ||
+    code?.includes("MANIFEST") ||
+    code?.includes("METADATA") ||
+    code?.includes("TEMPLATE") ||
+    code?.includes("WORKBOOK") ||
+    code?.includes("FILE") ||
+    code?.includes("SHEET")
+  ) return "File perlu dicek";
+  if (type === "overwrite") return "Nilai lama perlu dicek";
+  return "Bagian ini perlu dicek";
+}
+
+function getImportNotice(code?: string | null, fallback?: string, type?: ImportConflict["type"]) {
   if (code && importNoticeMessages[code]) return importNoticeMessages[code];
   const normalized = normalizeImportErrorCode(code || undefined);
   if (normalized) return importUiErrorMessages[normalized];
   return {
-    title: cleanBackendText(code || "Perlu dicek"),
+    title: fallbackNoticeTitle(code, type),
     message: cleanBackendText(fallback) || "Periksa kembali item ini sebelum melanjutkan import.",
   };
 }
@@ -1336,7 +1361,7 @@ function AnalysisStep({
           <MetricCard label="Kolom nilai" value={plan.summary.gradeColumnCount || 0} tone="blue" />
           <MetricCard label="Perlu dicek" value={plan.summary.conflictCount || 0} tone={(plan.summary.conflictCount || 0) > 0 ? "red" : "green"} />
           <MetricCard label="Tugas baru" value={plan.summary.newAssignmentCount || 0} tone="violet" />
-          <MetricCard label="Nilai invalid" value={plan.summary.invalidValueCount || 0} tone={(plan.summary.invalidValueCount || 0) > 0 ? "orange" : "green"} />
+        <MetricCard label="Nilai tidak valid" value={plan.summary.invalidValueCount || 0} tone={(plan.summary.invalidValueCount || 0) > 0 ? "orange" : "green"} />
         </div>
       </div>
 
@@ -1361,8 +1386,8 @@ function AnalysisStep({
             </RiskAlert>
           );
         }) : (
-          <RiskAlert title="Tidak ada warning utama" tone="safe">
-            Analisis awal tidak menemukan warning utama. Tetap cek pemetaan dan preview sebelum import.
+          <RiskAlert title="Tidak ada hal penting yang perlu dicek" tone="safe">
+            Pemeriksaan awal tidak menemukan masalah besar. Tetap lihat tabel sebelum menyimpan nilai.
           </RiskAlert>
         )}
       </div>
@@ -1483,7 +1508,7 @@ function ImportGuardrailPanel({
 
 function StudentMappingCard({ mapping }: { mapping: StudentMapping }) {
   const excelLabel = mapping.excelName || mapping.excelNisn || `Baris ${mapping.rowIndex}`;
-  const webLabel = `Web: ${mapping.webName || "Belum cocok"} ${mapping.webNisn ? `(${mapping.webNisn})` : ""}`.trim();
+  const webLabel = `Kelas aktif: ${mapping.webName || "Belum cocok"} ${mapping.webNisn ? `(${mapping.webNisn})` : ""}`.trim();
 
   return (
     <div className="rounded-2xl border border-border bg-white p-3 dark:bg-slate-950">
@@ -1775,7 +1800,7 @@ function ConflictActionPanel({
       <div className="mt-3 flex flex-wrap gap-2">
         {studentMapping?.studentId ? (
           <ResolutionButton tone="safe" onClick={() => actions.onUseCurrentStudent(conflict.rowIndex!, studentMapping.studentId!)}>
-            Gunakan siswa web ini
+            Gunakan siswa kelas ini
           </ResolutionButton>
         ) : null}
         <select
@@ -1864,7 +1889,7 @@ function ConflictActionPanel({
   if (conflict.severity === "blocked") {
     return (
       <div className="mt-3 space-y-2 rounded-2xl border border-red-100 bg-white/70 p-3 text-xs leading-5 dark:border-red-900/50 dark:bg-slate-950/40">
-        <p>Item ini belum bisa dilanjutkan sampai file atau pemetaannya diperbaiki. Data ambigu tidak dipilih otomatis.</p>
+        <p>Item ini belum bisa dilanjutkan sampai file atau pencocokannya diperbaiki. Data ambigu tidak dipilih otomatis.</p>
         <ResolutionButton onClick={() => actions.onResetConflictChoice(conflict)}>Ulangi pilihan ini</ResolutionButton>
       </div>
     );
@@ -1910,11 +1935,11 @@ function ConflictStep({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <ResolutionButton onClick={onBackToMapping}>Kembali ke pemetaan</ResolutionButton>
+            <ResolutionButton onClick={onBackToMapping}>Kembali ke pencocokan</ResolutionButton>
             <ResolutionButton tone="warning" onClick={actions.onResetAllChoices}>Ulangi pilihan</ResolutionButton>
             <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan kolom hasil rumus</ResolutionButton>
-            <ResolutionButton tone="safe" onClick={actions.onBulkUseSafeMappings}>Terima pemetaan aman</ResolutionButton>
-            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa dari web</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={actions.onBulkUseSafeMappings}>Terima pencocokan aman</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa dari kelas aktif</ResolutionButton>
           </div>
         </div>
         <div className="mt-4 border-t border-border pt-3">
@@ -1945,7 +1970,7 @@ function ConflictStep({
           </div>
           <div className="mt-3 space-y-2">
             {grouped[type].map((item, index) => {
-              const notice = getImportNotice(item.code, item.message);
+              const notice = getImportNotice(item.code, item.message, item.type);
               return (
                 <div key={`${item.code}-${index}`} className="rounded-2xl border border-red-100 bg-red-50/80 p-3 text-red-950 dark:border-red-900/60 dark:bg-red-950/25 dark:text-red-100">
                   <div className="flex min-w-0 items-start gap-2">
@@ -2069,7 +2094,7 @@ function SmartFixStep({
           title="File berbeda kelas/mapel/semester"
           body="File ini dibuat untuk kelas, mapel, semester, atau tahun ajaran lain. Import diblokir agar nilai tidak masuk ke konteks yang salah."
           fields={[
-            { label: "Masalah", value: getImportNotice(conflict.code, conflict.message).message },
+            { label: "Masalah", value: getImportNotice(conflict.code, conflict.message, conflict.type).message },
           ]}
         >
           <ResolutionButton onClick={onRestartUpload}>Batalkan dan upload template baru</ResolutionButton>
@@ -2089,7 +2114,7 @@ function SmartFixStep({
           ]}
         >
           {conflict.rowIndex ? <ResolutionButton onClick={() => actions.onIgnoreRow(conflict.rowIndex!)}>Abaikan nilai ini</ResolutionButton> : null}
-          {conflict.columnIndex ? <ResolutionButton onClick={() => actions.onIgnoreColumn(conflict.columnIndex!)}>Abaikan seluruh kolom invalid</ResolutionButton> : null}
+          {conflict.columnIndex ? <ResolutionButton onClick={() => actions.onIgnoreColumn(conflict.columnIndex!)}>Abaikan seluruh kolom ini</ResolutionButton> : null}
           <ResolutionButton tone="warning" onClick={() => actions.onResetConflictChoice(conflict)}>Edit di Excel lalu upload ulang</ResolutionButton>
         </ManualChoiceCard>
       );
@@ -2183,11 +2208,11 @@ function SmartFixStep({
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <ResolutionButton onClick={onBackToMapping}>Kembali ke pemetaan</ResolutionButton>
+            <ResolutionButton onClick={onBackToMapping}>Kembali ke pencocokan</ResolutionButton>
             <ResolutionButton tone="safe" onClick={applySafeFixes}>Terapkan pemeriksaan otomatis</ResolutionButton>
             <ResolutionButton tone="warning" onClick={reviewSuggestions}>Tinjau item perlu dicek</ResolutionButton>
             <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan Kolom yang Bukan Nilai</ResolutionButton>
-            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa exact dari web</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa yang cocok dari kelas aktif</ResolutionButton>
             <ResolutionButton tone="safe" onClick={() => actions.onUpdateModeChange("fill_empty_only")}>Isi Nilai Kosong Saja</ResolutionButton>
             <ResolutionButton tone="warning" onClick={actions.onResetAllChoices}>Ulangi semua pilihan</ResolutionButton>
           </div>
@@ -2374,7 +2399,7 @@ function AiSuggestionPanel({
             <h3 className="text-sm font-semibold">Saran AI</h3>
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            AI Agent membantu menyelesaikan item yang belum jelas. Keputusan tetap bisa dicek dan tidak akan menyimpan nilai.
+            Saran AI membantu menyelesaikan item yang belum jelas. Keputusan tetap bisa dicek dan tidak akan menyimpan nilai.
           </p>
         </div>
         <button
@@ -2383,13 +2408,13 @@ function AiSuggestionPanel({
           onClick={onRequest}
           className="min-h-11 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {aiState.status === "loading" ? "AI Agent sedang memeriksa..." : "Jalankan AI Agent"}
+          {aiState.status === "loading" ? "AI sedang memeriksa..." : "Minta Saran AI"}
         </button>
       </div>
 
       {aiState.status === "idle" ? (
         <p className="mt-3 rounded-2xl border border-blue-100 bg-white p-3 text-xs leading-5 text-muted-foreground dark:border-blue-900/50 dark:bg-slate-950">
-          Jalankan AI Agent setelah pemeriksaan otomatis tersedia untuk membantu memberi keputusan aman.
+          Minta Saran AI setelah pemeriksaan otomatis tersedia untuk membantu memberi keputusan aman.
         </p>
       ) : null}
 
@@ -2463,7 +2488,7 @@ function SpreadsheetPreviewStep({
   importContext: ImportPlanContext;
 }) {
   if (!plan || !model) {
-    return <EmptyPanel title="Perbaikan belum tersedia" description="Preview spreadsheet akan muncul setelah file dianalisis." />;
+    return <EmptyPanel title="Verifikasi belum tersedia" description="Tabel verifikasi akan muncul setelah file dianalisis." />;
   }
 
   const approveColumn = (column: SpreadsheetPreviewColumn) => {
@@ -2536,63 +2561,21 @@ function SpreadsheetPreviewStep({
 }
 
 function FinalReviewSpreadsheetTable({
-  review,
   model,
   actions,
   onOpenFixStep,
 }: {
-  review: FinalReviewModel;
   model: SpreadsheetPreviewModel | null;
   actions: ConflictResolutionActions;
   onOpenFixStep: () => void;
 }) {
-  const [activeSectionId, setActiveSectionId] = useState<FinalReviewModel["sections"][number]["id"]>("changes");
-  const activeSection = review.sections.find((section) => section.id === activeSectionId) || review.sections[0];
-
-  const skipDecision = (decision: FinalReviewModel["sections"][number]["decisions"][number]) => {
-    if (decision.kind === "header" && decision.columnIndex) {
-      actions.onIgnoreColumn(decision.columnIndex);
-      return;
-    }
-    if (decision.kind === "student" && decision.rowIndex) {
-      actions.onIgnoreRow(decision.rowIndex);
-      return;
-    }
-    if (decision.rowIndex && decision.columnIndex) {
-      actions.onIgnoreCell(decision.rowIndex, decision.columnIndex);
-      return;
-    }
-    if (decision.columnIndex) {
-      actions.onIgnoreColumn(decision.columnIndex);
-      return;
-    }
-    if (decision.rowIndex) {
-      actions.onIgnoreRow(decision.rowIndex);
-    }
-  };
-
-  const applySuggestedValue = (decision: FinalReviewModel["sections"][number]["decisions"][number]) => {
-    if (decision.rowIndex && decision.columnIndex && typeof decision.suggestedValue === "number") {
-      actions.onUseSuggestedValue(decision.rowIndex, decision.columnIndex, decision.suggestedValue);
-    }
-  };
-
-  const valueLabel = (decision: FinalReviewModel["sections"][number]["decisions"][number]) => {
-    const existing = decision.operation?.existingValue;
-    const next = decision.value ?? decision.suggestedValue;
-    if (decision.action === "skip") return "Tidak disimpan";
-    if (existing !== null && existing !== undefined) return `${existing} -> ${next ?? "-"}`;
-    if (decision.rawValue !== null && decision.rawValue !== undefined && decision.rawValue !== "") return `${decision.rawValue} -> ${next ?? "-"}`;
-    return next ?? "-";
-  };
-
   return (
     <section className="rounded-[24px] border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/60 dark:bg-slate-950">
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Tabel final import</h3>
+          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Verifikasi tabel import</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Ini adalah spreadsheet akhir setelah konfigurasi import. Nilai yang dipakai, dilewati, ditimpa, dan perlu dicek ditampilkan langsung pada selnya.
+            Ini adalah tabel kerja untuk mengecek nilai sebelum review akhir. Nilai yang dipakai, dilewati, ditimpa, dan perlu dicek ditampilkan langsung pada selnya.
           </p>
         </div>
         {model ? (
@@ -2720,100 +2703,72 @@ function FinalReviewSpreadsheetTable({
           Preview spreadsheet belum bisa dibuat. Periksa kembali hasil analisis file.
         </RiskAlert>
       )}
+    </section>
+  );
+}
 
-      <div className="mt-4 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+function reviewDecisionValueLabel(decision: FinalReviewModel["sections"][number]["decisions"][number]) {
+  const existing = decision.operation?.existingValue;
+  const next = decision.value ?? decision.suggestedValue;
+  if (decision.action === "skip") return "Tidak disimpan";
+  if (existing !== null && existing !== undefined) return `${existing} -> ${next ?? "-"}`;
+  if (decision.rawValue !== null && decision.rawValue !== undefined && decision.rawValue !== "") return `${decision.rawValue} -> ${next ?? "-"}`;
+  return next ?? "-";
+}
+
+function FinalReviewDecisionSummary({
+  review,
+  onOpenVerificationStep,
+}: {
+  review: FinalReviewModel;
+  onOpenVerificationStep: () => void;
+}) {
+  const importantDecisions = [
+    ...(review.sections.find((section) => section.id === "attention")?.decisions || []),
+    ...(review.sections.find((section) => section.id === "changes")?.decisions || []),
+    ...(review.sections.find((section) => section.id === "skipped")?.decisions || []),
+  ].slice(0, 12);
+
+  return (
+    <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Daftar keputusan detail</h4>
+          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Keputusan penting</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Gunakan filter ini untuk meninjau keputusan simpan, cek manual, dan skip secara rinci.
+            Ini ringkasan akhir. Untuk mengubah nilai, siswa, atau target kolom, kembali ke Verifikasi Tabel.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter review akhir">
-          {review.sections.map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              role="tab"
-              aria-selected={section.id === activeSection.id}
-              onClick={() => setActiveSectionId(section.id)}
-              className={cn(
-                "min-h-9 rounded-full border px-3 text-xs font-semibold transition-colors",
-                section.id === activeSection.id
-                  ? "border-blue-500 bg-blue-600 text-white"
-                  : "border-border bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900",
-              )}
-            >
-              {section.title} ({section.count})
-            </button>
-          ))}
-        </div>
+        <Button type="button" variant="outline" className="min-h-10 rounded-full" onClick={onOpenVerificationStep}>
+          Buka Verifikasi Tabel
+        </Button>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-        <div className="max-h-[520px] overflow-auto">
-          <table className="min-w-[1120px] w-full border-separate border-spacing-0 text-left text-xs">
-            <thead className="sticky top-0 z-10 bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-100">
-              <tr>
-                <th className="w-28 border-b border-border px-3 py-3 font-semibold">Posisi Excel</th>
-                <th className="w-48 border-b border-border px-3 py-3 font-semibold">Sumber Excel</th>
-                <th className="w-56 border-b border-border px-3 py-3 font-semibold">Target SIPENA</th>
-                <th className="w-36 border-b border-border px-3 py-3 font-semibold">Nilai final</th>
-                <th className="w-40 border-b border-border px-3 py-3 font-semibold">Aksi</th>
-                <th className="w-32 border-b border-border px-3 py-3 font-semibold">Risiko</th>
-                <th className="min-w-72 border-b border-border px-3 py-3 font-semibold">Alasan</th>
-                <th className="sticky right-0 w-56 border-b border-l border-border bg-slate-100 px-3 py-3 font-semibold dark:bg-slate-900">Ubah keputusan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeSection.decisions.length ? activeSection.decisions.map((decision) => (
-                <tr key={decision.id} className="bg-white align-top odd:bg-slate-50/70 hover:bg-blue-50/60 dark:bg-slate-950 dark:odd:bg-slate-900/45 dark:hover:bg-blue-950/25">
-                  <td className="border-b border-border px-3 py-3 text-slate-700 dark:text-slate-200">
-                    <div className="font-semibold">Baris {decision.rowIndex ?? "-"}</div>
-                    <div className="mt-1 text-muted-foreground">Kolom {decision.columnIndex ?? "-"}</div>
-                  </td>
-                  <td className="border-b border-border px-3 py-3">
-                    <div className="font-semibold text-slate-950 dark:text-slate-50">{decision.sourceLabel}</div>
-                    <div className="mt-1 break-words text-muted-foreground">Excel: {decision.rawValue !== null && decision.rawValue !== undefined && decision.rawValue !== "" ? String(decision.rawValue) : "-"}</div>
-                  </td>
-                  <td className="border-b border-border px-3 py-3">
-                    <div className="font-semibold text-slate-950 dark:text-slate-50">{decision.targetLabel}</div>
-                    <div className="mt-1 text-muted-foreground">{decision.target?.gradeType === "assignment" ? "Tugas" : decision.target?.gradeType?.toUpperCase() || "Belum jelas"}</div>
-                  </td>
-                  <td className="border-b border-border px-3 py-3 font-semibold text-slate-950 dark:text-slate-50">{valueLabel(decision)}</td>
-                  <td className="border-b border-border px-3 py-3">
-                    <StatusBadge tone={decisionActionTone(decision.action)}>{decisionActionLabel(decision.action)}</StatusBadge>
-                  </td>
-                  <td className="border-b border-border px-3 py-3">
-                    <StatusBadge tone={decisionRiskTone(decision.risk)}>{decisionRiskLabel(decision.risk)}</StatusBadge>
-                  </td>
-                  <td className="border-b border-border px-3 py-3 leading-5 text-muted-foreground">
-                    {decision.reason}
-                    {decision.approvedBy === "ai" ? <span className="mt-2 block font-semibold text-blue-700 dark:text-blue-200">Diputuskan oleh AI Agent, tetap bisa diubah.</span> : null}
-                  </td>
-                  <td className="sticky right-0 border-b border-l border-border bg-inherit px-3 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      {decision.suggestedValue !== undefined && decision.action === "convert" ? (
-                        <ResolutionButton tone="safe" onClick={() => applySuggestedValue(decision)}>Gunakan nilai</ResolutionButton>
-                      ) : null}
-                      <ResolutionButton onClick={onOpenFixStep}>Ubah</ResolutionButton>
-                      {decision.action !== "skip" ? (
-                        <ResolutionButton tone="warning" onClick={() => skipDecision(decision)}>
-                          {decision.kind === "header" ? "Skip kolom" : decision.kind === "student" ? "Skip baris" : "Skip sel"}
-                        </ResolutionButton>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={8} className="bg-white px-3 py-10 text-center text-sm text-muted-foreground dark:bg-slate-950">
-                    Tidak ada item pada kategori ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="mt-4 grid gap-2">
+        {importantDecisions.length ? importantDecisions.map((decision) => (
+          <div key={decision.id} className="rounded-2xl border border-border bg-slate-50 p-3 dark:bg-slate-900/60">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={decision.targetLabel}>
+                  {decision.targetLabel}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Baris {decision.rowIndex ?? "-"}, kolom {decision.columnIndex ?? "-"} · Nilai final: {reviewDecisionValueLabel(decision)}
+                </p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground" title={cleanBackendText(decision.reason)}>
+                  {cleanBackendText(decision.reason)}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <StatusBadge tone={decisionActionTone(decision.action)}>{decisionActionLabel(decision.action)}</StatusBadge>
+                <StatusBadge tone={decisionRiskTone(decision.risk)}>{decisionRiskLabel(decision.risk)}</StatusBadge>
+              </div>
+            </div>
+          </div>
+        )) : (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-100">
+            Tidak ada keputusan berisiko. Nilai yang siap disimpan sudah melewati pemeriksaan tabel.
+          </div>
+        )}
       </div>
     </section>
   );
@@ -2823,17 +2778,15 @@ function PreviewStep({
   plan,
   model,
   review,
-  actions,
   onOpenFixStep,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
   review: FinalReviewModel | null;
-  actions: ConflictResolutionActions;
   onOpenFixStep: () => void;
 }) {
   if (!plan) {
-    return <EmptyPanel title="Preview belum tersedia" description="Preview operasi akan muncul setelah file selesai dianalisis dan pemetaan aman." />;
+    return <EmptyPanel title="Review belum tersedia" description="Ringkasan akhir akan muncul setelah file selesai dianalisis dan pencocokan aman." />;
   }
 
   const isBlocked = hasBlockedConflicts(plan);
@@ -2844,9 +2797,9 @@ function PreviewStep({
         <section className="rounded-[24px] border border-blue-200 bg-blue-50/70 p-4 shadow-sm dark:border-blue-900/60 dark:bg-blue-950/20">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-blue-950 dark:text-blue-100">Review akhir keputusan import</h3>
+              <h3 className="text-sm font-semibold text-blue-950 dark:text-blue-100">Review akhir sebelum simpan</h3>
               <p className="mt-1 text-xs leading-5 text-blue-900/75 dark:text-blue-100/75">
-                Review ini dibangun dari decision graph final. Item yang belum jelas tidak akan masuk proses simpan.
+                Ringkasan ini menunjukkan hasil akhir dari Verifikasi Tabel. Item yang belum jelas tidak akan masuk proses simpan.
               </p>
             </div>
             <StatusBadge tone={review.canExecute ? "success" : "warning"}>
@@ -2867,15 +2820,15 @@ function PreviewStep({
       ) : null}
 
       {review ? (
-        <FinalReviewSpreadsheetTable review={review} model={model} actions={actions} onOpenFixStep={onOpenFixStep} />
+        <FinalReviewDecisionSummary review={review} onOpenVerificationStep={onOpenFixStep} />
       ) : null}
 
       {model ? (
         <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Preview pilihan import</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Periksa ringkasan akhir sebelum nilai disimpan.</p>
+              <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Ringkasan tabel terverifikasi</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Angka ini berasal dari tabel yang sudah diverifikasi pada langkah sebelumnya.</p>
             </div>
             <StatusBadge tone={model.summary.manualRequired || model.summary.invalidCells ? "danger" : "safe"}>
               {model.summary.manualRequired || model.summary.invalidCells ? "Perlu dicek" : "Siap import"}
@@ -2906,7 +2859,7 @@ function PreviewStep({
         <MetricCard label="BAB baru" value={plan.summary.newChapterCount || 0} tone="violet" />
         <MetricCard label="Tugas baru" value={plan.summary.newAssignmentCount || 0} tone="violet" />
         <MetricCard label="Siap import" value={plan.summary.readyImportCount || 0} tone="green" />
-        <MetricCard label="Dilewati/invalid" value={(plan.summary.skippedValueCount || 0) + (plan.summary.invalidValueCount || 0)} tone="orange" />
+        <MetricCard label="Dilewati/tidak valid" value={(plan.summary.skippedValueCount || 0) + (plan.summary.invalidValueCount || 0)} tone="orange" />
       </div>
     </div>
   );
@@ -3928,7 +3881,7 @@ export default function GradeImportExportDialog({
       if (needsRegionSelection) {
         showWarning("Pilih tabel nilai dulu", "Workbook memiliki beberapa tabel nilai. Pilih tabel yang benar sebelum lanjut.");
       } else if (nextPlan.sourceType === "official_exact") {
-        success("Template resmi siap direview", "Metadata SIPENA valid. Siswa dan kolom diproses otomatis tanpa AI atau mapping manual.");
+        success("Template resmi siap direview", "Identitas template SIPENA valid. Siswa dan kolom diproses otomatis tanpa AI atau pencocokan manual.");
       } else {
         success("Preview import siap", "File sudah dianalisis sebagai preview. Belum ada data yang disimpan.");
       }
@@ -3987,7 +3940,7 @@ export default function GradeImportExportDialog({
           showWarning(
             "Import belum siap",
             manualCount > 0
-              ? `Lanjut belum bisa - pilih target atau atur ${manualCount} bagian merah.`
+              ? `Lanjut belum bisa - pilih atau atur ${manualCount} bagian yang perlu dicek.`
               : `Lanjut belum bisa - perbaiki atau lewati ${invalidCount} nilai tidak valid.`,
           );
           return;
@@ -4063,7 +4016,7 @@ export default function GradeImportExportDialog({
 
       if (!canGoNext) {
         const smartFixMessage = (spreadsheetPreview?.summary.manualRequired || smartFixResult?.manualRequiredCount || 0) > 0
-          ? `Lanjut belum bisa - pilih target atau atur ${spreadsheetPreview?.summary.manualRequired || smartFixResult?.manualRequiredCount || 0} bagian merah.`
+          ? `Lanjut belum bisa - pilih atau atur ${spreadsheetPreview?.summary.manualRequired || smartFixResult?.manualRequiredCount || 0} bagian yang perlu dicek.`
           : (spreadsheetPreview?.summary.invalidCells || 0) > 0
             ? `Lanjut belum bisa - perbaiki atau lewati ${spreadsheetPreview?.summary.invalidCells || 0} nilai tidak valid.`
             : "Upload file yang valid dulu untuk membuat preview import.";
@@ -4177,7 +4130,7 @@ export default function GradeImportExportDialog({
       return `Simpan belum bisa karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
     }
     if ((stepIndex === 2 || stepIndex === 3) && spreadsheetPreview?.summary.manualRequired) {
-      return `Lanjut belum bisa - pilih target atau atur ${spreadsheetPreview.summary.manualRequired} bagian merah.`;
+      return `Lanjut belum bisa - pilih atau atur ${spreadsheetPreview.summary.manualRequired} bagian yang perlu dicek.`;
     }
     if ((stepIndex === 2 || stepIndex === 3) && spreadsheetPreview?.summary.overwriteNeedsConfirmation) {
       return `Lanjut belum bisa - konfirmasi ${spreadsheetPreview.summary.overwriteNeedsConfirmation} nilai yang akan ditimpa.`;
@@ -4222,13 +4175,13 @@ export default function GradeImportExportDialog({
       if ((plan?.conflicts || []).some((item) => item.code.includes("CONTEXT") || item.code.includes("SEMESTER"))) {
         return "Download template baru jika file berasal dari kelas/mapel/semester lain.";
       }
-      if (blockedItemCount > 0 || blocked) return "Selesaikan item yang diblokir terlebih dahulu.";
+      if (blockedItemCount > 0 || blocked) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
       if ((spreadsheetPreview?.summary.manualRequired || 0) > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
       return "Periksa item yang perlu dicek terlebih dahulu.";
     }
     if (stepIndex === 4) {
-      if (blocked || blockedItemCount > 0) return "Selesaikan item yang diblokir terlebih dahulu.";
-      if ((spreadsheetPreview?.summary.invalidCells || 0) > 0) return "Selesaikan item yang diblokir terlebih dahulu.";
+      if (blocked || blockedItemCount > 0) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
+      if ((spreadsheetPreview?.summary.invalidCells || 0) > 0) return "Selesaikan nilai yang perlu diperbaiki terlebih dahulu.";
       if ((spreadsheetPreview?.summary.manualRequired || 0) > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
       if (readyImportCount === 0) return "Tidak ada nilai siap import.";
     }
@@ -4378,11 +4331,11 @@ export default function GradeImportExportDialog({
                         ) : null}
                         {chapterCount === 0 || assignmentCount === 0 ? (
                           <RiskAlert title="Belum ada BAB/tugas" tone="warning">
-                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di langkah Perbaiki sebelum import.
+                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di Verifikasi Tabel sebelum import.
                           </RiskAlert>
                         ) : null}
                         <RiskAlert title="Data tidak akan ditimpa tanpa konfirmasi" tone="safe">
-                          Default import adalah isi nilai kosong saja. Template tetap dicocokkan dengan data web sebelum nilai disimpan.
+                          Default import adalah isi nilai kosong saja. Template tetap dicocokkan dengan data kelas aktif sebelum nilai disimpan.
                         </RiskAlert>
                         <RiskAlert title="BAB dan tugas baru butuh persetujuan" tone="warning">
                           Header baru hanya menjadi kandidat. Sistem tidak membuat struktur baru secara otomatis.
@@ -4412,6 +4365,13 @@ export default function GradeImportExportDialog({
                         selectionState={effectiveSelectionState}
                         importContext={importContext}
                       />
+                      {finalReviewModel ? (
+                        <FinalReviewSpreadsheetTable
+                          model={spreadsheetPreview}
+                          actions={resolverActions}
+                          onOpenFixStep={() => setStepIndex(2)}
+                        />
+                      ) : null}
                     </div>
                   ) : null}
                   {stepIndex === 3 ? (
@@ -4419,7 +4379,6 @@ export default function GradeImportExportDialog({
                       plan={plan}
                       model={spreadsheetPreview}
                       review={finalReviewModel}
-                      actions={resolverActions}
                       onOpenFixStep={() => setStepIndex(2)}
                     />
                   ) : null}
@@ -4462,7 +4421,7 @@ export default function GradeImportExportDialog({
                 <main className="min-w-0 space-y-3">
                   <ExportOptionCard
                     title="Template Resmi SIPENA"
-                    description="Workbook kosong dari data kelas, mapel, semester, siswa, BAB, dan tugas aktif. Saat diupload, SIPENA tetap mencocokkan isinya dengan data web."
+                    description="Workbook kosong dari data kelas, mapel, semester, siswa, BAB, dan tugas aktif. Saat diupload, SIPENA tetap mencocokkan isinya dengan data kelas aktif."
                     meta="Paling terarah untuk input nilai baru"
                     selected={exportMode === "official"}
                     tone="official"
