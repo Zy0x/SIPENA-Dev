@@ -14,6 +14,7 @@ import type {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { buildCellReasonHint, buildColumnReasonHint, reasonToneClass } from "./importReasonHints";
+import { buildCellDetailCopy, buildColumnDetailCopy, buildRowDetailCopy } from "./importIssueQueue";
 
 type Selection =
   | { kind: "cell"; cell: SpreadsheetPreviewCell; row: SpreadsheetPreviewRow; column: SpreadsheetPreviewColumn }
@@ -149,6 +150,12 @@ export function PreviewFixPanel({
     if (targetColumn) return buildColumnReasonHint(targetColumn, aiAssist);
     return null;
   }, [aiAssist, targetCell, targetColumn, targetRow]);
+  const detailCopy = useMemo(() => {
+    if (targetCell && targetRow && targetColumn) return buildCellDetailCopy(targetCell, targetRow, targetColumn);
+    if (targetColumn) return buildColumnDetailCopy(targetColumn);
+    if (targetRow) return buildRowDetailCopy(targetRow);
+    return null;
+  }, [targetCell, targetColumn, targetRow]);
   const shouldConfirmOverwrite = Boolean(
     targetCell
     && isGradeCell
@@ -365,15 +372,18 @@ export function PreviewFixPanel({
 
       {showDetail ? (
         <div className="sipena-preview-detail">
-          <p className="text-xs leading-5 text-muted-foreground">
-            Data tidak disimpan sebelum tahap Import. Pilihan nilai tidak bisa melewati target kolom atau siswa yang belum valid.
-          </p>
-          {targetCell?.message ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{targetCell.message}</p> : null}
-          {targetCell?.status === "changed" ? (
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">
-              Untuk menimpa nilai lama, pilih "Timpa nilai lama" pada nilai ini lalu centang konfirmasi risiko.
+          {detailCopy ? (
+            <>
+              <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{detailCopy.title}</p>
+              <ul className="mt-2 grid gap-1 pl-4 text-xs leading-5 text-muted-foreground">
+                {detailCopy.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
+              </ul>
+            </>
+          ) : (
+            <p className="text-xs leading-5 text-muted-foreground">
+              Data tidak disimpan sebelum tahap Import. Pilihan nilai tidak bisa melewati target kolom atau siswa yang belum valid.
             </p>
-          ) : null}
+          )}
         </div>
       ) : null}
     </aside>

@@ -397,8 +397,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).not.toContain("<ImportModeCard");
     expect(dialogSource).not.toContain("setImportMode");
     expect(overlaySource).toContain('if (column.isNewStructure) return "ignore"');
-    expect(overlaySource).toContain('title="Akan membuat tugas baru"');
-    expect(overlaySource).toContain('title="Akan membuat BAB + tugas"');
+    expect(overlaySource).toContain('title="Tugas lain"');
+    expect(overlaySource).toContain('title="Buat baru"');
+    expect(overlaySource).toContain("Tugas baru di BAB ini");
+    expect(overlaySource).toContain("BAB + tugas baru");
     expect(overlaySource).toContain('activeMode === "overwrite_existing"');
     expect(overlaySource).not.toContain("complexityMode");
     expect(fixPanelSource).toContain('(["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[])');

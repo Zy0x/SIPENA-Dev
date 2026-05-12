@@ -2,24 +2,36 @@ import type { SpreadsheetPreviewModel } from "@/lib/gradeImport";
 
 export function PreviewSummaryBanner({
   model,
+  invalidIssueCount = 0,
   onPrimaryAction,
 }: {
   model: SpreadsheetPreviewModel;
+  invalidIssueCount?: number;
   onPrimaryAction: () => void;
 }) {
   const manualCount = model.summary.manualRequired;
   const needsCheckCount = model.summary.needsCheck;
-  const title = manualCount > 0
-    ? "Atur kolom dan nilai yang akan disimpan"
-    : needsCheckCount > 0
+  const title = invalidIssueCount > 0
+    ? "Selesaikan nilai bermasalah dulu"
+    : manualCount > 0
       ? "Atur kolom dan nilai yang akan disimpan"
-      : "Atur kolom dan nilai yang akan disimpan";
-  const description = manualCount > 0
-    ? `Klik header untuk atur kolom. Masih ada ${manualCount} bagian merah yang perlu dipilih.`
-    : needsCheckCount > 0
-      ? "Klik header untuk atur kolom. Klik sel untuk pakai/lewati atau diatur manual."
-      : "Klik header untuk atur kolom. Klik sel untuk pakai/lewati atau diatur manual.";
-  const cta = manualCount > 0 ? "Pilih bagian merah" : needsCheckCount > 0 ? "Tinjau item perlu dicek" : "Terapkan pemeriksaan otomatis";
+      : needsCheckCount > 0
+        ? "Atur kolom dan nilai yang akan disimpan"
+        : "Atur kolom dan nilai yang akan disimpan";
+  const description = invalidIssueCount > 0
+    ? `${invalidIssueCount} item perlu dicek sebelum import aman. Selesaikan satu per satu atau lewati yang tidak dipakai.`
+    : manualCount > 0
+      ? `Klik header untuk atur kolom. Masih ada ${manualCount} bagian merah yang perlu dipilih.`
+      : needsCheckCount > 0
+        ? "Klik header untuk atur kolom. Klik sel untuk pakai/lewati atau diatur manual."
+        : "Klik header untuk atur kolom. Klik sel untuk pakai/lewati atau diatur manual.";
+  const cta = invalidIssueCount > 0
+    ? "Buka daftar masalah"
+    : manualCount > 0
+      ? "Pilih bagian merah"
+      : needsCheckCount > 0
+        ? "Tinjau item perlu dicek"
+        : "Terapkan pemeriksaan otomatis";
 
   return (
     <section className="sipena-preview-banner">

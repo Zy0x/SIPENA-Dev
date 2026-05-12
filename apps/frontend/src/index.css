@@ -512,9 +512,9 @@
 }
 
 .sipena-preview-cell--new-value {
-  background: #ecfdf5 !important;
-  color: #166534;
-  box-shadow: inset 0 0 0 1px #22c55e;
+  background: #f0fdf4 !important;
+  color: #14532d;
+  box-shadow: inset 0 0 0 1px #86efac;
 }
 
 .sipena-preview-cell--changed {
@@ -524,15 +524,15 @@
 }
 
 .sipena-preview-cell--new-column {
-  background: #fff7ed !important;
-  color: #9a3412;
-  box-shadow: inset 0 0 0 1px #fb923c;
+  background: #fef3c7 !important;
+  color: #92400e;
+  box-shadow: inset 0 0 0 1px #f59e0b;
 }
 
 .sipena-preview-cell--needs-check {
-  background: #fff7ed !important;
-  color: #9a3412;
-  box-shadow: inset 0 0 0 1px #fb923c;
+  background: #fef3c7 !important;
+  color: #92400e;
+  box-shadow: inset 0 0 0 1px #f59e0b;
 }
 
 .sipena-preview-cell--manual-required {
@@ -565,7 +565,7 @@
 
 .sipena-preview-cell--manual-included,
 .sipena-import-cell-manual-include {
-  outline: 2px solid #2563eb;
+  outline: 1px solid #94a3b8;
   outline-offset: -2px;
 }
 
@@ -592,6 +592,7 @@
 .sipena-import-cell-blocked-by-column {
   background: #fef2f2 !important;
   color: #991b1b;
+  box-shadow: inset 0 0 0 2px #ef4444;
   opacity: 0.85;
 }
 
@@ -850,6 +851,13 @@
   color: #475569;
 }
 
+.sipena-reason-desc-full {
+  display: block;
+  max-width: none;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
 .sipena-reason-action {
   flex: 0 0 auto;
   border-radius: 999px;
@@ -872,6 +880,10 @@
   margin-top: 10px;
   border-top: 1px solid #e2e8f0;
   padding-top: 10px;
+}
+
+.sipena-preview-detail ul {
+  list-style: disc;
 }
 
 .sipena-column-overlay {
@@ -1045,6 +1057,13 @@
   background: #eff6ff;
 }
 
+.sipena-column-target-card:disabled {
+  cursor: not-allowed;
+  background: #f8fafc;
+  color: #94a3b8;
+  opacity: 0.72;
+}
+
 .sipena-column-target-card span {
   font-size: 13px;
   font-weight: 900;
@@ -1062,6 +1081,32 @@
   border-color: #2563eb;
   background: #eff6ff;
   box-shadow: inset 0 0 0 1px #2563eb;
+}
+
+.sipena-column-detail-toggle {
+  grid-column: 1 / -1;
+  width: fit-content;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #2563eb;
+}
+
+.sipena-column-detail-toggle:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.sipena-column-nested-field,
+.sipena-column-create-target {
+  margin-top: 10px;
+}
+
+.sipena-column-create-target {
+  display: grid;
+  gap: 12px;
 }
 
 .sipena-column-switch-row {
@@ -1193,6 +1238,108 @@
   opacity: 0.55;
 }
 
+.sipena-invalid-drawer {
+  max-height: min(86dvh, 720px);
+  overflow: hidden;
+  border-radius: 22px 22px 0 0;
+}
+
+.sipena-invalid-drawer-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px 8px;
+}
+
+.sipena-invalid-step-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  background: #fff7f7;
+  padding: 14px;
+}
+
+.sipena-invalid-step-header {
+  display: grid;
+  gap: 4px;
+}
+
+.sipena-invalid-step-header strong {
+  font-size: 15px;
+  color: #7f1d1d;
+}
+
+.sipena-invalid-step-count {
+  width: fit-content;
+  border-radius: 999px;
+  background: #fee2e2;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #991b1b;
+}
+
+.sipena-invalid-step-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.sipena-invalid-context {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sipena-invalid-context div {
+  min-width: 0;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.sipena-invalid-context dt {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.sipena-invalid-context dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.sipena-invalid-detail {
+  border-top: 1px solid #fecaca;
+  padding-top: 12px;
+}
+
+.sipena-invalid-detail b {
+  font-size: 13px;
+  color: #7f1d1d;
+}
+
+.sipena-invalid-detail ul {
+  margin: 8px 0 0;
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #475569;
+  list-style: disc;
+}
+
+.sipena-invalid-drawer-actions {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 8px;
+}
+
 @media (max-width: 899px) {
   .sipena-preview-banner {
     flex-direction: column;
@@ -1217,6 +1364,10 @@
 
   .sipena-preview-actions > * {
     flex: 1 1 160px;
+  }
+
+  .sipena-invalid-context {
+    grid-template-columns: 1fr;
   }
 
   .sipena-column-overlay {

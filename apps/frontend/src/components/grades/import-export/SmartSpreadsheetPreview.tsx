@@ -19,11 +19,13 @@ import {
   type ColumnSettingsChapterOption,
   type ColumnTargetDraft,
 } from "./ColumnSettingsOverlay";
+import { InvalidIssueStepper } from "./InvalidIssueStepper";
 import { PreviewCellBadge } from "./PreviewCellBadge";
 import { PreviewFixPanel } from "./PreviewFixPanel";
 import { PreviewLegend } from "./PreviewLegend";
 import { PreviewQuickActions } from "./PreviewQuickActions";
 import { PreviewSummaryBanner } from "./PreviewSummaryBanner";
+import { buildInvalidIssueQueue, type InvalidIssue } from "./importIssueQueue";
 
 type Selection =
   | { kind: "cell"; cell: SpreadsheetPreviewCell; row: SpreadsheetPreviewRow; column: SpreadsheetPreviewColumn }
@@ -176,28 +178,26 @@ export function SmartSpreadsheetPreview({
 }) {
   const [selection, setSelection] = useState<Selection>(null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("quick");
+  const [issueDrawerOpen, setIssueDrawerOpen] = useState(false);
+  const [issueIndex, setIssueIndex] = useState(0);
   const isDetailMode = previewMode === "detail";
-  const firstManual = useMemo(() => {
-    for (const row of model.rows) {
-      const cell = row.cells.find((item) =>
-        item.status === "manual_required"
-        || item.status === "needs_check"
-        || item.status === "invalid"
-        || item.status === "blocked"
-        || item.requiresConfirmation
-      );
-      if (cell) {
-        const column = model.columns.find((item) => item.id === cell.columnId);
-        if (column) return { kind: "cell" as const, cell, row, column };
-      }
+  const invalidIssues = useMemo(() => buildInvalidIssueQueue(model), [model]);
+
+  const selectIssue = (issue: InvalidIssue) => {
+    if (issue.cell && issue.row && issue.column) {
+      setSelection({ kind: "cell", cell: issue.cell, row: issue.row, column: issue.column });
+    } else if (issue.column) {
+      setSelection({ kind: "column", column: issue.column });
+    } else if (issue.row) {
+      setSelection({ kind: "row", row: issue.row });
     }
-    const column = model.columns.find((item) => item.status === "manual_required");
-    return column ? { kind: "column" as const, column } : null;
-  }, [model]);
+    setIssueDrawerOpen(false);
+  };
 
   const primarySummaryAction = () => {
-    if (model.summary.manualRequired > 0 && firstManual) {
-      setSelection(firstManual);
+    if (invalidIssues.length > 0) {
+      setIssueIndex(0);
+      setIssueDrawerOpen(true);
       return;
     }
     if (model.summary.needsCheck > 0) {
@@ -208,6 +208,20 @@ export function SmartSpreadsheetPreview({
   };
 
   const showFixPanel = Boolean(selection && selection.kind !== "column");
+
+  const openIssueDrawer = () => {
+    if (invalidIssues.length > 0) {
+      setIssueIndex(0);
+      setIssueDrawerOpen(true);
+    }
+  };
+
+  const skipAllInvalidIssues = () => {
+    invalidIssues.forEach((issue) => {
+      if (issue.cell?.status === "invalid") onIgnoreCell(issue.cell);
+    });
+    setIssueIndex(0);
+  };
 
   const toggleCellInclude = (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => {
     if (column.type === "identity") {
@@ -230,7 +244,7 @@ export function SmartSpreadsheetPreview({
 
   return (
     <div className={cn("sipena-preview-shell", `sipena-preview-shell--${previewMode}`)} data-preview-mode={previewMode}>
-      <PreviewSummaryBanner model={model} onPrimaryAction={primarySummaryAction} />
+      <PreviewSummaryBanner model={model} invalidIssueCount={invalidIssues.length} onPrimaryAction={primarySummaryAction} />
       <div className="sipena-preview-modebar" aria-label="Mode tampilan tabel import">
         <div className="min-w-0">
           <p className="sipena-preview-modebar-title">Tampilan tabel</p>
@@ -259,9 +273,10 @@ export function SmartSpreadsheetPreview({
       </div>
       <PreviewQuickActions
         onApplySafeFixes={onApplySafeFixes}
-        onApproveSuggestions={() => firstManual && setSelection(firstManual)}
+        onApproveSuggestions={invalidIssues.length ? openIssueDrawer : onApproveSuggestions}
         onIgnoreNonGradeColumns={onIgnoreNonGradeColumns}
-        onPickManualItems={() => firstManual && setSelection(firstManual)}
+        onPickManualItems={openIssueDrawer}
+        issueCount={invalidIssues.length}
       />
       <PreviewLegend />
 
@@ -440,7 +455,7 @@ export function SmartSpreadsheetPreview({
             onIgnoreRow={onIgnoreRow}
             onResetRowSelection={onResetRowSelection}
             onApplySafeFixes={onApplySafeFixes}
-            onApproveSuggestions={() => firstManual && setSelection(firstManual)}
+            onApproveSuggestions={invalidIssues.length ? openIssueDrawer : onApproveSuggestions}
             onSetColumnInclude={onSetColumnInclude}
             onSetColumnValueMode={onSetColumnValueMode}
             onBulkColumnAction={onBulkColumnAction}
@@ -464,11 +479,22 @@ export function SmartSpreadsheetPreview({
           onSetHeader={onSetColumnHeader}
           onSetTarget={onSetColumnTarget}
           onSetValueMode={onSetColumnValueMode}
-          onBulkColumnAction={onBulkColumnAction}
           onResetColumnSelection={onResetColumnSelection}
           aiAssist={aiAssist}
         />
       ) : null}
+      <InvalidIssueStepper
+        open={issueDrawerOpen && invalidIssues.length > 0}
+        issues={invalidIssues}
+        activeIndex={issueIndex}
+        onOpenChange={setIssueDrawerOpen}
+        onActiveIndexChange={setIssueIndex}
+        onSelectIssue={selectIssue}
+        onSkipCell={onIgnoreCell}
+        onSkipRow={onIgnoreRow}
+        onSkipColumn={onIgnoreColumn}
+        onSkipAllInvalid={skipAllInvalidIssues}
+      />
     </div>
   );
 }

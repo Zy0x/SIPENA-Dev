@@ -3,11 +3,13 @@ export function PreviewQuickActions({
   onApproveSuggestions,
   onIgnoreNonGradeColumns,
   onPickManualItems,
+  issueCount = 0,
 }: {
   onApplySafeFixes: () => void;
   onApproveSuggestions: () => void;
   onIgnoreNonGradeColumns: () => void;
   onPickManualItems: () => void;
+  issueCount?: number;
 }) {
   return (
     <section className="rounded-[18px] border border-border bg-white p-3 dark:bg-slate-950">
@@ -20,9 +22,9 @@ export function PreviewQuickActions({
           Tinjau Saran AI
           <span className="mt-1 block text-xs font-medium text-orange-50">Buka saran bantuan. Semua pilihan tetap perlu dicek user.</span>
         </button>
-        <button type="button" className="min-h-11 rounded-2xl bg-red-600 px-4 text-left text-sm font-semibold text-white hover:bg-red-700" onClick={onPickManualItems}>
-          Pilih item bermasalah
-          <span className="mt-1 block text-xs font-medium text-red-50">Bagian merah perlu dipilih agar nilai tidak masuk ke target yang salah.</span>
+        <button type="button" className="min-h-11 rounded-2xl bg-red-600 px-4 text-left text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600" onClick={onPickManualItems} disabled={issueCount === 0}>
+          {issueCount > 0 ? `Pilih ${issueCount} item bermasalah` : "Pilih item bermasalah"}
+          <span className="mt-1 block text-xs font-medium text-red-50">Buka langkah kecil untuk atur atau lewati item merah.</span>
         </button>
       </div>
       <div className="mt-2">

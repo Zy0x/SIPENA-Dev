@@ -1,0 +1,235 @@
+import type {
+  SpreadsheetPreviewCell,
+  SpreadsheetPreviewColumn,
+  SpreadsheetPreviewModel,
+  SpreadsheetPreviewRow,
+} from "@/lib/gradeImport";
+
+export type InvalidIssueKind = "cell" | "row" | "column";
+
+export interface InvalidIssue {
+  id: string;
+  kind: InvalidIssueKind;
+  row?: SpreadsheetPreviewRow;
+  column?: SpreadsheetPreviewColumn;
+  cell?: SpreadsheetPreviewCell;
+  title: string;
+  description: string;
+  detailTitle: string;
+  detailBullets: string[];
+  primaryActionLabel: string;
+  skipActionLabel: string;
+}
+
+function formatValue(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "kosong";
+  return String(value);
+}
+
+function textIncludes(value: string | undefined, patterns: string[]): boolean {
+  const text = (value || "").toLowerCase();
+  return patterns.some((pattern) => text.includes(pattern));
+}
+
+function duplicateStudentDetail(message?: string) {
+  if (!textIncludes(message, ["duplikat", "duplicate", "lebih dari satu", "beberapa siswa"])) return null;
+  return {
+    title: "Nama siswa perlu dipilih",
+    bullets: [
+      "Nama ini cocok ke lebih dari satu siswa.",
+      "Pilih satu siswa yang benar atau lewati baris ini.",
+    ],
+  };
+}
+
+function duplicateTargetDetail(message?: string) {
+  if (!textIncludes(message, ["target dobel", "target ganda", "duplicate column target", "target yang sama"])) return null;
+  return {
+    title: "Target kolom ganda",
+    bullets: [
+      "Kolom ini mengarah ke target yang sama dengan kolom lain.",
+      "Pilih salah satu target atau lewati salah satu kolom.",
+    ],
+  };
+}
+
+export function buildCellDetailCopy(cell: SpreadsheetPreviewCell, row?: SpreadsheetPreviewRow, column?: SpreadsheetPreviewColumn) {
+  const rawValue = formatValue(cell.rawValue ?? cell.displayValue);
+  const duplicateStudent = duplicateStudentDetail(row?.message || cell.message);
+  if (duplicateStudent) return duplicateStudent;
+
+  const duplicateTarget = duplicateTargetDetail(column?.targetLabel || column?.sourceHeader || cell.message);
+  if (duplicateTarget) return duplicateTarget;
+
+  if (cell.status === "invalid") {
+    return {
+      title: "Nilai tidak valid",
+      bullets: [
+        `Excel berisi "${rawValue}".`,
+        "Nilai harus angka 0-100.",
+        "Lewati nilai ini atau perbaiki file Excel lalu upload ulang.",
+      ],
+    };
+  }
+
+  if (cell.status === "blocked" || cell.status === "manual_required" || cell.isBlockedByColumn || cell.isBlockedByRow || cell.isBlockedByTarget) {
+    return {
+      title: "Target belum aman",
+      bullets: [
+        "Nilai belum bisa disimpan karena siswa, kolom, atau targetnya belum aman.",
+        "Atur item ini dulu agar nilai tidak masuk ke tempat yang salah.",
+      ],
+    };
+  }
+
+  if (cell.status === "changed" || cell.requiresConfirmation) {
+    return {
+      title: "Nilai lama berbeda",
+      bullets: [
+        `Nilai SIPENA ${formatValue(cell.oldValue)}, Excel ${rawValue}.`,
+        "Default aman melewati nilai ini agar tidak menimpa tanpa konfirmasi.",
+      ],
+    };
+  }
+
+  return {
+    title: "Detail nilai",
+    bullets: [cell.message || "Nilai mengikuti aturan kolom saat ini."],
+  };
+}
+
+export function buildRowDetailCopy(row: SpreadsheetPreviewRow) {
+  const duplicateStudent = duplicateStudentDetail(row.message);
+  if (duplicateStudent) return duplicateStudent;
+
+  return {
+    title: "Siswa perlu dicek",
+    bullets: [
+      row.message || "Baris siswa belum aman untuk dipakai otomatis.",
+      "Pilih siswa yang benar atau lewati baris ini.",
+    ],
+  };
+}
+
+export function buildColumnDetailCopy(column: SpreadsheetPreviewColumn) {
+  const duplicateTarget = duplicateTargetDetail(column.targetLabel || column.sourceHeader);
+  if (duplicateTarget) return duplicateTarget;
+
+  if (column.status === "manual_required" || column.status === "blocked" || column.status === "invalid") {
+    return {
+      title: "Target kolom belum aman",
+      bullets: [
+        "Kolom ini memiliki nilai, tetapi targetnya belum aman.",
+        "Pilih STS, SAS, tugas existing, buat target baru, atau lewati kolom.",
+      ],
+    };
+  }
+
+  if (column.status === "new_column" || column.isNewStructure) {
+    return {
+      title: "Kolom baru perlu konfirmasi",
+      bullets: [
+        "SIPENA membaca kolom ini sebagai target baru.",
+        "Konfirmasi hanya jika BAB atau tugas baru memang benar.",
+      ],
+    };
+  }
+
+  return {
+    title: "Detail kolom",
+    bullets: [column.targetLabel ? `Target saat ini: ${column.targetLabel}.` : "Target kolom belum dipilih."],
+  };
+}
+
+function isIssueCell(cell: SpreadsheetPreviewCell): boolean {
+  if (cell.effectiveInclude === false || cell.isManuallySkipped) return false;
+  return cell.status === "invalid"
+    || cell.status === "blocked"
+    || cell.status === "manual_required"
+    || cell.isBlockedByColumn
+    || cell.isBlockedByRow
+    || cell.isBlockedByTarget;
+}
+
+function cellPriority(cell: SpreadsheetPreviewCell): number {
+  if (cell.status === "invalid") return 0;
+  if (cell.status === "blocked" || cell.isBlockedByColumn || cell.isBlockedByRow || cell.isBlockedByTarget) return 1;
+  return 2;
+}
+
+export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidIssue[] {
+  const issues: Array<InvalidIssue & { priority: number }> = [];
+
+  for (const row of model.rows) {
+    for (const cell of row.cells) {
+      if (!isIssueCell(cell)) continue;
+      const column = model.columns.find((item) => item.id === cell.columnId);
+      if (!column || column.type === "identity") continue;
+      const detail = buildCellDetailCopy(cell, row, column);
+      issues.push({
+        id: `cell:${cell.id}`,
+        kind: "cell",
+        row,
+        column,
+        cell,
+        title: cell.status === "invalid" ? "Nilai tidak valid" : "Nilai perlu dicek",
+        description: `${row.studentName} - ${column.header}: ${detail.bullets[0]}`,
+        detailTitle: detail.title,
+        detailBullets: detail.bullets,
+        primaryActionLabel: "Atur item ini",
+        skipActionLabel: "Lewati item",
+        priority: cellPriority(cell),
+      });
+    }
+
+    if (row.status === "manual_required" && row.cells.every((cell) => !isIssueCell(cell))) {
+      const detail = buildRowDetailCopy(row);
+      issues.push({
+        id: `row:${row.id}`,
+        kind: "row",
+        row,
+        title: "Siswa perlu dicek",
+        description: `${row.studentName}: ${detail.bullets[0]}`,
+        detailTitle: detail.title,
+        detailBullets: detail.bullets,
+        primaryActionLabel: "Atur siswa",
+        skipActionLabel: "Lewati baris",
+        priority: 2,
+      });
+    }
+  }
+
+  for (const column of model.columns) {
+    if (column.type === "identity" || column.effectiveInclude === false || column.isIgnored) continue;
+    if (column.status !== "manual_required" && column.status !== "blocked" && column.status !== "invalid") continue;
+    const detail = buildColumnDetailCopy(column);
+    issues.push({
+      id: `column:${column.id}`,
+      kind: "column",
+      column,
+      title: "Target kolom perlu dicek",
+      description: `${column.header}: ${detail.bullets[0]}`,
+      detailTitle: detail.title,
+      detailBullets: detail.bullets,
+      primaryActionLabel: "Atur kolom",
+      skipActionLabel: "Lewati kolom",
+      priority: 1,
+    });
+  }
+
+  return issues
+    .sort((left, right) => left.priority - right.priority)
+    .map((issue) => ({
+      id: issue.id,
+      kind: issue.kind,
+      row: issue.row,
+      column: issue.column,
+      cell: issue.cell,
+      title: issue.title,
+      description: issue.description,
+      detailTitle: issue.detailTitle,
+      detailBullets: issue.detailBullets,
+      primaryActionLabel: issue.primaryActionLabel,
+      skipActionLabel: issue.skipActionLabel,
+    }));
+}

@@ -1,15 +1,11 @@
 import type { PreviewCellStatus } from "@/lib/gradeImport";
 
 const legendItems: Array<{ status: PreviewCellStatus; label: string }> = [
-  { status: "unchanged", label: "Tidak berubah" },
+  { status: "unchanged", label: "Netral" },
   { status: "new_value", label: "Akan diisi" },
-  { status: "included", label: "Dipilih" },
+  { status: "needs_check", label: "Perlu konfirmasi" },
+  { status: "invalid", label: "Bermasalah" },
   { status: "skipped", label: "Dilewati" },
-  { status: "overwrite", label: "Timpa" },
-  { status: "new_column", label: "Kolom baru" },
-  { status: "needs_check", label: "Perlu dicek" },
-  { status: "blocked", label: "Perlu target" },
-  { status: "invalid", label: "Nilai tidak valid" },
 ];
 
 export function PreviewLegend() {
