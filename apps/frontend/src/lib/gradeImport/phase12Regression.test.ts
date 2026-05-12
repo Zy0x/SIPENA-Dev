@@ -357,11 +357,15 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("width: 184px");
     expect(previewBadgeSource).toContain("Tidak valid");
     expect(previewBannerSource).toContain("Klik header untuk atur kolom");
-    expect(dialogSource).toContain("Keputusan penting");
+    expect(dialogSource).toContain("Tabel review akhir");
+    expect(dialogSource).toContain("Sumber Excel");
+    expect(dialogSource).toContain("Target SIPENA");
+    expect(dialogSource).toContain("Nilai Excel");
+    expect(dialogSource).toContain("Nilai final");
     expect(dialogSource).toContain("Buka Verifikasi Tabel");
     expect(dialogSource).toContain("Ringkasan tabel terverifikasi");
-    expect(dialogSource).toContain("Review Akhir hanya menampilkan ringkasan sebelum simpan");
-    expect(dialogSource).toContain("Nilai final:");
+    expect(dialogSource).toContain("Review Akhir menampilkan tabel keputusan final sebelum simpan");
+    expect(dialogSource).toContain("reviewDecisionValueLabel");
     expect(dialogSource).toContain("Buka Verifikasi Tabel");
     expect(dialogSource).not.toContain("warning utama");
     expect(dialogSource).not.toContain("item diblokir");

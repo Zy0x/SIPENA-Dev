@@ -2512,6 +2512,33 @@ function reviewDecisionValueLabel(decision: FinalReviewModel["sections"][number]
   return next ?? "-";
 }
 
+function reviewDecisionRawLabel(decision: FinalReviewModel["sections"][number]["decisions"][number]) {
+  if (decision.rawValue !== null && decision.rawValue !== undefined && decision.rawValue !== "") return String(decision.rawValue);
+  if (decision.operation?.value !== null && decision.operation?.value !== undefined) return String(decision.operation.value);
+  return "-";
+}
+
+function reviewDecisionSourceLabel(decision: FinalReviewModel["sections"][number]["decisions"][number]) {
+  const position = [
+    decision.rowIndex ? `Baris ${decision.rowIndex}` : null,
+    decision.columnIndex ? `Kolom ${decision.columnIndex}` : null,
+  ].filter(Boolean).join(", ");
+  return position || decision.sourceLabel || "-";
+}
+
+function reviewDecisionSectionLabel(sectionId: FinalReviewModel["sections"][number]["id"]) {
+  if (sectionId === "changes") return "Akan diubah";
+  if (sectionId === "attention") return "Perlu perhatian";
+  return "Dilewati";
+}
+
+function reviewDecisionApprovalLabel(decision: FinalReviewModel["sections"][number]["decisions"][number]) {
+  if (decision.approvedBy === "ai") return "Saran AI";
+  if (decision.approvedBy === "user") return "Pilihan user";
+  if (decision.approvedBy === "system") return "Pemeriksaan otomatis";
+  return "Belum dipilih";
+}
+
 function FinalReviewDecisionSummary({
   review,
   onOpenVerificationStep,
@@ -2519,19 +2546,17 @@ function FinalReviewDecisionSummary({
   review: FinalReviewModel;
   onOpenVerificationStep: () => void;
 }) {
-  const importantDecisions = [
-    ...(review.sections.find((section) => section.id === "attention")?.decisions || []),
-    ...(review.sections.find((section) => section.id === "changes")?.decisions || []),
-    ...(review.sections.find((section) => section.id === "skipped")?.decisions || []),
-  ].slice(0, 12);
+  const decisionRows = review.sections.flatMap((section) => (
+    section.decisions.map((decision) => ({ section, decision }))
+  ));
 
   return (
     <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Keputusan penting</h3>
+          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Tabel review akhir</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Ini ringkasan akhir. Untuk mengubah nilai, siswa, atau target kolom, kembali ke Verifikasi Tabel.
+            Preview keputusan final sebelum simpan. Untuk mengubah nilai, siswa, atau target kolom, kembali ke Verifikasi Tabel.
           </p>
         </div>
         <Button type="button" variant="outline" className="min-h-10 rounded-full" onClick={onOpenVerificationStep}>
@@ -2539,28 +2564,63 @@ function FinalReviewDecisionSummary({
         </Button>
       </div>
 
-      <div className="mt-4 grid gap-2">
-        {importantDecisions.length ? importantDecisions.map((decision) => (
-          <div key={decision.id} className="rounded-2xl border border-border bg-slate-50 p-3 dark:bg-slate-900/60">
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={decision.targetLabel}>
-                  {decision.targetLabel}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Baris {decision.rowIndex ?? "-"}, kolom {decision.columnIndex ?? "-"} · Nilai final: {reviewDecisionValueLabel(decision)}
-                </p>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground" title={cleanBackendText(decision.reason)}>
-                  {cleanBackendText(decision.reason)}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <StatusBadge tone={decisionActionTone(decision.action)}>{decisionActionLabel(decision.action)}</StatusBadge>
-                <StatusBadge tone={decisionRiskTone(decision.risk)}>{decisionRiskLabel(decision.risk)}</StatusBadge>
-              </div>
-            </div>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+        {decisionRows.length ? (
+          <div className="max-h-[520px] overflow-auto">
+            <table className="min-w-[980px] w-full border-separate border-spacing-0 text-left text-xs">
+              <thead className="sticky top-0 z-10 bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                <tr>
+                  <th className="border-b border-border px-3 py-3 font-semibold">Status</th>
+                  <th className="border-b border-border px-3 py-3 font-semibold">Sumber Excel</th>
+                  <th className="border-b border-border px-3 py-3 font-semibold">Target SIPENA</th>
+                  <th className="border-b border-border px-3 py-3 font-semibold">Nilai Excel</th>
+                  <th className="border-b border-border px-3 py-3 font-semibold">Nilai final</th>
+                  <th className="border-b border-border px-3 py-3 font-semibold">Aksi</th>
+                  <th className="border-b border-border px-3 py-3 font-semibold">Risiko</th>
+                  <th className="border-b border-border px-3 py-3 font-semibold">Alasan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {decisionRows.map(({ section, decision }) => (
+                  <tr key={decision.id} className="bg-white align-top odd:bg-slate-50/60 dark:bg-slate-950 dark:odd:bg-slate-900/45">
+                    <td className="border-b border-border px-3 py-3">
+                      <StatusBadge tone={section.id === "attention" ? "warning" : section.id === "changes" ? "success" : "info"}>
+                        {reviewDecisionSectionLabel(section.id)}
+                      </StatusBadge>
+                    </td>
+                    <td className="border-b border-border px-3 py-3">
+                      <div className="font-semibold text-slate-900 dark:text-slate-100">{reviewDecisionSourceLabel(decision)}</div>
+                      <div className="mt-1 max-w-[180px] truncate text-muted-foreground" title={decision.sourceLabel}>{decision.sourceLabel}</div>
+                    </td>
+                    <td className="border-b border-border px-3 py-3">
+                      <div className="max-w-[210px] truncate font-semibold text-slate-900 dark:text-slate-100" title={decision.targetLabel}>
+                        {decision.targetLabel || "-"}
+                      </div>
+                      <div className="mt-1 text-muted-foreground">{reviewDecisionApprovalLabel(decision)}</div>
+                    </td>
+                    <td className="border-b border-border px-3 py-3 font-semibold text-slate-700 dark:text-slate-200">
+                      {reviewDecisionRawLabel(decision)}
+                    </td>
+                    <td className="border-b border-border px-3 py-3 font-semibold text-slate-900 dark:text-slate-100">
+                      {reviewDecisionValueLabel(decision)}
+                    </td>
+                    <td className="border-b border-border px-3 py-3">
+                      <StatusBadge tone={decisionActionTone(decision.action)}>{decisionActionLabel(decision.action)}</StatusBadge>
+                    </td>
+                    <td className="border-b border-border px-3 py-3">
+                      <StatusBadge tone={decisionRiskTone(decision.risk)}>{decisionRiskLabel(decision.risk)}</StatusBadge>
+                    </td>
+                    <td className="border-b border-border px-3 py-3">
+                      <p className="max-w-[260px] text-xs leading-5 text-muted-foreground" title={cleanBackendText(decision.reason)}>
+                        {cleanBackendText(decision.reason)}
+                      </p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )) : (
+        ) : (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-100">
             Tidak ada keputusan berisiko. Nilai yang siap disimpan sudah melewati pemeriksaan tabel.
           </div>
@@ -2595,7 +2655,7 @@ function PreviewStep({
             <div>
               <h3 className="text-sm font-semibold text-blue-950 dark:text-blue-100">Review akhir sebelum simpan</h3>
               <p className="mt-1 text-xs leading-5 text-blue-900/75 dark:text-blue-100/75">
-                Review Akhir hanya menampilkan ringkasan sebelum simpan. Ubah kolom atau nilai dari Verifikasi Tabel.
+                Review Akhir menampilkan tabel keputusan final sebelum simpan. Ubah kolom atau nilai dari Verifikasi Tabel.
               </p>
             </div>
             <StatusBadge tone={review.canExecute ? "success" : "warning"}>
