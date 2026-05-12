@@ -590,6 +590,37 @@ function decisionRiskTone(risk: FinalReviewModel["sections"][number]["decisions"
   return "danger";
 }
 
+function finalCellDecision(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): { label: string; tone: StatusBadgeTone } {
+  if (column.type === "identity") return { label: "Identitas", tone: "info" };
+  if (cell.status === "overwrite") return { label: "Akan ditimpa", tone: "warning" };
+  if (cell.status === "invalid" || cell.status === "blocked" || cell.status === "manual_required" || cell.requiresConfirmation) {
+    return { label: "Perlu dicek", tone: "danger" };
+  }
+  if (cell.effectiveInclude) return { label: "Dipakai", tone: "success" };
+  return { label: "Dilewati", tone: "info" };
+}
+
+function finalCellValue(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string {
+  if (column.type === "identity") return cell.displayValue || "-";
+  if (!cell.effectiveInclude) return cell.displayValue || "-";
+  const value = cell.resolvedValue ?? cell.newValue ?? cell.suggestedValue ?? cell.displayValue;
+  if (value === null || value === undefined || value === "") return "-";
+  return String(value);
+}
+
+function finalCellMeta(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string {
+  if (column.type === "identity") return "";
+  const parts: string[] = [];
+  if (cell.oldValue !== null && cell.oldValue !== undefined && cell.oldValue !== "") {
+    parts.push(`Lama: ${cell.oldValue}`);
+  }
+  if (cell.rawValue !== null && cell.rawValue !== undefined && cell.rawValue !== "") {
+    parts.push(`Excel: ${cell.rawValue}`);
+  }
+  if (cell.message) parts.push(cell.message);
+  return parts.join(" / ");
+}
+
 function emptyExecutionSummary(): ImportExecutionSummary {
   return {
     successCount: 0,
@@ -2474,10 +2505,12 @@ function SpreadsheetPreviewStep({
 
 function FinalReviewSpreadsheetTable({
   review,
+  model,
   actions,
   onOpenFixStep,
 }: {
   review: FinalReviewModel;
+  model: SpreadsheetPreviewModel | null;
   actions: ConflictResolutionActions;
   onOpenFixStep: () => void;
 }) {
@@ -2527,7 +2560,132 @@ function FinalReviewSpreadsheetTable({
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Tabel final import</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Ini adalah hasil akhir setelah konfigurasi import. Setiap baris menunjukkan keputusan final sebelum nilai dikirim untuk disimpan.
+            Ini adalah spreadsheet akhir setelah konfigurasi import. Nilai yang dipakai, dilewati, ditimpa, dan perlu dicek ditampilkan langsung pada selnya.
+          </p>
+        </div>
+        {model ? (
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <MetricCard label="Sel dipakai" value={model.summary.includedCells} tone="green" />
+            <MetricCard label="Sel dilewati" value={model.summary.skippedCells + model.summary.manualSkippedCells} tone="info" />
+            <MetricCard label="Akan ditimpa" value={model.summary.overwriteCells} tone={model.summary.overwriteCells ? "orange" : "info"} />
+            <MetricCard label="Perlu dicek" value={model.summary.manualRequired + model.summary.invalidCells + model.summary.blockedCells} tone={model.summary.manualRequired + model.summary.invalidCells + model.summary.blockedCells ? "red" : "green"} />
+          </div>
+        ) : null}
+      </div>
+
+      {model ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+          <div className="max-h-[560px] overflow-auto">
+            <table className="min-w-[1180px] w-full border-separate border-spacing-0 text-left text-xs">
+              <thead className="sticky top-0 z-20 bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                <tr>
+                  {model.columns.map((column, index) => (
+                    <th
+                      key={column.id}
+                      className={cn(
+                        "border-b border-border px-3 py-3 align-top font-semibold",
+                        index < 3 && "sticky z-30 bg-slate-100 dark:bg-slate-900",
+                        index === 0 && "left-0 w-16",
+                        index === 1 && "left-16 w-32",
+                        index === 2 && "left-48 w-56",
+                        index >= 3 && "min-w-44",
+                      )}
+                    >
+                      <div className="space-y-1">
+                        <div className="truncate" title={column.header}>{column.header}</div>
+                        {column.type !== "identity" ? (
+                          <div className="text-[11px] font-medium text-muted-foreground" title={column.targetLabel || column.sourceHeader || column.header}>
+                            {column.targetLabel || column.sourceHeader || "Target belum jelas"}
+                          </div>
+                        ) : null}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {model.rows.length ? model.rows.map((row) => (
+                  <tr key={row.id} className="align-top">
+                    {row.cells.map((cell, index) => {
+                      const column = model.columns[index];
+                      const decision = finalCellDecision(cell, column);
+                      const meta = finalCellMeta(cell, column);
+                      const isIdentity = column.type === "identity";
+                      return (
+                        <td
+                          key={cell.id}
+                          className={cn(
+                            "border-b border-border bg-white px-3 py-3 dark:bg-slate-950",
+                            cell.effectiveInclude && !isIdentity && "bg-green-50/70 dark:bg-green-950/20",
+                            !cell.effectiveInclude && !isIdentity && "bg-slate-50 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400",
+                            (cell.status === "invalid" || cell.status === "blocked" || cell.status === "manual_required" || cell.requiresConfirmation) && "bg-red-50/80 dark:bg-red-950/20",
+                            cell.status === "overwrite" && "bg-orange-50/80 dark:bg-orange-950/20",
+                            index < 3 && "sticky z-10",
+                            index === 0 && "left-0",
+                            index === 1 && "left-16",
+                            index === 2 && "left-48",
+                          )}
+                        >
+                          {isIdentity ? (
+                            <div className="font-semibold text-slate-900 dark:text-slate-50">{finalCellValue(cell, column)}</div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex min-w-0 items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={finalCellValue(cell, column)}>
+                                    {finalCellValue(cell, column)}
+                                  </div>
+                                  {meta ? <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted-foreground" title={meta}>{meta}</div> : null}
+                                </div>
+                                <StatusBadge tone={decision.tone}>{decision.label}</StatusBadge>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                <ResolutionButton onClick={onOpenFixStep}>Ubah</ResolutionButton>
+                                {cell.effectiveInclude ? (
+                                  <ResolutionButton tone="warning" onClick={() => {
+                                    const position = previewCellPosition(cell);
+                                    if (position) actions.onIgnoreCell(position.rowIndex, position.columnIndex);
+                                  }}>
+                                    Skip
+                                  </ResolutionButton>
+                                ) : null}
+                                {cell.suggestedValue !== undefined ? (
+                                  <ResolutionButton tone="safe" onClick={() => {
+                                    const position = previewCellPosition(cell);
+                                    if (position) actions.onUseSuggestedValue(position.rowIndex, position.columnIndex, cell.suggestedValue as number);
+                                  }}>
+                                    Pakai saran
+                                  </ResolutionButton>
+                                ) : null}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={model.columns.length} className="bg-white px-3 py-10 text-center text-sm text-muted-foreground dark:bg-slate-950">
+                      Belum ada data spreadsheet final untuk ditampilkan.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <RiskAlert title="Tabel akhir belum tersedia" tone="warning">
+          Preview spreadsheet belum bisa dibuat. Periksa kembali hasil analisis file.
+        </RiskAlert>
+      )}
+
+      <div className="mt-4 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Daftar keputusan detail</h4>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Gunakan filter ini untuk meninjau keputusan simpan, cek manual, dan skip secara rinci.
           </p>
         </div>
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter review akhir">
@@ -2669,7 +2827,7 @@ function PreviewStep({
       ) : null}
 
       {review ? (
-        <FinalReviewSpreadsheetTable review={review} actions={actions} onOpenFixStep={onOpenFixStep} />
+        <FinalReviewSpreadsheetTable review={review} model={model} actions={actions} onOpenFixStep={onOpenFixStep} />
       ) : null}
 
       {model ? (

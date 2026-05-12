@@ -321,6 +321,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("buildImportDecisionGraph");
     expect(dialogSource).toContain("buildFinalReviewModel");
     expect(dialogSource).toContain("Tabel final import");
+    expect(dialogSource).toContain("Ini adalah spreadsheet akhir setelah konfigurasi import");
+    expect(dialogSource).toContain("Sel dipakai");
+    expect(dialogSource).toContain("Dipakai");
+    expect(dialogSource).toContain("Dilewati");
     expect(dialogSource).toContain("Posisi Excel");
     expect(dialogSource).toContain("Target SIPENA");
     expect(dialogSource).toContain("Nilai final");
