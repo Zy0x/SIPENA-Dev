@@ -621,6 +621,34 @@ function finalCellMeta(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewC
   return parts.join(" / ");
 }
 
+function finalCellSurfaceClass(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string {
+  if (column.type === "identity") {
+    return "bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-50";
+  }
+  if (cell.status === "invalid" || cell.status === "blocked" || cell.status === "manual_required" || cell.requiresConfirmation) {
+    return "bg-red-50/80 text-red-950 ring-1 ring-inset ring-red-100 dark:bg-red-950/25 dark:text-red-50 dark:ring-red-900/60";
+  }
+  if (cell.status === "overwrite") {
+    return "bg-orange-50/80 text-orange-950 ring-1 ring-inset ring-orange-100 dark:bg-orange-950/25 dark:text-orange-50 dark:ring-orange-900/60";
+  }
+  if (cell.effectiveInclude) {
+    return "bg-emerald-50/75 text-emerald-950 ring-1 ring-inset ring-emerald-100 dark:bg-emerald-950/25 dark:text-emerald-50 dark:ring-emerald-900/60";
+  }
+  return "bg-slate-50 text-slate-600 dark:bg-slate-900/70 dark:text-slate-300";
+}
+
+function finalCellNeedsInlineActions(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): boolean {
+  if (column.type === "identity") return false;
+  return (
+    cell.status === "invalid" ||
+    cell.status === "blocked" ||
+    cell.status === "manual_required" ||
+    cell.status === "overwrite" ||
+    cell.requiresConfirmation ||
+    typeof cell.suggestedValue === "number"
+  );
+}
+
 function emptyExecutionSummary(): ImportExecutionSummary {
   return {
     successCount: 0,
@@ -1630,17 +1658,21 @@ function ResolutionButton({
   children,
   onClick,
   tone = "default",
+  size = "default",
 }: {
   children: ReactNode;
   onClick: () => void;
   tone?: "default" | "safe" | "warning";
+  size?: "default" | "compact";
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "min-h-9 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+        "rounded-full border font-semibold transition-colors",
+        size === "default" && "min-h-9 px-3 py-1.5 text-xs",
+        size === "compact" && "min-h-7 px-2.5 py-1 text-[11px]",
         tone === "safe" && "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/35 dark:text-blue-100",
         tone === "warning" && "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-900/60 dark:bg-orange-950/35 dark:text-orange-100",
         tone === "default" && "border-border bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900",
@@ -2573,28 +2605,37 @@ function FinalReviewSpreadsheetTable({
         ) : null}
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="font-semibold text-slate-700 dark:text-slate-200">Legenda:</span>
+        <StatusBadge tone="success" className="min-h-6 px-2 py-0.5 text-[11px]">Dipakai</StatusBadge>
+        <StatusBadge tone="info" className="min-h-6 px-2 py-0.5 text-[11px]">Dilewati</StatusBadge>
+        <StatusBadge tone="warning" className="min-h-6 px-2 py-0.5 text-[11px]">Akan ditimpa</StatusBadge>
+        <StatusBadge tone="danger" className="min-h-6 px-2 py-0.5 text-[11px]">Perlu dicek</StatusBadge>
+        <span className="ml-auto hidden text-[11px] sm:inline">Geser tabel untuk melihat semua kolom.</span>
+      </div>
+
       {model ? (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-          <div className="max-h-[560px] overflow-auto">
-            <table className="min-w-[1180px] w-full border-separate border-spacing-0 text-left text-xs">
-              <thead className="sticky top-0 z-20 bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-100">
+        <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-slate-50/60 dark:bg-slate-900/30">
+          <div className="max-h-[62vh] overflow-auto">
+            <table className="w-max min-w-full border-separate border-spacing-0 text-left text-xs">
+              <thead className="sticky top-0 z-30 bg-slate-100 text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-100">
                 <tr>
                   {model.columns.map((column, index) => (
                     <th
                       key={column.id}
                       className={cn(
                         "border-b border-border px-3 py-3 align-top font-semibold",
-                        index < 3 && "sticky z-30 bg-slate-100 dark:bg-slate-900",
-                        index === 0 && "left-0 w-16",
-                        index === 1 && "left-16 w-32",
-                        index === 2 && "left-48 w-56",
-                        index >= 3 && "min-w-44",
+                        index < 3 && "sticky z-40 bg-slate-100 shadow-[1px_0_0_0_rgba(148,163,184,0.35)] dark:bg-slate-900",
+                        index === 0 && "left-0 w-16 min-w-16 max-w-16",
+                        index === 1 && "left-16 w-40 min-w-40 max-w-40",
+                        index === 2 && "left-56 w-64 min-w-64 max-w-64",
+                        index >= 3 && "min-w-[13rem] max-w-[16rem]",
                       )}
                     >
                       <div className="space-y-1">
                         <div className="truncate" title={column.header}>{column.header}</div>
                         {column.type !== "identity" ? (
-                          <div className="text-[11px] font-medium text-muted-foreground" title={column.targetLabel || column.sourceHeader || column.header}>
+                          <div className="line-clamp-2 text-[11px] font-medium leading-4 text-muted-foreground" title={column.targetLabel || column.sourceHeader || column.header}>
                             {column.targetLabel || column.sourceHeader || "Target belum jelas"}
                           </div>
                         ) : null}
@@ -2605,44 +2646,43 @@ function FinalReviewSpreadsheetTable({
               </thead>
               <tbody>
                 {model.rows.length ? model.rows.map((row) => (
-                  <tr key={row.id} className="align-top">
+                  <tr key={row.id} className="align-top hover:bg-blue-50/35 dark:hover:bg-blue-950/10">
                     {row.cells.map((cell, index) => {
                       const column = model.columns[index];
                       const decision = finalCellDecision(cell, column);
                       const meta = finalCellMeta(cell, column);
                       const isIdentity = column.type === "identity";
+                      const showInlineActions = finalCellNeedsInlineActions(cell, column);
+                      const displayValue = finalCellValue(cell, column);
                       return (
                         <td
                           key={cell.id}
                           className={cn(
-                            "border-b border-border bg-white px-3 py-3 dark:bg-slate-950",
-                            cell.effectiveInclude && !isIdentity && "bg-green-50/70 dark:bg-green-950/20",
-                            !cell.effectiveInclude && !isIdentity && "bg-slate-50 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400",
-                            (cell.status === "invalid" || cell.status === "blocked" || cell.status === "manual_required" || cell.requiresConfirmation) && "bg-red-50/80 dark:bg-red-950/20",
-                            cell.status === "overwrite" && "bg-orange-50/80 dark:bg-orange-950/20",
-                            index < 3 && "sticky z-10",
+                            "border-b border-border px-3 py-3",
+                            finalCellSurfaceClass(cell, column),
+                            index < 3 && "sticky z-20 shadow-[1px_0_0_0_rgba(148,163,184,0.25)]",
                             index === 0 && "left-0",
                             index === 1 && "left-16",
-                            index === 2 && "left-48",
+                            index === 2 && "left-56",
                           )}
                         >
                           {isIdentity ? (
-                            <div className="font-semibold text-slate-900 dark:text-slate-50">{finalCellValue(cell, column)}</div>
+                            <div className="truncate font-semibold" title={displayValue}>{displayValue}</div>
                           ) : (
                             <div className="space-y-2">
-                              <div className="flex min-w-0 items-start justify-between gap-2">
+                              <div className="flex min-w-0 flex-col gap-2">
                                 <div className="min-w-0">
-                                  <div className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={finalCellValue(cell, column)}>
-                                    {finalCellValue(cell, column)}
+                                  <div className="truncate text-sm font-semibold" title={displayValue}>
+                                    {displayValue}
                                   </div>
                                   {meta ? <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted-foreground" title={meta}>{meta}</div> : null}
                                 </div>
-                                <StatusBadge tone={decision.tone}>{decision.label}</StatusBadge>
+                                <StatusBadge tone={decision.tone} className="min-h-6 w-fit max-w-full px-2 py-0.5 text-[11px]">{decision.label}</StatusBadge>
                               </div>
                               <div className="flex flex-wrap gap-1.5">
-                                <ResolutionButton onClick={onOpenFixStep}>Ubah</ResolutionButton>
+                                <ResolutionButton size="compact" onClick={onOpenFixStep}>{showInlineActions ? "Ubah" : "Atur"}</ResolutionButton>
                                 {cell.effectiveInclude ? (
-                                  <ResolutionButton tone="warning" onClick={() => {
+                                  <ResolutionButton size="compact" tone="warning" onClick={() => {
                                     const position = previewCellPosition(cell);
                                     if (position) actions.onIgnoreCell(position.rowIndex, position.columnIndex);
                                   }}>
@@ -2650,7 +2690,7 @@ function FinalReviewSpreadsheetTable({
                                   </ResolutionButton>
                                 ) : null}
                                 {cell.suggestedValue !== undefined ? (
-                                  <ResolutionButton tone="safe" onClick={() => {
+                                  <ResolutionButton size="compact" tone="safe" onClick={() => {
                                     const position = previewCellPosition(cell);
                                     if (position) actions.onUseSuggestedValue(position.rowIndex, position.columnIndex, cell.suggestedValue as number);
                                   }}>

@@ -325,6 +325,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("Sel dipakai");
     expect(dialogSource).toContain("Dipakai");
     expect(dialogSource).toContain("Dilewati");
+    expect(dialogSource).toContain("Legenda:");
+    expect(dialogSource).toContain("Geser tabel untuk melihat semua kolom.");
+    expect(dialogSource).toContain("finalCellSurfaceClass");
     expect(dialogSource).toContain("Posisi Excel");
     expect(dialogSource).toContain("Target SIPENA");
     expect(dialogSource).toContain("Nilai final");
