@@ -68,6 +68,7 @@ import { cn } from "@/lib/utils";
 
 import { ExportOptionCard } from "./import-export/ExportOptionCard";
 import type { ColumnTargetDraft } from "./import-export/ColumnSettingsOverlay";
+import { AdvancedImportOptions } from "./import-export/AdvancedImportOptions";
 import { ImportDropzone } from "./import-export/ImportDropzone";
 import { ImportStepper } from "./import-export/ImportStepper";
 import { ImportSummaryPanel } from "./import-export/ImportSummaryPanel";
@@ -118,6 +119,7 @@ interface GradeImportExportDialogProps {
 }
 
 type ExportMode = "official" | "current" | "backup";
+type ImportWorkspaceMode = "quick" | "advanced";
 type ImportExecutionState = "idle" | "analyzing" | "ready" | "failed" | "importing" | "success";
 type ImportHistoryActionState = "idle" | "undoing" | "redoing";
 type AiAssistState = "idle" | "loading" | "success" | "error";
@@ -234,7 +236,7 @@ const conflictTypeLabels: Record<ImportConflict["type"], string> = {
 };
 
 const exportSheetsByMode: Record<ExportMode, string[]> = {
-  official: ["Panduan", "Isi_Nilai", "_manifest", "_students", "_structure", "_column_map"],
+  official: ["Panduan", "Isi_Nilai", "_manifest", "_students", "_structure", "_column_map", "_rules", "_examples"],
   current: ["Panduan", "Nilai"],
   backup: ["Panduan", "Nilai", "_manifest", "_students", "_structure", "_grades"],
 };
@@ -565,6 +567,9 @@ function operationLabel(operation: GradeOperation): string {
   if (operation.action === "overwrite") return "Akan menimpa";
   if (operation.action === "skip_existing") return "Dilewati";
   if (operation.action === "skip_empty") return "Kosong";
+  if (operation.action === "manual_skip_row") return "Baris dilewati";
+  if (operation.action === "manual_skip_column") return "Kolom dilewati";
+  if (operation.action === "manual_skip_cell") return "Sel dilewati";
   if (operation.action === "needs_confirmation") return "Perlu konfirmasi";
   return "Diblokir";
 }
@@ -858,7 +863,9 @@ function operationActionAfterResolution(operation: GradeOperation, updateMode: U
 
 function recalculateSummary(plan: ImportPlan): ImportPlan["summary"] {
   const readyOperations = plan.gradeOperations.filter((operation) => ["fill_empty", "overwrite"].includes(operation.action));
-  const skippedOperations = plan.gradeOperations.filter((operation) => ["skip_empty", "skip_existing"].includes(operation.action));
+  const skippedOperations = plan.gradeOperations.filter((operation) =>
+    ["skip_empty", "skip_existing", "manual_skip_row", "manual_skip_column", "manual_skip_cell"].includes(operation.action),
+  );
   const invalidValues = plan.gradeOperations.filter((operation) =>
     operation.conflicts.some((item) => item.code === "IMPORT_INVALID_VALUE_STRICT" || item.type === "grade_value"),
   ).length;
@@ -1041,9 +1048,15 @@ function applyResolverToPlan(
       target: column?.target || operation.target,
       updateMode,
       conflicts,
-      action: ignored || ignoredCell ? "skip_existing" : operation.action,
+      action: ignoredRows.has(operation.rowIndex)
+        ? "manual_skip_row"
+        : (ignoredColumns.has(operation.columnIndex) || column?.target === undefined)
+          ? "manual_skip_column"
+          : ignoredCell
+            ? "manual_skip_cell"
+            : operation.action,
     };
-    nextOperation.action = ignored || ignoredCell ? "skip_existing" : operationActionAfterResolution(nextOperation, updateMode);
+    nextOperation.action = ignored || ignoredCell ? nextOperation.action : operationActionAfterResolution(nextOperation, updateMode);
     return nextOperation;
   });
 
@@ -1912,8 +1925,8 @@ function SmartFixStep({
     actions.onApplySafeFixes();
   };
 
-  const approveSuggestions = () => {
-    actions.onApproveSipenaSuggestions();
+  const reviewSuggestions = () => {
+    document.getElementById("sipena-smart-fix-needs")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const summaryAction = () => {
@@ -1922,7 +1935,7 @@ function SmartFixStep({
       return;
     }
     if (result.needsConfirmationCount > 0) {
-      approveSuggestions();
+      reviewSuggestions();
       return;
     }
     applySafeFixes();
@@ -2092,8 +2105,8 @@ function SmartFixStep({
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <ResolutionButton onClick={onBackToMapping}>Kembali ke pemetaan</ResolutionButton>
-            <ResolutionButton tone="safe" onClick={applySafeFixes}>Terapkan Semua yang Aman</ResolutionButton>
-            <ResolutionButton tone="warning" onClick={approveSuggestions}>Setujui saran aman</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={applySafeFixes}>Terapkan pemeriksaan otomatis</ResolutionButton>
+            <ResolutionButton tone="warning" onClick={reviewSuggestions}>Tinjau item perlu dicek</ResolutionButton>
             <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan Kolom yang Bukan Nilai</ResolutionButton>
             <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa exact dari web</ResolutionButton>
             <ResolutionButton tone="safe" onClick={() => actions.onUpdateModeChange("fill_empty_only")}>Isi Nilai Kosong Saja</ResolutionButton>
@@ -2104,11 +2117,15 @@ function SmartFixStep({
 
       <div className="grid gap-3 xl:grid-cols-3">
         {result.groups.map((group) => (
-          <div key={group.id} id={group.level === "manual_required" ? "sipena-smart-fix-manual" : undefined} className="min-w-0 scroll-mt-4">
+          <div
+            key={group.id}
+            id={group.level === "manual_required" ? "sipena-smart-fix-manual" : group.level === "needs_confirmation" ? "sipena-smart-fix-needs" : undefined}
+            className="min-w-0 scroll-mt-4"
+          >
             <SmartFixGroupCard
               group={group}
               defaultOpen={group.level === "manual_required" && group.itemCount > 0}
-              onPrimaryAction={group.level === "auto_fixable" ? applySafeFixes : group.canBulkApply ? approveSuggestions : undefined}
+              onPrimaryAction={group.level === "auto_fixable" ? applySafeFixes : group.level === "needs_confirmation" ? reviewSuggestions : undefined}
               renderItem={renderManualChoice}
             />
           </div>
@@ -2845,6 +2862,7 @@ export default function GradeImportExportDialog({
   const [basePlan, setBasePlan] = useState<ImportPlan | null>(null);
   const [plan, setPlan] = useState<ImportPlan | null>(null);
   const [updateMode, setUpdateMode] = useState<UpdateMode>("fill_empty_only");
+  const [importWorkspaceMode, setImportWorkspaceMode] = useState<ImportWorkspaceMode>("quick");
   const [resolverState, setResolverState] = useState<ImportResolverState>(emptyResolverState);
   const [selectionState, setSelectionState] = useState<ImportSelectionState>(emptyImportSelectionState);
   const [executionState, setExecutionState] = useState<ImportExecutionState>("idle");
@@ -2869,6 +2887,7 @@ export default function GradeImportExportDialog({
       setBasePlan(null);
       setPlan(null);
       setUpdateMode("fill_empty_only");
+      setImportWorkspaceMode("quick");
       setResolverState(emptyResolverState);
       setSelectionState(emptyImportSelectionState);
       setExecutionState("idle");
@@ -3480,6 +3499,7 @@ export default function GradeImportExportDialog({
     setBasePlan(null);
     setPlan(null);
     setResolverState(emptyResolverState);
+    setImportWorkspaceMode("quick");
     setAnalysisError(null);
     setAnalysisErrorCode(null);
     setExecutionSummary(null);
@@ -3920,6 +3940,35 @@ export default function GradeImportExportDialog({
                     blockedCount={executableImportPlan?.summary.blockedCount || 0}
                     overwriteNeedsConfirmationCount={executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0}
                   />
+
+                  {stepIndex > 0 && stepIndex < 4 ? (
+                    <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+                      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">
+                            {importWorkspaceMode === "quick" ? "Mode Cepat aktif" : "Mode Lanjutan aktif"}
+                          </h3>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            {importWorkspaceMode === "quick"
+                              ? "SIPENA memakai aturan aman: isi nilai kosong saja, abaikan kolom bukan nilai, dan minta konfirmasi untuk item ambigu."
+                              : "Atur manual dipakai untuk memilih tabel, siswa, kolom, nilai lama, dan item yang perlu dicek."}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-11 rounded-full"
+                          onClick={() => setImportWorkspaceMode((current) => current === "quick" ? "advanced" : "quick")}
+                        >
+                          {importWorkspaceMode === "quick" ? "Atur manual" : "Kembali ke Mode Cepat"}
+                        </Button>
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {stepIndex > 0 && stepIndex < 4 && importWorkspaceMode === "advanced" ? (
+                    <AdvancedImportOptions updateMode={effectiveUpdateMode} onUpdateModeChange={setUpdateMode} />
+                  ) : null}
 
                   {stepIndex === 0 ? (
                     <>

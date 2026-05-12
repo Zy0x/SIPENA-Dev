@@ -312,7 +312,9 @@ describe("phase 12 grade import regression suite", () => {
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).not.toContain("ImportComplexityMode");
-    expect(dialogSource).not.toContain("Mode Lanjutan");
+    expect(dialogSource).toContain("Mode Cepat aktif");
+    expect(dialogSource).toContain("Mode Lanjutan aktif");
+    expect(dialogSource).toContain("Atur manual");
     expect(dialogSource).toContain('const importSteps = ["Upload", "Pemeriksaan", "Perbaiki", "Preview", "Simpan"]');
     expect(dialogSource).toContain("Import Nilai");
     expect(dialogSource).toContain("Download Template Resmi");
@@ -349,7 +351,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(fixPanelSource).toContain('(["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[])');
     expect(fixPanelSource).toContain('(columnSetting?.valueMode || targetColumn.effectiveValueMode) === "overwrite_existing"');
     expect(fixPanelSource).not.toContain("complexityMode");
-    expect(quickActionsSource).toContain("Setujui saran aman");
+    expect(quickActionsSource).toContain("Tinjau Saran AI");
+    expect(quickActionsSource).toContain("Semua pilihan tetap perlu dicek user");
+    expect(dialogSource).toContain("sipena-smart-fix-needs");
+    expect(dialogSource).toContain("Tinjau item perlu dicek");
     expect(quickActionsSource).not.toContain("complexityMode");
   });
 

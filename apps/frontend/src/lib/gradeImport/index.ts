@@ -6,6 +6,7 @@ export * from "./executableImportBuilder";
 export * from "./freeExcelAnalyzer";
 export * from "./headerParser";
 export * from "./importSelection";
+export * from "./importSession";
 export * from "./importPlanBuilder";
 export * from "./officialTemplateReader";
 export * from "./spreadsheetPreviewBuilder";

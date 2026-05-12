@@ -155,6 +155,23 @@ describe("executable import builder", () => {
     expect(result.summary.skippedManualCount).toBe(1);
   });
 
+  it("treats explicit manual skip actions as manual skips, not existing-value skips", () => {
+    const skippedRow = buildExecutableImportOperations({
+      plan: plan({ gradeOperations: [operation({ action: "manual_skip_row" })] }),
+    });
+    const skippedColumn = buildExecutableImportOperations({
+      plan: plan({ gradeOperations: [operation({ action: "manual_skip_column" })] }),
+    });
+    const skippedCell = buildExecutableImportOperations({
+      plan: plan({ gradeOperations: [operation({ action: "manual_skip_cell" })] }),
+    });
+
+    expect(skippedRow.summary.skippedManualCount).toBe(1);
+    expect(skippedRow.summary.skippedExistingCount).toBe(0);
+    expect(skippedColumn.summary.skippedManualCount).toBe(1);
+    expect(skippedCell.summary.skippedManualCount).toBe(1);
+  });
+
   it("skips existing values in fill_empty_only mode", () => {
     const result = buildExecutableImportOperations({
       plan: plan({ gradeOperations: [operation({ existingValue: 70, action: "skip_existing" })] }),

@@ -390,6 +390,9 @@ function operationDecision(
     const status = column.status === "new_column" ? "new_column" : column.status === "manual_required" ? "blocked" : "unchanged";
     return { ...base, status, effectiveInclude: false };
   }
+  if (operation.action === "manual_skip_row" || operation.action === "manual_skip_column" || operation.action === "manual_skip_cell") {
+    return { ...base, status: "manual_skipped", effectiveInclude: false };
+  }
   if (isManuallySkipped) return { ...base, status: "manual_skipped", effectiveInclude: false };
   if (hasInvalidConflict(operation.conflicts, resolverState)) {
     return { ...base, status: "invalid", effectiveInclude: true };

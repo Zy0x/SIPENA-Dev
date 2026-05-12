@@ -259,6 +259,13 @@ function skippedItem(operation: GradeOperation, reason: ExecutableImportSkippedR
   };
 }
 
+function manualSkipMessage(operation: GradeOperation): string | null {
+  if (operation.action === "manual_skip_row") return "Baris dilewati sesuai pilihan user.";
+  if (operation.action === "manual_skip_column") return "Kolom dilewati sesuai pilihan user.";
+  if (operation.action === "manual_skip_cell") return "Sel nilai dilewati sesuai pilihan user.";
+  return null;
+}
+
 function blockedItem(
   operation: GradeOperation,
   reason: ExecutableImportBlockedReason,
@@ -298,9 +305,10 @@ export function buildExecutableImportOperations({
     const conflicts = unresolvedConflicts(operation, resolverState);
     const cellSetting = selectionState?.cellSettings[cellIdFor(operation.rowIndex, operation.columnIndex)];
     const resolvedValue = resolveOperationValue(operation, cellSetting);
+    const manualMessage = manualSkipMessage(operation);
 
-    if (isManuallySkipped(operation, resolverState, selectionState) || columnOverride?.kind === "ignore") {
-      skippedItems.push(skippedItem(operation, "manual_skip", "Baris, kolom, atau sel dilewati sesuai pilihan user."));
+    if (manualMessage || isManuallySkipped(operation, resolverState, selectionState) || columnOverride?.kind === "ignore") {
+      skippedItems.push(skippedItem(operation, "manual_skip", manualMessage || "Baris, kolom, atau sel dilewati sesuai pilihan user."));
       return;
     }
 

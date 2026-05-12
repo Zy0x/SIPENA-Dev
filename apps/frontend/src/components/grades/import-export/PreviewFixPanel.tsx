@@ -273,8 +273,8 @@ export function PreviewFixPanel({
       <div className="sipena-preview-fix-actions">
         {!selection ? (
           <>
-            <SettingButton tone="primary" onClick={onApplySafeFixes}>Terapkan yang aman</SettingButton>
-            <SettingButton onClick={onApproveSuggestions}>Setujui saran aman</SettingButton>
+            <SettingButton tone="primary" onClick={onApplySafeFixes}>Terapkan pemeriksaan otomatis</SettingButton>
+            <SettingButton onClick={onApproveSuggestions}>Tinjau Saran AI</SettingButton>
           </>
         ) : targetCell && isGradeCell ? (
           <>

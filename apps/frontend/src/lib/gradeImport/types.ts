@@ -142,7 +142,16 @@ export interface GradeOperation {
   suggestedValue?: number;
   existingValue?: number | null;
   updateMode: UpdateMode;
-  action: "fill_empty" | "overwrite" | "skip_empty" | "skip_existing" | "needs_confirmation" | "blocked";
+  action:
+    | "fill_empty"
+    | "overwrite"
+    | "skip_empty"
+    | "skip_existing"
+    | "manual_skip_row"
+    | "manual_skip_column"
+    | "manual_skip_cell"
+    | "needs_confirmation"
+    | "blocked";
   warnings: ImportWarning[];
   conflicts: ImportConflict[];
 }

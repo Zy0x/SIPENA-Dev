@@ -2,7 +2,7 @@ import * as XLSX from "xlsx";
 
 import { normalizeName, normalizeNisn, normalizeText, toCanonicalChapterName } from "./textNormalizer";
 
-export const OFFICIAL_TEMPLATE_VERSION = "1.0.0";
+export const OFFICIAL_TEMPLATE_VERSION = "2.0.0";
 
 export interface TemplateStudent {
   id: string;
@@ -44,6 +44,12 @@ interface TemplateColumn {
   chapterId: string;
   assignmentId: string;
   targetKey: string;
+}
+
+export interface CustomGradeTemplateOptions {
+  assignmentIds?: string[];
+  includeSts?: boolean;
+  includeSas?: boolean;
 }
 
 type SheetVisibility = 0 | 1 | 2;
@@ -166,12 +172,16 @@ function getOrderedStructure(context: OfficialGradeTemplateContext) {
   return { chapters, assignmentsByChapter };
 }
 
-function buildTemplateColumns(context: OfficialGradeTemplateContext): TemplateColumn[] {
+function buildTemplateColumns(context: OfficialGradeTemplateContext, options: CustomGradeTemplateOptions = {}): TemplateColumn[] {
   const { chapters, assignmentsByChapter } = getOrderedStructure(context);
   const columns: TemplateColumn[] = [];
+  const assignmentIds = options.assignmentIds ? new Set(options.assignmentIds) : null;
+  const includeSts = options.includeSts ?? true;
+  const includeSas = options.includeSas ?? true;
 
   chapters.forEach((chapter) => {
-    const assignments = assignmentsByChapter.get(chapter.id) || [];
+    const assignments = (assignmentsByChapter.get(chapter.id) || [])
+      .filter((assignment) => !assignmentIds || assignmentIds.has(assignment.id));
     assignments.forEach((assignment) => {
       const chapterName = toCanonicalChapterName(chapter.name);
       columns.push({
@@ -184,27 +194,31 @@ function buildTemplateColumns(context: OfficialGradeTemplateContext): TemplateCo
     });
   });
 
-  columns.push({
-    visibleHeader: "STS",
-    gradeType: "sts",
-    chapterId: "",
-    assignmentId: "",
-    targetKey: "special:sts",
-  });
-  columns.push({
-    visibleHeader: "SAS",
-    gradeType: "sas",
-    chapterId: "",
-    assignmentId: "",
-    targetKey: "special:sas",
-  });
+  if (includeSts) {
+    columns.push({
+      visibleHeader: "STS",
+      gradeType: "sts",
+      chapterId: "",
+      assignmentId: "",
+      targetKey: "special:sts",
+    });
+  }
+  if (includeSas) {
+    columns.push({
+      visibleHeader: "SAS",
+      gradeType: "sas",
+      chapterId: "",
+      assignmentId: "",
+      targetKey: "special:sas",
+    });
+  }
 
   return columns;
 }
 
 function createGuideSheet() {
   const rows = [
-    ["SIPENA - Template Resmi Import Nilai"],
+    ["SIPENA - Template Resmi Import Nilai v2"],
     ["Template ini dibuat dari data kelas, mapel, semester, siswa, BAB, dan tugas yang sedang aktif."],
     ["Saat diupload, SIPENA tetap mencocokkan isinya dengan data web sebelum import."],
     [""],
@@ -216,6 +230,7 @@ function createGuideSheet() {
     ["5. Pengguna boleh menambah header baru dengan format: BAB 1 - Tugas 2 atau BAB 3 - Proyek."],
     ["6. Header STS dan SAS dipakai untuk nilai sumatif tengah dan akhir semester."],
     ["7. Sheet tersembunyi membantu SIPENA mengenali siswa, kolom nilai, dan struktur web saat import."],
+    ["8. Jika memakai file Excel bebas, SIPENA tetap bisa membaca secara smart, tetapi template ini adalah acuan paling aman."],
     [""],
     ["Catatan keamanan"],
     ["Template dibuat dari browser, sehingga bukan jaminan file tidak berubah. SIPENA tetap memvalidasi terhadap data web saat upload."],
@@ -223,6 +238,46 @@ function createGuideSheet() {
   const ws = XLSX.utils.aoa_to_sheet(rows);
   setColumnWidths(ws, [110]);
   styleHeaderRow(ws, 0, 1);
+  return ws;
+}
+
+function createRulesSheet() {
+  const rows = [
+    ["rule", "value", "description"],
+    ["template_version", OFFICIAL_TEMPLATE_VERSION, "Versi template resmi SIPENA."],
+    ["default_update_policy", "fill_empty_only", "Mode cepat hanya mengisi nilai kosong dan tidak menimpa nilai lama tanpa konfirmasi."],
+    ["allowed_min_value", 0, "Nilai minimal yang bisa disimpan."],
+    ["allowed_max_value", 100, "Nilai maksimal yang bisa disimpan."],
+    ["decimal_separator", "dot_or_comma", "Angka 85.5 dan 85,5 dapat dibaca; koma desimal tetap ditandai untuk dicek."],
+    ["empty_tokens", "-, –, —, n/a, na, null, kosong, belum, belum dinilai, belum ada, tdk ada, tidak ada", "Token ini dianggap kosong dan tidak menghapus nilai lama."],
+    ["textual_grade_policy", "needs_confirmation", "Tuntas, Remedial, A/B/C, dan teks sejenis tidak dikonversi otomatis."],
+    ["student_policy", "match_existing_only", "Import nilai tidak membuat siswa baru otomatis."],
+    ["structure_policy", "confirm_before_create", "BAB/tugas baru harus dikonfirmasi user sebelum nilai bisa disimpan."],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  setColumnWidths(ws, [28, 72, 92]);
+  styleHeaderRow(ws, 0, 3);
+  return ws;
+}
+
+function createExamplesSheet() {
+  const rows = [
+    ["contoh", "status", "keterangan"],
+    ["85", "Siap import", "Angka 0 sampai 100 valid."],
+    ["85,5", "Perlu dicek ringan", "Koma desimal dibaca sebagai 85.5."],
+    ["85%", "Perlu dicek ringan", "Persen dibaca sebagai 85."],
+    ["90/100", "Perlu dicek ringan", "Pecahan per 100 dibaca sebagai 90."],
+    ["8/10", "Perlu dicek", "Saran nilai 80 perlu konfirmasi user."],
+    ["-", "Dilewati", "Kosong dan tidak menghapus nilai lama."],
+    ["belum dinilai", "Dilewati", "Kosong dan tidak menghapus nilai lama."],
+    ["Tuntas", "Perlu dicek", "Teks tidak dikonversi otomatis menjadi angka."],
+    ["A", "Perlu dicek", "Huruf nilai tidak dikonversi otomatis menjadi angka."],
+    ["101", "Diblokir", "Nilai di luar 0 sampai 100."],
+    ["#VALUE!", "Diblokir", "Error Excel tidak bisa disimpan sebagai nilai."],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  setColumnWidths(ws, [24, 24, 92]);
+  styleHeaderRow(ws, 0, 3);
   return ws;
 }
 
@@ -389,6 +444,27 @@ export function buildOfficialGradeTemplateWorkbook(context: OfficialGradeTemplat
   appendSheet(wb, createStudentsSheet(context), "_students", 1);
   appendSheet(wb, createStructureSheet(context), "_structure", 1);
   appendSheet(wb, createColumnMapSheet(columns), "_column_map", 1);
+  appendSheet(wb, createRulesSheet(), "_rules", 1);
+  appendSheet(wb, createExamplesSheet(), "_examples", 1);
+
+  return wb;
+}
+
+export function buildCustomGradeTemplateWorkbook(
+  context: OfficialGradeTemplateContext,
+  options: CustomGradeTemplateOptions = {},
+): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new() as WorkbookWithVisibility;
+  const columns = buildTemplateColumns(context, options);
+
+  appendSheet(wb, createGuideSheet(), "Panduan");
+  appendSheet(wb, createInputSheet(context, columns), "Isi_Nilai");
+  appendSheet(wb, createManifestSheet(context, columns), "_manifest", 1);
+  appendSheet(wb, createStudentsSheet(context), "_students", 1);
+  appendSheet(wb, createStructureSheet(context), "_structure", 1);
+  appendSheet(wb, createColumnMapSheet(columns), "_column_map", 1);
+  appendSheet(wb, createRulesSheet(), "_rules", 1);
+  appendSheet(wb, createExamplesSheet(), "_examples", 1);
 
   return wb;
 }

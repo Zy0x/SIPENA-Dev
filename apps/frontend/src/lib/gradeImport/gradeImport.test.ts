@@ -9,6 +9,7 @@ import {
   buildCurrentGradesExportWorkbook,
   buildFullGradeBackupWorkbook,
   buildOfficialGradeTemplateWorkbook,
+  buildCustomGradeTemplateWorkbook,
   getOfficialGradeTemplateFileName,
   matchColumns,
   matchStudents,
@@ -241,16 +242,21 @@ describe("official SIPENA grade template exporter", () => {
     const workbook = buildOfficialGradeTemplateWorkbook(context);
     const guideSheet = workbook.Sheets.Panduan;
 
-    expect(workbook.SheetNames).toEqual(["Panduan", "Isi_Nilai", "_manifest", "_students", "_structure", "_column_map"]);
+    expect(workbook.SheetNames).toEqual(["Panduan", "Isi_Nilai", "_manifest", "_students", "_structure", "_column_map", "_rules", "_examples"]);
     expect(workbook.Workbook?.Sheets?.filter((sheet) => sheet.Hidden === 1).map((sheet) => sheet.name)).toEqual([
       "_manifest",
       "_students",
       "_structure",
       "_column_map",
+      "_rules",
+      "_examples",
     ]);
     expect(guideSheet.A3?.v).toBe("Saat diupload, SIPENA tetap mencocokkan isinya dengan data web sebelum import.");
     expect(guideSheet.A12?.v).toBe("7. Sheet tersembunyi membantu SIPENA mengenali siswa, kolom nilai, dan struktur web saat import.");
-    expect(guideSheet.A15?.v).toBe("Template dibuat dari browser, sehingga bukan jaminan file tidak berubah. SIPENA tetap memvalidasi terhadap data web saat upload.");
+    expect(guideSheet.A16?.v).toBe("Template dibuat dari browser, sehingga bukan jaminan file tidak berubah. SIPENA tetap memvalidasi terhadap data web saat upload.");
+    expect(workbook.Sheets._rules.A2?.v).toBe("template_version");
+    expect(workbook.Sheets._rules.B2?.v).toBe("2.0.0");
+    expect(workbook.Sheets._examples.A6?.v).toBe("8/10");
   });
 
   it("creates Isi_Nilai headers from web structure plus STS and SAS", () => {
@@ -285,6 +291,21 @@ describe("official SIPENA grade template exporter", () => {
 
   it("creates production-safe SIPENA filename", () => {
     expect(getOfficialGradeTemplateFileName(context)).toBe("Template_Nilai_SIPENA_Kelas_5_A_Matematika_Semester_1.xlsx");
+  });
+
+  it("builds custom official template from selected assignments and special columns", () => {
+    const workbook = buildCustomGradeTemplateWorkbook(context, {
+      assignmentIds: ["assignment-2"],
+      includeSts: false,
+      includeSas: true,
+    });
+    const sheet = workbook.Sheets["Isi_Nilai"];
+    const columnMapRows = XLSX.utils.sheet_to_json(workbook.Sheets._column_map, { header: 1 }) as unknown[][];
+
+    expect(sheet.D1?.v).toBe("BAB 1 - Tugas 2");
+    expect(sheet.E1?.v).toBe("SAS");
+    expect(sheet.F1?.v).toBeUndefined();
+    expect(columnMapRows.slice(1).map((row) => row[1])).toEqual(["BAB 1 - Tugas 2", "SAS"]);
   });
 });
 

@@ -91,6 +91,7 @@ export function SmartSpreadsheetPreview({
     for (const row of model.rows) {
       const cell = row.cells.find((item) =>
         item.status === "manual_required"
+        || item.status === "needs_check"
         || item.status === "invalid"
         || item.status === "blocked"
         || item.requiresConfirmation
@@ -142,7 +143,7 @@ export function SmartSpreadsheetPreview({
       <PreviewSummaryBanner model={model} onPrimaryAction={primarySummaryAction} />
       <PreviewQuickActions
         onApplySafeFixes={onApplySafeFixes}
-        onApproveSuggestions={onApproveSuggestions}
+        onApproveSuggestions={() => firstManual && setSelection(firstManual)}
         onIgnoreNonGradeColumns={onIgnoreNonGradeColumns}
         onPickManualItems={() => firstManual && setSelection(firstManual)}
       />
@@ -242,7 +243,7 @@ export function SmartSpreadsheetPreview({
             onIgnoreCell={onIgnoreCell}
             onIgnoreRow={onIgnoreRow}
             onApplySafeFixes={onApplySafeFixes}
-            onApproveSuggestions={onApproveSuggestions}
+            onApproveSuggestions={() => firstManual && setSelection(firstManual)}
             onSetColumnInclude={onSetColumnInclude}
             onSetColumnValueMode={onSetColumnValueMode}
             onBulkColumnAction={onBulkColumnAction}
