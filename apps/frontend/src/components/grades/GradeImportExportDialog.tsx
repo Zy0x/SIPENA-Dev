@@ -561,23 +561,33 @@ function statusTone(status: string): StatusBadgeTone {
   return "info";
 }
 
-function operationTone(action: GradeOperation["action"]): StatusBadgeTone {
-  if (action === "fill_empty" || action === "overwrite") return "success";
-  if (action === "needs_confirmation") return "warning";
-  if (action === "blocked") return "danger";
+function decisionActionLabel(action: FinalReviewModel["sections"][number]["decisions"][number]["action"]): string {
+  if (action === "save") return "Simpan";
+  if (action === "convert") return "Konversi";
+  if (action === "overwrite") return "Timpa nilai lama";
+  if (action === "create_assignment") return "Buat tugas baru";
+  if (action === "create_chapter_and_assignment") return "Buat BAB dan tugas baru";
+  if (action === "skip") return "Skip";
+  return "Perlu pilihan";
+}
+
+function decisionActionTone(action: FinalReviewModel["sections"][number]["decisions"][number]["action"]): StatusBadgeTone {
+  if (action === "save" || action === "convert") return "success";
+  if (action === "overwrite" || action === "create_assignment" || action === "create_chapter_and_assignment") return "warning";
+  if (action === "manual_choice_required") return "danger";
   return "info";
 }
 
-function operationLabel(operation: GradeOperation): string {
-  if (operation.action === "fill_empty") return "Siap import";
-  if (operation.action === "overwrite") return "Akan menimpa";
-  if (operation.action === "skip_existing") return "Dilewati";
-  if (operation.action === "skip_empty") return "Kosong";
-  if (operation.action === "manual_skip_row") return "Baris dilewati";
-  if (operation.action === "manual_skip_column") return "Kolom dilewati";
-  if (operation.action === "manual_skip_cell") return "Sel dilewati";
-  if (operation.action === "needs_confirmation") return "Perlu konfirmasi";
-  return "Diblokir";
+function decisionRiskLabel(risk: FinalReviewModel["sections"][number]["decisions"][number]["risk"]): string {
+  if (risk === "safe") return "Aman";
+  if (risk === "review") return "Perlu cek";
+  return "Tinggi";
+}
+
+function decisionRiskTone(risk: FinalReviewModel["sections"][number]["decisions"][number]["risk"]): StatusBadgeTone {
+  if (risk === "safe") return "success";
+  if (risk === "review") return "warning";
+  return "danger";
 }
 
 function emptyExecutionSummary(): ImportExecutionSummary {
@@ -2462,26 +2472,172 @@ function SpreadsheetPreviewStep({
   );
 }
 
+function FinalReviewSpreadsheetTable({
+  review,
+  actions,
+  onOpenFixStep,
+}: {
+  review: FinalReviewModel;
+  actions: ConflictResolutionActions;
+  onOpenFixStep: () => void;
+}) {
+  const [activeSectionId, setActiveSectionId] = useState<FinalReviewModel["sections"][number]["id"]>("changes");
+  const activeSection = review.sections.find((section) => section.id === activeSectionId) || review.sections[0];
+
+  const skipDecision = (decision: FinalReviewModel["sections"][number]["decisions"][number]) => {
+    if (decision.kind === "header" && decision.columnIndex) {
+      actions.onIgnoreColumn(decision.columnIndex);
+      return;
+    }
+    if (decision.kind === "student" && decision.rowIndex) {
+      actions.onIgnoreRow(decision.rowIndex);
+      return;
+    }
+    if (decision.rowIndex && decision.columnIndex) {
+      actions.onIgnoreCell(decision.rowIndex, decision.columnIndex);
+      return;
+    }
+    if (decision.columnIndex) {
+      actions.onIgnoreColumn(decision.columnIndex);
+      return;
+    }
+    if (decision.rowIndex) {
+      actions.onIgnoreRow(decision.rowIndex);
+    }
+  };
+
+  const applySuggestedValue = (decision: FinalReviewModel["sections"][number]["decisions"][number]) => {
+    if (decision.rowIndex && decision.columnIndex && typeof decision.suggestedValue === "number") {
+      actions.onUseSuggestedValue(decision.rowIndex, decision.columnIndex, decision.suggestedValue);
+    }
+  };
+
+  const valueLabel = (decision: FinalReviewModel["sections"][number]["decisions"][number]) => {
+    const existing = decision.operation?.existingValue;
+    const next = decision.value ?? decision.suggestedValue;
+    if (decision.action === "skip") return "Tidak disimpan";
+    if (existing !== null && existing !== undefined) return `${existing} -> ${next ?? "-"}`;
+    if (decision.rawValue !== null && decision.rawValue !== undefined && decision.rawValue !== "") return `${decision.rawValue} -> ${next ?? "-"}`;
+    return next ?? "-";
+  };
+
+  return (
+    <section className="rounded-[24px] border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/60 dark:bg-slate-950">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Tabel final import</h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Ini adalah hasil akhir setelah konfigurasi import. Setiap baris menunjukkan keputusan final sebelum nilai dikirim untuk disimpan.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter review akhir">
+          {review.sections.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              role="tab"
+              aria-selected={section.id === activeSection.id}
+              onClick={() => setActiveSectionId(section.id)}
+              className={cn(
+                "min-h-9 rounded-full border px-3 text-xs font-semibold transition-colors",
+                section.id === activeSection.id
+                  ? "border-blue-500 bg-blue-600 text-white"
+                  : "border-border bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900",
+              )}
+            >
+              {section.title} ({section.count})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+        <div className="max-h-[520px] overflow-auto">
+          <table className="min-w-[1120px] w-full border-separate border-spacing-0 text-left text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-100">
+              <tr>
+                <th className="w-28 border-b border-border px-3 py-3 font-semibold">Posisi Excel</th>
+                <th className="w-48 border-b border-border px-3 py-3 font-semibold">Sumber Excel</th>
+                <th className="w-56 border-b border-border px-3 py-3 font-semibold">Target SIPENA</th>
+                <th className="w-36 border-b border-border px-3 py-3 font-semibold">Nilai final</th>
+                <th className="w-40 border-b border-border px-3 py-3 font-semibold">Aksi</th>
+                <th className="w-32 border-b border-border px-3 py-3 font-semibold">Risiko</th>
+                <th className="min-w-72 border-b border-border px-3 py-3 font-semibold">Alasan</th>
+                <th className="sticky right-0 w-56 border-b border-l border-border bg-slate-100 px-3 py-3 font-semibold dark:bg-slate-900">Ubah keputusan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeSection.decisions.length ? activeSection.decisions.map((decision) => (
+                <tr key={decision.id} className="bg-white align-top odd:bg-slate-50/70 hover:bg-blue-50/60 dark:bg-slate-950 dark:odd:bg-slate-900/45 dark:hover:bg-blue-950/25">
+                  <td className="border-b border-border px-3 py-3 text-slate-700 dark:text-slate-200">
+                    <div className="font-semibold">Baris {decision.rowIndex ?? "-"}</div>
+                    <div className="mt-1 text-muted-foreground">Kolom {decision.columnIndex ?? "-"}</div>
+                  </td>
+                  <td className="border-b border-border px-3 py-3">
+                    <div className="font-semibold text-slate-950 dark:text-slate-50">{decision.sourceLabel}</div>
+                    <div className="mt-1 break-words text-muted-foreground">Excel: {decision.rawValue !== null && decision.rawValue !== undefined && decision.rawValue !== "" ? String(decision.rawValue) : "-"}</div>
+                  </td>
+                  <td className="border-b border-border px-3 py-3">
+                    <div className="font-semibold text-slate-950 dark:text-slate-50">{decision.targetLabel}</div>
+                    <div className="mt-1 text-muted-foreground">{decision.target?.gradeType === "assignment" ? "Tugas" : decision.target?.gradeType?.toUpperCase() || "Belum jelas"}</div>
+                  </td>
+                  <td className="border-b border-border px-3 py-3 font-semibold text-slate-950 dark:text-slate-50">{valueLabel(decision)}</td>
+                  <td className="border-b border-border px-3 py-3">
+                    <StatusBadge tone={decisionActionTone(decision.action)}>{decisionActionLabel(decision.action)}</StatusBadge>
+                  </td>
+                  <td className="border-b border-border px-3 py-3">
+                    <StatusBadge tone={decisionRiskTone(decision.risk)}>{decisionRiskLabel(decision.risk)}</StatusBadge>
+                  </td>
+                  <td className="border-b border-border px-3 py-3 leading-5 text-muted-foreground">
+                    {decision.reason}
+                    {decision.approvedBy === "ai" ? <span className="mt-2 block font-semibold text-blue-700 dark:text-blue-200">Diputuskan oleh AI Agent, tetap bisa diubah.</span> : null}
+                  </td>
+                  <td className="sticky right-0 border-b border-l border-border bg-inherit px-3 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      {decision.suggestedValue !== undefined && decision.action === "convert" ? (
+                        <ResolutionButton tone="safe" onClick={() => applySuggestedValue(decision)}>Gunakan nilai</ResolutionButton>
+                      ) : null}
+                      <ResolutionButton onClick={onOpenFixStep}>Ubah</ResolutionButton>
+                      {decision.action !== "skip" ? (
+                        <ResolutionButton tone="warning" onClick={() => skipDecision(decision)}>
+                          {decision.kind === "header" ? "Skip kolom" : decision.kind === "student" ? "Skip baris" : "Skip sel"}
+                        </ResolutionButton>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={8} className="bg-white px-3 py-10 text-center text-sm text-muted-foreground dark:bg-slate-950">
+                    Tidak ada item pada kategori ini.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function PreviewStep({
   plan,
   model,
   review,
+  actions,
+  onOpenFixStep,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
   review: FinalReviewModel | null;
+  actions: ConflictResolutionActions;
+  onOpenFixStep: () => void;
 }) {
   if (!plan) {
     return <EmptyPanel title="Preview belum tersedia" description="Preview operasi akan muncul setelah file selesai dianalisis dan pemetaan aman." />;
   }
 
-  const groupedActions = plan.gradeOperations.reduce((acc, operation) => {
-    acc[operation.action] = (acc[operation.action] || 0) + 1;
-    return acc;
-  }, {} as Record<GradeOperation["action"], number>);
-  const visibleOperations = plan.gradeOperations
-    .filter((operation) => operation.value !== null || operation.action !== "skip_empty")
-    .slice(0, 80);
   const isBlocked = hasBlockedConflicts(plan);
 
   return (
@@ -2510,6 +2666,10 @@ function PreviewStep({
             <p className="mt-3 text-xs leading-5 text-orange-700 dark:text-orange-200">{review.disabledReason}</p>
           ) : null}
         </section>
+      ) : null}
+
+      {review ? (
+        <FinalReviewSpreadsheetTable review={review} actions={actions} onOpenFixStep={onOpenFixStep} />
       ) : null}
 
       {model ? (
@@ -2550,30 +2710,6 @@ function PreviewStep({
         <MetricCard label="Siap import" value={plan.summary.readyImportCount || 0} tone="green" />
         <MetricCard label="Dilewati/invalid" value={(plan.summary.skippedValueCount || 0) + (plan.summary.invalidValueCount || 0)} tone="orange" />
       </div>
-
-      <section className="rounded-[24px] border border-border bg-white p-4 dark:bg-slate-950">
-        <div className="flex flex-wrap gap-2">
-          {(Object.keys(groupedActions) as GradeOperation["action"][]).map((action) => (
-            <StatusBadge key={action} tone={operationTone(action)}>{operationLabel({ action } as GradeOperation)}: {groupedActions[action]}</StatusBadge>
-          ))}
-        </div>
-        <div className="mt-4 grid gap-2">
-          {visibleOperations.map((operation) => (
-            <div key={operation.id} className="rounded-2xl border border-border bg-slate-50 p-3 dark:bg-slate-900/55">
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-950 dark:text-slate-50" title={targetLabel(operation)}>{targetLabel(operation)}</p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Baris {operation.rowIndex} / Kolom {operation.columnIndex} / Nilai {operation.value ?? "-"}
-                    {operation.existingValue !== undefined ? ` / Lama ${operation.existingValue ?? "kosong"}` : ""}
-                  </p>
-                </div>
-                <StatusBadge tone={operationTone(operation.action)}>{operationLabel(operation)}</StatusBadge>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
@@ -4085,6 +4221,8 @@ export default function GradeImportExportDialog({
                       plan={plan}
                       model={spreadsheetPreview}
                       review={finalReviewModel}
+                      actions={resolverActions}
+                      onOpenFixStep={() => setStepIndex(2)}
                     />
                   ) : null}
                   {stepIndex === 4 ? (

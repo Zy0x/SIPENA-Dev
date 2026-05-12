@@ -320,6 +320,12 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("Metadata SIPENA valid. Siswa dan kolom diproses otomatis tanpa AI atau mapping manual.");
     expect(dialogSource).toContain("buildImportDecisionGraph");
     expect(dialogSource).toContain("buildFinalReviewModel");
+    expect(dialogSource).toContain("Tabel final import");
+    expect(dialogSource).toContain("Posisi Excel");
+    expect(dialogSource).toContain("Target SIPENA");
+    expect(dialogSource).toContain("Nilai final");
+    expect(dialogSource).toContain("Ubah keputusan");
+    expect(dialogSource).toContain("Skip sel");
     expect(dialogSource).toContain("Import Nilai");
     expect(dialogSource).toContain("Download Template Resmi");
     expect(dialogSource).toContain("Upload Excel");
