@@ -19,6 +19,7 @@ export interface InvalidIssue {
   kind: InvalidIssueKind;
   fixKind: "student" | "column" | "cell";
   row?: SpreadsheetPreviewRow;
+  relatedRows?: SpreadsheetPreviewRow[];
   column?: SpreadsheetPreviewColumn;
   cell?: SpreadsheetPreviewCell;
   scope: InvalidIssueKind;
@@ -192,6 +193,15 @@ function rowRootCause(row: SpreadsheetPreviewRow): InvalidIssueRootCause {
   return "student_ambiguous";
 }
 
+function normalizedKey(value: string | undefined): string {
+  return (value || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function duplicateStudentKey(row: SpreadsheetPreviewRow): string {
+  if (row.studentId) return `student:${row.studentId}`;
+  return `name:${normalizedKey(row.studentName)}:${normalizedKey(row.nisn)}`;
+}
+
 function columnRootCause(column: SpreadsheetPreviewColumn): InvalidIssueRootCause {
   const context = [column.targetLabel, column.sourceHeader, ...(column.conflictIds || [])].join(" ").toLowerCase();
   if (textIncludes(context, ["duplicate", "target ganda", "target dobel"])) return "column_target";
@@ -224,6 +234,43 @@ function isOnlyBlockedByStudentRow(cell: SpreadsheetPreviewCell, row: Spreadshee
 
 export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidIssue[] {
   const issues: Array<InvalidIssue & { priority: number }> = [];
+  const studentIssueRows = model.rows.filter((row) =>
+    row.status === "manual_required" && isStudentRowIssue(row));
+  const duplicateRows = studentIssueRows.filter((row) => rowRootCause(row) === "student_duplicate");
+  const duplicateGroups = new Map<string, SpreadsheetPreviewRow[]>();
+  const groupedDuplicateRowIds = new Set<string>();
+
+  duplicateRows.forEach((row) => {
+    const key = duplicateStudentKey(row);
+    duplicateGroups.set(key, [...(duplicateGroups.get(key) || []), row]);
+  });
+
+  duplicateGroups.forEach((rows) => {
+    if (!rows.length) return;
+    rows.forEach((row) => groupedDuplicateRowIds.add(row.id));
+    const representative = rows[0];
+    const detail = buildRowDetailCopy(representative);
+    const rowNumbers = rows.map((row) => row.rowIndex).join(", ");
+    issues.push({
+      id: `row-duplicate:${duplicateStudentKey(representative)}`,
+      kind: "row",
+      fixKind: "student",
+      scope: "row",
+      rootCause: "student_duplicate",
+      row: representative,
+      relatedRows: rows,
+      title: "Nama siswa redundan",
+      description: `${representative.studentName}: baris Excel ${rowNumbers} menuju siswa yang sama. Pilih satu baris yang dipakai.`,
+      detailTitle: detail.title,
+      detailBullets: [
+        "Beberapa baris Excel cocok ke siswa yang sama.",
+        "Bandingkan isi nilai per baris, pilih satu baris yang benar, lalu baris lain akan dilewati.",
+      ],
+      primaryActionLabel: "Pilih baris",
+      skipActionLabel: "Lewati baris",
+      priority: 2,
+    });
+  });
 
   for (const row of model.rows) {
     for (const cell of row.cells) {
@@ -251,7 +298,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       });
     }
 
-    if (row.status === "manual_required" && isStudentRowIssue(row)) {
+    if (row.status === "manual_required" && isStudentRowIssue(row) && !groupedDuplicateRowIds.has(row.id)) {
       const detail = buildRowDetailCopy(row);
       issues.push({
         id: `row:${row.id}`,
@@ -260,6 +307,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
         scope: "row",
         rootCause: rowRootCause(row),
         row,
+        relatedRows: [row],
         title: "Siswa perlu dicek",
         description: `${row.studentName}: ${detail.bullets[0]}`,
         detailTitle: detail.title,
@@ -299,6 +347,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       kind: issue.kind,
       fixKind: issue.fixKind,
       row: issue.row,
+      relatedRows: issue.relatedRows,
       column: issue.column,
       cell: issue.cell,
       scope: issue.scope,

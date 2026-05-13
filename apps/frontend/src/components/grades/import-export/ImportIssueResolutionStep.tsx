@@ -40,6 +40,87 @@ function cleanName(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function rowValue(row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn): string {
+  const cell = row.cells.find((item) => item.columnId === column.id);
+  return cell?.displayValue || cell?.newValue?.toString() || "-";
+}
+
+function DuplicateStudentComparison({
+  issue,
+  columns,
+  onChooseStudent,
+  onIgnoreRow,
+  onResetRowSelection,
+}: {
+  issue: InvalidIssue;
+  columns: SpreadsheetPreviewColumn[];
+  onChooseStudent: (row: SpreadsheetPreviewRow, studentId: string) => void;
+  onIgnoreRow: (row: SpreadsheetPreviewRow) => void;
+  onResetRowSelection: (row: SpreadsheetPreviewRow) => void;
+}) {
+  const rows = issue.relatedRows?.length ? issue.relatedRows : issue.row ? [issue.row] : [];
+  if (issue.rootCause !== "student_duplicate" || rows.length === 0) return null;
+
+  const chooseRow = (selectedRow: SpreadsheetPreviewRow) => {
+    rows
+      .filter((row) => row.id !== selectedRow.id)
+      .forEach((row) => onIgnoreRow(row));
+    if (selectedRow.studentId) {
+      onChooseStudent(selectedRow, selectedRow.studentId);
+    } else {
+      onResetRowSelection(selectedRow);
+    }
+  };
+
+  return (
+    <div className="sipena-duplicate-student-card">
+      <div className="sipena-duplicate-student-head">
+        <div>
+          <b>Bandingkan baris nama redundan</b>
+          <span>Pilih satu baris Excel yang benar untuk siswa ini. Baris lain otomatis dilewati.</span>
+        </div>
+        <span>{rows.length} baris</span>
+      </div>
+      <div className="sipena-duplicate-student-table-wrap">
+        <table className="sipena-duplicate-student-table">
+          <thead>
+            <tr>
+              <th>Aksi</th>
+              <th>Baris Excel</th>
+              {columns.map((column) => (
+                <th key={column.id}>{column.header}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <div className="sipena-duplicate-student-actions">
+                    <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={() => chooseRow(row)}>
+                      Pakai baris ini
+                    </button>
+                    <button type="button" className="sipena-column-btn" onClick={() => onIgnoreRow(row)}>
+                      Lewati
+                    </button>
+                    <button type="button" className="sipena-column-btn" onClick={() => onResetRowSelection(row)}>
+                      Reset
+                    </button>
+                  </div>
+                </td>
+                <td>{row.rowIndex}</td>
+                {columns.map((column) => (
+                  <td key={`${row.id}:${column.id}`}>{rowValue(row, column)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function InlineColumnTargetFix({
   column,
   assignments,
@@ -213,6 +294,7 @@ export function ImportIssueResolutionStep({
   const activeIssue = issues.find((issue) => issue.id === activeIssueId) || issues[0];
   const selection = activeIssue ? issueSelection(activeIssue) : null;
   const targetColumn = selection?.kind === "column" ? selection.column : selection?.kind === "cell" ? selection.column : null;
+  const isDuplicateStudentIssue = activeIssue?.rootCause === "student_duplicate";
 
   useEffect(() => {
     if (!issues.length) {
@@ -269,36 +351,47 @@ export function ImportIssueResolutionStep({
                 onSetColumnTarget={onSetColumnTarget}
               />
             ) : null}
-            <PreviewFixPanel
-              model={model}
-              selection={selection}
-              selectionState={selectionState}
-              students={students}
-              onApproveColumn={onApproveColumn}
-              onIgnoreColumn={onIgnoreColumn}
-              onIgnoreCell={onIgnoreCell}
-              onIgnoreRow={onIgnoreRow}
-              onResetRowSelection={onResetRowSelection}
-              onChooseStudent={onChooseStudent}
-              onMarkRowUnresolved={onMarkRowUnresolved}
-              onApplySafeFixes={onApplySafeFixes}
-              onApproveSuggestions={onApproveSuggestions}
-              onSetColumnInclude={onSetColumnInclude}
-              onSetColumnValueMode={onSetColumnValueMode}
-              onBulkColumnAction={onBulkColumnAction}
-              onResetColumnSelection={onResetColumnSelection}
-              onSetCellInclude={onSetCellInclude}
-              onSetCellValueMode={onSetCellValueMode}
-              onAcceptSuggestedValue={onAcceptSuggestedValue}
-              onResetCellSelection={onResetCellSelection}
-              aiAssist={aiAssist}
-            />
+            {activeIssue ? (
+              <DuplicateStudentComparison
+                issue={activeIssue}
+                columns={model.columns}
+                onChooseStudent={onChooseStudent}
+                onIgnoreRow={onIgnoreRow}
+                onResetRowSelection={onResetRowSelection}
+              />
+            ) : null}
+            {!isDuplicateStudentIssue ? (
+              <PreviewFixPanel
+                model={model}
+                selection={selection}
+                selectionState={selectionState}
+                students={students}
+                onApproveColumn={onApproveColumn}
+                onIgnoreColumn={onIgnoreColumn}
+                onIgnoreCell={onIgnoreCell}
+                onIgnoreRow={onIgnoreRow}
+                onResetRowSelection={onResetRowSelection}
+                onChooseStudent={onChooseStudent}
+                onMarkRowUnresolved={onMarkRowUnresolved}
+                onApplySafeFixes={onApplySafeFixes}
+                onApproveSuggestions={onApproveSuggestions}
+                onSetColumnInclude={onSetColumnInclude}
+                onSetColumnValueMode={onSetColumnValueMode}
+                onBulkColumnAction={onBulkColumnAction}
+                onResetColumnSelection={onResetColumnSelection}
+                onSetCellInclude={onSetCellInclude}
+                onSetCellValueMode={onSetCellValueMode}
+                onAcceptSuggestedValue={onAcceptSuggestedValue}
+                onResetCellSelection={onResetCellSelection}
+                aiAssist={aiAssist}
+              />
+            ) : null}
           </div>
         </div>
       ) : (
         <div className="sipena-issue-empty">
           <b>Tidak ada item bermasalah.</b>
-          <span>Semua nilai siap masuk ke Review Akhir. Nilai yang dilewati tetap ditandai abu-abu di preview.</span>
+          <span>Semua masalah utama selesai. Lanjutkan ke Verifikasi Tabel untuk mengecek tampilan akhir sebelum Review Akhir.</span>
         </div>
       )}
     </section>

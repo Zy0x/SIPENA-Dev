@@ -318,10 +318,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).not.toContain("ImportComplexityMode");
     expect(dialogSource).not.toContain("Mode Cepat aktif");
     expect(dialogSource).not.toContain("Mode Lanjutan aktif");
-    expect(dialogSource).toContain('const importSteps = ["Upload", "Pemeriksaan", "Verifikasi Tabel", "Daftar Bermasalah", "Review Akhir", "Simpan"]');
+    expect(dialogSource).toContain('const importSteps = ["Upload", "Pemeriksaan", "Daftar Bermasalah", "Verifikasi Tabel", "Review Akhir", "Simpan"]');
     expect(dialogSource).not.toContain("AI Agent Menyelesaikan");
-    expect(dialogSource).toContain("Template resmi siap direview");
-    expect(dialogSource).toContain("Identitas template SIPENA valid. Siswa dan kolom diproses otomatis tanpa AI atau pencocokan manual.");
+    expect(dialogSource).toContain("Template resmi siap diperiksa");
+    expect(dialogSource).toContain("Identitas template SIPENA valid. Periksa Daftar Bermasalah dulu sebelum melihat tabel verifikasi.");
     expect(dialogSource).toContain("buildImportDecisionGraph");
     expect(dialogSource).toContain("buildFinalReviewModel");
     expect(dialogSource).not.toContain("FinalReviewSpreadsheetTable");
@@ -349,6 +349,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(fixPanelSource).toContain("Pilih Siswa yang Sudah Ada");
     expect(issueStepSource).toContain("Daftar Bermasalah");
     expect(issueStepSource).toContain("InlineColumnTargetFix");
+    expect(issueStepSource).toContain("Bandingkan baris nama redundan");
     expect(globalStyles).toContain("sipena-preview-header-target");
     expect(globalStyles).toContain("sipena-preview-cell-details");
     expect(globalStyles).toContain("sipena-preview-cell-actions");
@@ -364,11 +365,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("Target SIPENA");
     expect(dialogSource).toContain("Nilai Excel");
     expect(dialogSource).toContain("Nilai final");
-    expect(dialogSource).toContain("Buka Verifikasi Tabel");
+    expect(dialogSource).toContain("Buka Daftar Bermasalah");
     expect(dialogSource).toContain("Ringkasan tabel terverifikasi");
     expect(dialogSource).toContain("Review Akhir menampilkan tabel keputusan final sebelum simpan");
     expect(dialogSource).toContain("reviewDecisionValueLabel");
-    expect(dialogSource).toContain("Buka Verifikasi Tabel");
+    expect(dialogSource).toContain("Buka Daftar Bermasalah");
     expect(dialogSource).not.toContain("warning utama");
     expect(dialogSource).not.toContain("item diblokir");
     expect(dialogSource).not.toContain("title: cleanBackendText(code");

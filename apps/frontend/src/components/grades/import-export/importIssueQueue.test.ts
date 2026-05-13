@@ -109,6 +109,30 @@ describe("invalid issue queue", () => {
     expect(issues.filter((issue) => issue.kind === "row" && issue.row?.id === "row-6")).toHaveLength(1);
   });
 
+  it("groups duplicate student rows into one issue with comparable rows", () => {
+    const duplicateRowA = previewRow("row-6", {
+      status: "manual_required",
+      studentId: "student-rafi",
+      studentName: "M. Rafi",
+      message: "Baris ini duplicate dengan baris lain.",
+      conflictIds: ["student:STUDENT_DUPLICATE_EXCEL_MATCH:6::"],
+    });
+    const duplicateRowB = previewRow("row-9", {
+      status: "manual_required",
+      studentId: "student-rafi",
+      studentName: "M. Rafi",
+      message: "Baris ini duplicate dengan baris lain.",
+      conflictIds: ["student:STUDENT_DUPLICATE_EXCEL_MATCH:9::"],
+    });
+
+    const issues = buildInvalidIssueQueue(model([duplicateRowA, duplicateRowB]));
+    const duplicateIssues = issues.filter((issue) => issue.rootCause === "student_duplicate");
+
+    expect(duplicateIssues).toHaveLength(1);
+    expect(duplicateIssues[0]).toMatchObject({ title: "Nama siswa redundan", primaryActionLabel: "Pilih baris" });
+    expect(duplicateIssues[0].relatedRows?.map((row) => row.id)).toEqual(["row-6", "row-9"]);
+  });
+
   it("keeps missing students as one row issue and omits ignored rows", () => {
     const missingRow = previewRow("row-7", {
       status: "manual_required",

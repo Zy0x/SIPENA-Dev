@@ -211,7 +211,7 @@ const emptyAiAssistPanelState: AiAssistPanelState = {
   cacheKey: null,
 };
 
-const importSteps = ["Upload", "Pemeriksaan", "Verifikasi Tabel", "Daftar Bermasalah", "Review Akhir", "Simpan"];
+const importSteps = ["Upload", "Pemeriksaan", "Daftar Bermasalah", "Verifikasi Tabel", "Review Akhir", "Simpan"];
 const maxImportFileBytes = 20 * 1024 * 1024;
 
 const sourceLabels: Record<ImportSourceType, string> = {
@@ -292,7 +292,7 @@ const importUiErrorMessages: Record<ImportUiErrorCode, { title: string; message:
 const importNoticeMessages: Record<string, { title: string; message: string }> = {
   IMPORT_PLAN_BLOCKED: {
     title: "Masih ada pilihan yang perlu diselesaikan",
-    message: "Buka Verifikasi Tabel, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
+    message: "Buka Daftar Bermasalah, pilih tindakan yang sesuai, lalu lanjutkan kembali.",
   },
   IMPORT_NO_GRADE_COLUMNS: {
     title: "Kolom nilai belum ditemukan",
@@ -2656,11 +2656,11 @@ function FinalReviewDecisionSummary({
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Tabel review akhir</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Preview keputusan final sebelum simpan. Untuk mengubah nilai, siswa, atau target kolom, kembali ke Verifikasi Tabel.
+            Preview keputusan final sebelum simpan. Untuk mengubah nilai, siswa, atau target kolom, kembali ke Daftar Bermasalah.
           </p>
         </div>
         <Button type="button" variant="outline" className="min-h-10 rounded-full" onClick={onOpenVerificationStep}>
-          Buka Verifikasi Tabel
+          Buka Daftar Bermasalah
         </Button>
       </div>
 
@@ -2755,7 +2755,7 @@ function PreviewStep({
             <div>
               <h3 className="text-sm font-semibold text-blue-950 dark:text-blue-100">Review akhir sebelum simpan</h3>
               <p className="mt-1 text-xs leading-5 text-blue-900/75 dark:text-blue-100/75">
-                Review Akhir menampilkan tabel keputusan final sebelum simpan. Ubah kolom atau nilai dari Verifikasi Tabel.
+                Review Akhir menampilkan tabel keputusan final sebelum simpan. Ubah kolom atau nilai dari Daftar Bermasalah.
               </p>
             </div>
             <StatusBadge tone={review.canExecute ? "success" : "warning"}>
@@ -3831,8 +3831,7 @@ export default function GradeImportExportDialog({
   const canGoNext = useMemo(() => {
     if (stepIndex === 0) return hasPlan && !unsupported && !regionSelectionPending;
     if (stepIndex === 1) return hasPlan && !unsupported && !regionSelectionPending;
-    if (stepIndex === 2) return hasPlan && !unsupported && !regionSelectionPending;
-    if (stepIndex === 3 || stepIndex === 4) {
+    if (stepIndex >= 2 && stepIndex <= 4) {
       return hasPlan
         && (spreadsheetPreview?.summary.manualRequired || 0) === 0
         && (spreadsheetPreview?.summary.invalidCells || 0) === 0
@@ -3918,13 +3917,13 @@ export default function GradeImportExportDialog({
       setAnalysis(nextAnalysis);
       setBasePlan(nextPlan);
       setPlan(applyResolverToPlan(nextPlan, emptyResolverState, importContext, effectiveUpdateMode));
-      setStepIndex(nextPlan.sourceType === "official_exact" && !needsRegionSelection ? 4 : 1);
+      setStepIndex(nextPlan.sourceType === "official_exact" && !needsRegionSelection ? 2 : 1);
       setExecutionState("ready");
       setAnalysisErrorCode(null);
       if (needsRegionSelection) {
         showWarning("Pilih tabel nilai dulu", "Workbook memiliki beberapa tabel nilai. Pilih tabel yang benar sebelum lanjut.");
       } else if (nextPlan.sourceType === "official_exact") {
-        success("Template resmi siap direview", "Identitas template SIPENA valid. Siswa dan kolom diproses otomatis tanpa AI atau pencocokan manual.");
+        success("Template resmi siap diperiksa", "Identitas template SIPENA valid. Periksa Daftar Bermasalah dulu sebelum melihat tabel verifikasi.");
       } else {
         success("Preview import siap", "File sudah dianalisis sebagai preview. Belum ada data yang disimpan.");
       }
@@ -4000,7 +3999,7 @@ export default function GradeImportExportDialog({
           updateMode: effectiveUpdateMode,
         });
         if (executablePlan.summary.overwriteNeedsConfirmationCount > 0) {
-          setStepIndex(3);
+          setStepIndex(2);
           showWarning(
             "Nilai lama perlu dikonfirmasi dulu.",
             `Simpan belum bisa karena ${executablePlan.summary.overwriteNeedsConfirmationCount} nilai lama belum dikonfirmasi untuk diganti.`,
@@ -4008,7 +4007,7 @@ export default function GradeImportExportDialog({
           return;
         }
         if (executablePlan.summary.blockedCount > 0) {
-          setStepIndex(3);
+          setStepIndex(2);
           showWarning(
             "Simpan belum bisa karena masih ada item yang perlu dipilih.",
             `${executablePlan.summary.blockedCount} item masih perlu dicek sebelum nilai disimpan.`,
@@ -4064,8 +4063,8 @@ export default function GradeImportExportDialog({
             ? `Lanjut belum bisa - perbaiki atau lewati ${spreadsheetPreview?.summary.invalidCells || 0} nilai tidak valid.`
             : "Upload file yang valid dulu untuk membuat preview import.";
         showWarning(
-          stepIndex === 3 ? "Perbaikan belum selesai" : "Preview import belum siap",
-          stepIndex === 3 ? smartFixMessage : "Upload file yang valid dulu untuk membuat preview import.",
+          stepIndex === 2 ? "Perbaikan belum selesai" : "Preview import belum siap",
+          stepIndex === 2 ? smartFixMessage : "Upload file yang valid dulu untuk membuat preview import.",
         );
         return;
       }
@@ -4172,13 +4171,13 @@ export default function GradeImportExportDialog({
     if (stepIndex >= 2 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
       return `Simpan belum bisa karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
     }
-    if ((stepIndex === 3 || stepIndex === 4) && spreadsheetPreview?.summary.manualRequired) {
+    if (stepIndex >= 2 && stepIndex <= 4 && spreadsheetPreview?.summary.manualRequired) {
       return `Lanjut belum bisa - pilih atau atur ${spreadsheetPreview.summary.manualRequired} bagian yang perlu dicek.`;
     }
-    if ((stepIndex === 3 || stepIndex === 4) && spreadsheetPreview?.summary.overwriteNeedsConfirmation) {
+    if (stepIndex >= 2 && stepIndex <= 4 && spreadsheetPreview?.summary.overwriteNeedsConfirmation) {
       return `Lanjut belum bisa - konfirmasi ${spreadsheetPreview.summary.overwriteNeedsConfirmation} nilai yang akan ditimpa.`;
     }
-    if ((stepIndex === 3 || stepIndex === 4) && spreadsheetPreview?.summary.invalidCells) {
+    if (stepIndex >= 2 && stepIndex <= 4 && spreadsheetPreview?.summary.invalidCells) {
       return `Lanjut belum bisa - perbaiki atau lewati ${spreadsheetPreview.summary.invalidCells} nilai tidak valid.`;
     }
     if (stepIndex >= 2 && executableImportPlan) {
@@ -4345,7 +4344,7 @@ export default function GradeImportExportDialog({
                         ) : null}
                         {chapterCount === 0 || assignmentCount === 0 ? (
                           <RiskAlert title="Belum ada BAB/tugas" tone="warning">
-                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di Verifikasi Tabel sebelum import.
+                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di Daftar Bermasalah sebelum import.
                           </RiskAlert>
                         ) : null}
                         <RiskAlert title="Data tidak akan ditimpa tanpa konfirmasi" tone="safe">
@@ -4360,6 +4359,16 @@ export default function GradeImportExportDialog({
 
                   {stepIndex === 1 ? <AnalysisStep plan={plan} analysis={analysis} onSelectRegion={handleSelectRegion} /> : null}
                   {stepIndex === 2 ? (
+                    <ImportIssueStep
+                      plan={plan}
+                      model={spreadsheetPreview}
+                      actions={resolverActions}
+                      selectionState={effectiveSelectionState}
+                      importContext={importContext}
+                      aiAssistResponse={aiAssist.response}
+                    />
+                  ) : null}
+                  {stepIndex === 3 ? (
                     <div className="space-y-4">
                       {plan ? (
                         <AiSuggestionPanel
@@ -4379,26 +4388,16 @@ export default function GradeImportExportDialog({
                         selectionState={effectiveSelectionState}
                         importContext={importContext}
                         aiAssistResponse={aiAssist.response}
-                        onOpenIssueStep={() => setStepIndex(3)}
+                        onOpenIssueStep={() => setStepIndex(2)}
                       />
                     </div>
-                  ) : null}
-                  {stepIndex === 3 ? (
-                    <ImportIssueStep
-                      plan={plan}
-                      model={spreadsheetPreview}
-                      actions={resolverActions}
-                      selectionState={effectiveSelectionState}
-                      importContext={importContext}
-                      aiAssistResponse={aiAssist.response}
-                    />
                   ) : null}
                   {stepIndex === 4 ? (
                     <PreviewStep
                       plan={plan}
                       model={spreadsheetPreview}
                       review={finalReviewModel}
-                      onOpenFixStep={() => setStepIndex(3)}
+                      onOpenFixStep={() => setStepIndex(2)}
                     />
                   ) : null}
                   {stepIndex === 5 ? (
