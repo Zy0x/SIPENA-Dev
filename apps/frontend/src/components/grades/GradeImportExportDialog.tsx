@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowRight,
@@ -2519,6 +2519,9 @@ function ImportIssueStep({
   selectionState,
   importContext,
   aiAssistResponse,
+  aiAssistState,
+  canRequestAiAssist,
+  onRequestAiAssist,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
@@ -2526,6 +2529,9 @@ function ImportIssueStep({
   selectionState: ImportSelectionState;
   importContext: ImportPlanContext;
   aiAssistResponse?: SmartImportAssistResponse | null;
+  aiAssistState?: AiAssistState;
+  canRequestAiAssist?: boolean;
+  onRequestAiAssist?: () => void;
 }) {
   if (!plan || !model) {
     return <EmptyPanel title="Daftar Bermasalah belum tersedia" description="Daftar masalah akan muncul setelah file dianalisis." />;
@@ -2600,6 +2606,9 @@ function ImportIssueStep({
       onAcceptSuggestedValue={actions.onAcceptSuggestedValue}
       onResetCellSelection={actions.onResetCellSelection}
       aiAssist={aiAssistResponse}
+      aiAssistStatus={aiAssistState}
+      canRequestAiAssist={canRequestAiAssist}
+      onRequestAiAssist={onRequestAiAssist}
     />
   );
 }
@@ -3150,10 +3159,18 @@ export default function GradeImportExportDialog({
   const [analysisErrorCode, setAnalysisErrorCode] = useState<ImportUiErrorCode | null>(null);
   const [aiAssist, setAiAssist] = useState<AiAssistPanelState>(emptyAiAssistPanelState);
   const [aiAssistCache, setAiAssistCache] = useState<Record<string, SmartImportAssistResponse>>({});
+  const importBodyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (open) setTab(activeTab);
   }, [activeTab, open]);
+
+  useEffect(() => {
+    if (!open || tab !== "import") return;
+    window.requestAnimationFrame(() => {
+      importBodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }, [open, stepIndex, tab]);
 
   useEffect(() => {
     if (!open) {
@@ -4284,7 +4301,13 @@ export default function GradeImportExportDialog({
             </TabsList>
           </div>
 
-          <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-4 py-4 dark:bg-slate-950 sm:px-6">
+          <div
+            ref={importBodyRef}
+            className={cn(
+              "min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-4 py-4 dark:bg-slate-950 sm:px-6",
+              tab === "import" && stepIndex === 2 && "sipena-import-body--issue-step",
+            )}
+          >
             <TabsContent value="import" className="m-0 min-w-0 focus-visible:ring-0 focus-visible:ring-offset-0">
               <div className={cn(
                 "grid min-w-0 gap-4",
@@ -4355,31 +4378,21 @@ export default function GradeImportExportDialog({
                       selectionState={effectiveSelectionState}
                       importContext={importContext}
                       aiAssistResponse={aiAssist.response}
+                      aiAssistState={aiAssist.status}
+                      canRequestAiAssist={hasAiAssistableItems}
+                      onRequestAiAssist={handleRequestAiAssist}
                     />
                   ) : null}
                   {stepIndex === 3 ? (
-                    <div className="space-y-4">
-                      {plan ? (
-                        <AiSuggestionPanel
-                          aiState={aiAssist}
-                          canRequest={hasAiAssistableItems}
-                          onRequest={handleRequestAiAssist}
-                          plan={plan}
-                          analysis={analysis}
-                          context={importContext}
-                          actions={resolverActions}
-                        />
-                      ) : null}
-                      <SpreadsheetPreviewStep
-                        plan={plan}
-                        model={spreadsheetPreview}
-                        actions={resolverActions}
-                        selectionState={effectiveSelectionState}
-                        importContext={importContext}
-                        aiAssistResponse={aiAssist.response}
-                        onOpenIssueStep={() => setStepIndex(2)}
-                      />
-                    </div>
+                    <SpreadsheetPreviewStep
+                      plan={plan}
+                      model={spreadsheetPreview}
+                      actions={resolverActions}
+                      selectionState={effectiveSelectionState}
+                      importContext={importContext}
+                      aiAssistResponse={aiAssist.response}
+                      onOpenIssueStep={() => setStepIndex(2)}
+                    />
                   ) : null}
                   {stepIndex === 4 ? (
                     <PreviewStep
