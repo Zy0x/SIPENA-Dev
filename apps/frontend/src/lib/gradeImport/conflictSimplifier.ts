@@ -499,7 +499,7 @@ function makeGroup(
       level,
       title: "Perbaikan Otomatis",
       description: "SIPENA menemukan beberapa hal yang aman untuk diperbaiki tanpa mengubah nilai lama.",
-      recommendedActionLabel: "Terapkan pemeriksaan otomatis",
+      recommendedActionLabel: "Pakai perbaikan aman",
       secondaryActionLabel: "Lihat detail",
       canBulkApply: items.some((item) => item.canApplyRecommended),
       itemCount: items.length,
@@ -589,7 +589,7 @@ export function simplifyImportConflicts({
     : needsConfirmationCount > 0
       ? "Tinjau item perlu dicek"
       : autoFixableCount > 0
-        ? "Terapkan pemeriksaan otomatis"
+        ? "Pakai perbaikan aman"
         : "Lanjut ke Preview";
 
   return {

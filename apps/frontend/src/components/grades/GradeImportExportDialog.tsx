@@ -2151,7 +2151,7 @@ function SmartFixStep({
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <ResolutionButton onClick={onBackToMapping}>Kembali ke pencocokan</ResolutionButton>
-            <ResolutionButton tone="safe" onClick={applySafeFixes}>Terapkan pemeriksaan otomatis</ResolutionButton>
+            <ResolutionButton tone="safe" onClick={applySafeFixes}>Pakai perbaikan aman</ResolutionButton>
             <ResolutionButton tone="warning" onClick={reviewSuggestions}>Tinjau item perlu dicek</ResolutionButton>
             <ResolutionButton onClick={actions.onBulkIgnoreDerived}>Abaikan Kolom yang Bukan Nilai</ResolutionButton>
             <ResolutionButton tone="safe" onClick={actions.onBulkTrustStudentIdWarnings}>Gunakan data siswa yang cocok dari kelas aktif</ResolutionButton>
