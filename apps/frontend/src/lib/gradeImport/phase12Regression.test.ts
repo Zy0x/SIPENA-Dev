@@ -322,6 +322,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).not.toContain("AI Agent Menyelesaikan");
     expect(dialogSource).toContain("Template resmi siap diperiksa");
     expect(dialogSource).toContain("Identitas template SIPENA valid. Periksa Daftar Bermasalah dulu sebelum melihat tabel verifikasi.");
+    expect(dialogSource).toContain("getActiveImportIssues(spreadsheetPreview)");
+    expect(dialogSource).toContain("stepIndex === 2) return hasPlan && !unsupported && !regionSelectionPending && activeImportIssueCount === 0");
     expect(dialogSource).toContain("buildImportDecisionGraph");
     expect(dialogSource).toContain("buildFinalReviewModel");
     expect(dialogSource).not.toContain("FinalReviewSpreadsheetTable");
@@ -350,9 +352,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(issueStepSource).toContain("Daftar Bermasalah");
     expect(issueStepSource).toContain("InlineColumnTargetFix");
     expect(issueStepSource).toContain("Bandingkan baris nama redundan");
+    expect(issueStepSource).toContain("Item {activeIndex + 1} dari {issues.length}");
+    expect(issueStepSource).toContain("masalah tersisa");
     expect(globalStyles).toContain("sipena-preview-header-target");
     expect(globalStyles).toContain("sipena-preview-cell-details");
     expect(globalStyles).toContain("sipena-preview-cell-actions");
+    expect(globalStyles).toContain("sipena-issue-active-summary");
+    expect(globalStyles).toContain("scroll-snap-type: x proximity");
     expect(globalStyles).toContain("sipena-preview-modebar");
     expect(globalStyles).toContain("sipena-preview-status-pill--ready");
     expect(globalStyles).not.toContain("sipena-preview-shell--quick");

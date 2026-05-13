@@ -360,3 +360,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       skipActionLabel: issue.skipActionLabel,
     }));
 }
+
+export function getActiveImportIssues(model: SpreadsheetPreviewModel | null | undefined): InvalidIssue[] {
+  return model ? buildInvalidIssueQueue(model) : [];
+}

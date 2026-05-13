@@ -76,6 +76,7 @@ import { ExportOptionCard } from "./import-export/ExportOptionCard";
 import type { ColumnTargetDraft } from "./import-export/ColumnSettingsOverlay";
 import { ImportDropzone } from "./import-export/ImportDropzone";
 import { ImportIssueResolutionStep } from "./import-export/ImportIssueResolutionStep";
+import { getActiveImportIssues } from "./import-export/importIssueQueue";
 import { ImportStepper } from "./import-export/ImportStepper";
 import { ImportSummaryPanel } from "./import-export/ImportSummaryPanel";
 import { ManualChoiceCard } from "./import-export/ManualChoiceCard";
@@ -3744,6 +3745,8 @@ export default function GradeImportExportDialog({
   const spreadsheetPreview = useMemo<SpreadsheetPreviewModel | null>(() => (
     plan ? buildSpreadsheetPreviewModel({ plan, resolverState: effectiveResolverState, updateMode: effectiveUpdateMode, selectionState: effectiveSelectionState }) : null
   ), [effectiveResolverState, effectiveSelectionState, effectiveUpdateMode, plan]);
+  const activeImportIssues = useMemo(() => getActiveImportIssues(spreadsheetPreview), [spreadsheetPreview]);
+  const activeImportIssueCount = activeImportIssues.length;
   const executableImportPlan = useMemo(() => (
     plan ? buildExecutableImportOperations({ plan, resolverState: effectiveResolverState, selectionState: effectiveSelectionState, updateMode: effectiveUpdateMode }) : null
   ), [effectiveResolverState, effectiveSelectionState, effectiveUpdateMode, plan]);
@@ -3831,24 +3834,21 @@ export default function GradeImportExportDialog({
   const canGoNext = useMemo(() => {
     if (stepIndex === 0) return hasPlan && !unsupported && !regionSelectionPending;
     if (stepIndex === 1) return hasPlan && !unsupported && !regionSelectionPending;
-    if (stepIndex >= 2 && stepIndex <= 4) {
+    if (stepIndex === 2) return hasPlan && !unsupported && !regionSelectionPending && activeImportIssueCount === 0;
+    if (stepIndex === 3 || stepIndex === 4) {
       return hasPlan
-        && (spreadsheetPreview?.summary.manualRequired || 0) === 0
-        && (spreadsheetPreview?.summary.invalidCells || 0) === 0
-        && (spreadsheetPreview?.summary.overwriteNeedsConfirmation || 0) === 0
+        && activeImportIssueCount === 0
         && (executableImportPlan?.summary.blockedCount || 0) === 0
         && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) === 0;
     }
     if (stepIndex >= importSteps.length - 1) return false;
     return hasPlan;
   }, [
+    activeImportIssueCount,
     executableImportPlan?.summary.blockedCount,
     executableImportPlan?.summary.overwriteNeedsConfirmationCount,
     hasPlan,
     regionSelectionPending,
-    spreadsheetPreview?.summary.invalidCells,
-    spreadsheetPreview?.summary.manualRequired,
-    spreadsheetPreview?.summary.overwriteNeedsConfirmation,
     stepIndex,
     unsupported,
   ]);
@@ -3976,14 +3976,12 @@ export default function GradeImportExportDialog({
           return;
         }
 
-        if (blocked || (spreadsheetPreview?.summary.manualRequired || 0) > 0 || (spreadsheetPreview?.summary.invalidCells || 0) > 0) {
-          const manualCount = spreadsheetPreview?.summary.manualRequired || 0;
-          const invalidCount = spreadsheetPreview?.summary.invalidCells || 0;
+        if (blocked || activeImportIssueCount > 0) {
           showWarning(
             "Import belum siap",
-            manualCount > 0
-              ? `Lanjut belum bisa - pilih atau atur ${manualCount} bagian yang perlu dicek.`
-              : `Lanjut belum bisa - perbaiki atau lewati ${invalidCount} nilai tidak valid.`,
+            activeImportIssueCount > 0
+              ? `Lanjut belum bisa - selesaikan ${activeImportIssueCount} masalah di Daftar Bermasalah.`
+              : "Lanjut belum bisa - masih ada item yang wajib dicek.",
           );
           return;
         }
@@ -4057,11 +4055,9 @@ export default function GradeImportExportDialog({
       }
 
       if (!canGoNext) {
-        const smartFixMessage = (spreadsheetPreview?.summary.manualRequired || smartFixResult?.manualRequiredCount || 0) > 0
-          ? `Lanjut belum bisa - pilih atau atur ${spreadsheetPreview?.summary.manualRequired || smartFixResult?.manualRequiredCount || 0} bagian yang perlu dicek.`
-          : (spreadsheetPreview?.summary.invalidCells || 0) > 0
-            ? `Lanjut belum bisa - perbaiki atau lewati ${spreadsheetPreview?.summary.invalidCells || 0} nilai tidak valid.`
-            : "Upload file yang valid dulu untuk membuat preview import.";
+        const smartFixMessage = activeImportIssueCount > 0
+          ? `Lanjut belum bisa - selesaikan ${activeImportIssueCount} masalah di Daftar Bermasalah.`
+          : "Upload file yang valid dulu untuk membuat preview import.";
         showWarning(
           stepIndex === 2 ? "Perbaikan belum selesai" : "Preview import belum siap",
           stepIndex === 2 ? smartFixMessage : "Upload file yang valid dulu untuk membuat preview import.",
@@ -4092,6 +4088,7 @@ export default function GradeImportExportDialog({
     );
   }, [
     blocked,
+    activeImportIssueCount,
     canGoNext,
     executionState,
     exportMode,
@@ -4107,7 +4104,6 @@ export default function GradeImportExportDialog({
     effectiveResolverState,
     effectiveSelectionState,
     effectiveUpdateMode,
-    smartFixResult,
     spreadsheetPreview,
     showError,
     showPlaceholder,
@@ -4171,14 +4167,8 @@ export default function GradeImportExportDialog({
     if (stepIndex >= 2 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
       return `Simpan belum bisa karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
     }
-    if (stepIndex >= 2 && stepIndex <= 4 && spreadsheetPreview?.summary.manualRequired) {
-      return `Lanjut belum bisa - pilih atau atur ${spreadsheetPreview.summary.manualRequired} bagian yang perlu dicek.`;
-    }
-    if (stepIndex >= 2 && stepIndex <= 4 && spreadsheetPreview?.summary.overwriteNeedsConfirmation) {
-      return `Lanjut belum bisa - konfirmasi ${spreadsheetPreview.summary.overwriteNeedsConfirmation} nilai yang akan ditimpa.`;
-    }
-    if (stepIndex >= 2 && stepIndex <= 4 && spreadsheetPreview?.summary.invalidCells) {
-      return `Lanjut belum bisa - perbaiki atau lewati ${spreadsheetPreview.summary.invalidCells} nilai tidak valid.`;
+    if (stepIndex >= 2 && stepIndex <= 4 && activeImportIssueCount > 0) {
+      return `Lanjut belum bisa - selesaikan ${activeImportIssueCount} masalah di Daftar Bermasalah.`;
     }
     if (stepIndex >= 2 && executableImportPlan) {
       const skipped = executableImportPlan.summary.skippedEmptyCount
@@ -4188,7 +4178,7 @@ export default function GradeImportExportDialog({
       return `${executableImportPlan.summary.executableCount} nilai akan disimpan, ${skipped} dilewati karena kosong/nilai lama.`;
     }
     return "Default aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
-  }, [executableImportPlan, regionSelectionPending, spreadsheetPreview, stepIndex, tab, unsupported]);
+  }, [activeImportIssueCount, executableImportPlan, regionSelectionPending, stepIndex, tab, unsupported]);
 
   const primaryLabel = useMemo(() => {
     if (tab === "export") {
@@ -4202,11 +4192,11 @@ export default function GradeImportExportDialog({
     if (stepIndex === 5) {
       if (executionState === "importing") return "Memproses...";
       if ((executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) return "Konfirmasi nilai lama";
-      if ((executableImportPlan?.summary.blockedCount || 0) > 0 || (spreadsheetPreview?.summary.manualRequired || 0) > 0) return "Selesaikan pilihan";
+      if ((executableImportPlan?.summary.blockedCount || 0) > 0 || activeImportIssueCount > 0) return "Selesaikan pilihan";
       return "Simpan nilai";
     }
     return "Lanjut";
-  }, [executionState, executableImportPlan, exportActionLoading, exportMode, spreadsheetPreview, stepIndex, tab]);
+  }, [activeImportIssueCount, executionState, executableImportPlan, exportActionLoading, exportMode, stepIndex, tab]);
   const importPrimaryDisabledReason = useMemo(() => {
     if (tab !== "import") return null;
     if (executionState === "analyzing") return "File sedang diperiksa.";
@@ -4218,27 +4208,26 @@ export default function GradeImportExportDialog({
         return "Download template baru jika file berasal dari kelas/mapel/semester lain.";
       }
       if (blockedItemCount > 0 || blocked) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
-      if ((spreadsheetPreview?.summary.manualRequired || 0) > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
+      if (activeImportIssueCount > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
       return "Periksa item yang perlu dicek terlebih dahulu.";
     }
     if (stepIndex === 5) {
       if (blocked || blockedItemCount > 0) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
-      if ((spreadsheetPreview?.summary.invalidCells || 0) > 0) return "Selesaikan nilai yang perlu diperbaiki terlebih dahulu.";
-      if ((spreadsheetPreview?.summary.manualRequired || 0) > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
+      if (activeImportIssueCount > 0) return "Selesaikan masalah di Daftar Bermasalah terlebih dahulu.";
+      if (needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
       if (readyImportCount === 0) return "Tidak ada nilai siap import.";
     }
     return null;
   }, [
     blocked,
     blockedItemCount,
+    activeImportIssueCount,
     canGoNext,
     executionState,
     needsCheckCount,
     plan?.conflicts,
     readyImportCount,
     regionSelectionPending,
-    spreadsheetPreview?.summary.invalidCells,
-    spreadsheetPreview?.summary.manualRequired,
     stepIndex,
     tab,
     unsupported,
@@ -4247,7 +4236,7 @@ export default function GradeImportExportDialog({
     executionState === "analyzing"
     || executionState === "importing"
     || (stepIndex > 0 && stepIndex < 5 && !canGoNext)
-    || (stepIndex === 5 && (blocked || (spreadsheetPreview?.summary.manualRequired || 0) > 0 || (spreadsheetPreview?.summary.invalidCells || 0) > 0))
+    || (stepIndex === 5 && (blocked || activeImportIssueCount > 0))
     || (stepIndex === 5 && readyImportCount === 0)
   );
   const exportPrimaryDisabled = tab === "export" && (

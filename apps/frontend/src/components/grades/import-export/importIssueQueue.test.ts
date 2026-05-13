@@ -7,7 +7,7 @@ import type {
   SpreadsheetPreviewRow,
 } from "@/lib/gradeImport";
 
-import { buildInvalidIssueQueue } from "./importIssueQueue";
+import { buildInvalidIssueQueue, getActiveImportIssues } from "./importIssueQueue";
 
 const columns: SpreadsheetPreviewColumn[] = [
   { id: "identity-no", header: "No", type: "identity", status: "unchanged" },
@@ -207,5 +207,19 @@ describe("invalid issue queue", () => {
     expect(issues.filter((issue) => issue.kind === "column" && issue.column?.id === "excel-col-5")).toHaveLength(1);
     expect(issues[0]).toMatchObject({ rootCause: "column_target", scope: "column" });
     expect(issues[0]).toMatchObject({ fixKind: "column" });
+  });
+
+  it("uses active issues instead of stale summary counts for step gating", () => {
+    const staleModel = {
+      ...model([]),
+      columns: columns.map((column) => column.id === "excel-col-5" ? { ...column, status: "ignored" as const, effectiveInclude: false, isIgnored: true } : column),
+      summary: {
+        ...model([]).summary,
+        manualRequired: 3,
+        invalidCells: 2,
+      },
+    } satisfies SpreadsheetPreviewModel;
+
+    expect(getActiveImportIssues(staleModel)).toHaveLength(0);
   });
 });

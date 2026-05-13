@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 import { type ColumnSettingsAssignmentOption, type ColumnSettingsChapterOption, type ColumnTargetDraft } from "./ColumnSettingsOverlay";
 import { PreviewFixPanel } from "./PreviewFixPanel";
-import { buildInvalidIssueQueue, type InvalidIssue } from "./importIssueQueue";
+import { getActiveImportIssues, type InvalidIssue } from "./importIssueQueue";
 
 type Selection =
   | { kind: "cell"; cell: SpreadsheetPreviewCell; row: SpreadsheetPreviewRow; column: SpreadsheetPreviewColumn }
@@ -34,6 +34,19 @@ function issueTone(issue: InvalidIssue): "danger" | "warning" | "neutral" {
   if (issue.rootCause === "invalid_value" || issue.rootCause === "student_missing") return "danger";
   if (issue.rootCause === "column_target" || issue.rootCause === "student_duplicate" || issue.rootCause === "student_ambiguous") return "warning";
   return "neutral";
+}
+
+function issueKindLabel(issue: InvalidIssue): string {
+  if (issue.fixKind === "student") return issue.rootCause === "student_duplicate" ? "Siswa redundan" : "Siswa";
+  if (issue.fixKind === "column") return "Kolom";
+  return issue.rootCause === "invalid_value" ? "Nilai tidak valid" : "Nilai";
+}
+
+function issuePrimaryContext(issue: InvalidIssue): string {
+  if (issue.row && issue.column) return `${issue.row.studentName} / ${issue.column.header}`;
+  if (issue.row) return `Baris ${issue.row.rowIndex} / ${issue.row.studentName}`;
+  if (issue.column) return issue.column.header;
+  return "Periksa item";
 }
 
 function cleanName(value: string): string {
@@ -289,9 +302,10 @@ export function ImportIssueResolutionStep({
   onResetCellSelection: (cell: SpreadsheetPreviewCell) => void;
   aiAssist?: SmartImportAssistResponse | null;
 }) {
-  const issues = useMemo(() => buildInvalidIssueQueue(model), [model]);
+  const issues = useMemo(() => getActiveImportIssues(model), [model]);
   const [activeIssueId, setActiveIssueId] = useState<string | null>(issues[0]?.id || null);
   const activeIssue = issues.find((issue) => issue.id === activeIssueId) || issues[0];
+  const activeIndex = activeIssue ? Math.max(0, issues.findIndex((issue) => issue.id === activeIssue.id)) : -1;
   const selection = activeIssue ? issueSelection(activeIssue) : null;
   const targetColumn = selection?.kind === "column" ? selection.column : selection?.kind === "cell" ? selection.column : null;
   const isDuplicateStudentIssue = activeIssue?.rootCause === "student_duplicate";
@@ -311,11 +325,11 @@ export function ImportIssueResolutionStep({
       <div className="sipena-issue-step-header">
         <div>
           <h3>Daftar Bermasalah</h3>
-          <p>Selesaikan item merah dan kuning dari sini. Pilih item, lalu gunakan panel perbaikan di sampingnya.</p>
+          <p>Selesaikan masalah utama dari sini. Pilih item, lihat konteksnya, lalu pakai aksi yang paling aman.</p>
         </div>
         <div className="sipena-issue-step-summary">
           <b>{issues.length}</b>
-          <span>item perlu dicek</span>
+          <span>masalah tersisa</span>
         </div>
       </div>
 
@@ -335,7 +349,12 @@ export function ImportIssueResolutionStep({
               >
                 <span className="sipena-issue-list-index">{index + 1}</span>
                 <span className="min-w-0">
+                  <span className="sipena-issue-list-meta">
+                    <span>{issueKindLabel(issue)}</span>
+                    <span>Belum selesai</span>
+                  </span>
                   <span className="sipena-issue-list-title">{issue.title}</span>
+                  <span className="sipena-issue-list-context">{issuePrimaryContext(issue)}</span>
                   <span className="sipena-issue-list-desc">{issue.description}</span>
                 </span>
               </button>
@@ -343,6 +362,21 @@ export function ImportIssueResolutionStep({
           </aside>
 
           <div className="sipena-issue-fix-stack">
+            {activeIssue ? (
+              <div className={`sipena-issue-active-summary sipena-issue-active-summary--${issueTone(activeIssue)}`}>
+                <div>
+                  <span className="sipena-issue-active-kicker">Item {activeIndex + 1} dari {issues.length}</span>
+                  <h4>{activeIssue.title}</h4>
+                  <p>{activeIssue.description}</p>
+                </div>
+                <div className="sipena-issue-active-details">
+                  <b>{activeIssue.detailTitle}</b>
+                  <ul>
+                    {activeIssue.detailBullets.slice(0, 3).map((bullet) => <li key={bullet}>{bullet}</li>)}
+                  </ul>
+                </div>
+              </div>
+            ) : null}
             {targetColumn ? (
               <InlineColumnTargetFix
                 column={targetColumn}

@@ -1388,18 +1388,18 @@
 
 .sipena-issue-step {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .sipena-issue-step-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
   border: 1px solid #dbeafe;
-  border-radius: 22px;
-  background: #eff6ff;
-  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+  padding: 14px 16px;
 }
 
 .sipena-issue-step-header h3 {
@@ -1420,10 +1420,11 @@
   display: grid;
   min-width: 108px;
   justify-items: center;
-  border-radius: 18px;
+  border-radius: 14px;
   background: #ffffff;
-  padding: 10px 12px;
+  padding: 9px 12px;
   color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px #dbeafe;
 }
 
 .sipena-issue-step-summary b {
@@ -1438,8 +1439,8 @@
 
 .sipena-issue-step-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
-  gap: 14px;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
 }
 
@@ -1448,15 +1449,15 @@
 .sipena-issue-empty {
   min-width: 0;
   border: 1px solid #e2e8f0;
-  border-radius: 22px;
+  border-radius: 18px;
   background: #ffffff;
-  padding: 12px;
+  padding: 10px;
 }
 
 .sipena-issue-list {
   display: grid;
-  gap: 8px;
-  max-height: min(68dvh, 720px);
+  gap: 7px;
+  max-height: min(62dvh, 680px);
   overflow-y: auto;
 }
 
@@ -1466,10 +1467,16 @@
   gap: 10px;
   width: 100%;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 14px;
   background: #ffffff;
-  padding: 10px;
+  padding: 9px;
   text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.sipena-issue-list-item:hover {
+  transform: translateY(-1px);
+  border-color: #93c5fd;
 }
 
 .sipena-issue-list-item-active {
@@ -1478,11 +1485,11 @@
 }
 
 .sipena-issue-list-item--danger {
-  background: #fff1f2;
+  background: #fff7f8;
 }
 
 .sipena-issue-list-item--warning {
-  background: #fffbeb;
+  background: #fffaf0;
 }
 
 .sipena-issue-list-index {
@@ -1499,15 +1506,39 @@
 }
 
 .sipena-issue-list-title,
+.sipena-issue-list-context,
 .sipena-issue-list-desc {
   display: block;
   overflow-wrap: anywhere;
+}
+
+.sipena-issue-list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.sipena-issue-list-meta span {
+  border-radius: 999px;
+  background: #e2e8f0;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #334155;
 }
 
 .sipena-issue-list-title {
   font-size: 13px;
   font-weight: 800;
   color: #0f172a;
+}
+
+.sipena-issue-list-context {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #2563eb;
 }
 
 .sipena-issue-list-desc {
@@ -1523,6 +1554,88 @@
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+.sipena-issue-active-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(240px, 0.9fr);
+  gap: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.06);
+}
+
+.sipena-issue-active-summary--danger {
+  border-color: #fecdd3;
+  background: #fff7f8;
+}
+
+.sipena-issue-active-summary--warning {
+  border-color: #fed7aa;
+  background: #fffaf0;
+}
+
+.sipena-issue-active-kicker {
+  display: inline-flex;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #075985;
+}
+
+.sipena-issue-active-summary h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 850;
+  color: #0f172a;
+}
+
+.sipena-issue-active-summary p,
+.sipena-issue-active-details {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #475569;
+}
+
+.sipena-issue-active-summary p {
+  margin: 5px 0 0;
+}
+
+.sipena-issue-active-details {
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.75);
+  padding: 10px 12px;
+}
+
+.sipena-issue-active-details b {
+  display: block;
+  margin-bottom: 5px;
+  color: #0f172a;
+}
+
+.sipena-issue-active-details ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.sipena-issue-fix-stack .sipena-preview-fix-actions {
+  position: sticky;
+  bottom: 8px;
+  z-index: 2;
+  margin-inline: -4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 0.94);
+  padding: 10px;
+  box-shadow: 0 -12px 26px rgb(15 23 42 / 0.08);
+  backdrop-filter: blur(10px);
 }
 
 .sipena-inline-target-fix {
@@ -1677,11 +1790,33 @@
 
   .sipena-issue-step-summary {
     justify-items: start;
+    width: 100%;
   }
 
   .sipena-issue-step-grid,
-  .sipena-inline-target-grid {
+  .sipena-inline-target-grid,
+  .sipena-issue-active-summary {
     grid-template-columns: 1fr;
+  }
+
+  .sipena-issue-list {
+    display: flex;
+    gap: 8px;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 10px;
+    scroll-snap-type: x proximity;
+  }
+
+  .sipena-issue-list-item {
+    min-width: min(82vw, 300px);
+    scroll-snap-align: start;
+  }
+
+  .sipena-issue-fix-stack .sipena-preview-fix-actions {
+    bottom: 6px;
+    margin-inline: 0;
   }
 
   .sipena-duplicate-student-head {
