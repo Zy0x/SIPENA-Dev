@@ -7,66 +7,62 @@ import type {
   SpreadsheetPreviewRow,
 } from "@/lib/gradeImport";
 
-import { buildCellDetailCopy, buildColumnDetailCopy, buildInvalidIssueQueue, buildRowDetailCopy } from "./importIssueQueue";
+import { buildInvalidIssueQueue } from "./importIssueQueue";
 
-const identityColumn: SpreadsheetPreviewColumn = {
-  id: "excel-col-0",
-  header: "Nama Siswa",
-  type: "identity",
-  status: "unchanged",
-};
+const columns: SpreadsheetPreviewColumn[] = [
+  { id: "identity-no", header: "No", type: "identity", status: "unchanged" },
+  { id: "identity-nisn", header: "NISN", type: "identity", status: "unchanged" },
+  { id: "identity-name", header: "Nama", type: "identity", status: "unchanged" },
+  { id: "excel-col-4", header: "UH 1", type: "assignment", status: "unchanged" },
+  { id: "excel-col-5", header: "Tugas 1", type: "assignment", status: "manual_required" },
+];
 
-const gradeColumn: SpreadsheetPreviewColumn = {
-  id: "excel-col-4",
-  header: "BAB 1 - Tugas 1",
-  type: "assignment",
-  status: "unchanged",
-  targetLabel: "BAB 1 - Tugas 1",
-};
-
-function cell(overrides: Partial<SpreadsheetPreviewCell>): SpreadsheetPreviewCell {
+function gradeCell(rowId: string, columnId: string, overrides: Partial<SpreadsheetPreviewCell>): SpreadsheetPreviewCell {
   return {
-    id: `row-2:${overrides.columnId || "excel-col-4"}`,
-    rowId: "row-2",
-    columnId: "excel-col-4",
-    displayValue: "82",
-    rawValue: "82",
+    id: `${rowId}:${columnId}`,
+    rowId,
+    columnId,
+    displayValue: "80",
     status: "new_value",
     effectiveInclude: true,
     ...overrides,
   };
 }
 
-function row(overrides: Partial<SpreadsheetPreviewRow> = {}): SpreadsheetPreviewRow {
-  return {
-    id: "row-2",
-    rowIndex: 2,
-    studentName: "Alya",
+function previewRow(id: string, overrides: Partial<SpreadsheetPreviewRow>): SpreadsheetPreviewRow {
+  const row: SpreadsheetPreviewRow = {
+    id,
+    rowIndex: Number(id.replace("row-", "")),
+    studentName: "Siswa",
     status: "unchanged",
     cells: [
-      cell({ id: "row-2:excel-col-0", columnId: "excel-col-0", displayValue: "Alya", status: "unchanged" }),
-      cell({}),
+      gradeCell(id, "identity-no", { status: "unchanged" }),
+      gradeCell(id, "identity-nisn", { status: "unchanged" }),
+      gradeCell(id, "identity-name", { status: "unchanged" }),
+      gradeCell(id, "excel-col-4", {}),
+      gradeCell(id, "excel-col-5", {}),
     ],
     ...overrides,
   };
+  return row;
 }
 
-function model(overrides: Partial<SpreadsheetPreviewModel> = {}): SpreadsheetPreviewModel {
+function model(rows: SpreadsheetPreviewRow[]): SpreadsheetPreviewModel {
   return {
-    columns: [identityColumn, gradeColumn],
-    rows: [row()],
+    columns,
+    rows,
     summary: {
-      totalRows: 1,
-      totalColumns: 2,
-      readyCells: 1,
-      newValueCells: 1,
+      totalRows: rows.length,
+      totalColumns: columns.length,
+      readyCells: 0,
+      newValueCells: 0,
       changedCells: 0,
       newColumns: 0,
       needsCheck: 0,
       manualRequired: 0,
       ignoredCells: 0,
       invalidCells: 0,
-      includedCells: 1,
+      includedCells: 0,
       skippedCells: 0,
       manualIncludedCells: 0,
       manualSkippedCells: 0,
@@ -75,60 +71,65 @@ function model(overrides: Partial<SpreadsheetPreviewModel> = {}): SpreadsheetPre
       overwriteNeedsConfirmation: 0,
       missingInExcelStudents: 0,
     },
-    ...overrides,
   };
 }
 
-describe("import issue queue", () => {
-  it("prioritizes invalid values before blocked targets", () => {
-    const invalidCell = cell({ id: "row-2:excel-col-4", status: "invalid", rawValue: "A" });
-    const blockedCell = cell({ id: "row-3:excel-col-4", rowId: "row-3", status: "blocked", isBlockedByTarget: true });
-    const preview = model({
-      rows: [
-        row({ id: "row-3", rowIndex: 3, studentName: "Bima", cells: [cell({ id: "row-3:excel-col-0", columnId: "excel-col-0" }), blockedCell] }),
-        row({ cells: [cell({ id: "row-2:excel-col-0", columnId: "excel-col-0" }), invalidCell] }),
+describe("invalid issue queue", () => {
+  it("prioritizes invalid values before row and column issues", () => {
+    const invalidRow = previewRow("row-5", {
+      studentName: "Ahmad",
+      cells: [
+        gradeCell("row-5", "identity-no", { status: "unchanged" }),
+        gradeCell("row-5", "identity-nisn", { status: "unchanged" }),
+        gradeCell("row-5", "identity-name", { status: "unchanged" }),
+        gradeCell("row-5", "excel-col-4", { status: "invalid", displayValue: "105" }),
+        gradeCell("row-5", "excel-col-5", { status: "new_value" }),
+      ],
+    });
+    const duplicateRow = previewRow("row-6", {
+      status: "manual_required",
+      studentName: "M. Rafi",
+      message: "Baris ini duplicate dengan baris lain.",
+      conflictIds: ["student:STUDENT_DUPLICATE_EXCEL_MATCH:6::"],
+      cells: [
+        gradeCell("row-6", "identity-no", { status: "manual_required" }),
+        gradeCell("row-6", "identity-nisn", { status: "manual_required" }),
+        gradeCell("row-6", "identity-name", { status: "manual_required" }),
+        gradeCell("row-6", "excel-col-4", { status: "blocked", isBlockedByRow: true, effectiveInclude: false }),
+        gradeCell("row-6", "excel-col-5", { status: "blocked", isBlockedByRow: true, effectiveInclude: false }),
       ],
     });
 
-    const issues = buildInvalidIssueQueue(preview);
+    const issues = buildInvalidIssueQueue(model([duplicateRow, invalidRow]));
 
-    expect(issues[0]?.cell?.status).toBe("invalid");
-    expect(issues[1]?.cell?.status).toBe("blocked");
+    expect(issues[0]).toMatchObject({ kind: "cell", rootCause: "invalid_value" });
+    expect(issues.some((issue) => issue.kind === "row" && issue.rootCause === "student_duplicate")).toBe(true);
+    expect(issues.filter((issue) => issue.kind === "row" && issue.row?.id === "row-6")).toHaveLength(1);
   });
 
-  it("does not include manually skipped invalid cells", () => {
-    const preview = model({
-      rows: [row({ cells: [cell({ id: "row-2:excel-col-0", columnId: "excel-col-0" }), cell({ status: "invalid", effectiveInclude: false, isManuallySkipped: true })] })],
+  it("keeps missing students as one row issue and omits ignored rows", () => {
+    const missingRow = previewRow("row-7", {
+      status: "manual_required",
+      studentName: "Siswa Baru Uji",
+      message: "Siswa belum ada di kelas aktif.",
+      conflictIds: ["student:IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE:7:4:"],
+    });
+    const ignoredRow = previewRow("row-8", {
+      status: "ignored",
+      studentName: "Siswa Dilewati",
+      cells: [gradeCell("row-8", "excel-col-4", { status: "ignored", effectiveInclude: false })],
     });
 
-    expect(buildInvalidIssueQueue(preview)).toHaveLength(0);
+    const issues = buildInvalidIssueQueue(model([missingRow, ignoredRow]));
+
+    expect(issues.filter((issue) => issue.rootCause === "student_missing")).toHaveLength(1);
+    expect(issues.some((issue) => issue.row?.id === "row-8")).toBe(false);
   });
 
-  it("explains duplicate student names specifically", () => {
-    const detail = buildRowDetailCopy(row({
-      status: "manual_required",
-      message: "Nama exact di data web duplikat, sehingga nama saja tidak boleh dipakai otomatis.",
-    }));
+  it("adds target column issues once", () => {
+    const issues = buildInvalidIssueQueue(model([]));
 
-    expect(detail.title).toBe("Nama siswa perlu dipilih");
-    expect(detail.bullets.join(" ")).toContain("Pilih satu siswa");
-  });
-
-  it("explains invalid value details with the raw Excel value", () => {
-    const detail = buildCellDetailCopy(cell({ status: "invalid", rawValue: "A", displayValue: "A" }), row(), gradeColumn);
-
-    expect(detail.title).toBe("Nilai tidak valid");
-    expect(detail.bullets.join(" ")).toContain('Excel berisi "A"');
-  });
-
-  it("explains duplicate column target specifically", () => {
-    const detail = buildColumnDetailCopy({
-      ...gradeColumn,
-      status: "manual_required",
-      targetLabel: "Target dobel.",
-    });
-
-    expect(detail.title).toBe("Target kolom ganda");
-    expect(detail.bullets.join(" ")).toContain("target yang sama");
+    expect(issues.filter((issue) => issue.kind === "column" && issue.column?.id === "excel-col-5")).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ rootCause: "column_target", scope: "column" });
   });
 });

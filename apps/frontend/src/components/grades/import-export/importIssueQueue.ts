@@ -6,6 +6,13 @@ import type {
 } from "@/lib/gradeImport";
 
 export type InvalidIssueKind = "cell" | "row" | "column";
+export type InvalidIssueRootCause =
+  | "invalid_value"
+  | "student_duplicate"
+  | "student_missing"
+  | "student_ambiguous"
+  | "column_target"
+  | "overwrite";
 
 export interface InvalidIssue {
   id: string;
@@ -13,6 +20,8 @@ export interface InvalidIssue {
   row?: SpreadsheetPreviewRow;
   column?: SpreadsheetPreviewColumn;
   cell?: SpreadsheetPreviewCell;
+  scope: InvalidIssueKind;
+  rootCause: InvalidIssueRootCause;
   title: string;
   description: string;
   detailTitle: string;
@@ -32,12 +41,24 @@ function textIncludes(value: string | undefined, patterns: string[]): boolean {
 }
 
 function duplicateStudentDetail(message?: string) {
-  if (!textIncludes(message, ["duplikat", "duplicate", "lebih dari satu", "beberapa siswa"])) return null;
+  if (!textIncludes(message, ["duplikat", "duplicate", "lebih dari satu", "beberapa siswa", "ambiguous", "ambigu"])) return null;
   return {
     title: "Nama siswa perlu dipilih",
     bullets: [
-      "Nama ini cocok ke lebih dari satu siswa.",
-      "Pilih satu siswa yang benar atau lewati baris ini.",
+      "Baris ini cocok ke lebih dari satu siswa atau sama dengan baris lain.",
+      "Pilih siswa yang benar, atau lewati salah satu baris agar nilai tidak masuk ganda.",
+    ],
+  };
+}
+
+function missingStudentDetail(message?: string) {
+  if (!textIncludes(message, ["missing_in_web", "belum ada", "tidak ditemukan", "siswa baru", "tidak cocok"])) return null;
+  return {
+    title: "Siswa belum ada di kelas",
+    bullets: [
+      "Baris Excel ini memiliki nilai, tetapi siswanya belum ditemukan di kelas aktif.",
+      "Pilih siswa existing jika sebenarnya siswa yang sama, atau lewati baris ini.",
+      "Jika memang siswa baru, tambahkan dulu di Data Siswa lalu upload ulang.",
     ],
   };
 }
@@ -55,10 +76,13 @@ function duplicateTargetDetail(message?: string) {
 
 export function buildCellDetailCopy(cell: SpreadsheetPreviewCell, row?: SpreadsheetPreviewRow, column?: SpreadsheetPreviewColumn) {
   const rawValue = formatValue(cell.rawValue ?? cell.displayValue);
-  const duplicateStudent = duplicateStudentDetail(row?.message || cell.message);
+  const rowContext = [row?.message, ...(row?.conflictIds || [])].join(" ");
+  const duplicateStudent = duplicateStudentDetail(rowContext || cell.message);
   if (duplicateStudent) return duplicateStudent;
+  const missingStudent = missingStudentDetail(rowContext || cell.message);
+  if (missingStudent) return missingStudent;
 
-  const duplicateTarget = duplicateTargetDetail(column?.targetLabel || column?.sourceHeader || cell.message);
+  const duplicateTarget = duplicateTargetDetail([column?.targetLabel, column?.sourceHeader, ...(column?.conflictIds || []), cell.message].join(" "));
   if (duplicateTarget) return duplicateTarget;
 
   if (cell.status === "invalid") {
@@ -99,8 +123,11 @@ export function buildCellDetailCopy(cell: SpreadsheetPreviewCell, row?: Spreadsh
 }
 
 export function buildRowDetailCopy(row: SpreadsheetPreviewRow) {
-  const duplicateStudent = duplicateStudentDetail(row.message);
+  const context = [row.message, ...(row.conflictIds || [])].join(" ");
+  const duplicateStudent = duplicateStudentDetail(context);
   if (duplicateStudent) return duplicateStudent;
+  const missingStudent = missingStudentDetail(context);
+  if (missingStudent) return missingStudent;
 
   return {
     title: "Siswa perlu dicek",
@@ -112,7 +139,7 @@ export function buildRowDetailCopy(row: SpreadsheetPreviewRow) {
 }
 
 export function buildColumnDetailCopy(column: SpreadsheetPreviewColumn) {
-  const duplicateTarget = duplicateTargetDetail(column.targetLabel || column.sourceHeader);
+  const duplicateTarget = duplicateTargetDetail([column.targetLabel, column.sourceHeader, ...(column.conflictIds || [])].join(" "));
   if (duplicateTarget) return duplicateTarget;
 
   if (column.status === "manual_required" || column.status === "blocked" || column.status === "invalid") {
@@ -157,6 +184,19 @@ function cellPriority(cell: SpreadsheetPreviewCell): number {
   return 2;
 }
 
+function rowRootCause(row: SpreadsheetPreviewRow): InvalidIssueRootCause {
+  const context = [row.message, ...(row.conflictIds || [])].join(" ").toLowerCase();
+  if (textIncludes(context, ["missing_in_web", "belum ada", "tidak ditemukan"])) return "student_missing";
+  if (textIncludes(context, ["duplicate", "duplikat", "ganda"])) return "student_duplicate";
+  return "student_ambiguous";
+}
+
+function columnRootCause(column: SpreadsheetPreviewColumn): InvalidIssueRootCause {
+  const context = [column.targetLabel, column.sourceHeader, ...(column.conflictIds || [])].join(" ").toLowerCase();
+  if (textIncludes(context, ["duplicate", "target ganda", "target dobel"])) return "column_target";
+  return "column_target";
+}
+
 export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidIssue[] {
   const issues: Array<InvalidIssue & { priority: number }> = [];
 
@@ -169,6 +209,8 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       issues.push({
         id: `cell:${cell.id}`,
         kind: "cell",
+        scope: "cell",
+        rootCause: cell.status === "invalid" ? "invalid_value" : "overwrite",
         row,
         column,
         cell,
@@ -182,11 +224,13 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       });
     }
 
-    if (row.status === "manual_required" && row.cells.every((cell) => !isIssueCell(cell))) {
+    if (row.status === "manual_required") {
       const detail = buildRowDetailCopy(row);
       issues.push({
         id: `row:${row.id}`,
         kind: "row",
+        scope: "row",
+        rootCause: rowRootCause(row),
         row,
         title: "Siswa perlu dicek",
         description: `${row.studentName}: ${detail.bullets[0]}`,
@@ -206,6 +250,8 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
     issues.push({
       id: `column:${column.id}`,
       kind: "column",
+      scope: "column",
+      rootCause: columnRootCause(column),
       column,
       title: "Target kolom perlu dicek",
       description: `${column.header}: ${detail.bullets[0]}`,
@@ -225,6 +271,8 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       row: issue.row,
       column: issue.column,
       cell: issue.cell,
+      scope: issue.scope,
+      rootCause: issue.rootCause,
       title: issue.title,
       description: issue.description,
       detailTitle: issue.detailTitle,

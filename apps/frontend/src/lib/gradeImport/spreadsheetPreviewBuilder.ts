@@ -318,8 +318,13 @@ function buildPreviewColumns(
   return [...identityColumns, ...gradeColumns];
 }
 
-function rowStatus(mapping: StudentMapping, resolverState?: SpreadsheetPreviewResolverState): PreviewCellStatus {
+function rowStatus(
+  mapping: StudentMapping,
+  resolverState?: SpreadsheetPreviewResolverState,
+  forceManualRequired = false,
+): PreviewCellStatus {
   if (resolverState?.ignoredRows?.includes(mapping.rowIndex)) return "ignored";
+  if (forceManualRequired) return "manual_required";
   if (hasBlockingConflict(mapping.conflicts, resolverState)) return "manual_required";
   if (mapping.status === "missing_in_web" || mapping.status === "missing_in_excel") return "ignored";
   if (["ambiguous", "blocked", "missing"].includes(mapping.status)) return "manual_required";
@@ -359,7 +364,11 @@ function operationDecision(
   const resolvedValue = operation ? resolveOperationValue(operation, cellSetting) : null;
   const isManuallySkipped = cellSetting?.include === false || resolverState?.ignoredCells?.includes(`${row.rowIndex}:${columnIndex}`) || false;
   const isManuallyIncluded = cellSetting?.include === true;
-  const isBlockedByColumn = !column.effectiveInclude || column.isIgnored || resolverState?.ignoredColumns?.includes(columnIndex) || false;
+  const isColumnExplicitlySkipped = column.isIgnored
+    || resolverState?.ignoredColumns?.includes(columnIndex)
+    || (column.status !== "manual_required" && !column.effectiveInclude)
+    || false;
+  const isBlockedByColumn = isColumnExplicitlySkipped;
   const isIgnoredByRow = resolverState?.ignoredRows?.includes(row.rowIndex) || rowStatusValue === "ignored" || false;
   const isBlockedByRow = rowStatusValue === "manual_required";
   const isBlockedByTarget = column.status === "manual_required" || !column.gradeType && column.type !== "identity";
@@ -378,7 +387,6 @@ function operationDecision(
   };
 
   if (isIgnoredByRow) return { ...base, status: "ignored", effectiveInclude: false };
-  if (isBlockedByRow) return { ...base, status: "blocked", effectiveInclude: false };
   if (isBlockedByColumn) {
     return {
       ...base,
@@ -397,6 +405,7 @@ function operationDecision(
   if (hasInvalidConflict(operation.conflicts, resolverState)) {
     return { ...base, status: "invalid", effectiveInclude: true };
   }
+  if (isBlockedByRow) return { ...base, status: "blocked", effectiveInclude: false };
   if (hasBlockingConflict(operation.conflicts, resolverState)) return { ...base, status: "blocked", effectiveInclude: false };
   if (isBlockedByTarget) return { ...base, status: "blocked", effectiveInclude: false };
   if (resolvedValue === null) {
@@ -467,14 +476,31 @@ function suggestedDisplayValue(operation: GradeOperation): string {
   return `${operation.rawValue} -> ${suggested}`;
 }
 
-function identityCell(rowId: string, columnId: string, displayValue: string, rowStatusValue: PreviewCellStatus): SpreadsheetPreviewCell {
+function rowMessage(
+  mapping: StudentMapping,
+  status: PreviewCellStatus,
+  rowConflicts: string[],
+): string | undefined {
+  const context = [mapping.status, ...mapping.conflicts.map((conflict) => conflict.code), ...rowConflicts].join(" ");
+  if (context.includes("MISSING_IN_WEB") || mapping.status === "missing_in_web") {
+    return "Siswa belum ada di kelas aktif. Pilih siswa existing, lewati baris, atau tambahkan siswa dulu lalu upload ulang.";
+  }
+  if (context.includes("DUPLICATE") || context.includes("AMBIGUOUS") || mapping.status === "ambiguous") {
+    return "Baris ini cocok ke lebih dari satu siswa atau sama dengan baris lain. Pilih satu siswa yang benar atau lewati baris ini.";
+  }
+  if (status === "manual_required") return "Data siswa pada baris ini perlu dipilih manual.";
+  if (status === "ignored") return "Baris ini tidak akan diimport.";
+  return cellMessage(status);
+}
+
+function identityCell(rowId: string, columnId: string, displayValue: string, rowStatusValue: PreviewCellStatus, message?: string): SpreadsheetPreviewCell {
   return {
     id: `${rowId}:${columnId}`,
     rowId,
     columnId,
     displayValue,
     status: rowStatusValue === "manual_required" ? "manual_required" : rowStatusValue === "ignored" ? "ignored" : "unchanged",
-    message: rowStatusValue === "manual_required" ? "Data siswa pada baris ini perlu dipilih manual." : undefined,
+    message: rowStatusValue === "manual_required" ? message || "Data siswa pada baris ini perlu dipilih manual." : undefined,
   };
 }
 
@@ -487,13 +513,19 @@ export function buildSpreadsheetPreviewModel({
   const executablePlan = buildExecutableImportOperations({ plan, resolverState, updateMode, selectionState });
   const columns = buildPreviewColumns(plan, resolverState, selectionState, updateMode);
   const operationsByRowAndColumn = new Map<string, GradeOperation>();
+  const operationsByRow = new Map<number, GradeOperation[]>();
   plan.gradeOperations.forEach((operation) => {
     operationsByRowAndColumn.set(`${operation.rowIndex}:${operation.columnIndex}`, operation);
+    operationsByRow.set(operation.rowIndex, [...(operationsByRow.get(operation.rowIndex) || []), operation]);
   });
 
   const rows = plan.studentMappings.map((studentMapping, index) => {
     const rowId = `row-${studentMapping.rowIndex}`;
-    const currentRowStatus = rowStatus(studentMapping, resolverState);
+    const rowOperations = operationsByRow.get(studentMapping.rowIndex) || [];
+    const unresolvedStudentConflicts = rowOperations
+      .flatMap((operation) => operation.conflicts)
+      .filter((conflict) => conflict.type === "student" && !isResolved(conflict, resolverState));
+    const currentRowStatus = rowStatus(studentMapping, resolverState, unresolvedStudentConflicts.length > 0);
     const gradeCells = columns.slice(3).map((column) => {
       const columnIndex = Number(column.id.replace("excel-col-", ""));
       const operation = operationsByRowAndColumn.get(`${studentMapping.rowIndex}:${columnIndex}`);
@@ -546,10 +578,12 @@ export function buildSpreadsheetPreviewModel({
       } satisfies SpreadsheetPreviewCell;
     });
 
+    const rowConflictIds = conflictIdsFor([...studentMapping.conflicts, ...unresolvedStudentConflicts], resolverState);
+    const message = rowMessage(studentMapping, currentRowStatus, rowConflictIds);
     const cells = [
-      identityCell(rowId, "identity-no", String(index + 1), currentRowStatus),
-      identityCell(rowId, "identity-nisn", studentMapping.webNisn || studentMapping.excelNisn || "-", currentRowStatus),
-      identityCell(rowId, "identity-name", studentMapping.webName || studentMapping.excelName || "Siswa tidak dikenal", currentRowStatus),
+      identityCell(rowId, "identity-no", String(index + 1), currentRowStatus, message),
+      identityCell(rowId, "identity-nisn", studentMapping.webNisn || studentMapping.excelNisn || "-", currentRowStatus, message),
+      identityCell(rowId, "identity-name", studentMapping.webName || studentMapping.excelName || "Siswa tidak dikenal", currentRowStatus, message),
       ...gradeCells,
     ];
 
@@ -560,8 +594,8 @@ export function buildSpreadsheetPreviewModel({
       studentName: studentMapping.webName || studentMapping.excelName || "Siswa tidak dikenal",
       nisn: studentMapping.webNisn || studentMapping.excelNisn,
       status: maxStatus(cells.map((cell) => cell.status)),
-      message: cellMessage(maxStatus(cells.map((cell) => cell.status))),
-      conflictIds: conflictIdsFor(studentMapping.conflicts, resolverState),
+      message,
+      conflictIds: rowConflictIds,
       cells,
     } satisfies SpreadsheetPreviewRow;
   });

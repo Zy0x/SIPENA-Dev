@@ -2466,6 +2466,7 @@ function SpreadsheetPreviewStep({
     <SmartSpreadsheetPreview
       model={model}
       selectionState={selectionState}
+      students={importContext.students}
       assignments={importContext.assignments.map((assignment) => {
         const chapter = importContext.chapters.find((item) => item.id === assignment.chapter_id);
         return {
@@ -2491,6 +2492,8 @@ function SpreadsheetPreviewStep({
       }}
       onIgnoreRow={(row) => actions.onIgnoreRow(previewRowIndex(row))}
       onResetRowSelection={(row) => actions.onResetRowSelection(previewRowIndex(row))}
+      onChooseStudent={(row, studentId) => actions.onChooseStudent(previewRowIndex(row), studentId)}
+      onMarkRowUnresolved={(row) => actions.onMarkRowUnresolved(previewRowIndex(row))}
       onSetColumnInclude={actions.onSetColumnInclude}
       onSetColumnHeader={actions.onSetColumnHeader}
       onSetColumnTarget={actions.onSetColumnTarget}

@@ -501,6 +501,40 @@
   box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.28);
 }
 
+.sipena-preview-visual--neutral {
+  background: #ffffff !important;
+  color: #0f172a;
+}
+
+.sipena-preview-visual--new {
+  background: #f0fdf4 !important;
+  color: #14532d;
+  box-shadow: inset 0 0 0 1px #86efac;
+}
+
+.sipena-preview-visual--change {
+  background: #fef3c7 !important;
+  color: #92400e;
+  box-shadow: inset 0 0 0 1px #f59e0b;
+}
+
+.sipena-preview-visual--danger {
+  background: #ffe4e6 !important;
+  color: #9f1239;
+  box-shadow: inset 0 0 0 2px #e11d48;
+}
+
+.sipena-preview-visual--skip {
+  background: #f8fafc !important;
+  color: #64748b;
+}
+
+.sipena-preview-visual--blocked {
+  background: #f8fafc !important;
+  color: #475569;
+  box-shadow: inset 0 0 0 1px #cbd5e1;
+}
+
 .sipena-preview-cell--unchanged {
   background: #ffffff !important;
   color: #0f172a;
@@ -594,6 +628,12 @@
   color: #991b1b;
   box-shadow: inset 0 0 0 2px #ef4444;
   opacity: 0.85;
+}
+
+.sipena-import-cell-blocked-by-scope {
+  outline: 1px dashed #94a3b8;
+  outline-offset: -3px;
+  opacity: 0.92;
 }
 
 .sipena-import-cell-mini-badge {

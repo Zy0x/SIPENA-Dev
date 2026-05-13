@@ -5,6 +5,7 @@ import type {
   CellValueMode,
   ColumnValueMode,
   ImportSelectionState,
+  ImportWebStudent,
   SmartImportAssistResponse,
   SpreadsheetPreviewCell,
   SpreadsheetPreviewColumn,
@@ -26,6 +27,7 @@ import { PreviewLegend } from "./PreviewLegend";
 import { PreviewQuickActions } from "./PreviewQuickActions";
 import { PreviewSummaryBanner } from "./PreviewSummaryBanner";
 import { buildInvalidIssueQueue, type InvalidIssue } from "./importIssueQueue";
+import { getCellPreviewVisualState, getColumnPreviewVisualState } from "./previewVisualState";
 
 type Selection =
   | { kind: "cell"; cell: SpreadsheetPreviewCell; row: SpreadsheetPreviewRow; column: SpreadsheetPreviewColumn }
@@ -35,25 +37,20 @@ type Selection =
 
 type PreviewMode = "quick" | "detail";
 
-function previewStatusClass(status: string): string {
-  return `sipena-preview-cell--${status.replace(/_/g, "-")}`;
-}
-
-function previewStatusTone(status: string, include = true): "ready" | "skip" | "check" | "danger" | "neutral" {
-  if (!include || ["ignored", "skipped", "manual_skipped"].includes(status)) return "skip";
-  if (["invalid", "blocked", "manual_required"].includes(status)) return "danger";
-  if (["changed", "overwrite", "needs_check", "new_column"].includes(status)) return "check";
-  if (["new_value", "included", "manual_included"].includes(status)) return "ready";
+function previewStatusTone(tone: string): "ready" | "skip" | "check" | "danger" | "neutral" {
+  if (tone === "skip" || tone === "blocked") return "skip";
+  if (tone === "danger") return "danger";
+  if (tone === "change") return "check";
+  if (tone === "new") return "ready";
   return "neutral";
 }
 
-function previewStatusLabel(status: string, include = true): string {
-  if (!include || ["ignored", "skipped", "manual_skipped"].includes(status)) return "Dilewati";
-  if (["invalid", "blocked", "manual_required"].includes(status)) return "Perlu dicek";
-  if (status === "overwrite" || status === "changed") return "Timpa";
-  if (status === "needs_check" || status === "new_column") return "Perlu dicek";
-  if (status === "new_value" || status === "included" || status === "manual_included") return "Dipakai";
-  return "Info";
+function shouldShowStatusBadge(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): boolean {
+  if (column.type === "identity") return !["unchanged", "included"].includes(cell.status);
+  if (cell.status === "blocked" && !cell.requiresConfirmation && (cell.isBlockedByRow || cell.isBlockedByColumn || cell.isBlockedByTarget)) {
+    return false;
+  }
+  return !["unchanged", "included"].includes(cell.status);
 }
 
 function stickyStyle(index: number): CSSProperties | undefined {
@@ -91,6 +88,9 @@ function previewCellDetailLines(cell: SpreadsheetPreviewCell, column: Spreadshee
   if (cell.message) details.push(cell.message);
   if (cell.effectiveInclude === false || cell.isManuallySkipped) details.push("Tidak akan disimpan");
   if (cell.status === "overwrite") details.push("Nilai lama akan ditimpa");
+  if ((cell.isBlockedByRow || cell.isBlockedByColumn || cell.isBlockedByTarget) && cell.status !== "invalid") {
+    details.push("Ditahan sampai siswa atau target kolom beres");
+  }
 
   return Array.from(new Set(details)).slice(0, 3);
 }
@@ -138,6 +138,7 @@ export function SmartSpreadsheetPreview({
   onIgnoreRow,
   onResetRowSelection,
   selectionState,
+  students,
   assignments,
   chapters,
   onSetColumnInclude,
@@ -150,10 +151,13 @@ export function SmartSpreadsheetPreview({
   onSetCellValueMode,
   onAcceptSuggestedValue,
   onResetCellSelection,
+  onChooseStudent,
+  onMarkRowUnresolved,
   aiAssist,
 }: {
   model: SpreadsheetPreviewModel;
   selectionState: ImportSelectionState;
+  students: ImportWebStudent[];
   assignments: ColumnSettingsAssignmentOption[];
   chapters: ColumnSettingsChapterOption[];
   onApplySafeFixes: () => void;
@@ -164,6 +168,8 @@ export function SmartSpreadsheetPreview({
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
   onIgnoreRow: (row: SpreadsheetPreviewRow) => void;
   onResetRowSelection: (row: SpreadsheetPreviewRow) => void;
+  onChooseStudent: (row: SpreadsheetPreviewRow, studentId: string) => void;
+  onMarkRowUnresolved: (row: SpreadsheetPreviewRow) => void;
   onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
   onSetColumnHeader: (column: SpreadsheetPreviewColumn, header: string) => void;
   onSetColumnTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
@@ -286,12 +292,14 @@ export function SmartSpreadsheetPreview({
             <table className="sipena-preview-table">
               <thead>
                 <tr>
-                  {model.columns.map((column, index) => (
+                  {model.columns.map((column, index) => {
+                    const visual = getColumnPreviewVisualState(column);
+                    return (
                     <th
                       key={column.id}
                       className={cn(
                         index < 3 && "sipena-preview-sticky-left",
-                        previewStatusClass(column.status),
+                        visual.className,
                       )}
                       style={stickyStyle(index)}
                     >
@@ -320,9 +328,9 @@ export function SmartSpreadsheetPreview({
                           <span className="sipena-preview-header-meta">
                             <span className={cn(
                               "sipena-preview-status-pill",
-                              `sipena-preview-status-pill--${previewStatusTone(column.status, column.effectiveInclude !== false)}`,
+                              `sipena-preview-status-pill--${previewStatusTone(visual.tone)}`,
                             )}>
-                              {column.isNewStructure ? "Kolom baru" : previewStatusLabel(column.status, column.effectiveInclude !== false)}
+                              {visual.label}
                             </span>
                             <span className="sipena-preview-header-action">Atur</span>
                           </span>
@@ -332,7 +340,8 @@ export function SmartSpreadsheetPreview({
                         <span className="sipena-preview-header-hint">{headerHint(column)}</span>
                       ) : null}
                     </th>
-                  ))}
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -342,22 +351,23 @@ export function SmartSpreadsheetPreview({
                       const column = model.columns[index];
                       const detailLines = previewCellDetailLines(cell, column);
                       const showCellActions = needsCompactCellActions(cell, column);
+                      const visual = getCellPreviewVisualState(cell, column, row);
                       return (
                         <td
                           key={cell.id}
                           className={cn(
                             "sipena-preview-cell",
-                            previewStatusClass(cell.status),
+                            visual.className,
                             cell.isManuallyIncluded && "sipena-import-cell-manual-include",
                             cell.isManuallySkipped && "sipena-import-cell-manual-skip",
                             cell.status === "overwrite" && "sipena-import-cell-overwrite-confirmed",
-                            cell.isBlockedByColumn && "sipena-import-cell-blocked-by-column",
+                            (cell.isBlockedByColumn || cell.isBlockedByRow || cell.isBlockedByTarget) && cell.status !== "invalid" && "sipena-import-cell-blocked-by-scope",
                             index < 3 && "sipena-preview-sticky-left",
                           )}
                           style={stickyStyle(index)}
                           onClick={() => toggleCellInclude(cell, row, column)}
                           onDoubleClick={() => setSelection({ kind: "cell", cell, row, column })}
-                          title={column.type === "identity" ? cell.displayValue : detailLines.join(" / ") || "Klik sel untuk pakai/lewati. Klik dua kali untuk detail."}
+                          title={column.type === "identity" ? cell.displayValue : detailLines.join(" / ") || `${visual.description} Klik sel untuk pakai/lewati. Klik dua kali untuk detail.`}
                         >
                           <div className="sipena-preview-cell-main">
                             <span className="min-w-0 flex-1">
@@ -371,7 +381,7 @@ export function SmartSpreadsheetPreview({
                               ) : null}
                             </span>
                             <span className="sipena-preview-cell-badges">
-                              <PreviewCellBadge status={cell.status} />
+                              {shouldShowStatusBadge(cell, column) ? <PreviewCellBadge status={cell.status} /> : null}
                               {cell.isManuallyIncluded ? <span className="sipena-import-cell-mini-badge">Dipilih</span> : null}
                               {cell.isManuallySkipped ? <span className="sipena-import-cell-mini-badge">Dilewati</span> : null}
                               {cell.status === "overwrite" ? <span className="sipena-import-cell-mini-badge">Timpa</span> : null}
@@ -449,11 +459,14 @@ export function SmartSpreadsheetPreview({
             model={model}
             selection={selection?.kind === "column" ? null : selection}
             selectionState={selectionState}
+            students={students}
             onApproveColumn={onApproveColumn}
             onIgnoreColumn={onIgnoreColumn}
             onIgnoreCell={onIgnoreCell}
             onIgnoreRow={onIgnoreRow}
             onResetRowSelection={onResetRowSelection}
+            onChooseStudent={onChooseStudent}
+            onMarkRowUnresolved={onMarkRowUnresolved}
             onApplySafeFixes={onApplySafeFixes}
             onApproveSuggestions={invalidIssues.length ? openIssueDrawer : onApproveSuggestions}
             onSetColumnInclude={onSetColumnInclude}

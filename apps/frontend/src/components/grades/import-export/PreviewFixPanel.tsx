@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
   CellValueMode,
   ColumnValueMode,
   ImportSelectionState,
+  ImportWebStudent,
   SmartImportAssistResponse,
   SpreadsheetPreviewCell,
   SpreadsheetPreviewColumn,
@@ -85,15 +86,41 @@ function ColumnStats({ column }: { column: SpreadsheetPreviewColumn }) {
   );
 }
 
+function normalized(value: string | null | undefined): string {
+  return (value || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function studentCandidates(row: SpreadsheetPreviewRow, students: ImportWebStudent[]): ImportWebStudent[] {
+  const rowName = normalized(row.studentName);
+  const rowNisn = normalized(row.nisn);
+  return [...students]
+    .map((student) => {
+      const name = normalized(student.name);
+      const nisn = normalized(student.nisn);
+      let score = 0;
+      if (row.studentId === student.id) score += 100;
+      if (rowNisn && nisn && rowNisn === nisn) score += 80;
+      if (rowName && name === rowName) score += 70;
+      if (rowName && name.includes(rowName)) score += 30;
+      if (rowName && rowName.includes(name)) score += 20;
+      return { student, score };
+    })
+    .sort((left, right) => right.score - left.score || left.student.name.localeCompare(right.student.name))
+    .map((item) => item.student);
+}
+
 export function PreviewFixPanel({
   model,
   selection,
   selectionState,
+  students,
   onApproveColumn,
   onIgnoreColumn,
   onIgnoreCell,
   onIgnoreRow,
   onResetRowSelection,
+  onChooseStudent,
+  onMarkRowUnresolved,
   onApplySafeFixes,
   onApproveSuggestions,
   onSetColumnInclude,
@@ -109,11 +136,14 @@ export function PreviewFixPanel({
   model: SpreadsheetPreviewModel;
   selection: Selection;
   selectionState: ImportSelectionState;
+  students: ImportWebStudent[];
   onApproveColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
   onIgnoreRow: (row: SpreadsheetPreviewRow) => void;
   onResetRowSelection: (row: SpreadsheetPreviewRow) => void;
+  onChooseStudent: (row: SpreadsheetPreviewRow, studentId: string) => void;
+  onMarkRowUnresolved: (row: SpreadsheetPreviewRow) => void;
   onApplySafeFixes: () => void;
   onApproveSuggestions: () => void;
   onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
@@ -129,6 +159,7 @@ export function PreviewFixPanel({
   const [showDetail, setShowDetail] = useState(false);
   const [columnOverwriteChecked, setColumnOverwriteChecked] = useState(false);
   const [cellOverwriteChecked, setCellOverwriteChecked] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState("");
   const [title, description] = useMemo(() => (
     selection ? panelCopy(selection) : ["Atur kolom dan nilai", "Klik header kolom atau cell nilai pada tabel untuk memilih apa yang akan disimpan."]
   ), [selection]);
@@ -165,6 +196,13 @@ export function PreviewFixPanel({
       || cellSetting?.valueMode === "overwrite_existing"
     ),
   );
+  const rowStudentCandidates = useMemo(() => (
+    targetRow ? studentCandidates(targetRow, students).slice(0, 5) : []
+  ), [students, targetRow]);
+
+  useEffect(() => {
+    setSelectedStudentId("");
+  }, [targetRow?.id]);
 
   const handlePrimaryCellAction = () => {
     if (!targetCell || !targetRow || !targetColumn) return;
@@ -331,6 +369,51 @@ export function PreviewFixPanel({
         </div>
       ) : null}
 
+      {targetRow && !targetCell && !targetColumn ? (
+        <div className="mt-4 rounded-2xl border border-border p-3">
+          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">Aksi siswa</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Pilih siswa di kelas aktif jika baris Excel ini sebenarnya milik siswa tersebut. Jika benar-benar siswa baru, tambahkan dulu di Data Siswa lalu upload ulang.
+          </p>
+          {rowStudentCandidates.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {rowStudentCandidates.map((student) => (
+                <SettingButton key={student.id} onClick={() => onChooseStudent(targetRow, student.id)}>
+                  Pakai {student.name}
+                </SettingButton>
+              ))}
+            </div>
+          ) : null}
+          <label className="mt-3 grid gap-1 text-xs font-semibold">
+            Pilih siswa existing
+            <select
+              value={selectedStudentId}
+              onChange={(event) => setSelectedStudentId(event.target.value)}
+              className="min-h-10 rounded-2xl border border-border bg-white px-3 text-xs font-medium text-slate-800 dark:bg-slate-950 dark:text-slate-100"
+            >
+              <option value="">Cari dari daftar siswa</option>
+              {students.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.name}{student.nisn ? ` (${student.nisn})` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <SettingButton
+              tone="primary"
+              onClick={() => {
+                if (selectedStudentId) onChooseStudent(targetRow, selectedStudentId);
+              }}
+              disabled={!selectedStudentId}
+            >
+              Pakai siswa terpilih
+            </SettingButton>
+            <SettingButton tone="warning" onClick={() => onMarkRowUnresolved(targetRow)}>Tandai belum selesai</SettingButton>
+          </div>
+        </div>
+      ) : null}
+
       <div className="sipena-preview-fix-actions">
         {!selection ? (
           <>
@@ -361,8 +444,17 @@ export function PreviewFixPanel({
           </>
         ) : targetRow ? (
           <>
-            <SettingButton tone="primary" onClick={() => onResetRowSelection(targetRow)}>Kembalikan baris</SettingButton>
-            <SettingButton onClick={() => onIgnoreRow(targetRow)}>Abaikan baris</SettingButton>
+            <SettingButton
+              tone="primary"
+              onClick={() => {
+                if (selectedStudentId) onChooseStudent(targetRow, selectedStudentId);
+              }}
+              disabled={!selectedStudentId}
+            >
+              Pakai siswa terpilih
+            </SettingButton>
+            <SettingButton onClick={() => onIgnoreRow(targetRow)}>Lewati baris</SettingButton>
+            <SettingButton onClick={() => onResetRowSelection(targetRow)}>Kembalikan baris</SettingButton>
           </>
         ) : null}
         <SettingButton onClick={() => setShowDetail((current) => !current)}>
