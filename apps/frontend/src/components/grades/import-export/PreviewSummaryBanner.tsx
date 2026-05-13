@@ -28,10 +28,10 @@ export function PreviewSummaryBanner({
   const cta = invalidIssueCount > 0
     ? "Buka daftar masalah"
     : manualCount > 0
-      ? "Pilih bagian merah"
+      ? "Buka daftar masalah"
       : needsCheckCount > 0
-        ? "Tinjau item perlu dicek"
-        : "Terapkan pemeriksaan otomatis";
+        ? "Buka daftar masalah"
+        : "Lihat verifikasi tabel";
 
   return (
     <section className="sipena-preview-banner">

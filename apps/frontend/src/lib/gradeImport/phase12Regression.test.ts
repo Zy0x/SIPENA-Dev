@@ -333,6 +333,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(previewSource).not.toContain('type PreviewMode = "quick" | "detail"');
     expect(previewSource).not.toContain("Mode Cepat");
     expect(previewSource).not.toContain("Mode Detail");
+    expect(previewSource).not.toContain("Terapkan pemeriksaan otomatis");
     expect(previewSource).not.toContain("sipena-preview-mode-toggle");
     expect(previewSource).toContain("sipena-preview-status-pill");
     expect(previewSource).toContain("Klik header untuk atur kolom");
@@ -349,6 +350,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("ignoredCells: current.ignoredCells.filter");
     expect(fixPanelSource).toContain("Pakai rekomendasi");
     expect(fixPanelSource).toContain("Pilih Siswa yang Sudah Ada");
+    expect(fixPanelSource).not.toContain("Terapkan pemeriksaan otomatis");
     expect(issueStepSource).toContain("Daftar Bermasalah");
     expect(issueStepSource).toContain("InlineColumnTargetFix");
     expect(issueStepSource).toContain("Bandingkan baris nama redundan");
@@ -367,6 +369,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("sipena-auto-check-overlay");
     expect(globalStyles).toContain("sipena-issue-list-item--done");
     expect(globalStyles).toContain("sipena-import-body--issue-step");
+    expect(globalStyles).toContain("scroll-padding-bottom: 128px");
+    expect(globalStyles).toContain("grid-template-columns: clamp(220px, 24vw, 300px) minmax(0, 1fr)");
     expect(globalStyles).toContain("scroll-snap-type: x proximity");
     expect(globalStyles).toContain("sipena-preview-modebar");
     expect(globalStyles).toContain("sipena-preview-status-pill--ready");

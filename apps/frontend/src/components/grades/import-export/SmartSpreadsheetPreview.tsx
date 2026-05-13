@@ -187,15 +187,10 @@ export function SmartSpreadsheetPreview({
   const invalidIssues = useMemo(() => buildInvalidIssueQueue(model), [model]);
 
   const primarySummaryAction = () => {
-    if (invalidIssues.length > 0) {
+    if (invalidIssues.length > 0 || model.summary.manualRequired > 0 || model.summary.needsCheck > 0) {
       onOpenIssueStep?.();
       return;
     }
-    if (model.summary.needsCheck > 0) {
-      onApproveSuggestions();
-      return;
-    }
-    onApplySafeFixes();
   };
 
   const showFixPanel = Boolean(selection && selection.kind !== "column");
@@ -229,13 +224,13 @@ export function SmartSpreadsheetPreview({
             Klik header untuk mengatur kolom. Klik sel atau buka Daftar Bermasalah untuk memperbaiki item langsung.
           </p>
         </div>
-        {invalidIssues.length > 0 ? (
+        {invalidIssues.length > 0 || model.summary.manualRequired > 0 || model.summary.needsCheck > 0 ? (
           <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={onOpenIssueStep}>
             Buka Daftar Bermasalah
           </button>
         ) : (
-          <button type="button" className="sipena-column-btn" onClick={onApplySafeFixes}>
-            Terapkan pemeriksaan otomatis
+          <button type="button" className="sipena-column-btn" onClick={onIgnoreNonGradeColumns}>
+            Lewati kolom nonnilai
           </button>
         )}
       </div>

@@ -1393,7 +1393,8 @@
 
 .sipena-import-body--issue-step {
   overflow-y: auto;
-  scroll-padding-bottom: 96px;
+  padding-bottom: 128px;
+  scroll-padding-bottom: 128px;
 }
 
 .sipena-issue-step-header {
@@ -1402,9 +1403,9 @@
   justify-content: space-between;
   gap: 16px;
   border: 1px solid #dbeafe;
-  border-radius: 18px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
-  padding: 14px 16px;
+  padding: 11px 14px;
 }
 
 .sipena-issue-step-header h3 {
@@ -1444,11 +1445,11 @@
 
 .sipena-issue-step-grid {
   display: grid;
-  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  grid-template-columns: clamp(220px, 24vw, 300px) minmax(0, 1fr);
   gap: 12px;
   align-items: start;
   min-height: 0;
-  height: auto;
+  min-height: min(520px, calc(100dvh - 420px));
 }
 
 .sipena-issue-list,
@@ -1466,9 +1467,9 @@
   align-content: start;
   gap: 7px;
   position: sticky;
-  top: 10px;
+  top: 12px;
   height: auto;
-  max-height: min(58dvh, 620px);
+  max-height: min(64dvh, 680px);
   overflow-y: auto;
 }
 
@@ -1675,16 +1676,20 @@
 
 .sipena-issue-toolbar {
   display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 4;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   border: 1px solid #dbeafe;
   border-radius: 16px;
-  background: #ffffff;
+  background: rgb(255 255 255 / 0.96);
   padding: 10px 12px;
   color: #475569;
   font-size: 12px;
   font-weight: 700;
+  backdrop-filter: blur(10px);
 }
 
 .sipena-auto-check-trigger {
@@ -2093,6 +2098,7 @@
 @media (max-width: 899px) {
   .sipena-import-body--issue-step {
     overflow-y: auto;
+    padding-bottom: 144px;
   }
 
   .sipena-preview-banner {
@@ -2119,6 +2125,7 @@
   .sipena-inline-target-grid,
   .sipena-issue-active-summary {
     grid-template-columns: 1fr;
+    min-height: 0;
     height: auto;
   }
 
@@ -2154,6 +2161,10 @@
   .sipena-auto-check-status {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .sipena-issue-toolbar {
+    position: static;
   }
 
   .sipena-auto-check-modal {
