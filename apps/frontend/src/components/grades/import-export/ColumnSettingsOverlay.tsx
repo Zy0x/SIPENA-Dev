@@ -75,7 +75,7 @@ function defaultTargetMode(column: SpreadsheetPreviewColumn): TargetMode {
   if (column.gradeType === "sas") return "sas";
   if (column.isNewStructure) return "ignore";
   if (column.assignmentId) return "keep";
-  return "keep";
+  return "ignore";
 }
 
 function targetChoiceFromMode(targetMode: TargetMode): TargetChoice {
@@ -96,32 +96,6 @@ function targetModeLabel(targetMode: TargetMode, column: SpreadsheetPreviewColum
   if (targetMode === "new_chapter_assignment") return "Buat BAB + tugas";
   const assignmentId = targetMode.replace("assignment:", "");
   return assignments.find((assignment) => assignment.id === assignmentId)?.label || "Tugas lain";
-}
-
-function TargetChoiceButton({
-  active,
-  title,
-  description,
-  onClick,
-  disabled,
-}: {
-  active: boolean;
-  title: string;
-  description: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      className={`sipena-column-target-card${active ? " sipena-column-target-card-active" : ""}`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      <span>{title}</span>
-      <small>{description}</small>
-    </button>
-  );
 }
 
 export function ColumnSettingsOverlay({
@@ -310,58 +284,37 @@ export function ColumnSettingsOverlay({
             <span>Target kolom nilai</span>
             {column.isNewStructure ? (
               <div className="sipena-column-suggestion-card">
-                <b>Kolom baru terdeteksi</b>
+                <b>Kolom baru</b>
                 <p>
-                  {`SIPENA membaca kolom ini sebagai ${newChapterName && newAssignmentName ? `${newChapterName} - ${newAssignmentName}` : "BAB/tugas baru"}. Pilih buat baru hanya jika target ini memang benar.`}
+                  {`Saran: ${newChapterName && newAssignmentName ? `${newChapterName} - ${newAssignmentName}` : "BAB/tugas baru"}. Simpan hanya jika target ini benar.`}
                 </p>
               </div>
             ) : null}
 
-            <div className="sipena-column-target-grid" aria-label="Pilih target kolom nilai">
+            <select
+              className="sipena-column-target-select"
+              value={targetChoice}
+              onChange={(event) => chooseTarget(event.target.value as TargetChoice)}
+              aria-label="Target kolom nilai"
+            >
               {targetCurrentAvailable(column) ? (
-                <TargetChoiceButton
-                  active={targetChoice === "keep"}
-                  title="Target saat ini"
-                  description={column.targetLabel || "Gunakan hasil baca SIPENA"}
-                  onClick={() => chooseTarget("keep")}
-                />
+                <option value="keep">Target saat ini - {column.targetLabel || "hasil baca SIPENA"}</option>
               ) : null}
-              <TargetChoiceButton
-                active={targetChoice === "sts"}
-                title="STS"
-                description="Nilai tengah semester"
-                onClick={() => chooseTarget("sts")}
-              />
-              <TargetChoiceButton
-                active={targetChoice === "sas"}
-                title="SAS"
-                description="Nilai akhir semester"
-                onClick={() => chooseTarget("sas")}
-              />
-              <TargetChoiceButton
-                active={targetChoice === "assignment"}
-                title="Tugas lain"
-                description={assignments.length ? "Pilih dari tugas yang sudah ada" : "Belum ada tugas existing"}
-                onClick={() => chooseTarget("assignment")}
-                disabled={!assignments.length}
-              />
-              <TargetChoiceButton
-                active={targetChoice === "create"}
-                title="Buat baru"
-                description="Buat target setelah dikonfirmasi"
-                onClick={() => chooseTarget("create")}
-              />
-              <TargetChoiceButton
-                active={targetChoice === "ignore"}
-                title="Lewati"
-                description="Kolom tidak disimpan"
-                onClick={() => chooseTarget("ignore")}
-              />
-            </div>
+              <option value="sts">STS - nilai tengah semester</option>
+              <option value="sas">SAS - nilai akhir semester</option>
+              <option value="assignment" disabled={!assignments.length}>
+                {assignments.length ? "Tugas lain - pilih tugas existing" : "Tugas lain - belum ada tugas"}
+              </option>
+              <option value="create">Buat baru - tugas atau BAB baru</option>
+              <option value="ignore">Lewati - kolom tidak disimpan</option>
+            </select>
+            <p className="sipena-column-target-summary">
+              Target dipilih: <b>{targetModeLabel(targetMode, column, assignments)}</b>
+            </p>
 
             {targetChoice === "assignment" ? (
               <label className="sipena-column-field sipena-column-nested-field">
-                <span>Pilih tugas</span>
+                <span>Tugas tujuan</span>
                 <select value={targetMode.startsWith("assignment:") ? targetMode : `assignment:${assignments[0]?.id || ""}`} onChange={(event) => setTargetMode(event.target.value as TargetMode)}>
                   {assignments.map((assignment) => (
                     <option key={assignment.id} value={`assignment:${assignment.id}`}>
@@ -488,9 +441,11 @@ export function ColumnSettingsOverlay({
           >
             Lewati kolom
           </button>
-          <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(column)}>
-            Reset
-          </button>
+          {showAdvanced ? (
+            <button type="button" className="sipena-column-btn sipena-column-btn-subtle" onClick={() => onResetColumnSelection(column)}>
+              Reset
+            </button>
+          ) : null}
         </div>
       </section>
     </div>
