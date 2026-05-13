@@ -397,6 +397,11 @@ export function buildExecutableImportOperations({
     const mode = effectiveValueMode(operation, updateMode, selectionState);
     const hasExisting = hasExistingGrade(operation);
 
+    if (hasExisting && Number(operation.existingValue) === Number(resolvedValue)) {
+      skippedItems.push(skippedItem(operation, "existing_value", "Nilai Excel sama dengan nilai SIPENA, jadi otomatis dilewati."));
+      return;
+    }
+
     if (hasExisting && (mode === "fill_empty_only" || mode === "skip_existing" || mode === "overwrite_selected_columns")) {
       skippedItems.push(skippedItem(operation, "existing_value", "Nilai lama sudah ada dan mode import tidak mengizinkan overwrite."));
       return;

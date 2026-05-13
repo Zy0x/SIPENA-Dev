@@ -294,7 +294,7 @@ describe("phase 12 grade import regression suite", () => {
     const skippedByRow = buildExecutableImportOperations({ plan, resolverState: { ignoredRows: [2] } });
 
     expect(blocked.summary.overwriteNeedsConfirmationCount).toBe(1);
-    expect(blocked.summary.blockedCount).toBe(2);
+    expect(blocked.summary.blockedCount).toBe(1);
     expect(executable.summary.executableCount).toBe(2);
     expect(executable.summary.overwriteCount).toBe(1);
     expect(executable.operations.find((operation) => operation.rowIndex === 3)?.value).toBe(90);
@@ -310,16 +310,15 @@ describe("phase 12 grade import regression suite", () => {
     const previewSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/SmartSpreadsheetPreview.tsx"), "utf8");
     const previewBannerSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewSummaryBanner.tsx"), "utf8");
     const previewBadgeSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewCellBadge.tsx"), "utf8");
-    const quickActionsSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewQuickActions.tsx"), "utf8");
+    const issueStepSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/ImportIssueResolutionStep.tsx"), "utf8");
     const fixPanelSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
     const globalStyles = readFileSync(resolve(process.cwd(), "apps/frontend/src/index.css"), "utf8");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).not.toContain("ImportComplexityMode");
-    expect(dialogSource).toContain("Mode Cepat aktif");
-    expect(dialogSource).toContain("Mode Lanjutan aktif");
-    expect(dialogSource).toContain("Atur manual");
-    expect(dialogSource).toContain('const importSteps = ["Upload", "Pemeriksaan", "Verifikasi Tabel", "Review Akhir", "Simpan"]');
+    expect(dialogSource).not.toContain("Mode Cepat aktif");
+    expect(dialogSource).not.toContain("Mode Lanjutan aktif");
+    expect(dialogSource).toContain('const importSteps = ["Upload", "Pemeriksaan", "Verifikasi Tabel", "Daftar Bermasalah", "Review Akhir", "Simpan"]');
     expect(dialogSource).not.toContain("AI Agent Menyelesaikan");
     expect(dialogSource).toContain("Template resmi siap direview");
     expect(dialogSource).toContain("Identitas template SIPENA valid. Siswa dan kolom diproses otomatis tanpa AI atau pencocokan manual.");
@@ -329,10 +328,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("<SpreadsheetPreviewStep");
     expect(previewSource).toContain("sipena-preview-header-button");
     expect(previewSource).toContain("ColumnSettingsOverlay");
-    expect(previewSource).toContain('type PreviewMode = "quick" | "detail"');
-    expect(previewSource).toContain("Mode Cepat");
-    expect(previewSource).toContain("Mode Detail");
-    expect(previewSource).toContain("sipena-preview-mode-toggle");
+    expect(previewSource).not.toContain('type PreviewMode = "quick" | "detail"');
+    expect(previewSource).not.toContain("Mode Cepat");
+    expect(previewSource).not.toContain("Mode Detail");
+    expect(previewSource).not.toContain("sipena-preview-mode-toggle");
     expect(previewSource).toContain("sipena-preview-status-pill");
     expect(previewSource).toContain("Klik header untuk atur kolom");
     expect(previewSource).toContain("Klik sel untuk pakai/lewati");
@@ -346,13 +345,16 @@ describe("phase 12 grade import regression suite", () => {
     expect(previewSource).toContain("onResetCellSelection(cell)");
     expect(dialogSource).toContain("onResetRowSelection");
     expect(dialogSource).toContain("ignoredCells: current.ignoredCells.filter");
-    expect(fixPanelSource).toContain("Kembalikan baris");
+    expect(fixPanelSource).toContain("Pakai rekomendasi");
+    expect(fixPanelSource).toContain("Pilih Siswa yang Sudah Ada");
+    expect(issueStepSource).toContain("Daftar Bermasalah");
+    expect(issueStepSource).toContain("InlineColumnTargetFix");
     expect(globalStyles).toContain("sipena-preview-header-target");
     expect(globalStyles).toContain("sipena-preview-cell-details");
     expect(globalStyles).toContain("sipena-preview-cell-actions");
     expect(globalStyles).toContain("sipena-preview-modebar");
     expect(globalStyles).toContain("sipena-preview-status-pill--ready");
-    expect(globalStyles).toContain("sipena-preview-shell--quick");
+    expect(globalStyles).not.toContain("sipena-preview-shell--quick");
     expect(globalStyles).toContain("--sipena-preview-sticky-3: 152px");
     expect(globalStyles).toContain("width: 184px");
     expect(previewBadgeSource).toContain("Tidak valid");
@@ -407,11 +409,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(fixPanelSource).toContain('(["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[])');
     expect(fixPanelSource).toContain('(columnSetting?.valueMode || targetColumn.effectiveValueMode) === "overwrite_existing"');
     expect(fixPanelSource).not.toContain("complexityMode");
-    expect(quickActionsSource).toContain("Tinjau Saran AI");
-    expect(quickActionsSource).toContain("Semua pilihan tetap perlu dicek user");
+    expect(issueStepSource).toContain("Target kolom");
+    expect(issueStepSource).toContain("Pilih target");
     expect(dialogSource).toContain("sipena-smart-fix-needs");
     expect(dialogSource).toContain("Tinjau item perlu dicek");
-    expect(quickActionsSource).not.toContain("complexityMode");
+    expect(issueStepSource).not.toContain("complexityMode");
   });
 
   it("guards atomic batch import RPC and duplicate-grade hard errors in SQL", () => {

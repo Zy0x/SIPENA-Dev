@@ -95,6 +95,26 @@ function plan(overrides: Partial<ImportPlan> = {}): ImportPlan {
 }
 
 describe("executable import builder", () => {
+  it("auto-skips values that are already the same in SIPENA", () => {
+    const result = buildExecutableImportOperations({
+      plan: plan({
+        updateMode: "overwrite_existing",
+        gradeOperations: [operation({ existingValue: 80, value: 80, updateMode: "overwrite_existing", action: "overwrite" })],
+      }),
+      updateMode: "overwrite_existing",
+      selectionState: {
+        columnSettings: {
+          "excel-col-4": { columnId: "excel-col-4", columnIndex: 4, include: true, valueMode: "overwrite_existing", overwriteConfirmed: true },
+        },
+        cellSettings: {},
+      },
+    });
+
+    expect(result.summary.executableCount).toBe(0);
+    expect(result.summary.skippedExistingCount).toBe(1);
+    expect(result.skippedItems[0]?.message).toContain("sama");
+  });
+
   it("skips every operation in a skipped column", () => {
     const result = buildExecutableImportOperations({
       plan: plan(),

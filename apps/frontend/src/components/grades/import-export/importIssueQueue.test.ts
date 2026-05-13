@@ -103,7 +103,9 @@ describe("invalid issue queue", () => {
     const issues = buildInvalidIssueQueue(model([duplicateRow, invalidRow]));
 
     expect(issues[0]).toMatchObject({ kind: "cell", rootCause: "invalid_value" });
+    expect(issues[0]).toMatchObject({ fixKind: "cell" });
     expect(issues.some((issue) => issue.kind === "row" && issue.rootCause === "student_duplicate")).toBe(true);
+    expect(issues.some((issue) => issue.fixKind === "student" && issue.row?.id === "row-6")).toBe(true);
     expect(issues.filter((issue) => issue.kind === "row" && issue.row?.id === "row-6")).toHaveLength(1);
   });
 
@@ -180,5 +182,6 @@ describe("invalid issue queue", () => {
 
     expect(issues.filter((issue) => issue.kind === "column" && issue.column?.id === "excel-col-5")).toHaveLength(1);
     expect(issues[0]).toMatchObject({ rootCause: "column_target", scope: "column" });
+    expect(issues[0]).toMatchObject({ fixKind: "column" });
   });
 });

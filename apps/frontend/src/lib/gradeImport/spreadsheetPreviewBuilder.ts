@@ -69,6 +69,9 @@ export type SpreadsheetPreviewCell = {
   oldValue?: string | number | null;
   newValue?: string | number | null;
   suggestedValue?: number;
+  convertedValue?: number;
+  conversionLabel?: string;
+  isAutoSkippedSameValue?: boolean;
   resolvedValue?: number | null;
   acceptedSuggestedValue?: boolean;
   status: PreviewCellStatus;
@@ -434,7 +437,7 @@ function operationDecision(
     }
     return { ...base, status: isManuallyIncluded ? "manual_included" : "skipped", effectiveInclude: false };
   }
-  return { ...base, status: isManuallyIncluded ? "manual_included" : "included", effectiveInclude: true };
+  return { ...base, status: "skipped", effectiveInclude: false };
 }
 
 function cellMessage(status: PreviewCellStatus): string {
@@ -554,10 +557,19 @@ export function buildSpreadsheetPreviewModel({
         oldValue: operation?.existingValue,
         newValue: resolvedValue ?? operation?.value ?? operation?.suggestedValue,
         suggestedValue: operation?.suggestedValue,
+        convertedValue: operation?.isAutoConverted ? operation.suggestedValue : undefined,
+        conversionLabel: operation?.conversionLabel,
+        isAutoSkippedSameValue: operation?.existingValue !== null
+          && operation?.existingValue !== undefined
+          && resolvedValue !== null
+          && resolvedValue !== undefined
+          && Number(operation.existingValue) === Number(resolvedValue),
         resolvedValue,
         acceptedSuggestedValue: Boolean(cellSetting?.acceptedSuggestedValue),
         status,
-        message: operation?.suggestedValue !== undefined && resolvedValue === null
+        message: operation?.isAutoConverted && operation.conversionLabel
+          ? operation.conversionLabel
+          : operation?.suggestedValue !== undefined && resolvedValue === null
           ? `Pakai nilai saran ${operation.suggestedValue} jika konversi ini benar.`
           : cellMessage(status),
         recommendedActionLabel: recommendedAction(status),

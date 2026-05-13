@@ -71,6 +71,31 @@ describe("preview visual state", () => {
     expect(getCellPreviewVisualState(cell({ status: "new_value", newValue: 82 }), gradeColumn).tone).toBe("new");
   });
 
+  it("uses gray for values that match SIPENA and are auto-skipped", () => {
+    const visual = getCellPreviewVisualState(cell({
+      status: "skipped",
+      oldValue: 82,
+      newValue: 82,
+      effectiveInclude: false,
+      isAutoSkippedSameValue: true,
+    }), gradeColumn);
+
+    expect(visual.tone).toBe("skip");
+    expect(visual.label).toBe("Sama, dilewati");
+  });
+
+  it("marks converted fractions as new values", () => {
+    const visual = getCellPreviewVisualState(cell({
+      status: "new_value",
+      rawValue: "8/10",
+      convertedValue: 80,
+      newValue: 80,
+    }), gradeColumn);
+
+    expect(visual.tone).toBe("new");
+    expect(visual.label).toBe("Dikonversi");
+  });
+
   it("does not paint row-blocked valid grade values red", () => {
     expect(getCellPreviewVisualState(cell({
       status: "blocked",

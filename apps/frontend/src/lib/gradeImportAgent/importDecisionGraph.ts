@@ -14,6 +14,7 @@ function operationSourceLabel(operation: GradeOperation): string {
 }
 
 function decisionAction(operation: GradeOperation, executable: boolean): ImportDecisionAction {
+  if (executable && operation.isAutoConverted && (operation.existingValue === null || operation.existingValue === undefined)) return "convert";
   if (executable) return operation.existingValue !== null && operation.existingValue !== undefined ? "overwrite" : "save";
   if (operation.action === "overwrite") return "overwrite";
   if (operation.action === "needs_confirmation" && operation.suggestedValue !== undefined) return "convert";
@@ -36,6 +37,7 @@ function decisionReason(operation: GradeOperation, executable: boolean): string 
   if (executable && operation.existingValue !== null && operation.existingValue !== undefined) {
     return "Nilai siap disimpan sebagai overwrite yang sudah lolos pemeriksaan.";
   }
+  if (executable && operation.isAutoConverted && operation.conversionLabel) return operation.conversionLabel;
   if (executable) return "Nilai siap disimpan karena siswa, target, dan nilai sudah aman.";
   if (operation.action === "skip_empty") return "Sel kosong dilewati dan tidak menghapus nilai lama.";
   if (operation.action === "skip_existing") return "Nilai lama sudah ada dan mode aman tidak menimpa otomatis.";
@@ -76,8 +78,8 @@ export function buildImportDecisionGraph(
     const executableOperation = executableByOperationId.get(operation.id);
     const skipped = skippedByOperationId.get(operation.id);
     const blocked = blockedByOperationId.get(operation.id);
-    const action = decisionAction(operation, Boolean(executableOperation));
-    const status = decisionStatus(operation, Boolean(executableOperation));
+    const action = skipped ? "skip" : decisionAction(operation, Boolean(executableOperation));
+    const status = skipped ? "will_skip" : decisionStatus(operation, Boolean(executableOperation));
 
     return {
       id: operation.id,

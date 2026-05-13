@@ -17,6 +17,7 @@ export type InvalidIssueRootCause =
 export interface InvalidIssue {
   id: string;
   kind: InvalidIssueKind;
+  fixKind: "student" | "column" | "cell";
   row?: SpreadsheetPreviewRow;
   column?: SpreadsheetPreviewColumn;
   cell?: SpreadsheetPreviewCell;
@@ -234,6 +235,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       issues.push({
         id: `cell:${cell.id}`,
         kind: "cell",
+        fixKind: "cell",
         scope: "cell",
         rootCause: cell.status === "invalid" ? "invalid_value" : "overwrite",
         row,
@@ -254,6 +256,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       issues.push({
         id: `row:${row.id}`,
         kind: "row",
+        fixKind: "student",
         scope: "row",
         rootCause: rowRootCause(row),
         row,
@@ -275,6 +278,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
     issues.push({
       id: `column:${column.id}`,
       kind: "column",
+      fixKind: "column",
       scope: "column",
       rootCause: columnRootCause(column),
       column,
@@ -293,6 +297,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
     .map((issue) => ({
       id: issue.id,
       kind: issue.kind,
+      fixKind: issue.fixKind,
       row: issue.row,
       column: issue.column,
       cell: issue.cell,

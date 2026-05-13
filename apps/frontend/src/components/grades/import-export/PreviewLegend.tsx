@@ -5,6 +5,7 @@ const legendItems: Array<{ tone: PreviewVisualTone; label: string }> = [
   { tone: "new", label: "Nilai baru" },
   { tone: "change", label: "Perubahan/timpa" },
   { tone: "danger", label: "Bermasalah" },
+  { tone: "skip", label: "Dilewati" },
   { tone: "blocked", label: "Ditahan" },
 ];
 

@@ -486,12 +486,16 @@ export function buildImportPlan(
         ? findExistingGrade(context.existingGrades || [], studentMapping.studentId, column.target)
         : undefined;
       const selected = selectedColumns.size === 0 || selectedColumns.has(column.columnIndex);
-      const baseAction = decideOperationAction(parsedValue.value, existing?.value, updateMode, selected);
+      const isAutoConverted = parsedValue.status === "needs_confirmation"
+        && parsedValue.suggestedValue !== undefined
+        && parsedValue.warnings.some((warning) => warning.code.includes("GRADE_VALUE_FRACTION"));
+      const operationValue = isAutoConverted ? parsedValue.suggestedValue ?? null : parsedValue.value;
+      const baseAction = decideOperationAction(operationValue, existing?.value, updateMode, selected);
       const action: GradeOperation["action"] = operationConflicts.length
         ? "blocked"
         : skipStudentRow
         ? "skip_empty"
-        : parsedValue.status === "needs_confirmation" || column.status === "needs_confirmation" || studentMapping?.status === "ambiguous"
+        : (!isAutoConverted && parsedValue.status === "needs_confirmation") || column.status === "needs_confirmation" || studentMapping?.status === "ambiguous"
           ? "needs_confirmation"
           : baseAction;
 
@@ -506,8 +510,12 @@ export function buildImportPlan(
         studentId: studentMapping?.studentId,
         target,
         rawValue,
-        value: parsedValue.value,
+        value: operationValue,
         suggestedValue: parsedValue.suggestedValue,
+        isAutoConverted,
+        conversionLabel: isAutoConverted && parsedValue.suggestedValue !== undefined
+          ? `${rawValue ?? ""} dikonversi ke ${parsedValue.suggestedValue}`
+          : undefined,
         existingValue: existing?.value,
         updateMode,
         action,

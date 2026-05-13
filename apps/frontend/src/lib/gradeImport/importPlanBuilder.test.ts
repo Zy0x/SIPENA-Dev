@@ -243,7 +243,7 @@ describe("import plan fail-closed regression", () => {
       plan: missingStudentPlan,
       resolverState: { ignoredColumns: [4] },
     }).summary.skippedManualCount).toBe(1);
-    expect(buildExecutableImportOperations({ plan: fractionPlan }).summary.executableCount).toBe(0);
+    expect(buildExecutableImportOperations({ plan: fractionPlan }).summary.executableCount).toBe(1);
     expect(buildExecutableImportOperations({
       plan: fractionPlan,
       selectionState: {

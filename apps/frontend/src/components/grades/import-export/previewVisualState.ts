@@ -99,6 +99,10 @@ export function getCellPreviewVisualState(
     return state("danger", "Tidak valid", "Nilai Excel tidak valid dan tidak bisa diimport otomatis.");
   }
 
+  if (cell.isAutoSkippedSameValue) {
+    return state("skip", "Sama, dilewati", "Nilai Excel sama dengan nilai SIPENA, jadi otomatis dilewati.");
+  }
+
   if (!cell.isManuallySkipped && !["ignored", "manual_skipped"].includes(cell.status) && (cell.isBlockedByRow || cell.isBlockedByColumn || cell.isBlockedByTarget || cell.status === "blocked" || cell.status === "manual_required")) {
     if (cell.requiresConfirmation) {
       return state("change", "Perlu konfirmasi", "Nilai perlu dikonfirmasi sebelum disimpan.");
@@ -122,6 +126,9 @@ export function getCellPreviewVisualState(
   }
 
   if (cell.status === "new_value" || cell.status === "manual_included") {
+    if (cell.convertedValue !== undefined) {
+      return state("new", "Dikonversi", "Nilai pecahan valid dikonversi otomatis menjadi angka 0-100.");
+    }
     return state("new", "Nilai baru", "Nilai ini siap diisi ke data yang masih kosong.");
   }
 

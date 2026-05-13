@@ -90,7 +90,13 @@ function normalized(value: string | null | undefined): string {
   return (value || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-function studentCandidates(row: SpreadsheetPreviewRow, students: ImportWebStudent[]): ImportWebStudent[] {
+interface StudentRecommendation {
+  student: ImportWebStudent;
+  score: number;
+  reason: string;
+}
+
+function studentCandidates(row: SpreadsheetPreviewRow, students: ImportWebStudent[]): StudentRecommendation[] {
   const rowName = normalized(row.studentName);
   const rowNisn = normalized(row.nisn);
   return [...students]
@@ -98,15 +104,29 @@ function studentCandidates(row: SpreadsheetPreviewRow, students: ImportWebStuden
       const name = normalized(student.name);
       const nisn = normalized(student.nisn);
       let score = 0;
+      const reasons: string[] = [];
       if (row.studentId === student.id) score += 100;
-      if (rowNisn && nisn && rowNisn === nisn) score += 80;
-      if (rowName && name === rowName) score += 70;
-      if (rowName && name.includes(rowName)) score += 30;
-      if (rowName && rowName.includes(name)) score += 20;
-      return { student, score };
+      if (row.studentId === student.id) reasons.push("sudah cocok dari data import");
+      if (rowNisn && nisn && rowNisn === nisn) {
+        score += 80;
+        reasons.push("NISN sama");
+      }
+      if (rowName && name === rowName) {
+        score += 70;
+        reasons.push("nama sama");
+      }
+      if (rowName && name.includes(rowName)) {
+        score += 30;
+        reasons.push("nama di data siswa memuat nama Excel");
+      }
+      if (rowName && rowName.includes(name)) {
+        score += 20;
+        reasons.push("nama Excel memuat nama data siswa");
+      }
+      return { student, score, reason: reasons[0] || "kandidat terdekat dari daftar siswa" };
     })
+    .filter((item) => item.score > 0)
     .sort((left, right) => right.score - left.score || left.student.name.localeCompare(right.student.name))
-    .map((item) => item.student);
 }
 
 export function PreviewFixPanel({
@@ -196,9 +216,10 @@ export function PreviewFixPanel({
       || cellSetting?.valueMode === "overwrite_existing"
     ),
   );
-  const rowStudentCandidates = useMemo(() => (
+  const rowStudentCandidates = useMemo<StudentRecommendation[]>(() => (
     targetRow ? studentCandidates(targetRow, students).slice(0, 5) : []
   ), [students, targetRow]);
+  const recommendedStudent = rowStudentCandidates[0];
 
   useEffect(() => {
     setSelectedStudentId("");
@@ -373,26 +394,34 @@ export function PreviewFixPanel({
         <div className="mt-4 rounded-2xl border border-border p-3">
           <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">Aksi siswa</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Pilih siswa di kelas aktif jika baris Excel ini sebenarnya milik siswa tersebut. Jika benar-benar siswa baru, tambahkan dulu di Data Siswa lalu upload ulang.
+            Siswa baru tidak dibuat otomatis. Pakai rekomendasi jika benar, pilih siswa yang sudah ada, atau lewati baris ini.
           </p>
-          {rowStudentCandidates.length ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {rowStudentCandidates.map((student) => (
-                <SettingButton key={student.id} onClick={() => onChooseStudent(targetRow, student.id)}>
-                  Pakai {student.name}
+          {recommendedStudent ? (
+            <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-950 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
+              <div className="font-semibold">Rekomendasi aksi</div>
+              <p className="mt-1 leading-5">
+                Pakai <b>{recommendedStudent.student.name}</b>{recommendedStudent.student.nisn ? ` (${recommendedStudent.student.nisn})` : ""}. Alasan: {recommendedStudent.reason}.
+              </p>
+              <div className="mt-3">
+                <SettingButton tone="primary" onClick={() => onChooseStudent(targetRow, recommendedStudent.student.id)}>
+                  Pakai rekomendasi
                 </SettingButton>
-              ))}
+              </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+              Tidak ada rekomendasi siswa yang cukup aman. Pilih siswa dari daftar yang sudah ada, atau lewati baris.
+            </div>
+          )}
           <label className="mt-3 grid gap-1 text-xs font-semibold">
-            Pilih siswa existing
+            Pilih Siswa yang Sudah Ada
             <select
               value={selectedStudentId}
               onChange={(event) => setSelectedStudentId(event.target.value)}
               className="min-h-10 rounded-2xl border border-border bg-white px-3 text-xs font-medium text-slate-800 dark:bg-slate-950 dark:text-slate-100"
             >
               <option value="">Cari dari daftar siswa</option>
-              {students.map((student) => (
+              {[...rowStudentCandidates.map((item) => item.student), ...students.filter((student) => !rowStudentCandidates.some((item) => item.student.id === student.id))].map((student) => (
                 <option key={student.id} value={student.id}>
                   {student.name}{student.nisn ? ` (${student.nisn})` : ""}
                 </option>
@@ -407,9 +436,8 @@ export function PreviewFixPanel({
               }}
               disabled={!selectedStudentId}
             >
-              Pakai siswa terpilih
+              Pakai siswa pilihan
             </SettingButton>
-            <SettingButton tone="warning" onClick={() => onMarkRowUnresolved(targetRow)}>Tandai belum selesai</SettingButton>
           </div>
         </div>
       ) : null}
@@ -434,27 +462,21 @@ export function PreviewFixPanel({
           </>
         ) : targetColumn ? (
           <>
-            <SettingButton tone="primary" onClick={() => onBulkColumnAction(targetColumn, "include_valid")}>Include semua nilai valid</SettingButton>
-            <SettingButton onClick={() => onBulkColumnAction(targetColumn, "skip_all")}>Lewati semua nilai di kolom ini</SettingButton>
-            <SettingButton onClick={() => onBulkColumnAction(targetColumn, "skip_existing")}>Lewati nilai yang sudah ada</SettingButton>
-            <SettingButton onClick={() => onBulkColumnAction(targetColumn, "reset")}>Reset pilihan manual</SettingButton>
+            <SettingButton tone="primary" onClick={() => onBulkColumnAction(targetColumn, "include_valid")}>Pakai kolom</SettingButton>
+            <SettingButton onClick={() => onBulkColumnAction(targetColumn, "skip_all")}>Lewati kolom</SettingButton>
             {targetColumn.status === "new_column" ? <SettingButton tone="primary" onClick={() => onApproveColumn(targetColumn)}>Konfirmasi kolom baru</SettingButton> : null}
-            <SettingButton onClick={() => onIgnoreColumn(targetColumn)}>Abaikan kolom</SettingButton>
             <SettingButton onClick={() => onResetColumnSelection(targetColumn)}>Reset kolom</SettingButton>
+            {showDetail ? (
+              <>
+                <SettingButton onClick={() => onBulkColumnAction(targetColumn, "skip_existing")}>Lewati nilai lama</SettingButton>
+                <SettingButton onClick={() => onIgnoreColumn(targetColumn)}>Abaikan kolom</SettingButton>
+              </>
+            ) : null}
           </>
         ) : targetRow ? (
           <>
-            <SettingButton
-              tone="primary"
-              onClick={() => {
-                if (selectedStudentId) onChooseStudent(targetRow, selectedStudentId);
-              }}
-              disabled={!selectedStudentId}
-            >
-              Pakai siswa terpilih
-            </SettingButton>
             <SettingButton onClick={() => onIgnoreRow(targetRow)}>Lewati baris</SettingButton>
-            <SettingButton onClick={() => onResetRowSelection(targetRow)}>Kembalikan baris</SettingButton>
+            <SettingButton onClick={() => onResetRowSelection(targetRow)}>Reset</SettingButton>
           </>
         ) : null}
         <SettingButton onClick={() => setShowDetail((current) => !current)}>

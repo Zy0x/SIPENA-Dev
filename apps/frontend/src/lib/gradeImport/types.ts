@@ -140,6 +140,8 @@ export interface GradeOperation {
   rawValue?: string | number | null;
   value: number | null;
   suggestedValue?: number;
+  isAutoConverted?: boolean;
+  conversionLabel?: string;
   existingValue?: number | null;
   updateMode: UpdateMode;
   action:

@@ -20,13 +20,11 @@ import {
   type ColumnSettingsChapterOption,
   type ColumnTargetDraft,
 } from "./ColumnSettingsOverlay";
-import { InvalidIssueStepper } from "./InvalidIssueStepper";
 import { PreviewCellBadge } from "./PreviewCellBadge";
 import { PreviewFixPanel } from "./PreviewFixPanel";
 import { PreviewLegend } from "./PreviewLegend";
-import { PreviewQuickActions } from "./PreviewQuickActions";
 import { PreviewSummaryBanner } from "./PreviewSummaryBanner";
-import { buildInvalidIssueQueue, type InvalidIssue } from "./importIssueQueue";
+import { buildInvalidIssueQueue } from "./importIssueQueue";
 import { getCellPreviewVisualState, getColumnPreviewVisualState } from "./previewVisualState";
 
 type Selection =
@@ -34,8 +32,6 @@ type Selection =
   | { kind: "column"; column: SpreadsheetPreviewColumn }
   | { kind: "row"; row: SpreadsheetPreviewRow }
   | null;
-
-type PreviewMode = "quick" | "detail";
 
 function previewStatusTone(tone: string): "ready" | "skip" | "check" | "danger" | "neutral" {
   if (tone === "skip" || tone === "blocked") return "skip";
@@ -84,6 +80,8 @@ function previewCellDetailLines(cell: SpreadsheetPreviewCell, column: Spreadshee
   if (cell.suggestedValue !== undefined && cell.suggestedValue !== null) {
     details.push(`Saran: ${cell.suggestedValue}`);
   }
+  if (cell.convertedValue !== undefined && cell.conversionLabel) details.push(cell.conversionLabel);
+  if (cell.isAutoSkippedSameValue) details.push("Sama dengan nilai SIPENA, otomatis dilewati");
 
   if (cell.message) details.push(cell.message);
   if (cell.effectiveInclude === false || cell.isManuallySkipped) details.push("Tidak akan disimpan");
@@ -153,6 +151,7 @@ export function SmartSpreadsheetPreview({
   onResetCellSelection,
   onChooseStudent,
   onMarkRowUnresolved,
+  onOpenIssueStep,
   aiAssist,
 }: {
   model: SpreadsheetPreviewModel;
@@ -170,6 +169,7 @@ export function SmartSpreadsheetPreview({
   onResetRowSelection: (row: SpreadsheetPreviewRow) => void;
   onChooseStudent: (row: SpreadsheetPreviewRow, studentId: string) => void;
   onMarkRowUnresolved: (row: SpreadsheetPreviewRow) => void;
+  onOpenIssueStep?: () => void;
   onSetColumnInclude: (column: SpreadsheetPreviewColumn, include: boolean) => void;
   onSetColumnHeader: (column: SpreadsheetPreviewColumn, header: string) => void;
   onSetColumnTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
@@ -183,27 +183,12 @@ export function SmartSpreadsheetPreview({
   aiAssist?: SmartImportAssistResponse | null;
 }) {
   const [selection, setSelection] = useState<Selection>(null);
-  const [previewMode, setPreviewMode] = useState<PreviewMode>("quick");
-  const [issueDrawerOpen, setIssueDrawerOpen] = useState(false);
-  const [issueIndex, setIssueIndex] = useState(0);
-  const isDetailMode = previewMode === "detail";
+  const isDetailMode = true;
   const invalidIssues = useMemo(() => buildInvalidIssueQueue(model), [model]);
-
-  const selectIssue = (issue: InvalidIssue) => {
-    if (issue.cell && issue.row && issue.column) {
-      setSelection({ kind: "cell", cell: issue.cell, row: issue.row, column: issue.column });
-    } else if (issue.column) {
-      setSelection({ kind: "column", column: issue.column });
-    } else if (issue.row) {
-      setSelection({ kind: "row", row: issue.row });
-    }
-    setIssueDrawerOpen(false);
-  };
 
   const primarySummaryAction = () => {
     if (invalidIssues.length > 0) {
-      setIssueIndex(0);
-      setIssueDrawerOpen(true);
+      onOpenIssueStep?.();
       return;
     }
     if (model.summary.needsCheck > 0) {
@@ -214,20 +199,6 @@ export function SmartSpreadsheetPreview({
   };
 
   const showFixPanel = Boolean(selection && selection.kind !== "column");
-
-  const openIssueDrawer = () => {
-    if (invalidIssues.length > 0) {
-      setIssueIndex(0);
-      setIssueDrawerOpen(true);
-    }
-  };
-
-  const skipAllInvalidIssues = () => {
-    invalidIssues.forEach((issue) => {
-      if (issue.cell?.status === "invalid") onIgnoreCell(issue.cell);
-    });
-    setIssueIndex(0);
-  };
 
   const toggleCellInclude = (cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow, column: SpreadsheetPreviewColumn) => {
     if (column.type === "identity") {
@@ -249,41 +220,25 @@ export function SmartSpreadsheetPreview({
   };
 
   return (
-    <div className={cn("sipena-preview-shell", `sipena-preview-shell--${previewMode}`)} data-preview-mode={previewMode}>
+    <div className="sipena-preview-shell sipena-preview-shell--detail" data-preview-mode="detail">
       <PreviewSummaryBanner model={model} invalidIssueCount={invalidIssues.length} onPrimaryAction={primarySummaryAction} />
-      <div className="sipena-preview-modebar" aria-label="Mode tampilan tabel import">
+      <div className="sipena-preview-modebar" aria-label="Tampilan tabel import">
         <div className="min-w-0">
-          <p className="sipena-preview-modebar-title">Tampilan tabel</p>
+          <p className="sipena-preview-modebar-title">Tampilan detail</p>
           <p className="sipena-preview-modebar-desc">
-            Mode Cepat lebih ringkas. Mode Detail menampilkan alasan, target, dan tombol per sel.
+            Klik header untuk mengatur kolom. Klik sel atau buka Daftar Bermasalah untuk memperbaiki item langsung.
           </p>
         </div>
-        <div className="sipena-preview-mode-toggle" role="group" aria-label="Pilih mode tampilan tabel">
-          <button
-            type="button"
-            className={cn("sipena-preview-mode-button", previewMode === "quick" && "sipena-preview-mode-button-active")}
-            aria-pressed={previewMode === "quick"}
-            onClick={() => setPreviewMode("quick")}
-          >
-            Mode Cepat
+        {invalidIssues.length > 0 ? (
+          <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={onOpenIssueStep}>
+            Buka Daftar Bermasalah
           </button>
-          <button
-            type="button"
-            className={cn("sipena-preview-mode-button", previewMode === "detail" && "sipena-preview-mode-button-active")}
-            aria-pressed={previewMode === "detail"}
-            onClick={() => setPreviewMode("detail")}
-          >
-            Mode Detail
+        ) : (
+          <button type="button" className="sipena-column-btn" onClick={onApplySafeFixes}>
+            Terapkan pemeriksaan otomatis
           </button>
-        </div>
+        )}
       </div>
-      <PreviewQuickActions
-        onApplySafeFixes={onApplySafeFixes}
-        onApproveSuggestions={invalidIssues.length ? openIssueDrawer : onApproveSuggestions}
-        onIgnoreNonGradeColumns={onIgnoreNonGradeColumns}
-        onPickManualItems={openIssueDrawer}
-        issueCount={invalidIssues.length}
-      />
       <PreviewLegend />
 
       <div className={cn("grid min-w-0 gap-4", showFixPanel && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
@@ -384,6 +339,8 @@ export function SmartSpreadsheetPreview({
                               {shouldShowStatusBadge(cell, column) ? <PreviewCellBadge status={cell.status} /> : null}
                               {cell.isManuallyIncluded ? <span className="sipena-import-cell-mini-badge">Dipilih</span> : null}
                               {cell.isManuallySkipped ? <span className="sipena-import-cell-mini-badge">Dilewati</span> : null}
+                              {cell.convertedValue !== undefined ? <span className="sipena-import-cell-mini-badge">Dikonversi</span> : null}
+                              {cell.isAutoSkippedSameValue ? <span className="sipena-import-cell-mini-badge">Sama</span> : null}
                               {cell.status === "overwrite" ? <span className="sipena-import-cell-mini-badge">Timpa</span> : null}
                               {cell.requiresConfirmation ? <span className="sipena-import-cell-mini-badge">Perlu cek</span> : null}
                             </span>
@@ -468,7 +425,7 @@ export function SmartSpreadsheetPreview({
             onChooseStudent={onChooseStudent}
             onMarkRowUnresolved={onMarkRowUnresolved}
             onApplySafeFixes={onApplySafeFixes}
-            onApproveSuggestions={invalidIssues.length ? openIssueDrawer : onApproveSuggestions}
+            onApproveSuggestions={onApproveSuggestions}
             onSetColumnInclude={onSetColumnInclude}
             onSetColumnValueMode={onSetColumnValueMode}
             onBulkColumnAction={onBulkColumnAction}
@@ -496,18 +453,6 @@ export function SmartSpreadsheetPreview({
           aiAssist={aiAssist}
         />
       ) : null}
-      <InvalidIssueStepper
-        open={issueDrawerOpen && invalidIssues.length > 0}
-        issues={invalidIssues}
-        activeIndex={issueIndex}
-        onOpenChange={setIssueDrawerOpen}
-        onActiveIndexChange={setIssueIndex}
-        onSelectIssue={selectIssue}
-        onSkipCell={onIgnoreCell}
-        onSkipRow={onIgnoreRow}
-        onSkipColumn={onIgnoreColumn}
-        onSkipAllInvalid={skipAllInvalidIssues}
-      />
     </div>
   );
 }
