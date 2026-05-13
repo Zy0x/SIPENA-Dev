@@ -51,7 +51,10 @@ describe("preview visual state", () => {
     expect(getCellPreviewVisualState(
       cell({ columnId: "identity-name", status: "manual_required" }),
       identityColumn,
-      row({ status: "manual_required" }),
+      row({
+        status: "manual_required",
+        conflictIds: ["student:STUDENT_DUPLICATE_EXCEL_MATCH:6::Nama siswa ganda."],
+      }),
     ).tone).toBe("danger");
   });
 
@@ -75,5 +78,32 @@ describe("preview visual state", () => {
       effectiveInclude: false,
       newValue: 82,
     }), gradeColumn, row({ status: "manual_required" })).tone).toBe("blocked");
+  });
+
+  it("keeps identity cells neutral when the row is blocked by value or column issues", () => {
+    expect(getCellPreviewVisualState(
+      cell({ columnId: "identity-name", status: "unchanged", displayValue: "Siti Aminah" }),
+      identityColumn,
+      row({ status: "manual_required", message: "Target kolom belum aman." }),
+    ).tone).toBe("neutral");
+  });
+
+  it("does not mark identity cells red from generic student copy", () => {
+    expect(getCellPreviewVisualState(
+      cell({ columnId: "identity-name", status: "unchanged", displayValue: "Siti Aminah" }),
+      identityColumn,
+      row({ status: "manual_required", message: "Siswa sudah cocok, tetapi ada nilai yang perlu dicek." }),
+    ).tone).toBe("neutral");
+  });
+
+  it("uses amber when a matched student only needs confirmation", () => {
+    expect(getCellPreviewVisualState(
+      cell({ columnId: "identity-name", status: "manual_required", displayValue: "Abdul Hamid" }),
+      identityColumn,
+      row({
+        status: "manual_required",
+        conflictIds: ["student:IMPORT_STUDENT_NOT_SAFE_FOR_VALUE:5:4:Baris siswa belum cocok aman tetapi memiliki nilai yang akan diimport."],
+      }),
+    ).tone).toBe("change");
   });
 });

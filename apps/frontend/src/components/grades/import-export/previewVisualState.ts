@@ -36,6 +36,31 @@ function state(
   };
 }
 
+function hasDangerStudentIdentityIssue(row?: SpreadsheetPreviewRow): boolean {
+  const context = [row?.message, ...(row?.conflictIds || [])].join(" ").toLowerCase();
+  return context.includes("import_student_missing_in_web_for_value")
+    || context.includes("student_missing")
+    || context.includes("student_duplicate")
+    || context.includes("student_match_ambiguous")
+    || context.includes("student_match_duplicate")
+    || context.includes("student_fuzzy_ambiguous")
+    || context.includes("missing_in_web")
+    || context.includes("duplicate")
+    || context.includes("duplikat")
+    || context.includes("ambiguous")
+    || context.includes("ambigu")
+    || context.includes("belum ada di kelas")
+    || context.includes("tidak ditemukan di kelas");
+}
+
+function hasStudentIdentityCheck(row?: SpreadsheetPreviewRow): boolean {
+  const context = [row?.message, ...(row?.conflictIds || [])].join(" ").toLowerCase();
+  return context.includes("student:")
+    || context.includes("student_")
+    || context.includes("perlu cek siswa")
+    || context.includes("belum cocok aman");
+}
+
 export function getColumnPreviewVisualState(column: SpreadsheetPreviewColumn): PreviewVisualState {
   if (column.type === "identity") {
     return state("neutral", "Identitas", "Kolom identitas siswa.");
@@ -60,11 +85,14 @@ export function getCellPreviewVisualState(
   column: SpreadsheetPreviewColumn,
   row?: SpreadsheetPreviewRow,
 ): PreviewVisualState {
-  const rowNeedsStudentAction = row?.status === "manual_required" || cell.status === "manual_required";
   const isIdentity = column.type === "identity";
 
-  if (isIdentity && rowNeedsStudentAction) {
+  if (isIdentity && hasDangerStudentIdentityIssue(row)) {
     return state("danger", "Siswa bermasalah", "Data siswa pada baris ini perlu dipilih atau dilewati.");
+  }
+
+  if (isIdentity && (cell.status === "manual_required" || hasStudentIdentityCheck(row))) {
+    return state("change", "Perlu cek siswa", "Nama atau NISN perlu dikonfirmasi sebelum nilai baris ini dipakai.");
   }
 
   if (cell.status === "invalid") {

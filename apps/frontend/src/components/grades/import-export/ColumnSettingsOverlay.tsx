@@ -302,10 +302,10 @@ export function ColumnSettingsOverlay({
               ) : null}
               <option value="sts">STS - nilai tengah semester</option>
               <option value="sas">SAS - nilai akhir semester</option>
-              <option value="assignment" disabled={!assignments.length}>
+              <option value="assignment" title="Tugas lain" disabled={!assignments.length}>
                 {assignments.length ? "Tugas lain - pilih tugas existing" : "Tugas lain - belum ada tugas"}
               </option>
-              <option value="create">Buat baru - tugas atau BAB baru</option>
+              <option value="create" title="Buat baru">Buat baru - tugas atau BAB baru</option>
               <option value="ignore">Lewati - kolom tidak disimpan</option>
             </select>
             <p className="sipena-column-target-summary">

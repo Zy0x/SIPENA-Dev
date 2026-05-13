@@ -113,6 +113,13 @@ describe("invalid issue queue", () => {
       studentName: "Siswa Baru Uji",
       message: "Siswa belum ada di kelas aktif.",
       conflictIds: ["student:IMPORT_STUDENT_MISSING_IN_WEB_FOR_VALUE:7:4:"],
+      cells: [
+        gradeCell("row-7", "identity-no", { status: "manual_required" }),
+        gradeCell("row-7", "identity-nisn", { status: "manual_required" }),
+        gradeCell("row-7", "identity-name", { status: "manual_required" }),
+        gradeCell("row-7", "excel-col-4", { status: "blocked", isBlockedByRow: true, effectiveInclude: false }),
+        gradeCell("row-7", "excel-col-5", { status: "blocked", isBlockedByRow: true, effectiveInclude: false }),
+      ],
     });
     const ignoredRow = previewRow("row-8", {
       status: "ignored",
@@ -123,7 +130,49 @@ describe("invalid issue queue", () => {
     const issues = buildInvalidIssueQueue(model([missingRow, ignoredRow]));
 
     expect(issues.filter((issue) => issue.rootCause === "student_missing")).toHaveLength(1);
+    expect(issues.filter((issue) => issue.row?.id === "row-7" && issue.kind === "cell")).toHaveLength(0);
     expect(issues.some((issue) => issue.row?.id === "row-8")).toBe(false);
+  });
+
+  it("does not create a student row issue when only column target blocks the row", () => {
+    const targetBlockedRow = previewRow("row-9", {
+      status: "manual_required",
+      studentName: "Siswa Benar",
+      message: "Target kolom belum aman.",
+      conflictIds: [],
+      cells: [
+        gradeCell("row-9", "identity-no", { status: "unchanged" }),
+        gradeCell("row-9", "identity-nisn", { status: "unchanged" }),
+        gradeCell("row-9", "identity-name", { status: "unchanged" }),
+        gradeCell("row-9", "excel-col-4", { status: "blocked", isBlockedByTarget: true, effectiveInclude: false }),
+        gradeCell("row-9", "excel-col-5", { status: "blocked", isBlockedByTarget: true, effectiveInclude: false }),
+      ],
+    });
+
+    const issues = buildInvalidIssueQueue(model([targetBlockedRow]));
+
+    expect(issues.some((issue) => issue.kind === "row" && issue.row?.id === "row-9")).toBe(false);
+  });
+
+  it("does not create a row issue from generic student copy", () => {
+    const valueBlockedRow = previewRow("row-10", {
+      status: "manual_required",
+      studentName: "Siswa Benar",
+      message: "Siswa sudah cocok, tetapi ada nilai yang perlu dicek.",
+      conflictIds: [],
+      cells: [
+        gradeCell("row-10", "identity-no", { status: "unchanged" }),
+        gradeCell("row-10", "identity-nisn", { status: "unchanged" }),
+        gradeCell("row-10", "identity-name", { status: "unchanged" }),
+        gradeCell("row-10", "excel-col-4", { status: "invalid", displayValue: "A", effectiveInclude: true }),
+        gradeCell("row-10", "excel-col-5", { status: "new_value" }),
+      ],
+    });
+
+    const issues = buildInvalidIssueQueue(model([valueBlockedRow]));
+
+    expect(issues.some((issue) => issue.kind === "row" && issue.row?.id === "row-10")).toBe(false);
+    expect(issues.some((issue) => issue.kind === "cell" && issue.row?.id === "row-10")).toBe(true);
   });
 
   it("adds target column issues once", () => {

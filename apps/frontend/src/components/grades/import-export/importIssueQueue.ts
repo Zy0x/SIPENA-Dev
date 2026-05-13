@@ -197,12 +197,37 @@ function columnRootCause(column: SpreadsheetPreviewColumn): InvalidIssueRootCaus
   return "column_target";
 }
 
+function isStudentRowIssue(row: SpreadsheetPreviewRow): boolean {
+  const context = [row.message, ...(row.conflictIds || [])].join(" ").toLowerCase();
+  return textIncludes(context, [
+    "student:",
+    "student_",
+    "import_student_missing_in_web_for_value",
+    "missing_in_web",
+    "duplicate",
+    "duplikat",
+    "ambiguous",
+    "ambigu",
+    "belum ada",
+    "tidak ditemukan",
+  ]);
+}
+
+function isOnlyBlockedByStudentRow(cell: SpreadsheetPreviewCell, row: SpreadsheetPreviewRow): boolean {
+  return isStudentRowIssue(row)
+    && cell.status !== "invalid"
+    && Boolean(cell.isBlockedByRow)
+    && !cell.isBlockedByColumn
+    && !cell.isBlockedByTarget;
+}
+
 export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidIssue[] {
   const issues: Array<InvalidIssue & { priority: number }> = [];
 
   for (const row of model.rows) {
     for (const cell of row.cells) {
       if (!isIssueCell(cell)) continue;
+      if (isOnlyBlockedByStudentRow(cell, row)) continue;
       const column = model.columns.find((item) => item.id === cell.columnId);
       if (!column || column.type === "identity") continue;
       const detail = buildCellDetailCopy(cell, row, column);
@@ -224,7 +249,7 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
       });
     }
 
-    if (row.status === "manual_required") {
+    if (row.status === "manual_required" && isStudentRowIssue(row)) {
       const detail = buildRowDetailCopy(row);
       issues.push({
         id: `row:${row.id}`,
