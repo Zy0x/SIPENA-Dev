@@ -1392,7 +1392,8 @@
 }
 
 .sipena-import-body--issue-step {
-  overflow-y: hidden;
+  overflow-y: auto;
+  scroll-padding-bottom: 96px;
 }
 
 .sipena-issue-step-header {
@@ -1447,7 +1448,7 @@
   gap: 12px;
   align-items: start;
   min-height: 0;
-  height: min(68dvh, 720px);
+  height: auto;
 }
 
 .sipena-issue-list,
@@ -1464,8 +1465,10 @@
   display: grid;
   align-content: start;
   gap: 7px;
-  height: 100%;
-  max-height: none;
+  position: sticky;
+  top: 10px;
+  height: auto;
+  max-height: min(58dvh, 620px);
   overflow-y: auto;
 }
 
@@ -1571,8 +1574,8 @@
   display: grid;
   align-content: start;
   gap: 12px;
-  height: 100%;
-  overflow-y: auto;
+  height: auto;
+  overflow-y: visible;
   padding: 0;
   border: 0;
   background: transparent;
@@ -2122,6 +2125,7 @@
   .sipena-issue-list {
     display: flex;
     gap: 8px;
+    position: static;
     height: auto;
     max-height: none;
     overflow-x: auto;

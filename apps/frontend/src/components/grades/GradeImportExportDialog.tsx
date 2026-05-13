@@ -4318,12 +4318,14 @@ export default function GradeImportExportDialog({
                     <ImportStepper steps={importSteps} currentIndex={stepIndex} />
                   </section>
 
-                  <ImportGuardrailPanel
-                    readyCount={executableImportPlan?.summary.executableCount || 0}
-                    skippedExistingCount={executableImportPlan?.summary.skippedExistingCount || 0}
-                    blockedCount={executableImportPlan?.summary.blockedCount || 0}
-                    overwriteNeedsConfirmationCount={executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0}
-                  />
+                  {stepIndex === 2 ? null : (
+                    <ImportGuardrailPanel
+                      readyCount={executableImportPlan?.summary.executableCount || 0}
+                      skippedExistingCount={executableImportPlan?.summary.skippedExistingCount || 0}
+                      blockedCount={executableImportPlan?.summary.blockedCount || 0}
+                      overwriteNeedsConfirmationCount={executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0}
+                    />
+                  )}
 
                   {stepIndex === 0 ? (
                     <>
