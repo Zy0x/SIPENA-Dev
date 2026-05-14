@@ -208,6 +208,7 @@ export function ImportIssueResolutionStep({
   const isDuplicateStudentIssue = activeIssue?.rootCause === "student_duplicate";
   const activeIssueCount = issues.length;
   const completedIssueCount = issueBoard.length - activeIssueCount;
+  const totalIssueCount = issueBoard.length;
 
   const rememberIssue = (issue: InvalidIssue | null | undefined, resolutionStatus: IssueResolutionStatus, resolutionLabel?: string) => {
     if (!issue) return;
@@ -253,10 +254,15 @@ export function ImportIssueResolutionStep({
       setActiveIssueId(null);
       return;
     }
+    const selectedIssue = issueBoard.find((issue) => issue.id === activeIssueId);
+    if (selectedIssue?.resolutionStatus && issues.length) {
+      setActiveIssueId(issues[0].id);
+      return;
+    }
     if (!activeIssueId || !issueBoard.some((issue) => issue.id === activeIssueId)) {
       setActiveIssueId(issueBoard[0].id);
     }
-  }, [activeIssueId, issueBoard]);
+  }, [activeIssueId, issueBoard, issues]);
 
   const handleResetActiveIssue = (issue: IssueBoardItem) => {
     clearIssueMemory(issue);
@@ -273,8 +279,8 @@ export function ImportIssueResolutionStep({
           <p>Selesaikan masalah utama dari sini. Pilih item, lihat konteksnya, lalu pakai aksi yang paling aman.</p>
         </div>
         <div className="sipena-issue-step-summary">
-          <b>{activeIssueCount}</b>
-          <span>{completedIssueCount ? `${completedIssueCount} selesai` : "masalah tersisa"}</span>
+          <b>{completedIssueCount}/{totalIssueCount || 0}</b>
+          <span>{activeIssueCount ? `${activeIssueCount} masalah tersisa` : "selesai"}</span>
         </div>
       </div>
 
@@ -314,12 +320,14 @@ export function ImportIssueResolutionStep({
                   <h4>{activeIssue.title}</h4>
                   <p>{activeIssue.description}</p>
                 </div>
+                {!activeIssue.resolutionStatus ? (
                 <div className="sipena-issue-active-details">
                   <b>{activeIssue.detailTitle}</b>
                   <ul>
-                    {activeIssue.detailBullets.slice(0, 3).map((bullet) => <li key={bullet}>{bullet}</li>)}
+                    {activeIssue.detailBullets.slice(0, 2).map((bullet) => <li key={bullet}>{bullet}</li>)}
                   </ul>
                 </div>
+                ) : null}
               </div>
             ) : null}
             {activeIssue && !activeIssue.resolutionStatus ? (
@@ -343,7 +351,7 @@ export function ImportIssueResolutionStep({
             {activeIssue?.resolutionStatus ? (
               <div className="sipena-issue-completed-panel">
                 <b>{issueStatusLabel(activeIssue)}</b>
-                <p>Item ini sudah diproses. Jika keputusan belum tepat, buka ulang pilihan lalu atur kembali.</p>
+                <p>Item sudah diproses. Ubah hanya jika pilihan tadi belum tepat.</p>
                 <button type="button" className="sipena-column-btn" onClick={() => handleResetActiveIssue(activeIssue)}>
                   Ubah pilihan
                 </button>

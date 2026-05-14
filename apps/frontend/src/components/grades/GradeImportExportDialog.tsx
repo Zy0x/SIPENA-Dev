@@ -4251,17 +4251,17 @@ export default function GradeImportExportDialog({
     if (tab !== "import") return "Data tidak akan ditimpa tanpa konfirmasi.";
     if (regionSelectionPending) return "Pilih tabel nilai yang ingin dipakai.";
     if (unsupported) return "Format file belum bisa dibaca.";
+    if (stepIndex === 2 && activeImportIssueCount > 0) {
+      return `Selesaikan ${activeImportIssueCount} masalah utama dulu. Header dan nilai kolom diatur pada langkah berikutnya.`;
+    }
+    if (stepIndex === 3 && activeHeaderIssueCount > 0) {
+      return `Selesaikan ${activeHeaderIssueCount} header di Konfigurasi Header terlebih dahulu.`;
+    }
     if (stepIndex >= 2 && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) {
       return "Nilai lama yang akan diganti harus dikonfirmasi dulu.";
     }
-    if (stepIndex >= 2 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
+    if (stepIndex >= 4 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
       return `Simpan belum bisa karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
-    }
-    if (stepIndex >= 2 && stepIndex <= 5 && activeImportIssueCount > 0) {
-      return `Lanjut belum bisa - selesaikan ${activeImportIssueCount} masalah di Daftar Bermasalah.`;
-    }
-    if (stepIndex >= 3 && stepIndex <= 5 && activeHeaderIssueCount > 0) {
-      return `Lanjut belum bisa - selesaikan ${activeHeaderIssueCount} header di Konfigurasi Header.`;
     }
     if (stepIndex >= 2 && executableImportPlan) {
       const skipped = executableImportPlan.summary.skippedEmptyCount
@@ -4300,7 +4300,9 @@ export default function GradeImportExportDialog({
       if ((plan?.conflicts || []).some((item) => item.code.includes("CONTEXT") || item.code.includes("SEMESTER"))) {
         return "Download template baru jika file berasal dari kelas/mapel/semester lain.";
       }
-      if (blockedItemCount > 0 || blocked) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
+      if (stepIndex === 2 && activeImportIssueCount > 0) return `Selesaikan ${activeImportIssueCount} masalah utama terlebih dahulu.`;
+      if (stepIndex === 3 && activeHeaderIssueCount > 0) return `Selesaikan ${activeHeaderIssueCount} header terlebih dahulu.`;
+      if (stepIndex >= 4 && (blockedItemCount > 0 || blocked)) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
       if (activeImportIssueCount > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
       if (activeHeaderIssueCount > 0) return "Selesaikan Konfigurasi Header terlebih dahulu.";
       return "Periksa item yang perlu dicek terlebih dahulu.";
