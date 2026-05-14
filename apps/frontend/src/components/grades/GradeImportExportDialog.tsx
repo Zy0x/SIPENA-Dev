@@ -2713,7 +2713,15 @@ function finalResultCellValue(cell: SpreadsheetPreviewCell, column: SpreadsheetP
   return String(cell.resolvedValue ?? cell.newValue ?? cell.suggestedValue ?? cell.oldValue ?? "-");
 }
 
-function FinalReviewResultTable({ model }: { model: SpreadsheetPreviewModel }) {
+function FinalReviewResultTable({
+  model,
+  hasBlockingIssues,
+}: {
+  model: SpreadsheetPreviewModel;
+  hasBlockingIssues: boolean;
+}) {
+  const needsAttention = hasBlockingIssues ? model.summary.manualRequired + model.summary.invalidCells : 0;
+
   return (
     <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -2723,8 +2731,8 @@ function FinalReviewResultTable({ model }: { model: SpreadsheetPreviewModel }) {
             Tampilan akhir setelah masalah dan header diselesaikan. Tabel ini hanya untuk review, tanpa pengeditan.
           </p>
         </div>
-        <StatusBadge tone={model.summary.manualRequired || model.summary.invalidCells ? "warning" : "success"}>
-          {model.summary.manualRequired || model.summary.invalidCells ? "Cek ulang" : "Siap import"}
+        <StatusBadge tone={needsAttention ? "warning" : "success"}>
+          {needsAttention ? "Cek ulang" : "Siap import"}
         </StatusBadge>
       </div>
       <div className="mt-4 overflow-hidden rounded-2xl border border-border">
@@ -2858,18 +2866,26 @@ function PreviewStep({
   plan,
   model,
   review,
+  hasBlockingIssues,
   onOpenFixStep,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
   review: FinalReviewModel | null;
+  hasBlockingIssues: boolean;
   onOpenFixStep: () => void;
 }) {
   if (!plan) {
     return <EmptyPanel title="Review belum tersedia" description="Ringkasan akhir akan muncul setelah file selesai dianalisis dan pencocokan aman." />;
   }
 
-  const isBlocked = hasBlockedConflicts(plan);
+  const isBlocked = hasBlockingIssues && hasBlockedConflicts(plan);
+  const reviewNeedsAttention = hasBlockingIssues && review
+    ? review.summary.manualChoiceRequired + review.summary.blocked
+    : 0;
+  const modelNeedsAttention = hasBlockingIssues && model
+    ? model.summary.manualRequired + model.summary.invalidCells
+    : 0;
 
   return (
     <div className="space-y-4">
@@ -2882,8 +2898,8 @@ function PreviewStep({
                 Review Akhir menampilkan tabel keputusan final sebelum simpan. Ubah kolom dari Konfigurasi Header atau nilai dari Verifikasi Tabel.
               </p>
             </div>
-            <StatusBadge tone={review.canExecute ? "success" : "warning"}>
-              {review.canExecute ? "Siap simpan" : "Perlu dicek"}
+            <StatusBadge tone={!reviewNeedsAttention ? "success" : "warning"}>
+              {!reviewNeedsAttention ? "Siap simpan" : "Perlu dicek"}
             </StatusBadge>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -2891,16 +2907,16 @@ function PreviewStep({
             <MetricCard label="Dikonversi" value={review.summary.convert} tone="blue" />
             <MetricCard label="Ditimpa" value={review.summary.overwrite} tone={review.summary.overwrite ? "orange" : "info"} />
             <MetricCard label="Di-skip" value={review.summary.skip} tone="info" />
-            <MetricCard label="Perlu perhatian" value={review.summary.manualChoiceRequired + review.summary.blocked} tone={review.summary.manualChoiceRequired + review.summary.blocked ? "red" : "green"} />
+            <MetricCard label="Perlu perhatian" value={reviewNeedsAttention} tone={reviewNeedsAttention ? "red" : "green"} />
           </div>
-          {review.disabledReason ? (
+          {hasBlockingIssues && review.disabledReason ? (
             <p className="mt-3 text-xs leading-5 text-orange-700 dark:text-orange-200">{review.disabledReason}</p>
           ) : null}
         </section>
       ) : null}
 
       {review ? (
-        model ? <FinalReviewResultTable model={model} /> : null
+        model ? <FinalReviewResultTable model={model} hasBlockingIssues={hasBlockingIssues} /> : null
       ) : null}
 
       {review ? (
@@ -2914,15 +2930,15 @@ function PreviewStep({
               <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Ringkasan tabel terverifikasi</h3>
               <p className="mt-1 text-xs text-muted-foreground">Angka ini berasal dari tabel yang sudah diverifikasi pada langkah sebelumnya.</p>
             </div>
-            <StatusBadge tone={model.summary.manualRequired || model.summary.invalidCells ? "danger" : "safe"}>
-              {model.summary.manualRequired || model.summary.invalidCells ? "Perlu dicek" : "Siap import"}
+            <StatusBadge tone={modelNeedsAttention ? "danger" : "safe"}>
+              {modelNeedsAttention ? "Perlu dicek" : "Siap import"}
             </StatusBadge>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard label="Nilai dipilih" value={model.summary.includedCells} tone="green" />
             <MetricCard label="Nilai dilewati" value={model.summary.skippedCells + model.summary.manualSkippedCells} tone="info" />
             <MetricCard label="Nilai akan ditimpa" value={model.summary.overwriteCells} tone={model.summary.overwriteCells > 0 ? "orange" : "info"} />
-            <MetricCard label="Nilai perlu dicek" value={model.summary.manualRequired + model.summary.invalidCells} tone={(model.summary.manualRequired + model.summary.invalidCells) > 0 ? "red" : "green"} />
+            <MetricCard label="Nilai perlu dicek" value={modelNeedsAttention} tone={modelNeedsAttention > 0 ? "red" : "green"} />
           </div>
         </section>
       ) : null}
@@ -3887,6 +3903,7 @@ export default function GradeImportExportDialog({
     [effectiveSelectionState, spreadsheetPreview],
   );
   const activeHeaderIssueCount = activeHeaderIssues.length;
+  const workflowIssuesResolved = activeImportIssueCount === 0 && activeHeaderIssueCount === 0;
   const executableImportPlan = useMemo(() => (
     plan ? buildExecutableImportOperations({ plan, resolverState: effectiveResolverState, selectionState: effectiveSelectionState, updateMode: effectiveUpdateMode }) : null
   ), [effectiveResolverState, effectiveSelectionState, effectiveUpdateMode, plan]);
@@ -4140,7 +4157,7 @@ export default function GradeImportExportDialog({
           selectionState: effectiveSelectionState,
           updateMode: effectiveUpdateMode,
         });
-        if (executablePlan.summary.overwriteNeedsConfirmationCount > 0) {
+        if (!workflowIssuesResolved && executablePlan.summary.overwriteNeedsConfirmationCount > 0) {
           setStepIndex(3);
           showWarning(
             "Nilai lama perlu dikonfirmasi dulu.",
@@ -4148,7 +4165,7 @@ export default function GradeImportExportDialog({
           );
           return;
         }
-        if (executablePlan.summary.blockedCount > 0) {
+        if (!workflowIssuesResolved && executablePlan.summary.blockedCount > 0) {
           setStepIndex(activeImportIssueCount > 0 ? 2 : activeHeaderIssueCount > 0 ? 3 : 4);
           showWarning(
             "Simpan belum bisa karena masih ada item yang perlu dipilih.",
@@ -4258,6 +4275,7 @@ export default function GradeImportExportDialog({
     stepIndex,
     success,
     tab,
+    workflowIssuesResolved,
   ]);
 
   const handleBack = useCallback(() => {
@@ -4292,13 +4310,18 @@ export default function GradeImportExportDialog({
   const readyImportCount = finalReviewModel
     ? finalReviewModel.summary.save + finalReviewModel.summary.convert + finalReviewModel.summary.overwrite
     : executableImportPlan?.summary.executableCount ?? plan?.summary.readyImportCount ?? 0;
-  const needsCheckCount = (smartFixResult?.needsConfirmationCount || 0)
+  const rawNeedsCheckCount = (smartFixResult?.needsConfirmationCount || 0)
     + (smartFixResult?.manualRequiredCount || 0)
     + (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0);
-  const blockedItemCount = finalReviewModel?.summary.blocked
+  const rawBlockedItemCount = finalReviewModel?.summary.blocked
     ?? executableImportPlan?.summary.blockedCount
     ?? plan?.conflicts.filter((item) => item.severity === "blocked").length
     ?? 0;
+  const needsCheckCount = workflowIssuesResolved && stepIndex >= 4 ? 0 : rawNeedsCheckCount;
+  const blockedItemCount = workflowIssuesResolved && stepIndex >= 4 ? 0 : rawBlockedItemCount;
+  const overwriteNeedsConfirmationCount = workflowIssuesResolved && stepIndex >= 4
+    ? 0
+    : executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0;
   const skippedItemCount = finalReviewModel?.summary.skip ?? (executableImportPlan
     ? executableImportPlan.summary.skippedEmptyCount
       + executableImportPlan.summary.skippedExistingCount
@@ -4314,12 +4337,13 @@ export default function GradeImportExportDialog({
     if (stepIndex === 3 && activeHeaderIssueCount > 0) {
       return `Selesaikan ${activeHeaderIssueCount} header di Konfigurasi Header terlebih dahulu.`;
     }
-    if (stepIndex === 6 && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) {
+    if (stepIndex === 6 && overwriteNeedsConfirmationCount > 0) {
       return "Nilai lama yang akan diganti harus dikonfirmasi dulu.";
     }
-    if (stepIndex === 6 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
-      return `Simpan belum bisa karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
+    if (stepIndex === 6 && blockedItemCount > 0) {
+      return `Simpan belum bisa karena masih ada ${blockedItemCount} item yang perlu dipilih.`;
     }
+    if (stepIndex === 6 && workflowIssuesResolved) return "Masalah utama dan header sudah selesai. Tabel akhir sudah konkret dan siap disimpan.";
     if (stepIndex === 4 || stepIndex === 5) {
       return "Masalah utama dan header sudah selesai. Periksa tabel lalu lanjut.";
     }
@@ -4331,7 +4355,7 @@ export default function GradeImportExportDialog({
       return `${executableImportPlan.summary.executableCount} nilai akan disimpan, ${skipped} dilewati karena kosong/nilai lama.`;
     }
     return "Default aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
-  }, [activeHeaderIssueCount, activeImportIssueCount, executableImportPlan, regionSelectionPending, stepIndex, tab, unsupported]);
+  }, [activeHeaderIssueCount, activeImportIssueCount, blockedItemCount, executableImportPlan, overwriteNeedsConfirmationCount, regionSelectionPending, stepIndex, tab, unsupported, workflowIssuesResolved]);
 
   const primaryLabel = useMemo(() => {
     if (tab === "export") {
@@ -4344,12 +4368,12 @@ export default function GradeImportExportDialog({
     if (stepIndex === 6 && executionState === "success") return "Selesai";
     if (stepIndex === 6) {
       if (executionState === "importing") return "Memproses...";
-      if ((executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) return "Konfirmasi nilai lama";
-      if ((executableImportPlan?.summary.blockedCount || 0) > 0 || activeImportIssueCount > 0 || activeHeaderIssueCount > 0) return "Selesaikan pilihan";
+      if (overwriteNeedsConfirmationCount > 0) return "Konfirmasi nilai lama";
+      if (blockedItemCount > 0 || activeImportIssueCount > 0 || activeHeaderIssueCount > 0) return "Selesaikan pilihan";
       return "Simpan nilai";
     }
     return "Lanjut";
-  }, [activeHeaderIssueCount, activeImportIssueCount, executionState, executableImportPlan, exportActionLoading, exportMode, stepIndex, tab]);
+  }, [activeHeaderIssueCount, activeImportIssueCount, blockedItemCount, executionState, exportActionLoading, exportMode, overwriteNeedsConfirmationCount, stepIndex, tab]);
   const importPrimaryDisabledReason = useMemo(() => {
     if (tab !== "import") return null;
     if (executionState === "analyzing") return "File sedang diperiksa.";
@@ -4367,10 +4391,12 @@ export default function GradeImportExportDialog({
       return "Periksa item yang perlu dicek terlebih dahulu.";
     }
     if (stepIndex === 6) {
-      if (blocked || blockedItemCount > 0) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
       if (activeImportIssueCount > 0) return "Selesaikan masalah di Daftar Bermasalah terlebih dahulu.";
       if (activeHeaderIssueCount > 0) return "Selesaikan Konfigurasi Header terlebih dahulu.";
-      if (needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
+      if (!workflowIssuesResolved) {
+        if (blocked || blockedItemCount > 0) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
+        if (needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
+      }
       if (readyImportCount === 0) return "Tidak ada nilai siap import.";
     }
     return null;
@@ -4388,6 +4414,7 @@ export default function GradeImportExportDialog({
     stepIndex,
     tab,
     unsupported,
+    workflowIssuesResolved,
   ]);
   const importPrimaryDisabled = tab === "import" && (
     executionState === "analyzing"
@@ -4444,7 +4471,7 @@ export default function GradeImportExportDialog({
             ref={importBodyRef}
             className={cn(
               "min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-4 py-4 dark:bg-slate-950 sm:px-6",
-              tab === "import" && (stepIndex === 2 || stepIndex === 3) && "sipena-import-body--issue-step",
+              tab === "import" && stepIndex === 2 && "sipena-import-body--issue-step",
             )}
           >
             <TabsContent value="import" className="m-0 min-w-0 focus-visible:ring-0 focus-visible:ring-offset-0">
@@ -4461,8 +4488,8 @@ export default function GradeImportExportDialog({
                     <ImportGuardrailPanel
                       readyCount={executableImportPlan?.summary.executableCount || 0}
                       skippedExistingCount={executableImportPlan?.summary.skippedExistingCount || 0}
-                      blockedCount={executableImportPlan?.summary.blockedCount || 0}
-                      overwriteNeedsConfirmationCount={executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0}
+                      blockedCount={blockedItemCount}
+                      overwriteNeedsConfirmationCount={overwriteNeedsConfirmationCount}
                     />
                   )}
 
@@ -4547,6 +4574,7 @@ export default function GradeImportExportDialog({
                       plan={plan}
                       model={spreadsheetPreview}
                       review={finalReviewModel}
+                      hasBlockingIssues={!workflowIssuesResolved}
                       onOpenFixStep={() => setStepIndex(4)}
                     />
                   ) : null}

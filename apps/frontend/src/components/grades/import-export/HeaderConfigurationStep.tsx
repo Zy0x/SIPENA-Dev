@@ -482,9 +482,28 @@ export function HeaderConfigurationStep({
                   </div>
                   {activeIssue.valueMode === "overwrite_existing" ? (
                     <div className="sipena-header-overwrite-confirm">
-                      Tombol <b>Konfirmasi timpa</b> akan mengizinkan penggantian {activeIssue.counts.overwrite} nilai lama pada header ini.
+                      <span>
+                        Tombol ini mengizinkan penggantian <b>{activeIssue.counts.overwrite} nilai lama</b> pada header ini.
+                      </span>
+                      <button
+                        type="button"
+                        className="sipena-column-btn sipena-column-btn-primary"
+                        onClick={() => applyHeaderDecision(activeIssue)}
+                        disabled={!canApplyHeaderDecision}
+                      >
+                        Konfirmasi timpa
+                      </button>
                     </div>
-                  ) : null}
+                  ) : (
+                    <button
+                      type="button"
+                      className="sipena-column-btn sipena-column-btn-primary sipena-header-mode-save"
+                      onClick={() => applyHeaderDecision(activeIssue)}
+                      disabled={!canApplyHeaderDecision}
+                    >
+                      Simpan aturan nilai
+                    </button>
+                  )}
                 </div>
               </div>
               ) : null}
