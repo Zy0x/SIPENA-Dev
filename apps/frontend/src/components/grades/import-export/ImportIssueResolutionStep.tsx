@@ -194,6 +194,7 @@ export function ImportIssueResolutionStep({
 }) {
   const issues = useMemo(() => getActiveImportIssues(model), [model]);
   const [completedIssues, setCompletedIssues] = useState<Record<string, IssueBoardItem>>({});
+  const [showActiveDetail, setShowActiveDetail] = useState(false);
   const previousIssuesRef = useRef<InvalidIssue[]>(issues);
   const activeIssueIds = useMemo(() => new Set(issues.map((issue) => issue.id)), [issues]);
   const issueBoard = useMemo<IssueBoardItem[]>(() => {
@@ -204,11 +205,16 @@ export function ImportIssueResolutionStep({
   const [activeIssueId, setActiveIssueId] = useState<string | null>(issueBoard[0]?.id || null);
   const activeIssue = issueBoard.find((issue) => issue.id === activeIssueId) || issueBoard[0];
   const activeIndex = activeIssue ? Math.max(0, issueBoard.findIndex((issue) => issue.id === activeIssue.id)) : -1;
+  const activePendingIndex = activeIssue ? issues.findIndex((issue) => issue.id === activeIssue.id) : -1;
   const selection = activeIssue ? issueSelection(activeIssue) : null;
   const isDuplicateStudentIssue = activeIssue?.rootCause === "student_duplicate";
+  const isInvalidCellIssue = activeIssue?.fixKind === "cell" && activeIssue.rootCause === "invalid_value";
   const activeIssueCount = issues.length;
   const completedIssueCount = issueBoard.length - activeIssueCount;
   const totalIssueCount = issueBoard.length;
+  const activeKicker = activeIssue?.resolutionStatus
+    ? `Selesai ${activeIndex + 1} dari ${issueBoard.length}`
+    : `Masalah ${Math.max(1, activePendingIndex + 1)} dari ${activeIssueCount || 1}`;
 
   const rememberIssue = (issue: InvalidIssue | null | undefined, resolutionStatus: IssueResolutionStatus, resolutionLabel?: string) => {
     if (!issue) return;
@@ -248,6 +254,10 @@ export function ImportIssueResolutionStep({
     });
     previousIssuesRef.current = issues;
   }, [issues]);
+
+  useEffect(() => {
+    setShowActiveDetail(false);
+  }, [activeIssueId]);
 
   useEffect(() => {
     if (!issueBoard.length) {
@@ -316,7 +326,7 @@ export function ImportIssueResolutionStep({
             {activeIssue ? (
               <div className={`sipena-issue-active-summary sipena-issue-active-summary--${issueBoardTone(activeIssue)}`}>
                 <div>
-                  <span className="sipena-issue-active-kicker">Item {activeIndex + 1} dari {issueBoard.length} / {issueStatusLabel(activeIssue)}</span>
+                  <span className="sipena-issue-active-kicker">{activeKicker}</span>
                   <h4>{activeIssue.title}</h4>
                   <p>{activeIssue.description}</p>
                 </div>
@@ -327,6 +337,38 @@ export function ImportIssueResolutionStep({
                     {activeIssue.detailBullets.slice(0, 2).map((bullet) => <li key={bullet}>{bullet}</li>)}
                   </ul>
                 </div>
+                ) : null}
+                {isInvalidCellIssue && activeIssue.cell && activeIssue.row && activeIssue.column && !activeIssue.resolutionStatus ? (
+                  <div className="flex flex-wrap gap-2">
+                    {activeIssue.cell.suggestedValue !== undefined ? (
+                      <button
+                        type="button"
+                        className="sipena-column-btn sipena-column-btn-primary"
+                        onClick={() => {
+                          rememberIssue(activeIssue, "resolved", "Selesai");
+                          onAcceptSuggestedValue(activeIssue.cell!, activeIssue.row!, activeIssue.column!);
+                        }}
+                      >
+                        Pakai saran
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="sipena-column-btn sipena-column-btn-warning"
+                      onClick={() => {
+                        rememberIssue(activeIssue, "skipped", "Dilewati");
+                        onIgnoreCell(activeIssue.cell!);
+                      }}
+                    >
+                      Lewati nilai
+                    </button>
+                    <button type="button" className="sipena-column-btn" onClick={() => onResetCellSelection(activeIssue.cell!)}>
+                      Reset
+                    </button>
+                    <button type="button" className="sipena-column-btn" onClick={() => setShowActiveDetail((current) => !current)}>
+                      {showActiveDetail ? "Sembunyikan detail" : "Lihat detail"}
+                    </button>
+                  </div>
                 ) : null}
               </div>
             ) : null}
@@ -356,7 +398,7 @@ export function ImportIssueResolutionStep({
                   Ubah pilihan
                 </button>
               </div>
-            ) : !isDuplicateStudentIssue ? (
+            ) : !isDuplicateStudentIssue && (!isInvalidCellIssue || showActiveDetail) ? (
               <PreviewFixPanel
                 model={model}
                 selection={selection}

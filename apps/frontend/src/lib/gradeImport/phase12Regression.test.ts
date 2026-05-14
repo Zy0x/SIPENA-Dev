@@ -363,7 +363,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(issueStepSource).toContain("Daftar Bermasalah");
     expect(issueStepSource).not.toContain("InlineColumnTargetFix");
     expect(issueStepSource).toContain("Bandingkan baris nama redundan");
-    expect(issueStepSource).toContain("Item {activeIndex + 1} dari {issueBoard.length}");
+    expect(issueStepSource).toContain("Masalah ${Math.max(1, activePendingIndex + 1)} dari ${activeIssueCount || 1}");
+    expect(issueStepSource).toContain("Lihat detail");
     expect(issueStepSource).toContain("completedIssues");
     expect(issueStepSource).not.toContain("AutomaticHeaderCheckDialog");
     expect(issueStepSource).not.toContain("sipena-auto-check-trigger--attention");

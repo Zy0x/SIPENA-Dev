@@ -35,7 +35,12 @@ function defaultTargetChoice(column: SpreadsheetPreviewColumn): TargetChoice {
   if (column.effectiveInclude === false || column.isIgnored) return "ignore";
   if (column.gradeType === "sts" || column.type === "sts") return "sts";
   if (column.gradeType === "sas" || column.type === "sas") return "sas";
-  return "current";
+  if (column.gradeType || column.assignmentId || column.targetLabel) return "current";
+  return "ignore";
+}
+
+function hasCurrentTarget(column: SpreadsheetPreviewColumn): boolean {
+  return Boolean(column.gradeType || column.assignmentId || column.targetLabel);
 }
 
 function columnAiSuggestion(column: SpreadsheetPreviewColumn, aiAssist?: SmartImportAssistResponse | null) {
@@ -81,7 +86,7 @@ function HeaderTargetForm({
     setAssignmentName(column.assignmentName || column.sourceHeader || column.header);
   }, [assignments, chapters, column]);
 
-  const canSaveTarget = targetChoice === "current"
+  const canSaveTarget = (targetChoice === "current" && hasCurrentTarget(column))
     || targetChoice === "sts"
     || targetChoice === "sas"
     || targetChoice === "ignore"
@@ -122,7 +127,7 @@ function HeaderTargetForm({
       <label>
         <span>Target header</span>
         <select value={targetChoice} onChange={(event) => setTargetChoice(event.target.value as TargetChoice)}>
-          <option value="current">Target saat ini</option>
+          <option value="current" disabled={!hasCurrentTarget(column)}>Target saat ini</option>
           <option value="sts">STS</option>
           <option value="sas">SAS</option>
           <option value="assignment">Tugas lain</option>
@@ -204,7 +209,8 @@ export function HeaderConfigurationStep({
   const [selectedCategory, setSelectedCategory] = useState<HeaderConfigurationCategory>("target_required");
   const [activeIssueId, setActiveIssueId] = useState<string | null>(issues[0]?.id || null);
   const visibleIssues = issues.filter((issue) => issue.category === selectedCategory);
-  const activeIssue = issues.find((issue) => issue.id === activeIssueId) || visibleIssues[0] || issues[0];
+  const selectedIssue = issues.find((issue) => issue.id === activeIssueId);
+  const activeIssue = selectedIssue?.category === selectedCategory ? selectedIssue : visibleIssues[0] || activeIssues[0] || issues[0];
   const categories: HeaderConfigurationCategory[] = ["target_required", "overwrite", "new_values", "skipped"];
 
   useEffect(() => {
@@ -212,12 +218,18 @@ export function HeaderConfigurationStep({
       setActiveIssueId(null);
       return;
     }
-    if (!activeIssueId || !issues.some((issue) => issue.id === activeIssueId)) {
+    const currentIssue = issues.find((issue) => issue.id === activeIssueId);
+    if (currentIssue && currentIssue.category !== selectedCategory) {
+      const nextInCategory = visibleIssues[0];
+      if (nextInCategory) setActiveIssueId(nextInCategory.id);
+      return;
+    }
+    if (!activeIssueId || !currentIssue) {
       const next = activeIssues[0] || issues[0];
       setSelectedCategory(next.category);
       setActiveIssueId(next.id);
     }
-  }, [activeIssueId, activeIssues, issues]);
+  }, [activeIssueId, activeIssues, issues, selectedCategory, visibleIssues]);
 
   const selectCategory = (category: HeaderConfigurationCategory) => {
     setSelectedCategory(category);
@@ -227,9 +239,13 @@ export function HeaderConfigurationStep({
 
   const suggestion = activeIssue ? columnAiSuggestion(activeIssue.column, aiAssist) : undefined;
   const applyHeader = (issue: HeaderConfigurationIssue) => {
+    if (!hasCurrentTarget(issue.column) && issue.column.effectiveInclude !== false && !issue.column.isIgnored) return;
     onApproveColumn(issue.column);
     onBulkColumnAction(issue.column, "include_valid");
   };
+  const canApplyHeader = activeIssue
+    ? hasCurrentTarget(activeIssue.column) || activeIssue.column.effectiveInclude === false || activeIssue.column.isIgnored
+    : false;
 
   return (
     <section className="sipena-header-config-step">
@@ -357,7 +373,7 @@ export function HeaderConfigurationStep({
               </div>
 
               <div className="sipena-header-actions">
-                <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={() => applyHeader(activeIssue)}>
+                <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={() => applyHeader(activeIssue)} disabled={!canApplyHeader}>
                   Pakai header
                 </button>
                 <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => onBulkColumnAction(activeIssue.column, "skip_all")}>
