@@ -207,13 +207,86 @@ describe("invalid issue queue", () => {
     expect(issues.filter((issue) => issue.kind === "column" && issue.column?.id === "excel-col-5")).toHaveLength(0);
   });
 
-  it("moves target column issues to Konfigurasi Header", () => {
-    const headerIssues = buildHeaderConfigurationQueue(model([]));
-    const activeHeaderIssues = getActiveHeaderConfigurationIssues(model([]));
+  it("moves target column issues with values to Konfigurasi Header", () => {
+    const preview = model([previewRow("row-14", {
+      cells: [
+        gradeCell("row-14", "identity-no", { status: "unchanged" }),
+        gradeCell("row-14", "identity-nisn", { status: "unchanged" }),
+        gradeCell("row-14", "identity-name", { status: "unchanged" }),
+        gradeCell("row-14", "excel-col-4", { status: "skipped", oldValue: 80, newValue: 80, effectiveInclude: false, isAutoSkippedSameValue: true }),
+        gradeCell("row-14", "excel-col-5", { status: "blocked", oldValue: null, newValue: 80, isBlockedByTarget: true, effectiveInclude: false }),
+      ],
+    })]);
+    const headerIssues = buildHeaderConfigurationQueue(preview);
+    const activeHeaderIssues = getActiveHeaderConfigurationIssues(preview);
 
     expect(headerIssues.filter((issue) => issue.column.id === "excel-col-5")).toHaveLength(1);
     expect(headerIssues.find((issue) => issue.column.id === "excel-col-5")).toMatchObject({ category: "target_required", isResolved: false });
     expect(activeHeaderIssues.map((issue) => issue.column.id)).toContain("excel-col-5");
+  });
+
+  it("treats same header values as safe skipped even when target metadata is incomplete", () => {
+    const preview = {
+      ...model([previewRow("row-15", {
+        cells: [
+          gradeCell("row-15", "identity-no", { status: "unchanged" }),
+          gradeCell("row-15", "identity-nisn", { status: "unchanged" }),
+          gradeCell("row-15", "identity-name", { status: "unchanged" }),
+          gradeCell("row-15", "excel-col-4", {
+            status: "blocked",
+            oldValue: 88,
+            newValue: 88,
+            isBlockedByTarget: true,
+            effectiveInclude: false,
+          }),
+          gradeCell("row-15", "excel-col-5", { status: "skipped", effectiveInclude: false }),
+        ],
+      })]),
+      columns: columns.map((column) => column.id === "excel-col-4"
+        ? {
+          ...column,
+          status: "manual_required" as const,
+          targetLabel: "UH 1",
+        }
+        : column),
+    } satisfies SpreadsheetPreviewModel;
+
+    const issue = buildHeaderConfigurationQueue(preview).find((item) => item.column.id === "excel-col-4");
+
+    expect(issue).toMatchObject({ category: "skipped", isResolved: true });
+    expect(getActiveHeaderConfigurationIssues(preview).map((item) => item.column.id)).not.toContain("excel-col-4");
+  });
+
+  it("requires configuration when the same header contains a different existing value", () => {
+    const preview = {
+      ...model([previewRow("row-16", {
+        cells: [
+          gradeCell("row-16", "identity-no", { status: "unchanged" }),
+          gradeCell("row-16", "identity-nisn", { status: "unchanged" }),
+          gradeCell("row-16", "identity-name", { status: "unchanged" }),
+          gradeCell("row-16", "excel-col-4", {
+            status: "blocked",
+            oldValue: 75,
+            newValue: 82,
+            isBlockedByTarget: true,
+            effectiveInclude: false,
+          }),
+          gradeCell("row-16", "excel-col-5", { status: "skipped", effectiveInclude: false }),
+        ],
+      })]),
+      columns: columns.map((column) => column.id === "excel-col-4"
+        ? {
+          ...column,
+          status: "manual_required" as const,
+          targetLabel: "UH 1",
+        }
+        : column),
+    } satisfies SpreadsheetPreviewModel;
+
+    const issue = buildHeaderConfigurationQueue(preview).find((item) => item.column.id === "excel-col-4");
+
+    expect(issue).toMatchObject({ category: "target_required", isResolved: false });
+    expect(issue?.counts.overwrite).toBe(1);
   });
 
   it("keeps unresolved header confirmations in Konfigurasi Header before value categories", () => {

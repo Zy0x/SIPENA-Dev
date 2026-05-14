@@ -374,8 +374,53 @@ function columnCells(model: SpreadsheetPreviewModel, column: SpreadsheetPreviewC
     .filter(Boolean) as SpreadsheetPreviewCell[];
 }
 
-function hasColumnTargetIssue(column: SpreadsheetPreviewColumn, cells: SpreadsheetPreviewCell[]): boolean {
+function valueIsEmpty(value: string | number | null | undefined): boolean {
+  return value === null || value === undefined || String(value).trim() === "";
+}
+
+function valuesAreSame(left: string | number | null | undefined, right: string | number | null | undefined): boolean {
+  if (valueIsEmpty(left) && valueIsEmpty(right)) return true;
+  if (valueIsEmpty(left) || valueIsEmpty(right)) return false;
+  const leftNumber = Number(left);
+  const rightNumber = Number(right);
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber === rightNumber;
+  return String(left).trim().toLowerCase() === String(right).trim().toLowerCase();
+}
+
+function cellNextValue(cell: SpreadsheetPreviewCell): string | number | null | undefined {
+  return cell.resolvedValue ?? cell.newValue ?? cell.suggestedValue ?? cell.rawValue ?? cell.displayValue;
+}
+
+function isSameOrEmptyCell(cell: SpreadsheetPreviewCell): boolean {
+  if (cell.status === "invalid") return false;
+  const nextValue = cellNextValue(cell);
+  if (valueIsEmpty(nextValue)) return true;
+  return valuesAreSame(cell.oldValue, nextValue);
+}
+
+function hasDifferentExistingValue(cell: SpreadsheetPreviewCell): boolean {
+  const nextValue = cellNextValue(cell);
+  return !valueIsEmpty(cell.oldValue) && !valueIsEmpty(nextValue) && !valuesAreSame(cell.oldValue, nextValue);
+}
+
+function isActionableBlockedCell(cell: SpreadsheetPreviewCell): boolean {
+  if (cell.status === "invalid") return true;
+  if (cell.isBlockedByRow) return false;
+  if (isSameOrEmptyCell(cell)) return false;
+  return cell.status === "blocked"
+    || cell.status === "manual_required"
+    || Boolean(cell.isBlockedByColumn)
+    || Boolean(cell.isBlockedByTarget);
+}
+
+function hasColumnTargetIssue(
+  column: SpreadsheetPreviewColumn,
+  cells: SpreadsheetPreviewCell[],
+  counts: HeaderConfigurationIssue["counts"],
+): boolean {
   if (column.effectiveInclude === false || column.isIgnored) return false;
+  const hasActionableValues = counts.newValues > 0 || counts.overwrite > 0 || counts.invalid > 0 || counts.blocked > 0;
+  if (!hasActionableValues) return false;
   const hasUnresolvedConfirmation = column.status === "needs_check" && Boolean(column.conflictIds?.length);
   return column.status === "manual_required"
     || column.status === "blocked"
@@ -383,29 +428,30 @@ function hasColumnTargetIssue(column: SpreadsheetPreviewColumn, cells: Spreadshe
     || column.status === "new_column"
     || hasUnresolvedConfirmation
     || Boolean(column.isNewStructure)
-    || cells.some((cell) => cell.isBlockedByColumn || cell.isBlockedByTarget);
+    || cells.some((cell) => (cell.isBlockedByColumn || cell.isBlockedByTarget) && isActionableBlockedCell(cell));
 }
 
 function columnCounts(column: SpreadsheetPreviewColumn, cells: SpreadsheetPreviewCell[]): HeaderConfigurationIssue["counts"] {
   return {
-    newValues: cells.filter((cell) => ["new_value", "manual_included", "included"].includes(cell.status) && cell.effectiveInclude !== false).length,
+    newValues: cells.filter((cell) =>
+      ["new_value", "manual_included", "included"].includes(cell.status)
+      && cell.effectiveInclude !== false
+      && !hasDifferentExistingValue(cell)).length,
     skipped: cells.filter((cell) =>
       cell.effectiveInclude === false
       || cell.isAutoSkippedSameValue
+      || isSameOrEmptyCell(cell)
       || ["skipped", "manual_skipped", "ignored"].includes(cell.status)).length,
     overwrite: cells.filter((cell) =>
-      cell.requiresConfirmation
-      || cell.status === "changed"
-      || cell.status === "overwrite"
-      || (
-        cell.oldValue !== null
-        && cell.oldValue !== undefined
-        && cell.newValue !== null
-        && cell.newValue !== undefined
-        && String(cell.oldValue) !== String(cell.newValue)
+      cell.status !== "invalid"
+      && (
+        cell.requiresConfirmation
+        || cell.status === "changed"
+        || cell.status === "overwrite"
+        || hasDifferentExistingValue(cell)
       )).length,
     invalid: cells.filter((cell) => cell.status === "invalid").length,
-    blocked: cells.filter((cell) => cell.status === "blocked" || cell.status === "manual_required" || cell.isBlockedByColumn || cell.isBlockedByTarget).length,
+    blocked: cells.filter((cell) => isActionableBlockedCell(cell)).length,
     valid: column.stats?.validValues ?? cells.filter((cell) => cell.newValue !== null && cell.newValue !== undefined && cell.status !== "invalid").length,
   };
 }
@@ -454,12 +500,13 @@ export function buildHeaderConfigurationQueue(
     .map(({ column, cells, counts }) => {
       const setting = selectionState?.columnSettings[column.id];
       const valueMode = setting?.valueMode || column.effectiveValueMode || "fill_empty_only";
-      const hasTargetIssue = hasColumnTargetIssue(column, cells);
+      const hasTargetIssue = hasColumnTargetIssue(column, cells, counts);
       const category = headerCategory(column, counts, hasTargetIssue);
       const detail = buildColumnDetailCopy(column);
       const include = setting?.include ?? column.effectiveInclude !== false;
       const requiresOverwriteConfirmation = include && counts.overwrite > 0 && valueMode === "overwrite_existing" && !setting?.overwriteConfirmed && !column.overwriteConfirmed;
       const isResolved = !include
+        || category === "skipped"
         || (
           !hasTargetIssue
           && (

@@ -1662,16 +1662,8 @@
 }
 
 .sipena-issue-fix-stack .sipena-preview-fix-actions {
-  position: sticky;
-  bottom: 8px;
-  z-index: 2;
-  margin-inline: -4px;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  background: rgb(255 255 255 / 0.94);
-  padding: 10px;
-  box-shadow: 0 -12px 26px rgb(15 23 42 / 0.08);
-  backdrop-filter: blur(10px);
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
 }
 
 .sipena-issue-toolbar {
@@ -2352,14 +2344,108 @@
   margin: 8px 0 0;
 }
 
+.sipena-header-preview,
+.sipena-header-decision-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.sipena-header-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sipena-header-preview-head b,
+.sipena-header-preview-head span {
+  display: block;
+}
+
+.sipena-header-preview-head b {
+  font-size: 13px;
+  font-weight: 850;
+  color: #0f172a;
+}
+
+.sipena-header-preview-head span {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.sipena-header-preview-head > span {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #f1f5f9;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 850;
+  color: #334155;
+}
+
+.sipena-header-preview-table-wrap {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.sipena-header-preview-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+.sipena-header-preview-table th,
+.sipena-header-preview-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sipena-header-preview-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 850;
+  color: #475569;
+}
+
+.sipena-header-preview-table td:nth-child(3) {
+  min-width: 180px;
+  white-space: normal;
+}
+
+.sipena-header-preview-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.sipena-header-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
 .sipena-header-target-form {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid #bfdbfe;
-  border-radius: 18px;
-  background: #eff6ff;
-  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .sipena-header-target-form label {
@@ -2381,6 +2467,10 @@
   font-size: 13px;
   font-weight: 700;
   color: #0f172a;
+}
+
+.sipena-header-target-save {
+  align-self: end;
 }
 
 .sipena-header-value-mode {
@@ -2425,20 +2515,13 @@
   color: #9a3412 !important;
 }
 
-.sipena-header-actions {
+.sipena-header-decision-actions {
   display: flex;
-  position: sticky;
-  bottom: 8px;
-  z-index: 2;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  background: rgb(255 255 255 / 0.94);
-  padding: 10px;
-  box-shadow: 0 -12px 26px rgb(15 23 42 / 0.08);
-  backdrop-filter: blur(10px);
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
 }
 
 @media (max-width: 899px) {
@@ -2499,11 +2582,6 @@
     scroll-snap-align: start;
   }
 
-  .sipena-issue-fix-stack .sipena-preview-fix-actions {
-    bottom: 6px;
-    margin-inline: 0;
-  }
-
   .sipena-issue-fix-stack {
     height: auto;
     overflow-y: visible;
@@ -2513,13 +2591,16 @@
     flex-direction: column;
   }
 
-  .sipena-header-actions {
-    bottom: 6px;
+  .sipena-header-decision-actions {
     justify-content: stretch;
   }
 
-  .sipena-header-actions > * {
+  .sipena-header-decision-actions > * {
     flex: 1 1 150px;
+  }
+
+  .sipena-header-preview-head {
+    flex-direction: column;
   }
 
   .sipena-issue-toolbar,

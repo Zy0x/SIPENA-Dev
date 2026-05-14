@@ -187,6 +187,7 @@ export function PreviewFixPanel({
   const targetCell = selection?.kind === "cell" ? selection.cell : null;
   const targetColumn = selection?.kind === "cell" ? selection.column : selection?.kind === "column" ? selection.column : null;
   const targetRow = selection?.kind === "cell" ? selection.row : selection?.kind === "row" ? selection.row : null;
+  const isRowOnlySelection = Boolean(targetRow && !targetCell && !targetColumn);
   const columnSetting = targetColumn ? selectionState.columnSettings[targetColumn.id] : undefined;
   const cellSetting = targetCell ? selectionState.cellSettings[targetCell.id] : undefined;
   const isGradeCell = Boolean(targetCell && targetColumn && targetColumn.type !== "identity");
@@ -438,10 +439,16 @@ export function PreviewFixPanel({
             >
               Pakai siswa pilihan
             </SettingButton>
+            <SettingButton onClick={() => onIgnoreRow(targetRow)}>Lewati baris</SettingButton>
+            <SettingButton onClick={() => onResetRowSelection(targetRow)}>Reset</SettingButton>
+            <SettingButton onClick={() => setShowDetail((current) => !current)}>
+              {showDetail ? "Sembunyikan detail" : "Lihat detail"}
+            </SettingButton>
           </div>
         </div>
       ) : null}
 
+      {!isRowOnlySelection ? (
       <div className="sipena-preview-fix-actions">
         {!selection ? (
           <>
@@ -483,6 +490,7 @@ export function PreviewFixPanel({
           {showDetail ? "Sembunyikan detail" : "Lihat detail"}
         </SettingButton>
       </div>
+      ) : null}
 
       {showDetail ? (
         <div className="sipena-preview-detail">
