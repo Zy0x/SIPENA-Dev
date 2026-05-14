@@ -414,8 +414,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("sipena-header-sequence-actions");
     expect(globalStyles).toContain("sipena-issue-list-item--done");
     expect(globalStyles).toContain("sipena-import-body--issue-step");
-    expect(globalStyles).toContain("scroll-padding-bottom: 128px");
-    expect(globalStyles).toContain("grid-template-columns: clamp(230px, 25vw, 320px) minmax(0, 1fr)");
+    expect(globalStyles).toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
+    expect(globalStyles).toContain("scroll-padding-bottom: 24px");
+    expect(globalStyles).not.toContain("scroll-padding-bottom: 128px");
+    expect(globalStyles).not.toContain("padding-bottom: 144px");
+    expect(globalStyles).toContain("grid-template-columns: clamp(220px, 24vw, 300px) minmax(0, 1fr)");
     expect(globalStyles).toContain("scroll-snap-type: x proximity");
     expect(globalStyles).toContain("sipena-preview-modebar");
     expect(globalStyles).toContain("sipena-preview-status-pill--ready");

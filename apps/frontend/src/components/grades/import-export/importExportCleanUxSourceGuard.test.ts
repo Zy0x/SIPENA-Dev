@@ -13,6 +13,7 @@ describe("clean import/export UX source guards", () => {
   const dialogSource = readSource("apps/frontend/src/components/grades/GradeImportExportDialog.tsx");
   const dropzoneSource = readSource("apps/frontend/src/components/grades/import-export/ImportDropzone.tsx");
   const previewSource = readSource("apps/frontend/src/components/grades/import-export/SmartSpreadsheetPreview.tsx");
+  const cssSource = readSource("apps/frontend/src/index.css");
 
   it("opens the same upload file picker from the first footer primary action", () => {
     expect(dropzoneSource).toContain("inputRef?: RefObject<HTMLInputElement>");
@@ -36,6 +37,14 @@ describe("clean import/export UX source guards", () => {
     expect(dialogSource).not.toContain('MetricCard label="Kolom nilai"');
     expect(dialogSource).not.toContain('MetricCard label="Tugas baru"');
     expect(dialogSource).not.toContain('MetricCard label="Nilai tidak valid"');
+  });
+
+  it("keeps the issue step height efficient near the footer", () => {
+    expect(cssSource).toContain(".sipena-issue-step");
+    expect(cssSource).toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
+    expect(cssSource).toContain("padding-bottom: 8px");
+    expect(cssSource).not.toContain("padding-bottom: 128px");
+    expect(cssSource).not.toContain("padding-bottom: 144px");
   });
 
   it("keeps backend terms behind user-facing labels", () => {
