@@ -87,7 +87,6 @@ import GradeImportExportDialog, { type GradeImportExportTab } from "@/components
 import {
   FormulaSettings,
 } from "@/components/grades/FormulaSettings";
-import ImportGradesDialog from "@/components/import/ImportGradesDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 
 export type GradeInputMode = "owner" | "guest";
@@ -317,7 +316,6 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [isDownloadingOfficialTemplate, setIsDownloadingOfficialTemplate] = useState(false);
   const [isExportingCurrentGrades, setIsExportingCurrentGrades] = useState(false);
   const [isExportingGradeBackup, setIsExportingGradeBackup] = useState(false);
-  const [showImportGrades, setShowImportGrades] = useState(false);
   const [showOCRGrades, setShowOCRGrades] = useState(false);
   const [showGuestKkmDialog, setShowGuestKkmDialog] = useState(false);
   const [guestKkm, setGuestKkm] = useState(75);
@@ -1081,10 +1079,6 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             <Download className="w-4 h-4" />
             Export Nilai
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowImportGrades(true)} className="gap-2 min-h-[44px]">
-            <FileSpreadsheet className="w-4 h-4" />
-            Import dari Excel Lama
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowOCRGrades(true)} className="gap-2 min-h-[44px]">
             <Camera className="w-4 h-4" />
             Import dari Foto (OCR)
@@ -1453,26 +1447,6 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             queryClient.invalidateQueries({ queryKey: ["all_assignments"] });
           }}
           importContext={gradeImportContext}
-          onOpenLegacyImport={() => {
-            setShowGradeImportExport(false);
-            setShowImportGrades(true);
-          }}
-        />
-      )}
-
-      {!isGuestMode && selectedSubjectId && selectedClassId && (
-        <ImportGradesDialog
-          open={showImportGrades}
-          onOpenChange={setShowImportGrades}
-          subjectId={selectedSubjectId}
-          subjectName={selectedSubject?.name || ""}
-          classId={selectedClassId}
-          className={selectedClass?.name || ""}
-          students={students.map((s) => ({ id: s.id, name: s.name, nisn: s.nisn }))}
-          assignments={allAssignments.map((a) => ({ id: a.id, name: a.name, chapter_id: a.chapter_id }))}
-          onImportComplete={() => {
-            queryClient.invalidateQueries({ queryKey: ["grades"] });
-          }}
         />
       )}
 

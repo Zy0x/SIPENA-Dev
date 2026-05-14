@@ -316,9 +316,11 @@ describe("phase 12 grade import regression suite", () => {
     const previewSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/SmartSpreadsheetPreview.tsx"), "utf8");
     const previewBannerSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewSummaryBanner.tsx"), "utf8");
     const previewBadgeSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewCellBadge.tsx"), "utf8");
+    const statusBadgeSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/StatusBadge.tsx"), "utf8");
     const issueStepSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/ImportIssueResolutionStep.tsx"), "utf8");
     const headerStepSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/HeaderConfigurationStep.tsx"), "utf8");
     const fixPanelSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
+    const gradesPageSource = readFileSync(repoPath("apps/frontend/src/pages/Grades.tsx"), "utf8");
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
@@ -437,6 +439,14 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("Import Nilai");
     expect(dialogSource).toContain("Download Template Resmi");
     expect(dialogSource).toContain("Upload Excel");
+    expect(dialogSource).not.toContain("onOpenLegacyImport");
+    expect(dialogSource).not.toContain("Buka import lama");
+    expect(gradesPageSource).not.toContain("ImportGradesDialog");
+    expect(gradesPageSource).not.toContain("showImportGrades");
+    expect(gradesPageSource).not.toContain("Import dari Excel Lama");
+    expect(previewBadgeSource).toContain("Tooltip");
+    expect(previewBadgeSource).toContain("previewCellBadgeText");
+    expect(statusBadgeSource).toContain("description?: ReactNode");
     expect(dialogSource).toContain("Pemeriksaan otomatis");
     expect(dialogSource).toContain("Saran AI");
     expect(dialogSource).toContain("requestSmartImportAssist");

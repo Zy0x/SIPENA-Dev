@@ -52,10 +52,10 @@ export function ImportSummaryPanel({
   return (
     <aside className="min-w-0 space-y-3 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950 lg:sticky lg:top-4 lg:max-h-[calc(92dvh-12rem)] lg:overflow-y-auto">
       <div className="space-y-2">
-        <StatusBadge tone="safe">Pemeriksaan otomatis</StatusBadge>
-        <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Ringkasan Import</h3>
+        <StatusBadge tone="info" description="Ringkasan singkat dari file dan tahap import aktif.">Ringkasan</StatusBadge>
+        <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Ringkasan import</h3>
         <p className="text-xs leading-5 text-muted-foreground">
-          {currentStep ? `Langkah aktif: ${currentStep}. ` : ""}Preview akan menampilkan siswa, kolom, dan item yang perlu dicek sebelum ada perubahan data.
+          {currentStep ? `Langkah: ${currentStep}. ` : ""}Angka ini hanya ringkasan, bukan tombol aksi.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-2">

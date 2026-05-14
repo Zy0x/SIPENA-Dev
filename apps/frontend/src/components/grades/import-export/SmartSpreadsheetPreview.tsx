@@ -12,6 +12,7 @@ import type {
   SpreadsheetPreviewModel,
   SpreadsheetPreviewRow,
 } from "@/lib/gradeImport";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import {
@@ -39,6 +40,19 @@ function previewStatusTone(tone: string): "ready" | "skip" | "check" | "danger" 
   if (tone === "change") return "check";
   if (tone === "new") return "ready";
   return "neutral";
+}
+
+function MiniStatusBadge({ label, description }: { label: string; description: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="sipena-import-cell-mini-badge">{label}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-[240px] text-xs leading-5">
+        {description}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 function shouldShowStatusBadge(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): boolean {
@@ -332,12 +346,12 @@ export function SmartSpreadsheetPreview({
                             </span>
                             <span className="sipena-preview-cell-badges">
                               {shouldShowStatusBadge(cell, column) ? <PreviewCellBadge status={cell.status} /> : null}
-                              {cell.isManuallyIncluded ? <span className="sipena-import-cell-mini-badge">Dipilih</span> : null}
-                              {cell.isManuallySkipped ? <span className="sipena-import-cell-mini-badge">Dilewati</span> : null}
-                              {cell.convertedValue !== undefined ? <span className="sipena-import-cell-mini-badge">Dikonversi</span> : null}
-                              {cell.isAutoSkippedSameValue ? <span className="sipena-import-cell-mini-badge">Sama</span> : null}
-                              {cell.status === "overwrite" ? <span className="sipena-import-cell-mini-badge">Timpa</span> : null}
-                              {cell.requiresConfirmation ? <span className="sipena-import-cell-mini-badge">Perlu cek</span> : null}
+                              {cell.isManuallyIncluded ? <MiniStatusBadge label="Dipilih" description="Nilai ini dipilih manual untuk ikut diproses." /> : null}
+                              {cell.isManuallySkipped ? <MiniStatusBadge label="Dilewati" description="Nilai ini dipilih manual untuk dilewati." /> : null}
+                              {cell.convertedValue !== undefined ? <MiniStatusBadge label="Dikonversi" description="Nilai pecahan atau format khusus dikonversi menjadi angka 0-100." /> : null}
+                              {cell.isAutoSkippedSameValue ? <MiniStatusBadge label="Sama" description="Nilai Excel sama dengan nilai SIPENA, jadi otomatis dilewati." /> : null}
+                              {cell.status === "overwrite" ? <MiniStatusBadge label="Timpa" description="Nilai Excel akan mengganti nilai SIPENA setelah konfirmasi." /> : null}
+                              {cell.requiresConfirmation ? <MiniStatusBadge label="Perlu cek" description="Nilai valid, tetapi keputusan target atau aksi masih perlu dicek." /> : null}
                             </span>
                           </div>
                           {isDetailMode && showCellActions ? (

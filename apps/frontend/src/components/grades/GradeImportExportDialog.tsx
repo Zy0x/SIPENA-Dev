@@ -110,7 +110,6 @@ interface GradeImportExportDialogProps {
   isExportingBackup?: boolean;
   onDownloadCurrentGrades?: () => void | Promise<void>;
   onDownloadBackup?: () => void | Promise<void>;
-  onOpenLegacyImport?: () => void;
   onSaveGrade?: (studentId: string, gradeType: "assignment" | "sts" | "sas", value: number, assignmentId?: string) => void | Promise<void>;
   onSaveGradesBatch?: (items: Array<{
     studentId: string;
@@ -1363,97 +1362,54 @@ function ImportStartPanel({
 }) {
   const downloadDisabled = !canDownloadOfficialTemplate || !onDownloadOfficialTemplate || isDownloadingTemplate;
   return (
-    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)]">
-      <section className="rounded-[24px] border border-emerald-200 bg-emerald-50/55 p-4 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/20">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm ring-1 ring-emerald-100 dark:bg-slate-950 dark:ring-emerald-900/70">
-          <FileSpreadsheet className="h-6 w-6" />
+    <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.65fr)]">
+      <section className="rounded-[20px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+        <div className="mb-3 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">Upload file nilai</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Gunakan Excel/CSV dari template SIPENA atau file nilai lain.
+            </p>
+          </div>
+          <span className="text-xs font-medium text-muted-foreground">.xlsx, .xls, .csv</span>
         </div>
-        <div className="mt-4 space-y-2">
-          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">Template Resmi</h3>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Paling aman karena sudah sesuai kelas, mapel, semester, dan tahun ajaran aktif.
-          </p>
+        <ImportDropzone fileName={fileName} onFileSelected={onFileSelected} />
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          File diperiksa dulu. Nilai lama tidak ditimpa tanpa konfirmasi.
+        </p>
+      </section>
+
+      <section className="rounded-[20px] border border-border bg-slate-50/75 p-4 shadow-sm dark:bg-slate-900/40">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
+            <FileSpreadsheet className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Template resmi</h3>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Paling aman untuk input baru karena struktur sudah sesuai kelas aktif.
+            </p>
+          </div>
         </div>
         <Button
           type="button"
-          className="mt-4 min-h-11 w-full rounded-full"
+          variant="outline"
+          className="mt-4 min-h-10 w-full rounded-full bg-white"
           disabled={downloadDisabled}
           aria-describedby={downloadReason ? "sipena-template-download-reason" : undefined}
+          title={downloadReason || undefined}
           onClick={onDownloadOfficialTemplate}
         >
           {isDownloadingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          {isDownloadingTemplate ? "Menyiapkan template..." : "Download Template Resmi"}
+          {isDownloadingTemplate ? "Menyiapkan..." : "Download template"}
         </Button>
         {downloadReason ? (
-          <p id="sipena-template-download-reason" className="mt-3 text-xs leading-5 text-muted-foreground">
+          <p id="sipena-template-download-reason" className="mt-2 text-xs leading-5 text-muted-foreground">
             {downloadReason}
           </p>
         ) : null}
       </section>
-
-      <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
-        <div className="mb-3 space-y-2">
-          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">Upload Excel</h3>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Bisa memakai template SIPENA, file Excel dari sumber lain, atau CSV.
-          </p>
-        </div>
-        <ImportDropzone fileName={fileName} onFileSelected={onFileSelected} />
-        <p className="mt-3 text-xs leading-5 text-muted-foreground">
-          Format file: .xlsx, .xls, atau .csv. Ukuran maksimal 20 MB.
-        </p>
-      </section>
     </div>
-  );
-}
-
-function ImportGuardrailPanel({
-  readyCount,
-  skippedExistingCount,
-  blockedCount,
-  overwriteNeedsConfirmationCount,
-}: {
-  readyCount: number;
-  skippedExistingCount: number;
-  blockedCount: number;
-  overwriteNeedsConfirmationCount: number;
-}) {
-  return (
-    <section className="rounded-[24px] border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-950 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-50">
-      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone="success">Pemeriksaan otomatis</StatusBadge>
-            <StatusBadge tone="safe">Nilai lama tidak ditimpa otomatis</StatusBadge>
-            <StatusBadge tone="warning">Aksi berisiko butuh konfirmasi</StatusBadge>
-          </div>
-          <h3 className="mt-3 text-sm font-semibold">
-            Satu alur pemeriksaan aman
-          </h3>
-          <p className="mt-1 max-w-3xl text-xs leading-5 opacity-85">
-            Default-nya hanya mengisi nilai kosong. Nilai lama, BAB/tugas baru, baris siswa yang belum pasti, dan nilai saran harus dicek dulu sebelum disimpan.
-          </p>
-        </div>
-      </div>
-      <div className="mt-3 grid gap-2 text-xs sm:grid-cols-4">
-        <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
-          <b>{readyCount}</b>
-          <span className="ml-1">siap import</span>
-        </div>
-        <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
-          <b>{skippedExistingCount}</b>
-          <span className="ml-1">nilai dilewati karena sudah ada</span>
-        </div>
-        <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
-          <b>{blockedCount}</b>
-          <span className="ml-1">perlu dipilih</span>
-        </div>
-        <div className="rounded-2xl bg-white/75 p-3 dark:bg-slate-950/35">
-          <b>{overwriteNeedsConfirmationCount}</b>
-          <span className="ml-1">butuh konfirmasi timpa</span>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -3291,7 +3247,6 @@ export default function GradeImportExportDialog({
   isExportingBackup = false,
   onDownloadCurrentGrades,
   onDownloadBackup,
-  onOpenLegacyImport,
   onSaveGrade,
   onSaveGradesBatch,
   onEnsureAssignmentTarget,
@@ -4502,7 +4457,6 @@ export default function GradeImportExportDialog({
                     <DialogTitle className="text-base font-semibold tracking-normal text-slate-950 dark:text-slate-50">
                       {tab === "import" ? "Import Nilai" : "Export Nilai"}
                     </DialogTitle>
-                    <StatusBadge tone="safe">Pemeriksaan otomatis</StatusBadge>
                   </div>
                   <DialogDescription className="mt-0.5 max-w-[min(76vw,920px)] truncate text-xs leading-5 text-muted-foreground" title={dialogDescription}>
                     {dialogDescription}
@@ -4537,15 +4491,6 @@ export default function GradeImportExportDialog({
                     <ImportStepper steps={importSteps} currentIndex={stepIndex} />
                   </section>
 
-                  {stepIndex === 2 || stepIndex === 3 ? null : (
-                    <ImportGuardrailPanel
-                      readyCount={executableImportPlan?.summary.executableCount || 0}
-                      skippedExistingCount={executableImportPlan?.summary.skippedExistingCount || 0}
-                      blockedCount={blockedItemCount}
-                      overwriteNeedsConfirmationCount={overwriteNeedsConfirmationCount}
-                    />
-                  )}
-
                   {stepIndex === 0 ? (
                     <>
                       <ImportStartPanel
@@ -4569,24 +4514,11 @@ export default function GradeImportExportDialog({
                         </RiskAlert>
                       ) : null}
 
-                      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-                        {studentCount === 0 ? (
-                          <RiskAlert title="Belum ada siswa" tone="warning">
-                            Tambahkan siswa pada kelas aktif sebelum import nilai agar data siswa bisa dicocokkan.
-                          </RiskAlert>
-                        ) : null}
-                        {chapterCount === 0 || assignmentCount === 0 ? (
-                          <RiskAlert title="Belum ada BAB/tugas" tone="warning">
-                            Tambahkan BAB dan tugas, atau konfirmasi struktur baru di Daftar Bermasalah sebelum import.
-                          </RiskAlert>
-                        ) : null}
-                        <RiskAlert title="Data tidak akan ditimpa tanpa konfirmasi" tone="safe">
-                          Default import adalah isi nilai kosong saja. Template tetap dicocokkan dengan data kelas aktif sebelum nilai disimpan.
+                      {studentCount === 0 ? (
+                        <RiskAlert title="Belum ada siswa" tone="warning" className="rounded-2xl">
+                          Tambahkan siswa pada kelas aktif sebelum import nilai.
                         </RiskAlert>
-                        <RiskAlert title="BAB dan tugas baru butuh persetujuan" tone="warning">
-                          Header baru hanya menjadi kandidat. Sistem tidak membuat struktur baru secara otomatis.
-                        </RiskAlert>
-                      </div>
+                      ) : null}
                     </>
                   ) : null}
 
@@ -4671,7 +4603,7 @@ export default function GradeImportExportDialog({
                 <main className="min-w-0 space-y-3">
                   <ExportOptionCard
                     title="Template Resmi SIPENA"
-                    description="Workbook kosong dari data kelas, mapel, semester, siswa, BAB, dan tugas aktif. Saat diupload, SIPENA tetap mencocokkan isinya dengan data kelas aktif."
+                    description="File kosong sesuai kelas, mapel, semester, siswa, BAB, dan tugas aktif."
                     meta="Paling terarah untuk input nilai baru"
                     selected={exportMode === "official"}
                     tone="official"
@@ -4680,7 +4612,7 @@ export default function GradeImportExportDialog({
                   />
                   <ExportOptionCard
                     title="Export Nilai Saat Ini"
-                    description="Membawa nilai yang sedang tersimpan untuk dicek atau dilengkapi. File ini bukan template validasi lengkap."
+                    description="Berisi nilai yang sudah tersimpan untuk dicek atau dilengkapi."
                     meta="Untuk pemeriksaan nilai saat ini"
                     selected={exportMode === "current"}
                     tone="current"
@@ -4689,7 +4621,7 @@ export default function GradeImportExportDialog({
                   />
                   <ExportOptionCard
                     title="Backup Lengkap"
-                    description="Paket workbook untuk arsip kelas dan mapel aktif sebelum perubahan besar. Backup bukan restore otomatis 1 klik."
+                    description="Arsip workbook sebelum perubahan besar."
                     meta="Arsip pemeriksaan sebelum import massal"
                     selected={exportMode === "backup"}
                     tone="backup"
@@ -4750,16 +4682,6 @@ export default function GradeImportExportDialog({
                   onClick={handleBack}
                 >
                   Kembali
-                </Button>
-              ) : null}
-              {tab === "import" && stepIndex === 0 && onOpenLegacyImport ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="min-h-10 w-full rounded-full sm:w-auto"
-                  onClick={onOpenLegacyImport}
-                >
-                  Buka import lama
                 </Button>
               ) : null}
               <Button

@@ -13,7 +13,7 @@ interface RiskAlertProps {
 }
 
 const toneClass: Record<RiskAlertTone, string> = {
-  safe: "border-blue-200 bg-blue-50/80 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100",
+  safe: "border-emerald-200 bg-emerald-50/80 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100",
   warning: "border-orange-200 bg-orange-50/80 text-orange-900 dark:border-orange-900/60 dark:bg-orange-950/30 dark:text-orange-100",
   info: "border-slate-200 bg-slate-50/80 text-slate-900 dark:border-slate-800 dark:bg-slate-900/55 dark:text-slate-100",
   blocked: "border-red-200 bg-red-50/80 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-100",

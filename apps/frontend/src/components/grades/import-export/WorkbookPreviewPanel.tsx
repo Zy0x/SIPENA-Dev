@@ -26,16 +26,16 @@ export function WorkbookPreviewPanel({
   warning,
 }: WorkbookPreviewPanelProps) {
   return (
-    <section className="min-w-0 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+    <section className="min-w-0 rounded-[20px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <StatusBadge tone="success">{modeLabel}</StatusBadge>
-          <h3 className="mt-3 text-sm font-semibold text-slate-950 dark:text-slate-50">Workbook Preview</h3>
+          <StatusBadge tone="info" description="Mode file export yang akan dibuat.">{modeLabel}</StatusBadge>
+          <h3 className="mt-3 text-sm font-semibold text-slate-950 dark:text-slate-50">Preview workbook</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             Struktur mengikuti kelas, mapel, dan semester yang sedang dipilih.
           </p>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/60">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:ring-blue-900/60">
           <FileSpreadsheet className="h-6 w-6" />
         </div>
       </div>
@@ -55,19 +55,19 @@ export function WorkbookPreviewPanel({
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border">
-        <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs font-semibold text-muted-foreground">
+      <details className="mt-4 rounded-2xl border border-border">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground">
           <Table2 className="h-4 w-4" />
           Sheet workbook
-        </div>
-        <div className="grid gap-2 p-3 sm:grid-cols-2">
+        </summary>
+        <div className="grid gap-2 border-t border-border p-3 sm:grid-cols-2">
           {sheetNames.map((sheet) => (
             <div key={sheet} className="truncate rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
               {sheet}
             </div>
           ))}
         </div>
-      </div>
+      </details>
 
       {warning ? (
         <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 p-3 text-xs leading-5 text-orange-950 dark:border-orange-900/60 dark:bg-orange-950/20 dark:text-orange-100">
