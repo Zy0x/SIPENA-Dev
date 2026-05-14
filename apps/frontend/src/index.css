@@ -2263,11 +2263,12 @@
 
 .sipena-header-detail {
   display: grid;
-  align-content: start;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: stretch;
   gap: 12px;
   height: 100%;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 14px;
 }
 
@@ -2363,8 +2364,16 @@
   margin: 8px 0 0;
 }
 
-.sipena-header-preview,
-.sipena-header-decision-panel {
+.sipena-header-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.88fr) minmax(0, 1.12fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.sipena-header-editor-panel,
+.sipena-header-evidence-panel,
+.sipena-header-preview {
   display: grid;
   gap: 10px;
   border: 1px solid #e2e8f0;
@@ -2373,13 +2382,36 @@
   padding: 10px;
 }
 
-.sipena-header-decision-panel {
-  position: sticky;
-  top: 0;
-  z-index: 3;
+.sipena-header-editor-panel {
+  align-content: start;
   border-color: #bfdbfe;
   background: #f8fbff;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  min-height: 0;
+  overflow: auto;
+}
+
+.sipena-header-evidence-panel {
+  align-content: start;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.sipena-header-panel-title {
+  display: grid;
+  gap: 3px;
+}
+
+.sipena-header-panel-title b {
+  font-size: 14px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.sipena-header-panel-title span {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
 }
 
 .sipena-header-resolved-note {
@@ -2404,7 +2436,7 @@
   line-height: 1.45;
 }
 
-.sipena-header-decision-secondary {
+.sipena-header-secondary-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -2631,15 +2663,11 @@
   }
 
   .sipena-header-detail,
-  .sipena-header-decision-panel {
+  .sipena-header-editor-panel,
+  .sipena-header-evidence-panel {
     height: auto;
     max-height: none;
     overflow: visible;
-  }
-
-  .sipena-header-decision-panel {
-    position: static;
-    box-shadow: none;
   }
 
   .sipena-preview-banner {
@@ -2663,6 +2691,7 @@
 
   .sipena-issue-step-grid,
   .sipena-header-config-grid,
+  .sipena-header-workspace,
   .sipena-header-target-form,
   .sipena-header-value-mode > div,
   .sipena-header-counts,

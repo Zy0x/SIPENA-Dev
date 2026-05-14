@@ -534,61 +534,80 @@ export function HeaderConfigurationStep({
               <div className="sipena-header-sequence-actions">
                 <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
                 <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
-                {activeIssue.column.type !== "identity" ? (
-                  <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
-                    Reset
-                  </button>
-                ) : null}
               </div>
 
-              {activeIssue.column.type !== "identity" && !activeIssue.isResolved ? (
-              <div className="sipena-header-decision-panel">
-                <HeaderTargetForm
-                  issue={activeIssue}
-                  assignments={assignments}
-                  chapters={chapters}
-                  onApproveColumn={onApproveColumn}
-                  onIgnoreColumn={onIgnoreColumn}
-                  onSetColumnTarget={onSetColumnTarget}
-                  onSetColumnValueMode={onSetColumnValueMode}
-                  onBulkColumnAction={onBulkColumnAction}
-                  onAfterApply={focusNextUnresolved}
-                />
+              <div className="sipena-header-workspace">
+                <div className="sipena-header-editor-panel">
+                  <div className="sipena-header-panel-title">
+                    <b>Keputusan header</b>
+                    <span>Atur target dan aturan nilai untuk seluruh kolom ini.</span>
+                  </div>
 
-                <div className="sipena-header-decision-secondary">
-                  <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => {
-                    onBulkColumnAction(activeIssue.column, "skip_all");
-                    focusNextUnresolved(activeIssue.id);
-                  }}>
-                    Lewati header
-                  </button>
+                  {activeIssue.column.type !== "identity" && !activeIssue.isResolved ? (
+                    <>
+                      <HeaderTargetForm
+                        issue={activeIssue}
+                        assignments={assignments}
+                        chapters={chapters}
+                        onApproveColumn={onApproveColumn}
+                        onIgnoreColumn={onIgnoreColumn}
+                        onSetColumnTarget={onSetColumnTarget}
+                        onSetColumnValueMode={onSetColumnValueMode}
+                        onBulkColumnAction={onBulkColumnAction}
+                        onAfterApply={focusNextUnresolved}
+                      />
+
+                      <div className="sipena-header-secondary-actions">
+                        <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => {
+                          onBulkColumnAction(activeIssue.column, "skip_all");
+                          focusNextUnresolved(activeIssue.id);
+                        }}>
+                          Lewati header
+                        </button>
+                        <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
+                          Reset
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+
+                  {activeIssue.column.type !== "identity" && activeIssue.isResolved ? (
+                    <div className="sipena-header-resolved-note">
+                      <b>Header selesai</b>
+                      <span>Keputusan sudah diterapkan. Gunakan Reset jika ingin mengatur ulang header ini.</span>
+                      <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
+                        Reset
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {activeIssue.column.type === "identity" ? (
+                    <div className="sipena-header-resolved-note">
+                      <b>Header identitas</b>
+                      <span>Kolom ini hanya dipakai untuk mencocokkan siswa dan otomatis dilewati saat simpan nilai.</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="sipena-header-evidence-panel">
+                  <dl className="sipena-header-counts">
+                    <div><dt>Baru</dt><dd>{activeIssue.counts.newValues}</dd></div>
+                    <div><dt>Timpa</dt><dd>{activeIssue.counts.overwrite}</dd></div>
+                    <div><dt>Dilewati</dt><dd>{activeIssue.counts.skipped}</dd></div>
+                    <div><dt>Invalid</dt><dd>{activeIssue.counts.invalid}</dd></div>
+                  </dl>
+
+                  <div className="sipena-header-info">
+                    <b>{activeIssue.detailTitle}</b>
+                    <ul>{activeIssue.detailBullets.slice(0, 2).map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
+                    {suggestion ? (
+                      <p><b>Saran AI:</b> {suggestion.reason} ({Math.round(suggestion.confidence * 100)}%).</p>
+                    ) : null}
+                  </div>
+
+                  <HeaderColumnPreview model={model} issue={activeIssue} />
                 </div>
               </div>
-              ) : null}
-
-              {activeIssue.column.type !== "identity" && activeIssue.isResolved ? (
-                <div className="sipena-header-resolved-note">
-                  <b>Header selesai</b>
-                  <span>Keputusan sudah diterapkan. Gunakan Reset jika ingin mengatur ulang header ini.</span>
-                </div>
-              ) : null}
-
-              <dl className="sipena-header-counts">
-                <div><dt>Baru</dt><dd>{activeIssue.counts.newValues}</dd></div>
-                <div><dt>Timpa</dt><dd>{activeIssue.counts.overwrite}</dd></div>
-                <div><dt>Dilewati</dt><dd>{activeIssue.counts.skipped}</dd></div>
-                <div><dt>Invalid</dt><dd>{activeIssue.counts.invalid}</dd></div>
-              </dl>
-
-              <div className="sipena-header-info">
-                <b>{activeIssue.detailTitle}</b>
-                <ul>{activeIssue.detailBullets.slice(0, 2).map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
-                {suggestion ? (
-                  <p><b>Saran AI:</b> {suggestion.reason} ({Math.round(suggestion.confidence * 100)}%).</p>
-                ) : null}
-              </div>
-
-              <HeaderColumnPreview model={model} issue={activeIssue} />
             </div>
           ) : null}
         </div>

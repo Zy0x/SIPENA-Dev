@@ -390,8 +390,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(headerStepSource).toContain("Urutan header Excel");
     expect(globalStyles).toContain("sipena-header-list-tools");
     expect(globalStyles).toContain("sipena-header-filter-tabs");
-    expect(globalStyles).toContain("sipena-header-decision-panel");
-    expect(globalStyles).toContain("position: sticky");
+    expect(headerStepSource).toContain("sipena-header-workspace");
+    expect(headerStepSource).toContain("sipena-header-editor-panel");
+    expect(headerStepSource).toContain("sipena-header-evidence-panel");
+    expect(globalStyles).toContain("sipena-header-workspace");
+    expect(globalStyles).toContain("sipena-header-editor-panel");
+    expect(globalStyles).toContain("sipena-header-evidence-panel");
+    expect(globalStyles).not.toContain("sipena-header-decision-panel");
     expect(globalStyles).toContain("sipena-header-sequence-actions");
     expect(globalStyles).toContain("sipena-issue-list-item--done");
     expect(globalStyles).toContain("sipena-import-body--issue-step");

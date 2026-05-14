@@ -10,7 +10,7 @@ describe("auth lockout reset edge function security guards", () => {
   const supabaseConfig = () => readFileSync(
     resolve(process.cwd(), "supabase/config.toml"),
     "utf8",
-  );
+  ).replace(/\r\n/g, "\n");
 
   it("is intentionally public but still uses server-side guards", () => {
     const source = functionSource();
