@@ -418,6 +418,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("overflow-y: auto");
     expect(globalStyles).toContain("padding-bottom: 18px");
     expect(globalStyles).toContain("scroll-padding-bottom: 24px");
+    expect(globalStyles).toContain("max-height: clamp(300px, calc(100dvh - 340px), 620px)");
+    expect(globalStyles).toContain("overscroll-behavior: contain");
     expect(globalStyles).not.toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
     expect(globalStyles).not.toContain("scroll-padding-bottom: 128px");
     expect(globalStyles).not.toContain("padding-bottom: 144px");

@@ -49,11 +49,17 @@ describe("clean import/export UX source guards", () => {
       cssSource.indexOf(".sipena-issue-fix-stack"),
       cssSource.indexOf(".sipena-issue-active-summary"),
     );
+    const issueListStyles = cssSource.slice(
+      cssSource.indexOf(".sipena-issue-list {"),
+      cssSource.indexOf(".sipena-issue-list-item"),
+    );
 
     expect(cssSource).toContain(".sipena-issue-step");
     expect(issueBodyStyles).toContain("overflow-y: auto");
     expect(issueBodyStyles).toContain("padding-bottom: 18px");
     expect(issueBodyStyles).not.toContain("overflow-y: hidden");
+    expect(issueListStyles).toContain("max-height: clamp(300px, calc(100dvh - 340px), 620px)");
+    expect(issueListStyles).toContain("overscroll-behavior: contain");
     expect(issueFixStackStyles).toContain("overflow-y: visible");
     expect(cssSource).not.toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
     expect(cssSource).not.toContain("padding-bottom: 128px");
