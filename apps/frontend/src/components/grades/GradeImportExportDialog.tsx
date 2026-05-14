@@ -80,7 +80,6 @@ import { ImportIssueResolutionStep } from "./import-export/ImportIssueResolution
 import { getActiveHeaderConfigurationIssues, getActiveImportIssues } from "./import-export/importIssueQueue";
 import { getImportStepReadiness } from "./import-export/importStepReadiness";
 import { ImportStepper } from "./import-export/ImportStepper";
-import { ImportSummaryPanel } from "./import-export/ImportSummaryPanel";
 import { ManualChoiceCard } from "./import-export/ManualChoiceCard";
 import { RiskAlert } from "./import-export/RiskAlert";
 import { SmartFixGroupCard } from "./import-export/SmartFixGroupCard";
@@ -1316,7 +1315,7 @@ function AnalysisStep({
         <RegionSelectionPanel analysis={freeAnalysis} onSelectRegion={onSelectRegion} />
       ) : null}
 
-      <div className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+      <div className="rounded-[20px] border border-slate-300 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge tone={sourceTone(plan.sourceType)}>{sourceLabels[plan.sourceType]}</StatusBadge>
           <StatusBadge tone={hasBlockedConflicts(plan) ? "warning" : "safe"}>
@@ -1324,14 +1323,9 @@ function AnalysisStep({
           </StatusBadge>
           {freeAnalysis?.selectedRegionId ? <StatusBadge tone="safe">{selectedRegionLabel(freeAnalysis)}</StatusBadge> : null}
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <MetricCard label="Siswa cocok" value={plan.summary.matchedStudentCount || 0} tone="green" />
-          <MetricCard label="Siswa ambigu" value={plan.summary.ambiguousStudentCount || 0} tone="orange" />
-          <MetricCard label="Kolom nilai" value={plan.summary.gradeColumnCount || 0} tone="blue" />
-          <MetricCard label="Perlu dicek" value={plan.summary.conflictCount || 0} tone={(plan.summary.conflictCount || 0) > 0 ? "red" : "green"} />
-          <MetricCard label="Tugas baru" value={plan.summary.newAssignmentCount || 0} tone="violet" />
-        <MetricCard label="Nilai tidak valid" value={plan.summary.invalidValueCount || 0} tone={(plan.summary.invalidValueCount || 0) > 0 ? "orange" : "green"} />
-        </div>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          File sudah dibaca. Lanjutkan ke Daftar Bermasalah atau Konfigurasi Header untuk menyelesaikan pilihan yang diperlukan.
+        </p>
       </div>
 
       {(plan.summary.gradeColumnCount || 0) === 0 ? (
@@ -4307,11 +4301,6 @@ export default function GradeImportExportDialog({
   const overwriteNeedsConfirmationCount = workflowIssuesResolved && stepIndex >= 4
     ? 0
     : executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0;
-  const skippedItemCount = finalReviewModel?.summary.skip ?? (executableImportPlan
-    ? executableImportPlan.summary.skippedEmptyCount
-      + executableImportPlan.summary.skippedExistingCount
-      + executableImportPlan.summary.skippedManualCount
-    : plan?.summary.skippedValueCount ?? 0);
   const importReadinessMessage = useMemo(() => {
     if (tab !== "import") return "Data tidak akan ditimpa tanpa konfirmasi.";
     if (regionSelectionPending) return "Pilih tabel nilai yang ingin dipakai.";
@@ -4417,7 +4406,6 @@ export default function GradeImportExportDialog({
     ? "Upload template SIPENA atau Excel bebas. SIPENA akan membaca dan memeriksa otomatis sebelum nilai disimpan."
     : contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu";
   const isPreviewFixStep = tab === "import" && (stepIndex === 2 || stepIndex === 3 || stepIndex === 4);
-  const showImportSummarySidebar = tab === "import" && stepIndex > 0;
   const footerStatusLabel = useMemo(() => {
     if (tab === "export") return "Mode export";
     if (regionSelectionPending) return "Pilih tabel";
@@ -4484,10 +4472,7 @@ export default function GradeImportExportDialog({
             )}
           >
             <TabsContent value="import" className="m-0 min-w-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-              <div className={cn(
-                "grid min-w-0 gap-4",
-                showImportSummarySidebar ? "xl:grid-cols-[minmax(0,1fr)_280px]" : "grid-cols-1",
-              )}>
+              <div className="grid min-w-0 grid-cols-1 gap-4">
                 <main className="min-w-0 space-y-4">
                   <section className="min-w-0 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
                     <ImportStepper steps={importSteps} currentIndex={stepIndex} />
@@ -4584,20 +4569,6 @@ export default function GradeImportExportDialog({
                   ) : null}
                 </main>
 
-                {showImportSummarySidebar ? (
-                  <ImportSummaryPanel
-                    studentCount={studentCount}
-                    chapterCount={chapterCount}
-                    assignmentCount={assignmentCount}
-                    fileName={fileName}
-                    plan={plan}
-                    currentStep={importSteps[stepIndex]}
-                    readyImportCount={readyImportCount}
-                    needsCheckCount={needsCheckCount}
-                    blockedCount={blockedItemCount}
-                    skippedCount={skippedItemCount}
-                  />
-                ) : null}
               </div>
             </TabsContent>
 

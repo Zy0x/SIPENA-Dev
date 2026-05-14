@@ -28,6 +28,16 @@ describe("clean import/export UX source guards", () => {
     expect(previewSource).not.toContain("onIgnoreNonGradeColumns");
   });
 
+  it("keeps post-upload import work area free from redundant summary panels", () => {
+    expect(dialogSource).not.toContain("ImportSummaryPanel");
+    expect(dialogSource).not.toContain("showImportSummarySidebar");
+    expect(dialogSource).not.toContain('MetricCard label="Siswa cocok"');
+    expect(dialogSource).not.toContain('MetricCard label="Siswa ambigu"');
+    expect(dialogSource).not.toContain('MetricCard label="Kolom nilai"');
+    expect(dialogSource).not.toContain('MetricCard label="Tugas baru"');
+    expect(dialogSource).not.toContain('MetricCard label="Nilai tidak valid"');
+  });
+
   it("keeps backend terms behind user-facing labels", () => {
     expect(dialogSource).toContain('blocked: "Perlu diselesaikan"');
     expect(dialogSource).toContain('manual_required: "Perlu dipilih"');
