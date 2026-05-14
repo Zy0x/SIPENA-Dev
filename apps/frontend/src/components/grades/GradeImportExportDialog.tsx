@@ -4631,7 +4631,7 @@ export default function GradeImportExportDialog({
           </div>
         </Tabs>
 
-        <footer className="sticky bottom-0 z-20 shrink-0 border-t border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-5">
+        <footer className="z-20 shrink-0 border-t border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-5">
           <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-200 dark:ring-blue-900/70" title={importReadinessMessage}>

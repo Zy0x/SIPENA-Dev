@@ -414,8 +414,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("sipena-header-sequence-actions");
     expect(globalStyles).toContain("sipena-issue-list-item--done");
     expect(globalStyles).toContain("sipena-import-body--issue-step");
-    expect(globalStyles).toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
+    expect(dialogSource).not.toContain("sticky bottom-0 z-20 shrink-0 border-t");
+    expect(globalStyles).toContain("overflow-y: auto");
+    expect(globalStyles).toContain("padding-bottom: 18px");
     expect(globalStyles).toContain("scroll-padding-bottom: 24px");
+    expect(globalStyles).not.toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
     expect(globalStyles).not.toContain("scroll-padding-bottom: 128px");
     expect(globalStyles).not.toContain("padding-bottom: 144px");
     expect(globalStyles).toContain("grid-template-columns: clamp(220px, 24vw, 300px) minmax(0, 1fr)");

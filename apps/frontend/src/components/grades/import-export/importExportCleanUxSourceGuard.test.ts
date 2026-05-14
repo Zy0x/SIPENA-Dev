@@ -25,6 +25,7 @@ describe("clean import/export UX source guards", () => {
     const footerSource = dialogSource.slice(dialogSource.indexOf("<footer"), dialogSource.indexOf("</footer>"));
 
     expect(footerSource).not.toContain("Tutup");
+    expect(footerSource).not.toContain("sticky bottom-0");
     expect(previewSource).not.toContain("Buka Daftar Bermasalah");
     expect(previewSource).not.toContain("onIgnoreNonGradeColumns");
   });
@@ -40,9 +41,21 @@ describe("clean import/export UX source guards", () => {
   });
 
   it("keeps the issue step height efficient near the footer", () => {
+    const issueBodyStyles = cssSource.slice(
+      cssSource.indexOf(".sipena-import-body--issue-step"),
+      cssSource.indexOf(".sipena-issue-step-header"),
+    );
+    const issueFixStackStyles = cssSource.slice(
+      cssSource.indexOf(".sipena-issue-fix-stack"),
+      cssSource.indexOf(".sipena-issue-active-summary"),
+    );
+
     expect(cssSource).toContain(".sipena-issue-step");
-    expect(cssSource).toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
-    expect(cssSource).toContain("padding-bottom: 8px");
+    expect(issueBodyStyles).toContain("overflow-y: auto");
+    expect(issueBodyStyles).toContain("padding-bottom: 18px");
+    expect(issueBodyStyles).not.toContain("overflow-y: hidden");
+    expect(issueFixStackStyles).toContain("overflow-y: visible");
+    expect(cssSource).not.toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
     expect(cssSource).not.toContain("padding-bottom: 128px");
     expect(cssSource).not.toContain("padding-bottom: 144px");
   });
