@@ -896,6 +896,10 @@ function buildTargetFromColumnResolution(resolution: ColumnResolution, context: 
   };
 }
 
+function resolutionCreatesNewStructure(resolution: ColumnResolution | undefined): boolean {
+  return Boolean(resolution && ["create_assignment", "create_chapter_and_assignment"].includes(resolution.kind) && resolution.confirmed);
+}
+
 function operationActionAfterResolution(operation: GradeOperation, updateMode: UpdateMode): GradeOperation["action"] {
   if (operation.conflicts.length) return "blocked";
   if (operation.value === null) return "skip_empty";
@@ -1062,6 +1066,7 @@ function applyResolverToPlan(
   const gradeOperations = basePlan.gradeOperations.map((operation) => {
     const student = studentByRow.get(operation.rowIndex);
     const column = columnByIndex.get(operation.columnIndex);
+    const columnResolution = columnOverrides.get(operation.columnIndex);
     const ignored = ignoredRows.has(operation.rowIndex) || ignoredColumns.has(operation.columnIndex) || column?.target === undefined;
     const ignoredCell = ignoredCells.has(`${operation.rowIndex}:${operation.columnIndex}`);
     const unresolved = unresolvedRows.has(operation.rowIndex);
@@ -1091,6 +1096,7 @@ function applyResolverToPlan(
       ...operation,
       studentId: student?.studentId,
       target: column?.target || operation.target,
+      existingValue: resolutionCreatesNewStructure(columnResolution) ? null : operation.existingValue,
       updateMode,
       conflicts,
       action: ignoredRows.has(operation.rowIndex)
@@ -2717,12 +2723,21 @@ function finalResultCellValue(cell: SpreadsheetPreviewCell, column: SpreadsheetP
 
 function FinalReviewResultTable({
   model,
+  executablePlan,
   hasBlockingIssues,
 }: {
   model: SpreadsheetPreviewModel;
+  executablePlan: ReturnType<typeof buildExecutableImportOperations> | null;
   hasBlockingIssues: boolean;
 }) {
   const needsAttention = hasBlockingIssues ? model.summary.manualRequired + model.summary.invalidCells : 0;
+  const executableRowIds = new Set((executablePlan?.operations || []).map((operation) => `row-${operation.rowIndex}`));
+  const executableColumnIds = new Set((executablePlan?.operations || []).map((operation) => `excel-col-${operation.columnIndex}`));
+  const visibleRows = model.rows.filter((row) => executableRowIds.has(row.id));
+  const visibleColumns = model.columns
+    .map((column, index) => ({ column, index }))
+    .filter(({ column }) => column.type === "identity" ? visibleRows.length > 0 : executableColumnIds.has(column.id));
+  const hasVisibleImportValues = visibleRows.length > 0 && visibleColumns.some(({ column }) => column.type !== "identity");
 
   return (
     <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
@@ -2738,11 +2753,12 @@ function FinalReviewResultTable({
         </StatusBadge>
       </div>
       <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+        {hasVisibleImportValues ? (
         <div className="max-h-[560px] overflow-auto">
           <table className="sipena-preview-table min-w-[980px]">
             <thead>
               <tr>
-                {model.columns.map((column) => (
+                {visibleColumns.map(({ column }) => (
                   <th key={column.id}>
                     <span className="block truncate">{column.header}</span>
                     {column.type !== "identity" ? (
@@ -2753,10 +2769,10 @@ function FinalReviewResultTable({
               </tr>
             </thead>
             <tbody>
-              {model.rows.map((row) => (
+              {visibleRows.map((row) => (
                 <tr key={row.id}>
-                  {row.cells.map((cell, index) => {
-                    const column = model.columns[index];
+                  {visibleColumns.map(({ column, index }) => {
+                    const cell = row.cells[index];
                     return (
                       <td key={cell.id} className="sipena-preview-cell">
                         <span className="sipena-preview-cell-value">{finalResultCellValue(cell, column)}</span>
@@ -2768,6 +2784,11 @@ function FinalReviewResultTable({
             </tbody>
           </table>
         </div>
+        ) : (
+          <div className="bg-slate-50 p-5 text-sm leading-6 text-slate-600 dark:bg-slate-900/50 dark:text-slate-300">
+            Tidak ada nilai baru atau perubahan yang akan disimpan. Baris, kolom, dan nilai yang dilewati tidak ditampilkan di tabel akhir.
+          </div>
+        )}
       </div>
     </section>
   );
@@ -2868,12 +2889,14 @@ function PreviewStep({
   plan,
   model,
   review,
+  executablePlan,
   hasBlockingIssues,
   onOpenFixStep,
 }: {
   plan: ImportPlan | null;
   model: SpreadsheetPreviewModel | null;
   review: FinalReviewModel | null;
+  executablePlan: ReturnType<typeof buildExecutableImportOperations> | null;
   hasBlockingIssues: boolean;
   onOpenFixStep: () => void;
 }) {
@@ -2918,7 +2941,7 @@ function PreviewStep({
       ) : null}
 
       {review ? (
-        model ? <FinalReviewResultTable model={model} hasBlockingIssues={hasBlockingIssues} /> : null
+        model ? <FinalReviewResultTable model={model} executablePlan={executablePlan} hasBlockingIssues={hasBlockingIssues} /> : null
       ) : null}
 
       {review ? (
@@ -4604,6 +4627,7 @@ export default function GradeImportExportDialog({
                       plan={plan}
                       model={spreadsheetPreview}
                       review={finalReviewModel}
+                      executablePlan={executableImportPlan}
                       hasBlockingIssues={!workflowIssuesResolved}
                       onOpenFixStep={() => setStepIndex(4)}
                     />

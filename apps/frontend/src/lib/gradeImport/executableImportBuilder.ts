@@ -97,7 +97,12 @@ function cellIdFor(rowIndex: number, columnIndex: number): string {
   return `${rowIdFor(rowIndex)}:${columnIdFor(columnIndex)}`;
 }
 
-function hasExistingGrade(operation: GradeOperation): boolean {
+function isCreateStructureOverride(override: ColumnOverride | undefined): boolean {
+  return Boolean(override && ["create_assignment", "create_chapter_and_assignment"].includes(override.kind || "") && override.confirmed);
+}
+
+function hasExistingGrade(operation: GradeOperation, override?: ColumnOverride): boolean {
+  if (isCreateStructureOverride(override)) return false;
   return operation.existingValue !== null && operation.existingValue !== undefined;
 }
 
@@ -189,9 +194,15 @@ function isStructureConfirmed(
   return Boolean(override && ["create_assignment", "create_chapter_and_assignment"].includes(override.kind || "") && override.confirmed);
 }
 
-function hasExecutableAssignmentTarget(target: GradeTarget | undefined): boolean {
+function hasExecutableAssignmentTarget(target: GradeTarget | undefined, override?: ColumnOverride): boolean {
   if (!target) return false;
-  if (target.gradeType === "assignment") return Boolean(target.assignmentId);
+  if (target.gradeType === "assignment") {
+    if (target.assignmentId) return true;
+    if (!isCreateStructureOverride(override)) return false;
+    if (override?.kind === "create_assignment") return Boolean(target.chapterId && target.assignmentName);
+    if (override?.kind === "create_chapter_and_assignment") return Boolean(target.chapterName && target.assignmentName);
+    return false;
+  }
   return !target.assignmentId;
 }
 
@@ -353,7 +364,9 @@ export function buildExecutableImportOperations({
       return;
     }
 
-    if (operation.action === "skip_existing") {
+    const targetUsesNewStructure = isCreateStructureOverride(columnOverride);
+
+    if (operation.action === "skip_existing" && !targetUsesNewStructure) {
       if (conflicts.length > 0) {
         blockedItems.push(blockedItem(operation, "blocked_operation", "Operasi masih memiliki konflik yang belum selesai.", conflicts));
         return;
@@ -370,7 +383,7 @@ export function buildExecutableImportOperations({
       return;
     }
 
-    if (!hasExecutableAssignmentTarget(target)) {
+    if (!hasExecutableAssignmentTarget(target, columnOverride)) {
       const reason = target.gradeType === "assignment" ? "structure_unconfirmed" : "unresolved_column";
       const message = target.gradeType === "assignment"
         ? "Target tugas belum lengkap."
@@ -395,7 +408,7 @@ export function buildExecutableImportOperations({
     }
 
     const mode = effectiveValueMode(operation, updateMode, selectionState);
-    const hasExisting = hasExistingGrade(operation);
+    const hasExisting = hasExistingGrade(operation, columnOverride);
 
     if (hasExisting && Number(operation.existingValue) === Number(resolvedValue)) {
       skippedItems.push(skippedItem(operation, "existing_value", "Nilai Excel sama dengan nilai SIPENA, jadi otomatis dilewati."));

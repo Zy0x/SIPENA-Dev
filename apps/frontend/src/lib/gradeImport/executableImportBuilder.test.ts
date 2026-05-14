@@ -401,7 +401,7 @@ describe("executable import builder", () => {
     expect(ignored.summary.skippedManualCount).toBe(1);
   });
 
-  it("requires an assignmentId before executable create-structure operations", () => {
+  it("executes confirmed create-structure operations before the assignment is created", () => {
     const createPlan = plan({
       columnMappings: [column("BAB 1 - Tugas Baru", {
         status: "needs_confirmation",
@@ -414,12 +414,48 @@ describe("executable import builder", () => {
     const blocked = buildExecutableImportOperations({ plan: createPlan });
     const confirmed = buildExecutableImportOperations({
       plan: createPlan,
-      resolverState: { columnOverrides: { 4: { kind: "create_assignment", confirmed: true } } },
+      resolverState: {
+        columnOverrides: {
+          4: { kind: "create_assignment", chapterId: "chapter-1", assignmentName: "Tugas Baru", confirmed: true },
+        },
+      },
     });
 
     expect(blocked.summary.unresolvedColumnCount).toBe(1);
-    expect(confirmed.summary.executableCount).toBe(0);
-    expect(confirmed.summary.unresolvedColumnCount).toBe(1);
+    expect(confirmed.summary.executableCount).toBe(1);
+    expect(confirmed.summary.unresolvedColumnCount).toBe(0);
+    expect(confirmed.operations[0]?.target).toMatchObject({
+      gradeType: "assignment",
+      chapterId: "chapter-1",
+      assignmentName: "Tugas Baru",
+    });
+  });
+
+  it("treats confirmed new assignment targets as empty even when the original target had a value", () => {
+    const createPlan = plan({
+      gradeOperations: [operation({
+        existingValue: 70,
+        action: "skip_existing",
+        target: { gradeType: "assignment", chapterId: "chapter-1", chapterName: "BAB 1", assignmentName: "Tugas Baru" },
+      })],
+      columnMappings: [column("BAB 1 - Tugas Baru", {
+        status: "needs_confirmation",
+        target: { gradeType: "assignment", chapterId: "chapter-1", chapterName: "BAB 1", assignmentName: "Tugas Baru" },
+      })],
+    });
+
+    const result = buildExecutableImportOperations({
+      plan: createPlan,
+      resolverState: {
+        columnOverrides: {
+          4: { kind: "create_assignment", chapterId: "chapter-1", assignmentName: "Tugas Baru", confirmed: true },
+        },
+      },
+    });
+
+    expect(result.summary.executableCount).toBe(1);
+    expect(result.summary.fillEmptyCount).toBe(1);
+    expect(result.summary.skippedExistingCount).toBe(0);
   });
 
   it("does not make skipped create-structure columns executable", () => {
