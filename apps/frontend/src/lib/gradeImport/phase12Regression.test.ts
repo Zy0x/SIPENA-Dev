@@ -383,7 +383,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("sipena-preview-cell-actions");
     expect(globalStyles).toContain("sipena-issue-active-summary");
     expect(globalStyles).toContain("sipena-header-config-grid");
-    expect(globalStyles).toContain("sipena-header-category-bar");
+    expect(headerStepSource).toContain("Urutan header Excel");
+    expect(globalStyles).toContain("sipena-header-sequence-actions");
     expect(globalStyles).toContain("sipena-issue-list-item--done");
     expect(globalStyles).toContain("sipena-import-body--issue-step");
     expect(globalStyles).toContain("scroll-padding-bottom: 128px");
@@ -396,7 +397,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("width: 184px");
     expect(previewBadgeSource).toContain("Tidak valid");
     expect(previewBannerSource).toContain("Klik header untuk atur kolom");
-    expect(dialogSource).toContain("Tabel review akhir");
+    expect(dialogSource).toContain("Tabel akhir hasil");
+    expect(dialogSource).toContain("Detail keputusan import");
     expect(dialogSource).toContain("Sumber Excel");
     expect(dialogSource).toContain("Target SIPENA");
     expect(dialogSource).toContain("Nilai Excel");

@@ -225,6 +225,14 @@ describe("invalid issue queue", () => {
     expect(activeHeaderIssues.map((issue) => issue.column.id)).toContain("excel-col-5");
   });
 
+  it("shows all headers in their spreadsheet order while keeping identity headers resolved", () => {
+    const preview = model([previewRow("row-14", {})]);
+    const headerIssues = buildHeaderConfigurationQueue(preview);
+
+    expect(headerIssues.map((issue) => issue.column.header)).toEqual(["No", "NISN", "Nama", "UH 1", "Tugas 1"]);
+    expect(headerIssues.slice(0, 3).every((issue) => issue.isResolved && issue.category === "skipped")).toBe(true);
+  });
+
   it("treats same header values as safe skipped even when target metadata is incomplete", () => {
     const preview = {
       ...model([previewRow("row-15", {

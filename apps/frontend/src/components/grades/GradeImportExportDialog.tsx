@@ -2705,6 +2705,64 @@ function reviewDecisionApprovalLabel(decision: FinalReviewModel["sections"][numb
   return "Belum dipilih";
 }
 
+function finalResultCellValue(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): string {
+  if (column.type === "identity") return cell.displayValue || "-";
+  if (cell.effectiveInclude === false || cell.isAutoSkippedSameValue || cell.isManuallySkipped) {
+    return String(cell.oldValue ?? cell.displayValue ?? "-");
+  }
+  return String(cell.resolvedValue ?? cell.newValue ?? cell.suggestedValue ?? cell.oldValue ?? "-");
+}
+
+function FinalReviewResultTable({ model }: { model: SpreadsheetPreviewModel }) {
+  return (
+    <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Tabel akhir hasil</h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Tampilan akhir setelah masalah dan header diselesaikan. Tabel ini hanya untuk review, tanpa pengeditan.
+          </p>
+        </div>
+        <StatusBadge tone={model.summary.manualRequired || model.summary.invalidCells ? "warning" : "success"}>
+          {model.summary.manualRequired || model.summary.invalidCells ? "Cek ulang" : "Siap import"}
+        </StatusBadge>
+      </div>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+        <div className="max-h-[560px] overflow-auto">
+          <table className="sipena-preview-table min-w-[980px]">
+            <thead>
+              <tr>
+                {model.columns.map((column) => (
+                  <th key={column.id}>
+                    <span className="block truncate">{column.header}</span>
+                    {column.type !== "identity" ? (
+                      <span className="sipena-preview-header-target">{column.targetLabel || column.sourceHeader || "Target tersimpan"}</span>
+                    ) : null}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {model.rows.map((row) => (
+                <tr key={row.id}>
+                  {row.cells.map((cell, index) => {
+                    const column = model.columns[index];
+                    return (
+                      <td key={cell.id} className="sipena-preview-cell">
+                        <span className="sipena-preview-cell-value">{finalResultCellValue(cell, column)}</span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FinalReviewDecisionSummary({
   review,
   onOpenVerificationStep,
@@ -2717,18 +2775,18 @@ function FinalReviewDecisionSummary({
   ));
 
   return (
-    <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <details className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+      <summary className="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Tabel review akhir</h3>
+          <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Detail keputusan import</h3>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Preview keputusan final sebelum simpan. Untuk mengubah nilai, kembali ke Verifikasi Tabel; untuk target kolom, kembali ke Konfigurasi Header.
+            Buka hanya jika ingin melihat alasan per nilai. Untuk mengubah nilai, kembali ke Verifikasi Tabel.
           </p>
         </div>
         <Button type="button" variant="outline" className="min-h-10 rounded-full" onClick={onOpenVerificationStep}>
           Buka Verifikasi Tabel
         </Button>
-      </div>
+      </summary>
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-border">
         {decisionRows.length ? (
@@ -2792,7 +2850,7 @@ function FinalReviewDecisionSummary({
           </div>
         )}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -2839,6 +2897,10 @@ function PreviewStep({
             <p className="mt-3 text-xs leading-5 text-orange-700 dark:text-orange-200">{review.disabledReason}</p>
           ) : null}
         </section>
+      ) : null}
+
+      {review ? (
+        model ? <FinalReviewResultTable model={model} /> : null
       ) : null}
 
       {review ? (

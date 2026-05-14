@@ -12,20 +12,13 @@ import type {
 import { cn } from "@/lib/utils";
 
 import type { ColumnSettingsAssignmentOption, ColumnSettingsChapterOption, ColumnTargetDraft } from "./ColumnSettingsOverlay";
-import { buildHeaderConfigurationQueue, type HeaderConfigurationCategory, type HeaderConfigurationIssue } from "./importIssueQueue";
+import { buildHeaderConfigurationQueue, type HeaderConfigurationIssue } from "./importIssueQueue";
 import { getCellPreviewVisualState } from "./previewVisualState";
 
 type TargetChoice = "current" | "sts" | "sas" | "assignment" | "new_assignment" | "new_chapter_assignment" | "ignore";
 
 function cleanName(value: string): string {
   return value.trim().replace(/\s+/g, " ");
-}
-
-function categoryCopy(category: HeaderConfigurationCategory) {
-  if (category === "target_required") return { label: "Perlu target", description: "Header belum aman atau perlu dibuatkan target." };
-  if (category === "overwrite") return { label: "Akan ditimpa", description: "Kolom berisi nilai lama yang berbeda." };
-  if (category === "new_values") return { label: "Akan ditambahkan", description: "Kolom mengisi nilai yang masih kosong." };
-  return { label: "Akan dilewati", description: "Kolom berisi nilai sama, kosong, atau diset skip." };
 }
 
 function valueModeLabel(mode: ColumnValueMode): string {
@@ -52,6 +45,7 @@ function hasUsableTarget(column: SpreadsheetPreviewColumn): boolean {
 }
 
 function headerPrimaryLabel(issue: HeaderConfigurationIssue): string {
+  if (issue.column.type === "identity") return "Sudah benar";
   if (issue.category === "target_required") return "Simpan target";
   if (issue.category === "overwrite" && issue.valueMode === "overwrite_existing") return "Konfirmasi timpa";
   if (issue.category === "skipped") return "Tandai aman";
@@ -61,6 +55,14 @@ function headerPrimaryLabel(issue: HeaderConfigurationIssue): string {
 function previewValue(value: string | number | null | undefined): string {
   if (value === null || value === undefined || String(value).trim() === "") return "-";
   return String(value);
+}
+
+function headerDecisionSummary(issue: HeaderConfigurationIssue): string {
+  if (issue.column.type === "identity") return "Kolom identitas hanya untuk mencocokkan siswa. Tidak ada nilai yang disimpan dari header ini.";
+  if (issue.category === "skipped") return "Semua nilai pada header ini sama, kosong, atau sudah dilewati. Header aman tanpa konfirmasi.";
+  if (issue.category === "target_required") return "Header ini punya nilai yang perlu target BAB/tugas sebelum bisa masuk ke tabel verifikasi.";
+  if (issue.category === "overwrite") return `${issue.counts.overwrite} nilai berbeda dari SIPENA. Konfirmasi aturan satu kali untuk seluruh kolom.`;
+  return `${issue.counts.newValues} nilai baru akan diisi ke sel kosong pada target header ini.`;
 }
 
 function columnAiSuggestion(column: SpreadsheetPreviewColumn, aiAssist?: SmartImportAssistResponse | null) {
@@ -92,19 +94,19 @@ function HeaderTargetForm({
   onSetColumnTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
 }) {
   const column = issue.column;
-  const [targetChoice, setTargetChoice] = useState<TargetChoice>(() => defaultTargetChoice(column));
+  const [targetChoice, setTargetChoice] = useState<TargetChoice>(() => issue.category === "target_required" ? "new_assignment" : defaultTargetChoice(column));
   const [assignmentId, setAssignmentId] = useState(column.assignmentId || assignments[0]?.id || "");
   const [chapterId, setChapterId] = useState(column.chapterId || chapters[0]?.id || "");
   const [chapterName, setChapterName] = useState(column.chapterName || "BAB Baru");
   const [assignmentName, setAssignmentName] = useState(column.assignmentName || column.sourceHeader || column.header);
 
   useEffect(() => {
-    setTargetChoice(defaultTargetChoice(column));
+    setTargetChoice(issue.category === "target_required" ? "new_assignment" : defaultTargetChoice(column));
     setAssignmentId(column.assignmentId || assignments[0]?.id || "");
     setChapterId(column.chapterId || chapters[0]?.id || "");
     setChapterName(column.chapterName || "BAB Baru");
     setAssignmentName(column.assignmentName || column.sourceHeader || column.header);
-  }, [assignments, chapters, column]);
+  }, [assignments, chapters, column, issue.category]);
 
   const canSaveTarget = (targetChoice === "current" && hasUsableTarget(column))
     || targetChoice === "sts"
@@ -298,38 +300,26 @@ export function HeaderConfigurationStep({
   onBulkColumnAction: (column: SpreadsheetPreviewColumn, action: "include_valid" | "skip_all" | "skip_existing" | "reset") => void;
   onResetColumnSelection: (column: SpreadsheetPreviewColumn) => void;
 }) {
-  const issues = useMemo(() => buildHeaderConfigurationQueue(model, selectionState), [model, selectionState]);
-  const activeIssues = issues.filter((issue) => !issue.isResolved);
-  const [selectedCategory, setSelectedCategory] = useState<HeaderConfigurationCategory>("target_required");
-  const [activeIssueId, setActiveIssueId] = useState<string | null>(issues[0]?.id || null);
-  const visibleIssues = issues.filter((issue) => issue.category === selectedCategory);
-  const selectedIssue = issues.find((issue) => issue.id === activeIssueId);
-  const activeIssue = selectedIssue?.category === selectedCategory ? selectedIssue : visibleIssues[0] || activeIssues[0] || issues[0];
-  const categories: HeaderConfigurationCategory[] = ["target_required", "overwrite", "new_values", "skipped"];
+  const headers = useMemo(() => buildHeaderConfigurationQueue(model, selectionState), [model, selectionState]);
+  const activeIssues = headers.filter((issue) => !issue.isResolved);
+  const [activeIssueId, setActiveIssueId] = useState<string | null>(headers[0]?.id || null);
+  const selectedIssue = headers.find((issue) => issue.id === activeIssueId);
+  const activeIssue = selectedIssue || activeIssues[0] || headers[0];
+  const activeHeaderIndex = activeIssue ? Math.max(0, headers.findIndex((issue) => issue.id === activeIssue.id)) : -1;
+  const completedHeaderCount = headers.filter((issue) => issue.isResolved).length;
+  const totalHeaderCount = headers.length;
 
   useEffect(() => {
-    if (!issues.length) {
+    if (!headers.length) {
       setActiveIssueId(null);
       return;
     }
-    const currentIssue = issues.find((issue) => issue.id === activeIssueId);
-    if (currentIssue && currentIssue.category !== selectedCategory) {
-      const nextInCategory = visibleIssues[0];
-      if (nextInCategory) setActiveIssueId(nextInCategory.id);
-      return;
-    }
+    const currentIssue = headers.find((issue) => issue.id === activeIssueId);
     if (!activeIssueId || !currentIssue) {
-      const next = activeIssues[0] || issues[0];
-      setSelectedCategory(next.category);
+      const next = activeIssues[0] || headers[0];
       setActiveIssueId(next.id);
     }
-  }, [activeIssueId, activeIssues, issues, selectedCategory, visibleIssues]);
-
-  const selectCategory = (category: HeaderConfigurationCategory) => {
-    setSelectedCategory(category);
-    const first = issues.find((issue) => issue.category === category);
-    if (first) setActiveIssueId(first.id);
-  };
+  }, [activeIssueId, activeIssues, headers]);
 
   const suggestion = activeIssue ? columnAiSuggestion(activeIssue.column, aiAssist) : undefined;
   const applyHeaderDecision = (issue: HeaderConfigurationIssue) => {
@@ -358,44 +348,34 @@ export function HeaderConfigurationStep({
     if (activeIssue.category === "target_required") return hasUsableTarget(activeIssue.column);
     return true;
   }, [activeIssue]);
+  const nextHeader = () => {
+    if (!activeIssue || headers.length === 0) return;
+    const next = headers[activeHeaderIndex + 1] || headers[0];
+    setActiveIssueId(next.id);
+  };
+  const previousHeader = () => {
+    if (!activeIssue || headers.length === 0) return;
+    const previous = headers[activeHeaderIndex - 1] || headers[headers.length - 1];
+    setActiveIssueId(previous.id);
+  };
 
   return (
     <section className="sipena-header-config-step">
       <div className="sipena-issue-step-header">
         <div>
           <h3>Konfigurasi Header</h3>
-          <p>Atur target dan aturan nilai per kolom. Semua nilai di bawah header akan mengikuti keputusan ini.</p>
+          <p>Periksa header dari awal sampai akhir. Header yang identik atau kosong langsung aman; hanya nilai baru atau berbeda yang perlu keputusan.</p>
         </div>
         <div className="sipena-issue-step-summary">
-          <b>{activeIssues.length}</b>
-          <span>{activeIssues.length ? "header perlu aksi" : "header aman"}</span>
+          <b>{completedHeaderCount}/{totalHeaderCount || 0}</b>
+          <span>{activeIssues.length ? `${activeIssues.length} perlu aksi` : "semua aman"}</span>
         </div>
       </div>
 
-      <div className="sipena-header-category-bar" aria-label="Kategori header">
-        {categories.map((category) => {
-          const copy = categoryCopy(category);
-          const count = issues.filter((issue) => issue.category === category).length;
-          const unresolved = issues.filter((issue) => issue.category === category && !issue.isResolved).length;
-          return (
-            <button
-              key={category}
-              type="button"
-              className={cn("sipena-header-category-button", selectedCategory === category && "sipena-header-category-button--active")}
-              onClick={() => selectCategory(category)}
-            >
-              <span>{copy.label}</span>
-              <b>{unresolved ? `${unresolved}/${count}` : count}</b>
-              <small>{copy.description}</small>
-            </button>
-          );
-        })}
-      </div>
-
-      {issues.length ? (
+      {headers.length ? (
         <div className="sipena-header-config-grid">
-          <aside className="sipena-header-list" aria-label="Daftar header nilai">
-            {(visibleIssues.length ? visibleIssues : issues).map((issue) => (
+          <aside className="sipena-header-list" aria-label="Urutan header Excel">
+            {headers.map((issue, index) => (
               <button
                 key={issue.id}
                 type="button"
@@ -407,14 +387,14 @@ export function HeaderConfigurationStep({
                 )}
                 onClick={() => setActiveIssueId(issue.id)}
               >
-                <span className="sipena-header-list-state">{issue.isResolved ? "✓" : "!"}</span>
+                <span className="sipena-header-list-state">{issue.isResolved ? "✓" : index + 1}</span>
                 <span className="min-w-0">
                   <span className="sipena-header-list-meta">
                     <span>{issue.categoryLabel}</span>
                     <span>{issue.isResolved ? "Selesai" : issue.recommendedActionLabel}</span>
                   </span>
                   <b>{issue.title}</b>
-                  <small>{issue.description}</small>
+                  <small>{headerDecisionSummary(issue)}</small>
                 </span>
               </button>
             ))}
@@ -424,13 +404,37 @@ export function HeaderConfigurationStep({
             <div className="sipena-header-detail">
               <div className="sipena-header-detail-head">
                 <div>
-                  <span>{activeIssue.categoryLabel}</span>
+                  <span>Header {activeHeaderIndex + 1} dari {totalHeaderCount} / {activeIssue.categoryLabel}</span>
                   <h4>{activeIssue.column.header}</h4>
-                  <p>Target saat ini: {activeIssue.column.targetLabel || "Belum dipilih"}</p>
+                  <p>{headerDecisionSummary(activeIssue)}</p>
                 </div>
                 <span className={cn("sipena-header-status", activeIssue.isResolved ? "sipena-header-status--done" : "sipena-header-status--pending")}>
                   {activeIssue.isResolved ? "Selesai" : "Perlu aksi"}
                 </span>
+              </div>
+              <div className="sipena-header-sequence-actions">
+                <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
+                <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
+                {!activeIssue.isResolved && activeIssue.category !== "target_required" ? (
+                  <button
+                    type="button"
+                    className="sipena-column-btn sipena-column-btn-primary"
+                    onClick={() => applyHeaderDecision(activeIssue)}
+                    disabled={!canApplyHeaderDecision}
+                  >
+                    {headerPrimaryLabel(activeIssue)}
+                  </button>
+                ) : null}
+                {!activeIssue.isResolved && activeIssue.column.type !== "identity" ? (
+                  <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => onBulkColumnAction(activeIssue.column, "skip_all")}>
+                    Lewati header
+                  </button>
+                ) : null}
+                {activeIssue.column.type !== "identity" ? (
+                  <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
+                    Reset
+                  </button>
+                ) : null}
               </div>
 
               <dl className="sipena-header-counts">
@@ -450,6 +454,7 @@ export function HeaderConfigurationStep({
 
               <HeaderColumnPreview model={model} issue={activeIssue} />
 
+              {activeIssue.column.type !== "identity" && !activeIssue.isResolved ? (
               <div className="sipena-header-decision-panel">
                 <HeaderTargetForm
                   issue={activeIssue}
@@ -481,28 +486,8 @@ export function HeaderConfigurationStep({
                     </div>
                   ) : null}
                 </div>
-
-                <div className="sipena-header-decision-actions">
-                  {activeIssue.category !== "target_required" ? (
-                    <button
-                      type="button"
-                      className="sipena-column-btn sipena-column-btn-primary"
-                      onClick={() => applyHeaderDecision(activeIssue)}
-                      disabled={!canApplyHeaderDecision}
-                    >
-                      {headerPrimaryLabel(activeIssue)}
-                    </button>
-                  ) : null}
-                  {activeIssue.category !== "target_required" ? (
-                    <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => onBulkColumnAction(activeIssue.column, "skip_all")}>
-                      Lewati header
-                    </button>
-                  ) : null}
-                  <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
-                    Reset
-                  </button>
-                </div>
               </div>
+              ) : null}
             </div>
           ) : null}
         </div>
