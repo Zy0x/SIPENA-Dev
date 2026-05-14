@@ -382,6 +382,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(issueStepSource).toContain("masalah tersisa");
     expect(dialogSource).toContain("importBodyRef.current?.scrollTo({ top: 0");
     expect(dialogSource).toContain("sipena-import-body--issue-step");
+    expect(dialogSource).toContain("footerStatusLabel");
+    expect(dialogSource).toContain("lg:flex-row lg:items-center lg:justify-between");
+    expect(dialogSource).toContain("lg:w-80");
+    expect(dialogSource).not.toContain('className="shrink-0 border-b border-border bg-white px-4 py-3 dark:bg-slate-950 sm:px-6"');
     expect(globalStyles).toContain("sipena-preview-header-target");
     expect(globalStyles).toContain("sipena-preview-cell-details");
     expect(globalStyles).toContain("sipena-preview-cell-actions");

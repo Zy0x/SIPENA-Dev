@@ -4428,49 +4428,72 @@ export default function GradeImportExportDialog({
     || (exportMode === "current" && !onDownloadCurrentGrades)
     || (exportMode === "backup" && !onDownloadBackup)
   );
+  const dialogDescription = tab === "import"
+    ? "Upload template SIPENA atau Excel bebas. SIPENA akan membaca dan memeriksa otomatis sebelum nilai disimpan."
+    : contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu";
   const isPreviewFixStep = tab === "import" && (stepIndex === 2 || stepIndex === 3 || stepIndex === 4);
   const isWideImportWorkspace = tab === "import" && (stepIndex === 2 || stepIndex === 3 || stepIndex === 4 || stepIndex === 5);
+  const footerStatusLabel = useMemo(() => {
+    if (tab === "export") return "Mode export";
+    if (regionSelectionPending) return "Pilih tabel";
+    if (unsupported) return "File belum valid";
+    if (stepIndex === 2 && activeImportIssueCount > 0) return `${activeImportIssueCount} masalah tersisa`;
+    if (stepIndex === 3 && activeHeaderIssueCount > 0) return `${activeHeaderIssueCount} header tersisa`;
+    if (stepIndex === 6 && overwriteNeedsConfirmationCount > 0) return `${overwriteNeedsConfirmationCount} timpa perlu konfirmasi`;
+    if (stepIndex === 6 && blockedItemCount > 0) return `${blockedItemCount} item tertahan`;
+    if (workflowIssuesResolved && stepIndex >= 4) return "Siap diverifikasi";
+    if (readyImportCount > 0) return `${readyImportCount} siap import`;
+    return "Pemeriksaan aman";
+  }, [
+    activeHeaderIssueCount,
+    activeImportIssueCount,
+    blockedItemCount,
+    overwriteNeedsConfirmationCount,
+    readyImportCount,
+    regionSelectionPending,
+    stepIndex,
+    tab,
+    unsupported,
+    workflowIssuesResolved,
+  ]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[calc(100dvh-0.25rem)] max-h-[980px] w-[calc(100vw-0.25rem)] max-w-[1880px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-white/80 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(96dvh,980px)] sm:w-[calc(100vw-0.75rem)] xl:w-[min(98vw,1880px)]">
-        <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-950/95 sm:px-6 sm:py-4">
-          <div className="flex min-w-0 items-start gap-3 pr-10">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/70 sm:h-12 sm:w-12">
-              <FileSpreadsheet className="h-6 w-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <DialogTitle className="text-base font-semibold tracking-normal text-slate-950 dark:text-slate-50 sm:text-lg">
-                  {tab === "import" ? "Import Nilai" : "Export Nilai"}
-                </DialogTitle>
-                <StatusBadge tone="safe">Pemeriksaan otomatis</StatusBadge>
-              </div>
-              <DialogDescription className="mt-1 max-w-full text-sm leading-5 text-muted-foreground" title={contextLabel || undefined}>
-                {tab === "import"
-                  ? "Upload template SIPENA atau Excel bebas. SIPENA akan membaca dan memeriksa otomatis sebelum nilai disimpan."
-                  : contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu"}
-              </DialogDescription>
-            </div>
-          </div>
-        </header>
-
         <Tabs value={tab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="shrink-0 border-b border-border bg-white px-4 py-3 dark:bg-slate-950 sm:px-6">
-            <TabsList aria-label="Mode export dan import nilai" className="grid h-11 w-full max-w-md grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900">
-              <TabsTrigger value="import" className="h-9 rounded-full text-xs sm:text-sm">
-                Import Nilai
-              </TabsTrigger>
-              <TabsTrigger value="export" className="h-9 rounded-full text-xs sm:text-sm">
-                Export Nilai
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-white/95 px-3 py-2 backdrop-blur dark:bg-slate-950/95 sm:px-5">
+            <div className="flex min-w-0 flex-col gap-2 pr-10 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/70">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <DialogTitle className="text-base font-semibold tracking-normal text-slate-950 dark:text-slate-50">
+                      {tab === "import" ? "Import Nilai" : "Export Nilai"}
+                    </DialogTitle>
+                    <StatusBadge tone="safe">Pemeriksaan otomatis</StatusBadge>
+                  </div>
+                  <DialogDescription className="mt-0.5 max-w-[min(76vw,920px)] truncate text-xs leading-5 text-muted-foreground" title={dialogDescription}>
+                    {dialogDescription}
+                  </DialogDescription>
+                </div>
+              </div>
+              <TabsList aria-label="Mode export dan import nilai" className="grid h-10 w-full max-w-sm shrink-0 grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900 lg:w-80">
+                <TabsTrigger value="import" className="h-8 rounded-full text-xs sm:text-sm">
+                  Import Nilai
+                </TabsTrigger>
+                <TabsTrigger value="export" className="h-8 rounded-full text-xs sm:text-sm">
+                  Export Nilai
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </header>
 
           <div
             ref={importBodyRef}
             className={cn(
-              "min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-4 py-4 dark:bg-slate-950 sm:px-6",
+              "min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-3 py-3 dark:bg-slate-950 sm:px-5",
               tab === "import" && stepIndex === 2 && "sipena-import-body--issue-step",
             )}
           >
@@ -4670,25 +4693,29 @@ export default function GradeImportExportDialog({
           </div>
         </Tabs>
 
-        <footer className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-950/95 sm:px-6">
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 space-y-1 text-xs text-muted-foreground">
-              <div className="flex min-w-0 items-center gap-2">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-blue-600" />
-              <span className="truncate" title={importReadinessMessage}>{importReadinessMessage}</span>
-              </div>
+        <footer className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-white/95 px-3 py-2 backdrop-blur dark:bg-slate-950/95 sm:px-5">
+          <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-200 dark:ring-blue-900/70" title={importReadinessMessage}>
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                <span className="truncate">{footerStatusLabel}</span>
+              </span>
               {importPrimaryDisabledReason ? (
-                <p id="sipena-import-disabled-reason" className="text-orange-700 dark:text-orange-300">
+                <span id="sipena-import-disabled-reason" className="max-w-[min(78vw,720px)] truncate text-orange-700 dark:text-orange-300" title={importPrimaryDisabledReason}>
                   {importPrimaryDisabledReason}
-                </p>
-              ) : null}
+                </span>
+              ) : (
+                <span className="max-w-[min(78vw,760px)] truncate" title={importReadinessMessage}>
+                  {importReadinessMessage}
+                </span>
+              )}
             </div>
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
               {tab === "import" && stepIndex > 0 ? (
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-11 w-full rounded-full sm:min-h-10 sm:w-auto"
+                  className="min-h-10 w-full rounded-full sm:w-auto"
                   onClick={handleBack}
                 >
                   Kembali
@@ -4698,7 +4725,7 @@ export default function GradeImportExportDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  className="min-h-11 w-full rounded-full sm:min-h-10 sm:w-auto"
+                  className="min-h-10 w-full rounded-full sm:w-auto"
                   onClick={onOpenLegacyImport}
                 >
                   Buka import lama
@@ -4707,7 +4734,7 @@ export default function GradeImportExportDialog({
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-11 w-full rounded-full sm:min-h-10 sm:w-auto"
+                className="min-h-10 w-full rounded-full sm:w-auto"
                 onClick={handleClose}
               >
                 Tutup
@@ -4720,7 +4747,7 @@ export default function GradeImportExportDialog({
                 }
                 aria-describedby={importPrimaryDisabledReason ? "sipena-import-disabled-reason" : undefined}
                 className={cn(
-                  "min-h-11 w-full min-w-0 gap-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:min-h-10 sm:w-auto",
+                  "min-h-10 w-full min-w-0 gap-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto",
                 )}
                 onClick={handlePrimaryAction}
               >
