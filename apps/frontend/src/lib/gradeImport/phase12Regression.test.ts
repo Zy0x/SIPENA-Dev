@@ -411,7 +411,12 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("sipena-header-evidence-panel");
     expect(globalStyles).toContain("grid-template-columns: minmax(0, 1fr)");
     expect(globalStyles).not.toContain("sipena-header-decision-panel");
-    expect(globalStyles).toContain("sipena-header-sequence-actions");
+    expect(headerStepSource).toContain("sipena-header-unified-actions");
+    expect(headerStepSource).not.toContain("sipena-header-secondary-actions");
+    expect(headerStepSource).not.toContain("sipena-header-sequence-actions");
+    expect(globalStyles).toContain("sipena-header-unified-actions");
+    expect(globalStyles).not.toContain("sipena-header-secondary-actions");
+    expect(globalStyles).not.toContain("sipena-header-sequence-actions");
     expect(globalStyles).toContain("sipena-issue-list-item--done");
     expect(globalStyles).toContain("sipena-import-body--issue-step");
     expect(dialogSource).not.toContain("sticky bottom-0 z-20 shrink-0 border-t");

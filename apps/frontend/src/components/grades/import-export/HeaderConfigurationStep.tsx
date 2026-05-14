@@ -101,6 +101,10 @@ function HeaderTargetForm({
   onSetColumnValueMode,
   onBulkColumnAction,
   onAfterApply,
+  onPreviousHeader,
+  onNextHeader,
+  onSkipHeader,
+  onResetHeader,
 }: {
   issue: HeaderConfigurationIssue;
   assignments: ColumnSettingsAssignmentOption[];
@@ -111,6 +115,10 @@ function HeaderTargetForm({
   onSetColumnValueMode: (column: SpreadsheetPreviewColumn, mode: ColumnValueMode, overwriteConfirmed?: boolean) => void;
   onBulkColumnAction: (column: SpreadsheetPreviewColumn, action: "include_valid" | "skip_all" | "skip_existing" | "reset") => void;
   onAfterApply: (issueId: string) => void;
+  onPreviousHeader: () => void;
+  onNextHeader: () => void;
+  onSkipHeader: () => void;
+  onResetHeader: () => void;
 }) {
   const column = issue.column;
   const [targetChoice, setTargetChoice] = useState<TargetChoice>(() => issue.category === "target_required" ? "new_assignment" : defaultTargetChoice(column));
@@ -192,6 +200,16 @@ function HeaderTargetForm({
 
   return (
     <div className="sipena-header-target-form">
+      <div className="sipena-header-unified-actions">
+        <button type="button" className="sipena-column-btn" onClick={onPreviousHeader}>Sebelumnya</button>
+        <button type="button" className="sipena-column-btn" onClick={onNextHeader}>Header berikutnya</button>
+        <span aria-hidden="true" className="sipena-header-action-spacer" />
+        <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={onSkipHeader}>Lewati header</button>
+        <button type="button" className="sipena-column-btn" onClick={onResetHeader}>Reset</button>
+        <button type="button" className="sipena-column-btn sipena-column-btn-primary sipena-header-target-save" onClick={applyTarget} disabled={!canSaveTarget}>
+          {targetChoice === "ignore" ? "Lewati header" : headerPrimaryLabel(issue)}
+        </button>
+      </div>
       <label>
         <span>Target header</span>
         <select value={targetChoice} onChange={(event) => setTargetChoice(event.target.value as TargetChoice)}>
@@ -263,9 +281,6 @@ function HeaderTargetForm({
           </div>
         ) : null}
       </div>
-      <button type="button" className="sipena-column-btn sipena-column-btn-primary sipena-header-target-save" onClick={applyTarget} disabled={!canSaveTarget}>
-        {targetChoice === "ignore" ? "Lewati header" : headerPrimaryLabel(issue)}
-      </button>
     </div>
   );
 }
@@ -547,11 +562,6 @@ export function HeaderConfigurationStep({
                   {activeIssue.isResolved ? "Selesai" : "Perlu aksi"}
                 </span>
               </div>
-              <div className="sipena-header-sequence-actions">
-                <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
-                <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
-              </div>
-
               <div className={cn("sipena-header-workspace", isEvidenceOpen && "sipena-header-workspace--evidence-open")}>
                 <div className="sipena-header-editor-panel">
                   <div className="sipena-header-panel-title">
@@ -583,19 +593,14 @@ export function HeaderConfigurationStep({
                         onSetColumnValueMode={onSetColumnValueMode}
                         onBulkColumnAction={onBulkColumnAction}
                         onAfterApply={focusNextUnresolved}
-                      />
-
-                      <div className="sipena-header-secondary-actions">
-                        <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => {
+                        onPreviousHeader={previousHeader}
+                        onNextHeader={nextHeader}
+                        onSkipHeader={() => {
                           onBulkColumnAction(activeIssue.column, "skip_all");
                           focusNextUnresolved(activeIssue.id);
-                        }}>
-                          Lewati header
-                        </button>
-                        <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
-                          Reset
-                        </button>
-                      </div>
+                        }}
+                        onResetHeader={() => onResetColumnSelection(activeIssue.column)}
+                      />
                     </>
                   ) : null}
 
@@ -603,6 +608,8 @@ export function HeaderConfigurationStep({
                     <div className="sipena-header-resolved-note">
                       <b>Header selesai</b>
                       <span>Keputusan sudah diterapkan. Gunakan Reset jika ingin mengatur ulang header ini.</span>
+                      <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
+                      <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
                       <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
                         Reset
                       </button>
@@ -613,6 +620,8 @@ export function HeaderConfigurationStep({
                     <div className="sipena-header-resolved-note">
                       <b>Header identitas</b>
                       <span>Kolom ini hanya dipakai untuk mencocokkan siswa dan otomatis dilewati saat simpan nilai.</span>
+                      <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
+                      <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
                     </div>
                   ) : null}
                 </div>

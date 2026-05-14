@@ -12,6 +12,7 @@ function readSource(path: string) {
 describe("clean import/export UX source guards", () => {
   const dialogSource = readSource("apps/frontend/src/components/grades/GradeImportExportDialog.tsx");
   const dropzoneSource = readSource("apps/frontend/src/components/grades/import-export/ImportDropzone.tsx");
+  const headerStepSource = readSource("apps/frontend/src/components/grades/import-export/HeaderConfigurationStep.tsx");
   const previewSource = readSource("apps/frontend/src/components/grades/import-export/SmartSpreadsheetPreview.tsx");
   const cssSource = readSource("apps/frontend/src/index.css");
 
@@ -64,6 +65,19 @@ describe("clean import/export UX source guards", () => {
     expect(cssSource).not.toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");
     expect(cssSource).not.toContain("padding-bottom: 128px");
     expect(cssSource).not.toContain("padding-bottom: 144px");
+  });
+
+  it("keeps header configuration actions in one top toolbar", () => {
+    expect(headerStepSource).toContain("sipena-header-unified-actions");
+    expect(headerStepSource).toContain("onPreviousHeader");
+    expect(headerStepSource).toContain("onNextHeader");
+    expect(headerStepSource).toContain("onSkipHeader");
+    expect(headerStepSource).toContain("onResetHeader");
+    expect(headerStepSource).not.toContain("sipena-header-secondary-actions");
+    expect(headerStepSource).not.toContain("sipena-header-sequence-actions");
+    expect(cssSource).toContain(".sipena-header-unified-actions");
+    expect(cssSource).not.toContain(".sipena-header-secondary-actions");
+    expect(cssSource).not.toContain(".sipena-header-sequence-actions");
   });
 
   it("keeps backend terms behind user-facing labels", () => {
