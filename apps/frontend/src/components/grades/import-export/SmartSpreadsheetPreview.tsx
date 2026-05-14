@@ -101,7 +101,7 @@ function previewCellDetailLines(cell: SpreadsheetPreviewCell, column: Spreadshee
   if (cell.effectiveInclude === false || cell.isManuallySkipped) details.push("Tidak akan disimpan");
   if (cell.status === "overwrite") details.push("Nilai lama akan ditimpa");
   if ((cell.isBlockedByRow || cell.isBlockedByColumn || cell.isBlockedByTarget) && cell.status !== "invalid") {
-    details.push("Ditahan sampai siswa atau target kolom beres");
+    details.push("Menunggu pilihan siswa atau target kolom");
   }
 
   return Array.from(new Set(details)).slice(0, 3);
@@ -126,24 +126,10 @@ function columnStatsDetail(column: SpreadsheetPreviewColumn): string {
   return parts.join(" / ");
 }
 
-function needsCompactCellActions(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn): boolean {
-  if (column.type === "identity") return false;
-  return cell.status === "invalid"
-    || cell.status === "blocked"
-    || cell.status === "manual_required"
-    || cell.status === "needs_check"
-    || cell.status === "overwrite"
-    || cell.isManuallyIncluded
-    || cell.isManuallySkipped
-    || cell.requiresConfirmation
-    || typeof cell.suggestedValue === "number";
-}
-
 export function SmartSpreadsheetPreview({
   model,
   onApplySafeFixes,
   onApproveSuggestions,
-  onIgnoreNonGradeColumns,
   onApproveColumn,
   onIgnoreColumn,
   onIgnoreCell,
@@ -175,7 +161,6 @@ export function SmartSpreadsheetPreview({
   chapters: ColumnSettingsChapterOption[];
   onApplySafeFixes: () => void;
   onApproveSuggestions: () => void;
-  onIgnoreNonGradeColumns: () => void;
   onApproveColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
@@ -199,6 +184,7 @@ export function SmartSpreadsheetPreview({
   const [selection, setSelection] = useState<Selection>(null);
   const isDetailMode = true;
   const invalidIssues = useMemo(() => buildInvalidIssueQueue(model), [model]);
+  const hasActiveIssues = invalidIssues.length > 0 || model.summary.manualRequired > 0 || model.summary.needsCheck > 0;
 
   const primarySummaryAction = () => {
     if (invalidIssues.length > 0 || model.summary.manualRequired > 0 || model.summary.needsCheck > 0) {
@@ -230,24 +216,9 @@ export function SmartSpreadsheetPreview({
 
   return (
     <div className="sipena-preview-shell sipena-preview-shell--detail" data-preview-mode="detail">
-      <PreviewSummaryBanner model={model} invalidIssueCount={invalidIssues.length} onPrimaryAction={primarySummaryAction} />
-      <div className="sipena-preview-modebar" aria-label="Tampilan tabel import">
-        <div className="min-w-0">
-          <p className="sipena-preview-modebar-title">Tampilan detail</p>
-          <p className="sipena-preview-modebar-desc">
-            Klik header untuk mengatur kolom. Klik sel atau buka Daftar Bermasalah untuk memperbaiki item langsung.
-          </p>
-        </div>
-        {invalidIssues.length > 0 || model.summary.manualRequired > 0 || model.summary.needsCheck > 0 ? (
-          <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={onOpenIssueStep}>
-            Buka Daftar Bermasalah
-          </button>
-        ) : (
-          <button type="button" className="sipena-column-btn" onClick={onIgnoreNonGradeColumns}>
-            Lewati kolom nonnilai
-          </button>
-        )}
-      </div>
+      {hasActiveIssues ? (
+        <PreviewSummaryBanner model={model} invalidIssueCount={invalidIssues.length} onPrimaryAction={primarySummaryAction} />
+      ) : null}
       <PreviewLegend />
 
       <div className={cn("grid min-w-0 gap-4", showFixPanel && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
@@ -296,13 +267,9 @@ export function SmartSpreadsheetPreview({
                             )}>
                               {visual.label}
                             </span>
-                            <span className="sipena-preview-header-action">Atur</span>
                           </span>
                         ) : null}
                       </button>
-                      {column.type !== "identity" && isDetailMode ? (
-                        <span className="sipena-preview-header-hint">{headerHint(column)}</span>
-                      ) : null}
                     </th>
                     );
                   })}
@@ -314,7 +281,6 @@ export function SmartSpreadsheetPreview({
                     {row.cells.map((cell, index) => {
                       const column = model.columns[index];
                       const detailLines = previewCellDetailLines(cell, column);
-                      const showCellActions = needsCompactCellActions(cell, column);
                       const visual = getCellPreviewVisualState(cell, column, row);
                       return (
                         <td
@@ -354,56 +320,6 @@ export function SmartSpreadsheetPreview({
                               {cell.requiresConfirmation ? <MiniStatusBadge label="Perlu cek" description="Nilai valid, tetapi keputusan target atau aksi masih perlu dicek." /> : null}
                             </span>
                           </div>
-                          {isDetailMode && showCellActions ? (
-                            <div className="sipena-preview-cell-actions">
-                              <button
-                                type="button"
-                                className="sipena-preview-cell-action"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setSelection({ kind: "cell", cell, row, column });
-                                }}
-                              >
-                                Atur
-                              </button>
-                              {cell.effectiveInclude ? (
-                                <button
-                                  type="button"
-                                  className="sipena-preview-cell-action sipena-preview-cell-action-muted"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    onIgnoreCell(cell);
-                                  }}
-                                >
-                                  Skip
-                                </button>
-                              ) : null}
-                              {(cell.isManuallySkipped || cell.isManuallyIncluded) ? (
-                                <button
-                                  type="button"
-                                  className="sipena-preview-cell-action"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    onResetCellSelection(cell);
-                                  }}
-                                >
-                                  Kembalikan
-                                </button>
-                              ) : null}
-                              {typeof cell.suggestedValue === "number" ? (
-                                <button
-                                  type="button"
-                                  className="sipena-preview-cell-action sipena-preview-cell-action-safe"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    onAcceptSuggestedValue(cell, row, column);
-                                  }}
-                                >
-                                  Saran
-                                </button>
-                              ) : null}
-                            </div>
-                          ) : null}
                         </td>
                       );
                     })}

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
@@ -228,11 +228,25 @@ const sourceLabels: Record<ImportSourceType, string> = {
 };
 
 const updateModeLabels: Record<UpdateMode, string> = {
-  fill_empty_only: "Isi nilai kosong saja",
-  overwrite_existing: "Timpa nilai lama",
+  fill_empty_only: "Isi yang kosong",
+  overwrite_existing: "Timpa setelah konfirmasi",
   overwrite_selected_columns: "Timpa kolom dipilih",
   skip_existing: "Lewati nilai lama",
 };
+
+function formatImportUiLabel(value?: string | null) {
+  if (!value) return "";
+  const labels: Record<string, string> = {
+    blocked: "Perlu diselesaikan",
+    manual_required: "Perlu dipilih",
+    needs_confirmation: "Perlu dicek",
+    fill_empty_only: "Isi yang kosong",
+    skip_existing: "Lewati nilai lama",
+    overwrite_existing: "Timpa setelah konfirmasi",
+    skip: "Dilewati",
+  };
+  return labels[value] || value;
+}
 
 const conflictTypeLabels: Record<ImportConflict["type"], string> = {
   student: "Siswa",
@@ -489,10 +503,15 @@ function getImportErrorMessage(code: ImportUiErrorCode | null, fallback?: string
 function cleanBackendText(text?: string) {
   if (!text) return "";
   return text
+    .replace(/\bmanual_required\b/gi, formatImportUiLabel("manual_required"))
+    .replace(/\bneeds_confirmation\b/gi, formatImportUiLabel("needs_confirmation"))
+    .replace(/\bfill_empty_only\b/gi, formatImportUiLabel("fill_empty_only"))
+    .replace(/\bskip_existing\b/gi, formatImportUiLabel("skip_existing"))
+    .replace(/\boverwrite_existing\b/gi, formatImportUiLabel("overwrite_existing"))
     .replace(/ImportPlan/gi, "Rencana import")
     .replace(/\bwarning\b/gi, "hal yang perlu dicek")
     .replace(/\bblocking\b/gi, "yang wajib diselesaikan")
-    .replace(/\bblocked\b/gi, "belum bisa dilanjutkan")
+    .replace(/\bblocked\b/gi, formatImportUiLabel("blocked"))
     .replace(/\bresolved\b/gi, "selesai dicek")
     .replace(/\bexecutor\b/gi, "proses simpan")
     .replace(/\bderived columns?\b/gi, "kolom hasil rumus")
@@ -595,7 +614,7 @@ function decisionActionLabel(action: FinalReviewModel["sections"][number]["decis
   if (action === "overwrite") return "Timpa nilai lama";
   if (action === "create_assignment") return "Buat tugas baru";
   if (action === "create_chapter_and_assignment") return "Buat BAB dan tugas baru";
-  if (action === "skip") return "Skip";
+  if (action === "skip") return formatImportUiLabel("skip");
   return "Perlu pilihan";
 }
 
@@ -1352,6 +1371,7 @@ function ImportStartPanel({
   onDownloadOfficialTemplate,
   onFileSelected,
   downloadReason,
+  uploadInputRef,
 }: {
   fileName?: string | null;
   canDownloadOfficialTemplate: boolean;
@@ -1359,6 +1379,7 @@ function ImportStartPanel({
   onDownloadOfficialTemplate?: () => void | Promise<void>;
   onFileSelected: (file: File) => void;
   downloadReason?: string | null;
+  uploadInputRef?: RefObject<HTMLInputElement>;
 }) {
   const downloadDisabled = !canDownloadOfficialTemplate || !onDownloadOfficialTemplate || isDownloadingTemplate;
   return (
@@ -1373,7 +1394,7 @@ function ImportStartPanel({
           </div>
           <span className="text-xs font-medium text-muted-foreground">.xlsx, .xls, .csv</span>
         </div>
-        <ImportDropzone fileName={fileName} onFileSelected={onFileSelected} />
+        <ImportDropzone fileName={fileName} onFileSelected={onFileSelected} inputRef={uploadInputRef} />
         <p className="mt-2 text-xs leading-5 text-muted-foreground">
           File diperiksa dulu. Nilai lama tidak ditimpa tanpa konfirmasi.
         </p>
@@ -2448,7 +2469,6 @@ function SpreadsheetPreviewStep({
       chapters={importContext.chapters.map((chapter) => ({ id: chapter.id, name: chapter.name }))}
       onApplySafeFixes={actions.onApplySafeFixes}
       onApproveSuggestions={actions.onApproveSipenaSuggestions}
-      onIgnoreNonGradeColumns={actions.onBulkIgnoreDerived}
       onApproveColumn={approveColumn}
       onIgnoreColumn={(column) => {
         const columnIndex = previewColumnIndex(column);
@@ -2677,6 +2697,10 @@ function finalResultCellValue(cell: SpreadsheetPreviewCell, column: SpreadsheetP
   return String(cell.resolvedValue ?? cell.newValue ?? cell.suggestedValue ?? cell.oldValue ?? "-");
 }
 
+function finalReviewOperationKey(rowId: string, columnId: string) {
+  return `${rowId}:${columnId}`;
+}
+
 function FinalReviewResultTable({
   model,
   executablePlan,
@@ -2687,8 +2711,12 @@ function FinalReviewResultTable({
   hasBlockingIssues: boolean;
 }) {
   const needsAttention = hasBlockingIssues ? model.summary.manualRequired + model.summary.invalidCells : 0;
-  const executableRowIds = new Set((executablePlan?.operations || []).map((operation) => `row-${operation.rowIndex}`));
-  const executableColumnIds = new Set((executablePlan?.operations || []).map((operation) => `excel-col-${operation.columnIndex}`));
+  const executableOperations = executablePlan?.operations || [];
+  const executableRowIds = new Set(executableOperations.map((operation) => `row-${operation.rowIndex}`));
+  const executableColumnIds = new Set(executableOperations.map((operation) => `excel-col-${operation.columnIndex}`));
+  const executableValueKeys = new Set(executableOperations.map((operation) => (
+    finalReviewOperationKey(`row-${operation.rowIndex}`, `excel-col-${operation.columnIndex}`)
+  )));
   const visibleRows = model.rows.filter((row) => executableRowIds.has(row.id));
   const visibleColumns = model.columns
     .map((column, index) => ({ column, index }))
@@ -2729,9 +2757,14 @@ function FinalReviewResultTable({
                 <tr key={row.id}>
                   {visibleColumns.map(({ column, index }) => {
                     const cell = row.cells[index];
+                    const isImportValue = column.type !== "identity" && executableValueKeys.has(finalReviewOperationKey(row.id, column.id));
                     return (
                       <td key={cell.id} className="sipena-preview-cell">
-                        <span className="sipena-preview-cell-value">{finalResultCellValue(cell, column)}</span>
+                        {column.type === "identity" || isImportValue ? (
+                          <span className="sipena-preview-cell-value">{finalResultCellValue(cell, column)}</span>
+                        ) : (
+                          <span className="sipena-final-result-empty" aria-label="Tidak disimpan">-</span>
+                        )}
                       </td>
                     );
                   })}
@@ -2864,10 +2897,6 @@ function PreviewStep({
   const reviewNeedsAttention = hasBlockingIssues && review
     ? review.summary.manualChoiceRequired + review.summary.blocked
     : 0;
-  const modelNeedsAttention = hasBlockingIssues && model
-    ? model.summary.manualRequired + model.summary.invalidCells
-    : 0;
-
   return (
     <div className="space-y-4">
       {review ? (
@@ -2876,18 +2905,17 @@ function PreviewStep({
             <div>
               <h3 className="text-sm font-semibold text-blue-950 dark:text-blue-100">Review akhir sebelum simpan</h3>
               <p className="mt-1 text-xs leading-5 text-blue-900/75 dark:text-blue-100/75">
-                Review Akhir menampilkan tabel keputusan final sebelum simpan. Ubah kolom dari Konfigurasi Header atau nilai dari Verifikasi Tabel.
+                Review Akhir hanya menampilkan nilai yang akan disimpan. Ubah kolom dari Konfigurasi Header atau nilai dari Verifikasi Tabel.
               </p>
             </div>
             <StatusBadge tone={!reviewNeedsAttention ? "success" : "warning"}>
               {!reviewNeedsAttention ? "Siap simpan" : "Perlu dicek"}
             </StatusBadge>
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <MetricCard label="Akan disimpan" value={review.summary.save} tone="green" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard label="Nilai baru" value={review.summary.save} tone="green" />
             <MetricCard label="Dikonversi" value={review.summary.convert} tone="blue" />
             <MetricCard label="Ditimpa" value={review.summary.overwrite} tone={review.summary.overwrite ? "orange" : "info"} />
-            <MetricCard label="Di-skip" value={review.summary.skip} tone="info" />
             <MetricCard label="Perlu perhatian" value={reviewNeedsAttention} tone={reviewNeedsAttention ? "red" : "green"} />
           </div>
           {hasBlockingIssues && review.disabledReason ? (
@@ -2904,44 +2932,11 @@ function PreviewStep({
         <FinalReviewDecisionSummary review={review} onOpenVerificationStep={onOpenFixStep} />
       ) : null}
 
-      {model ? (
-        <section className="rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-950 dark:text-slate-50">Ringkasan tabel terverifikasi</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Angka ini berasal dari tabel yang sudah diverifikasi pada langkah sebelumnya.</p>
-            </div>
-            <StatusBadge tone={modelNeedsAttention ? "danger" : "safe"}>
-              {modelNeedsAttention ? "Perlu dicek" : "Siap import"}
-            </StatusBadge>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard label="Nilai dipilih" value={model.summary.includedCells} tone="green" />
-            <MetricCard label="Nilai dilewati" value={model.summary.skippedCells + model.summary.manualSkippedCells} tone="info" />
-            <MetricCard label="Nilai akan ditimpa" value={model.summary.overwriteCells} tone={model.summary.overwriteCells > 0 ? "orange" : "info"} />
-            <MetricCard label="Nilai perlu dicek" value={modelNeedsAttention} tone={modelNeedsAttention > 0 ? "red" : "green"} />
-          </div>
-        </section>
-      ) : null}
-
       {isBlocked ? (
         <RiskAlert title={getImportNotice("IMPORT_PLAN_BLOCKED").title} tone="blocked">
           Preview masih memiliki pilihan yang wajib diselesaikan. Tombol import tetap nonaktif sampai semua item selesai dicek.
         </RiskAlert>
       ) : null}
-
-      <RiskAlert title="Pemeriksaan import aktif" tone="safe">
-        {model
-          ? `${model.summary.includedCells} nilai siap import. ${model.summary.skippedCells + model.summary.manualSkippedCells} nilai dilewati karena kosong, sudah ada, atau pilihan manual.`
-          : "Nilai lama tidak ditimpa dan BAB/tugas baru tidak dibuat tanpa konfirmasi pada item terkait."}
-      </RiskAlert>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="BAB baru" value={plan.summary.newChapterCount || 0} tone="violet" />
-        <MetricCard label="Tugas baru" value={plan.summary.newAssignmentCount || 0} tone="violet" />
-        <MetricCard label="Siap import" value={plan.summary.readyImportCount || 0} tone="green" />
-        <MetricCard label="Dilewati/tidak valid" value={(plan.summary.skippedValueCount || 0) + (plan.summary.invalidValueCount || 0)} tone="orange" />
-      </div>
     </div>
   );
 }
@@ -3278,6 +3273,7 @@ export default function GradeImportExportDialog({
   const [aiAssist, setAiAssist] = useState<AiAssistPanelState>(emptyAiAssistPanelState);
   const [aiAssistCache, setAiAssistCache] = useState<Record<string, SmartImportAssistResponse>>({});
   const importBodyRef = useRef<HTMLDivElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) setTab(activeTab);
@@ -4113,6 +4109,10 @@ export default function GradeImportExportDialog({
 
   const handlePrimaryAction = useCallback(async () => {
     if (tab === "import") {
+      if (stepIndex === 0) {
+        uploadInputRef.current?.click();
+        return;
+      }
       if (stepIndex === 6) {
         if (executionState === "success") {
           handleClose();
@@ -4417,7 +4417,7 @@ export default function GradeImportExportDialog({
     ? "Upload template SIPENA atau Excel bebas. SIPENA akan membaca dan memeriksa otomatis sebelum nilai disimpan."
     : contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu";
   const isPreviewFixStep = tab === "import" && (stepIndex === 2 || stepIndex === 3 || stepIndex === 4);
-  const isWideImportWorkspace = tab === "import" && (stepIndex === 2 || stepIndex === 3 || stepIndex === 4 || stepIndex === 5);
+  const showImportSummarySidebar = tab === "import" && stepIndex > 0;
   const footerStatusLabel = useMemo(() => {
     if (tab === "export") return "Mode export";
     if (regionSelectionPending) return "Pilih tabel";
@@ -4425,7 +4425,7 @@ export default function GradeImportExportDialog({
     if (stepIndex === 2 && activeImportIssueCount > 0) return `${activeImportIssueCount} masalah tersisa`;
     if (stepIndex === 3 && activeHeaderIssueCount > 0) return `${activeHeaderIssueCount} header tersisa`;
     if (stepIndex === 6 && overwriteNeedsConfirmationCount > 0) return `${overwriteNeedsConfirmationCount} timpa perlu konfirmasi`;
-    if (stepIndex === 6 && blockedItemCount > 0) return `${blockedItemCount} item tertahan`;
+    if (stepIndex === 6 && blockedItemCount > 0) return `${blockedItemCount} perlu diselesaikan`;
     if (workflowIssuesResolved && stepIndex >= 4) return "Siap diverifikasi";
     if (readyImportCount > 0) return `${readyImportCount} siap import`;
     return "Pemeriksaan aman";
@@ -4444,9 +4444,9 @@ export default function GradeImportExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[calc(100dvh-0.25rem)] max-h-[980px] w-[calc(100vw-0.25rem)] max-w-[1880px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-white/80 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(96dvh,980px)] sm:w-[calc(100vw-0.75rem)] xl:w-[min(98vw,1880px)]">
+      <DialogContent className="sipena-grade-import-dialog flex h-[calc(100dvh-0.25rem)] max-h-[980px] w-[calc(100vw-0.25rem)] max-w-[1880px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-slate-300 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(96dvh,980px)] sm:w-[calc(100vw-0.75rem)] xl:w-[min(98vw,1880px)]">
         <Tabs value={tab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-white/95 px-3 py-2 backdrop-blur dark:bg-slate-950/95 sm:px-5">
+          <header className="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-5">
             <div className="flex min-w-0 flex-col gap-2 pr-10 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-2.5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/70">
@@ -4463,11 +4463,13 @@ export default function GradeImportExportDialog({
                   </DialogDescription>
                 </div>
               </div>
-              <TabsList aria-label="Mode export dan import nilai" className="grid h-10 w-full max-w-sm shrink-0 grid-cols-2 rounded-full bg-slate-100 p-1 dark:bg-slate-900 lg:w-80">
-                <TabsTrigger value="import" className="h-8 rounded-full text-xs sm:text-sm">
+              <TabsList aria-label="Mode export dan import nilai" className="grid h-10 w-full max-w-sm shrink-0 grid-cols-2 rounded-full border border-slate-200 bg-slate-100 p-1 dark:border-slate-800 dark:bg-slate-900 lg:w-80">
+                <TabsTrigger value="import" className="h-8 gap-1.5 rounded-full text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm sm:text-sm">
+                  <UploadCloud className="h-3.5 w-3.5" />
                   Import Nilai
                 </TabsTrigger>
-                <TabsTrigger value="export" className="h-8 rounded-full text-xs sm:text-sm">
+                <TabsTrigger value="export" className="h-8 gap-1.5 rounded-full text-xs data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:shadow-sm sm:text-sm">
+                  <Download className="h-3.5 w-3.5" />
                   Export Nilai
                 </TabsTrigger>
               </TabsList>
@@ -4477,14 +4479,14 @@ export default function GradeImportExportDialog({
           <div
             ref={importBodyRef}
             className={cn(
-              "min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-3 py-3 dark:bg-slate-950 sm:px-5",
+              "min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-3 py-2.5 dark:bg-slate-950 sm:px-5",
               tab === "import" && stepIndex === 2 && "sipena-import-body--issue-step",
             )}
           >
             <TabsContent value="import" className="m-0 min-w-0 focus-visible:ring-0 focus-visible:ring-offset-0">
               <div className={cn(
                 "grid min-w-0 gap-4",
-                isWideImportWorkspace ? "grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_280px]",
+                showImportSummarySidebar ? "xl:grid-cols-[minmax(0,1fr)_280px]" : "grid-cols-1",
               )}>
                 <main className="min-w-0 space-y-4">
                   <section className="min-w-0 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
@@ -4500,6 +4502,7 @@ export default function GradeImportExportDialog({
                         onDownloadOfficialTemplate={onDownloadOfficialTemplate}
                         onFileSelected={handleFileSelected}
                         downloadReason={templateDownloadReason}
+                        uploadInputRef={uploadInputRef}
                       />
 
                       {executionState === "analyzing" ? (
@@ -4581,7 +4584,7 @@ export default function GradeImportExportDialog({
                   ) : null}
                 </main>
 
-                {isWideImportWorkspace ? null : (
+                {showImportSummarySidebar ? (
                   <ImportSummaryPanel
                     studentCount={studentCount}
                     chapterCount={chapterCount}
@@ -4594,7 +4597,7 @@ export default function GradeImportExportDialog({
                     blockedCount={blockedItemCount}
                     skippedCount={skippedItemCount}
                   />
-                )}
+                ) : null}
               </div>
             </TabsContent>
 
@@ -4634,9 +4637,10 @@ export default function GradeImportExportDialog({
                       {backupIncompleteWarning} Workbook tetap akan dibuat dari siswa, struktur, dan nilai yang tersedia saat ini.
                     </RiskAlert>
                   ) : (
-                    <RiskAlert title="Export aman aktif" tone="safe">
-                      Nilai kosong tetap kosong. Export tidak mengubah nilai di Input Nilai dan tidak menyimpan data baru. Template resmi tetap divalidasi saat diupload kembali.
-                    </RiskAlert>
+                    <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-100">
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      Export tidak mengubah nilai dan tidak menyimpan data baru.
+                    </div>
                   )}
                 </main>
 
@@ -4656,7 +4660,7 @@ export default function GradeImportExportDialog({
           </div>
         </Tabs>
 
-        <footer className="sticky bottom-0 z-20 shrink-0 border-t border-border bg-white/95 px-3 py-2 backdrop-blur dark:bg-slate-950/95 sm:px-5">
+        <footer className="sticky bottom-0 z-20 shrink-0 border-t border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-5">
           <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-200 dark:ring-blue-900/70" title={importReadinessMessage}>
@@ -4684,14 +4688,6 @@ export default function GradeImportExportDialog({
                   Kembali
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-10 w-full rounded-full sm:w-auto"
-                onClick={handleClose}
-              >
-                Tutup
-              </Button>
               <Button
                 type="button"
                 disabled={

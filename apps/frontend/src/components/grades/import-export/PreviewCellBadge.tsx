@@ -52,8 +52,8 @@ export const previewCellBadgeText: Record<PreviewCellStatus, { label: string; de
     description: "Pengguna memilih nilai ini untuk dilewati.",
   },
   blocked: {
-    label: "Perlu target",
-    description: "Nilai tertahan karena siswa, target header, atau keputusan belum aman.",
+    label: "Menunggu pilihan",
+    description: "Nilai menunggu pilihan siswa, target header, atau keputusan yang aman.",
   },
   overwrite: {
     label: "Timpa",

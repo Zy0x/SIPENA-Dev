@@ -103,7 +103,7 @@ export function buildColumnReasonHint(
   } else if ((stats?.invalid || 0) + (stats?.blocked || 0) > 0) {
     hint = {
       label: "Ada nilai perlu dicek",
-      description: `${(stats?.invalid || 0) + (stats?.blocked || 0)} nilai belum siap disimpan karena invalid, diblokir, atau butuh konfirmasi.`,
+      description: `${(stats?.invalid || 0) + (stats?.blocked || 0)} nilai belum siap disimpan karena tidak valid, perlu diselesaikan, atau butuh konfirmasi.`,
       source: "local",
       actionLabel: "Lihat nilai",
       tone: "danger",

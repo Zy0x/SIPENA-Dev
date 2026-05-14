@@ -164,6 +164,23 @@
   }
 }
 
+.sipena-grade-import-dialog button,
+.sipena-grade-import-dialog [role="tab"] {
+  user-select: none;
+}
+
+.sipena-grade-import-dialog > button[aria-label="Tutup dialog"] {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  opacity: 1;
+}
+
+.sipena-grade-import-dialog > button[aria-label="Tutup dialog"]:hover {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .sipena-preview-shell {
   display: flex;
   flex-direction: column;
@@ -272,15 +289,40 @@
 }
 
 .sipena-preview-legend {
+  display: block;
+  padding: 0;
+}
+
+.sipena-preview-legend summary {
+  display: inline-flex;
+  min-height: 34px;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.sipena-preview-legend summary::-webkit-details-marker {
+  display: none;
+}
+
+.sipena-preview-legend-grid {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 8px;
   overflow-x: auto;
-  padding: 2px 0 4px;
+  padding-bottom: 4px;
   scrollbar-width: none;
 }
 
-.sipena-preview-legend::-webkit-scrollbar {
+.sipena-preview-legend-grid::-webkit-scrollbar {
   display: none;
 }
 
@@ -306,7 +348,7 @@
 }
 
 .sipena-preview-grid-wrap {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   border-radius: 22px;
   background: #ffffff;
   overflow: hidden;
@@ -332,8 +374,8 @@
 
 .sipena-preview-table th,
 .sipena-preview-table td {
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
   padding: 8px 9px;
   min-width: 136px;
   height: 46px;
@@ -366,7 +408,7 @@
   position: sticky;
   top: 0;
   z-index: 4;
-  background: #f8fafc;
+  background: #f1f5f9;
   color: #334155;
   font-weight: 700;
   text-align: left;
@@ -380,7 +422,7 @@
 
 .sipena-preview-table th.sipena-preview-sticky-left {
   z-index: 5;
-  background: #f8fafc;
+  background: #f1f5f9;
 }
 
 .sipena-preview-header-button {
@@ -402,7 +444,7 @@
 
 .sipena-preview-header-meta {
   display: inline-flex;
-  max-width: 92px;
+  max-width: 78px;
   flex: 0 0 auto;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -668,6 +710,13 @@
   line-height: 1.25;
 }
 
+.sipena-final-result-empty {
+  display: block;
+  color: #94a3b8;
+  font-weight: 700;
+  text-align: center;
+}
+
 .sipena-preview-cell-details {
   display: flex;
   margin-top: 3px;
@@ -779,7 +828,7 @@
   gap: 12px;
   border: 1px solid #e2e8f0;
   border-radius: 18px;
-  background: #f8fafc;
+  background: #f1f5f9;
   padding: 12px;
 }
 

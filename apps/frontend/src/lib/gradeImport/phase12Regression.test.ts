@@ -350,12 +350,14 @@ describe("phase 12 grade import regression suite", () => {
     expect(previewSource).toContain("Klik sel untuk pakai/lewati");
     expect(previewSource).toContain("previewCellDetailLines");
     expect(previewSource).toContain("columnStatsDetail");
-    expect(previewSource).toContain("needsCompactCellActions");
+    expect(previewSource).not.toContain("needsCompactCellActions");
+    expect(previewSource).not.toContain("sipena-preview-cell-action");
+    expect(previewSource).toContain("<PreviewFixPanel");
     expect(previewSource).toContain("Excel:");
     expect(previewSource).toContain("Lama:");
     expect(previewSource).toContain("Saran:");
     expect(previewSource).toContain("Perlu cek");
-    expect(previewSource).toContain("onResetCellSelection(cell)");
+    expect(previewSource).toContain("onResetCellSelection={onResetCellSelection}");
     expect(dialogSource).toContain("onResetRowSelection");
     expect(dialogSource).toContain("ignoredCells: current.ignoredCells.filter");
     expect(fixPanelSource).toContain("Pakai rekomendasi");
@@ -429,8 +431,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("Nilai Excel");
     expect(dialogSource).toContain("Nilai final");
     expect(dialogSource).toContain("Buka Verifikasi Tabel");
-    expect(dialogSource).toContain("Ringkasan tabel terverifikasi");
-    expect(dialogSource).toContain("Review Akhir menampilkan tabel keputusan final sebelum simpan");
+    expect(dialogSource).not.toContain("Ringkasan tabel terverifikasi");
+    expect(dialogSource).toContain("Review Akhir hanya menampilkan nilai yang akan disimpan");
     expect(dialogSource).toContain("reviewDecisionValueLabel");
     expect(dialogSource).toContain("Konfigurasi Header atau nilai dari Verifikasi Tabel");
     expect(dialogSource).not.toContain("warning utama");

@@ -107,7 +107,7 @@ export function getCellPreviewVisualState(
     if (cell.requiresConfirmation) {
       return state("change", "Perlu konfirmasi", "Nilai perlu dikonfirmasi sebelum disimpan.");
     }
-    return state("blocked", "Ditahan", "Nilai valid ini ditahan sampai siswa atau target kolom beres.");
+    return state("blocked", "Menunggu pilihan", "Nilai valid ini menunggu pilihan siswa atau target kolom.");
   }
 
   if (cell.effectiveInclude === false || cell.isManuallySkipped || ["ignored", "skipped", "manual_skipped"].includes(cell.status)) {

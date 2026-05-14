@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
 import { FileSpreadsheet, UploadCloud } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -6,10 +6,12 @@ import { cn } from "@/lib/utils";
 interface ImportDropzoneProps {
   fileName?: string | null;
   onFileSelected: (file: File) => void;
+  inputRef?: RefObject<HTMLInputElement>;
 }
 
-export function ImportDropzone({ fileName, onFileSelected }: ImportDropzoneProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+export function ImportDropzone({ fileName, onFileSelected, inputRef }: ImportDropzoneProps) {
+  const internalInputRef = useRef<HTMLInputElement>(null);
+  const resolvedInputRef = inputRef || internalInputRef;
   const [isDragging, setIsDragging] = useState(false);
   const descriptionId = "sipena-grade-import-dropzone-description";
 
@@ -22,7 +24,7 @@ export function ImportDropzone({ fileName, onFileSelected }: ImportDropzoneProps
       type="button"
       aria-label="Pilih file nilai untuk dianalisis"
       aria-describedby={descriptionId}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => resolvedInputRef.current?.click()}
       onDragEnter={(event) => {
         event.preventDefault();
         setIsDragging(true);
@@ -41,7 +43,7 @@ export function ImportDropzone({ fileName, onFileSelected }: ImportDropzoneProps
       )}
     >
       <input
-        ref={inputRef}
+        ref={resolvedInputRef}
         type="file"
         accept=".xlsx,.xls,.csv"
         aria-label="File nilai Excel atau CSV"
