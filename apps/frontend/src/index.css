@@ -2316,7 +2316,7 @@
 
 .sipena-header-detail {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   align-content: stretch;
   gap: 12px;
   height: 100%;
@@ -2368,10 +2368,6 @@
 .sipena-header-status--pending {
   background: #ffedd5;
   color: #9a3412;
-}
-
-.sipena-header-action-slot:empty {
-  display: none;
 }
 
 .sipena-header-counts {
