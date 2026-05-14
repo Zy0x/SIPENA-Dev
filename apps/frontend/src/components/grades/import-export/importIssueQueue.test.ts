@@ -265,6 +265,35 @@ describe("invalid issue queue", () => {
     expect(getActiveHeaderConfigurationIssues(preview).map((item) => item.column.id)).not.toContain("excel-col-4");
   });
 
+  it("keeps derived or non-value headers resolved as skipped", () => {
+    const preview = {
+      ...model([previewRow("row-15", {
+        cells: [
+          gradeCell("row-15", "identity-no", { status: "unchanged" }),
+          gradeCell("row-15", "identity-nisn", { status: "unchanged" }),
+          gradeCell("row-15", "identity-name", { status: "unchanged" }),
+          gradeCell("row-15", "excel-col-4", { status: "ignored", displayValue: "88.67", effectiveInclude: false }),
+          gradeCell("row-15", "excel-col-5", { status: "skipped", effectiveInclude: false }),
+        ],
+      })]),
+      columns: columns.map((column) => column.id === "excel-col-4"
+        ? {
+          ...column,
+          header: "Rata-rata",
+          type: "derived" as const,
+          status: "ignored" as const,
+          effectiveInclude: false,
+          isIgnored: true,
+        }
+        : column),
+    } satisfies SpreadsheetPreviewModel;
+
+    const issue = buildHeaderConfigurationQueue(preview).find((item) => item.column.id === "excel-col-4");
+
+    expect(issue).toMatchObject({ category: "skipped", isResolved: true });
+    expect(getActiveHeaderConfigurationIssues(preview).map((item) => item.column.id)).not.toContain("excel-col-4");
+  });
+
   it("requires configuration when the same header contains a different existing value", () => {
     const preview = {
       ...model([previewRow("row-16", {

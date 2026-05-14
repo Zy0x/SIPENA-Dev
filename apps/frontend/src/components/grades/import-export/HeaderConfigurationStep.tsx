@@ -16,6 +16,7 @@ import { buildHeaderConfigurationQueue, type HeaderConfigurationIssue } from "./
 import { getCellPreviewVisualState } from "./previewVisualState";
 
 type TargetChoice = "current" | "sts" | "sas" | "assignment" | "new_assignment" | "new_chapter_assignment" | "ignore";
+type HeaderFilter = "action" | "all" | "done";
 
 function cleanName(value: string): string {
   return value.trim().replace(/\s+/g, " ");
@@ -46,10 +47,10 @@ function hasUsableTarget(column: SpreadsheetPreviewColumn): boolean {
 
 function headerPrimaryLabel(issue: HeaderConfigurationIssue): string {
   if (issue.column.type === "identity") return "Sudah benar";
-  if (issue.category === "target_required") return "Simpan target";
+  if (issue.category === "target_required") return "Simpan target & aturan";
   if (issue.category === "overwrite" && issue.valueMode === "overwrite_existing") return "Konfirmasi timpa";
-  if (issue.category === "skipped") return "Tandai aman";
-  return "Simpan aturan";
+  if (issue.category === "skipped") return "Tandai dilewati";
+  return "Simpan target & aturan";
 }
 
 function previewValue(value: string | number | null | undefined): string {
@@ -63,6 +64,12 @@ function headerDecisionSummary(issue: HeaderConfigurationIssue): string {
   if (issue.category === "target_required") return "Header ini punya nilai yang perlu target BAB/tugas sebelum bisa masuk ke tabel verifikasi.";
   if (issue.category === "overwrite") return `${issue.counts.overwrite} nilai berbeda dari SIPENA. Konfirmasi aturan satu kali untuk seluruh kolom.`;
   return `${issue.counts.newValues} nilai baru akan diisi ke sel kosong pada target header ini.`;
+}
+
+function filterLabel(filter: HeaderFilter): string {
+  if (filter === "all") return "Semua";
+  if (filter === "done") return "Selesai";
+  return "Perlu aksi";
 }
 
 function columnAiSuggestion(column: SpreadsheetPreviewColumn, aiAssist?: SmartImportAssistResponse | null) {
@@ -85,6 +92,9 @@ function HeaderTargetForm({
   onApproveColumn,
   onIgnoreColumn,
   onSetColumnTarget,
+  onSetColumnValueMode,
+  onBulkColumnAction,
+  onAfterApply,
 }: {
   issue: HeaderConfigurationIssue;
   assignments: ColumnSettingsAssignmentOption[];
@@ -92,6 +102,9 @@ function HeaderTargetForm({
   onApproveColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreColumn: (column: SpreadsheetPreviewColumn) => void;
   onSetColumnTarget: (column: SpreadsheetPreviewColumn, target: ColumnTargetDraft) => void;
+  onSetColumnValueMode: (column: SpreadsheetPreviewColumn, mode: ColumnValueMode, overwriteConfirmed?: boolean) => void;
+  onBulkColumnAction: (column: SpreadsheetPreviewColumn, action: "include_valid" | "skip_all" | "skip_existing" | "reset") => void;
+  onAfterApply: (issueId: string) => void;
 }) {
   const column = issue.column;
   const [targetChoice, setTargetChoice] = useState<TargetChoice>(() => issue.category === "target_required" ? "new_assignment" : defaultTargetChoice(column));
@@ -116,21 +129,47 @@ function HeaderTargetForm({
     || (targetChoice === "new_assignment" && Boolean(chapterId) && Boolean(cleanName(assignmentName)))
     || (targetChoice === "new_chapter_assignment" && Boolean(cleanName(chapterName)) && Boolean(cleanName(assignmentName)));
 
+  const applyValueRule = () => {
+    if (issue.valueMode === "overwrite_existing") {
+      onSetColumnValueMode(column, "overwrite_existing", true);
+      onApproveColumn(column);
+      onBulkColumnAction(column, "include_valid");
+      return;
+    }
+    onSetColumnValueMode(column, issue.valueMode, false);
+    onApproveColumn(column);
+    onBulkColumnAction(column, issue.valueMode === "skip_existing" ? "skip_existing" : "include_valid");
+  };
+
   const applyTarget = () => {
     if (targetChoice === "current") {
       onApproveColumn(column);
+      applyValueRule();
+      onAfterApply(issue.id);
+      return;
+    }
+    if (targetChoice === "ignore") {
+      onIgnoreColumn(column);
+      onBulkColumnAction(column, "skip_all");
+      onAfterApply(issue.id);
       return;
     }
     if (targetChoice === "sts" || targetChoice === "sas") {
       onSetColumnTarget(column, { kind: targetChoice });
+      applyValueRule();
+      onAfterApply(issue.id);
       return;
     }
     if (targetChoice === "assignment" && assignmentId) {
       onSetColumnTarget(column, { kind: "existing_assignment", assignmentId });
+      applyValueRule();
+      onAfterApply(issue.id);
       return;
     }
     if (targetChoice === "new_assignment" && chapterId && cleanName(assignmentName)) {
       onSetColumnTarget(column, { kind: "create_assignment", chapterId, assignmentName: cleanName(assignmentName) });
+      applyValueRule();
+      onAfterApply(issue.id);
       return;
     }
     if (targetChoice === "new_chapter_assignment" && cleanName(chapterName) && cleanName(assignmentName)) {
@@ -139,9 +178,10 @@ function HeaderTargetForm({
         chapterName: cleanName(chapterName),
         assignmentName: cleanName(assignmentName),
       });
+      applyValueRule();
+      onAfterApply(issue.id);
       return;
     }
-    if (targetChoice === "ignore") onIgnoreColumn(column);
   };
 
   return (
@@ -194,8 +234,31 @@ function HeaderTargetForm({
           </label>
         </>
       ) : null}
+      <div className="sipena-header-value-mode sipena-header-target-form-mode">
+        <b>Aturan nilai kolom</b>
+        <div>
+          {(["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[]).map((mode) => (
+            <label key={mode} className={cn(issue.valueMode === mode && "sipena-header-value-mode--active")}>
+              <input
+                type="radio"
+                name={`header-mode-${issue.column.id}`}
+                checked={issue.valueMode === mode}
+                onChange={() => onSetColumnValueMode(issue.column, mode, false)}
+              />
+              <span>{valueModeLabel(mode)}</span>
+            </label>
+          ))}
+        </div>
+        {issue.valueMode === "overwrite_existing" ? (
+          <div className="sipena-header-overwrite-confirm">
+            <span>
+              Tombol ini mengizinkan penggantian <b>{issue.counts.overwrite} nilai lama</b> pada header ini.
+            </span>
+          </div>
+        ) : null}
+      </div>
       <button type="button" className="sipena-column-btn sipena-column-btn-primary sipena-header-target-save" onClick={applyTarget} disabled={!canSaveTarget}>
-        {targetChoice === "ignore" ? "Lewati header" : "Simpan target"}
+        {targetChoice === "ignore" ? "Lewati header" : headerPrimaryLabel(issue)}
       </button>
     </div>
   );
@@ -225,17 +288,17 @@ function HeaderColumnPreview({
   const priority = { danger: 0, change: 1, new: 2, blocked: 3, skip: 4, neutral: 5 } as const;
   const previewRows = [...rows]
     .sort((left, right) => priority[left.visual.tone] - priority[right.visual.tone] || left.row.rowIndex - right.row.rowIndex)
-    .slice(0, 10);
+    .slice(0, 6);
 
   return (
-    <div className="sipena-header-preview">
-      <div className="sipena-header-preview-head">
+    <details className="sipena-header-preview" open={issue.category !== "skipped"}>
+      <summary className="sipena-header-preview-head">
         <div>
-          <b>Preview nilai header</b>
-          <span>Baris penting ditampilkan dulu agar keputusan target dan aturan nilai jelas.</span>
+          <b>Contoh nilai terdampak</b>
+          <span>Menampilkan nilai paling penting dulu. Buka untuk cek bukti sebelum lanjut.</span>
         </div>
         <span>{rows.length} nilai</span>
-      </div>
+      </summary>
       <div className="sipena-header-preview-table-wrap">
         <table className="sipena-header-preview-table">
           <thead>
@@ -271,7 +334,7 @@ function HeaderColumnPreview({
           </tbody>
         </table>
       </div>
-    </div>
+    </details>
   );
 }
 
@@ -302,12 +365,28 @@ export function HeaderConfigurationStep({
 }) {
   const headers = useMemo(() => buildHeaderConfigurationQueue(model, selectionState), [model, selectionState]);
   const activeIssues = headers.filter((issue) => !issue.isResolved);
-  const [activeIssueId, setActiveIssueId] = useState<string | null>(headers[0]?.id || null);
+  const [headerFilter, setHeaderFilter] = useState<HeaderFilter>("action");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeIssueId, setActiveIssueId] = useState<string | null>(activeIssues[0]?.id || headers[0]?.id || null);
   const selectedIssue = headers.find((issue) => issue.id === activeIssueId);
   const activeIssue = selectedIssue || activeIssues[0] || headers[0];
   const activeHeaderIndex = activeIssue ? Math.max(0, headers.findIndex((issue) => issue.id === activeIssue.id)) : -1;
   const completedHeaderCount = headers.filter((issue) => issue.isResolved).length;
   const totalHeaderCount = headers.length;
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredHeaders = headers.filter((issue) => {
+    if (headerFilter === "action" && issue.isResolved) return false;
+    if (headerFilter === "done" && !issue.isResolved) return false;
+    if (!normalizedSearch) return true;
+    return [
+      issue.title,
+      issue.column.header,
+      issue.column.targetLabel,
+      issue.column.sourceHeader,
+      issue.categoryLabel,
+      issue.recommendedActionLabel,
+    ].some((value) => (value || "").toLowerCase().includes(normalizedSearch));
+  });
 
   useEffect(() => {
     if (!headers.length) {
@@ -322,16 +401,26 @@ export function HeaderConfigurationStep({
   }, [activeIssueId, activeIssues, headers]);
 
   const suggestion = activeIssue ? columnAiSuggestion(activeIssue.column, aiAssist) : undefined;
+  const focusNextUnresolved = (currentId: string) => {
+    const currentIndex = headers.findIndex((issue) => issue.id === currentId);
+    const next = headers
+      .slice(currentIndex + 1)
+      .concat(headers.slice(0, Math.max(0, currentIndex)))
+      .find((issue) => !issue.isResolved && issue.id !== currentId);
+    if (next) setActiveIssueId(next.id);
+  };
   const applyHeaderDecision = (issue: HeaderConfigurationIssue) => {
     if (issue.category === "target_required" && !hasUsableTarget(issue.column)) return;
     if (issue.category === "skipped") {
       onBulkColumnAction(issue.column, "skip_all");
+      focusNextUnresolved(issue.id);
       return;
     }
     if (issue.category === "overwrite" && issue.valueMode === "overwrite_existing") {
       onSetColumnValueMode(issue.column, "overwrite_existing", true);
       onApproveColumn(issue.column);
       onBulkColumnAction(issue.column, "include_valid");
+      focusNextUnresolved(issue.id);
       return;
     }
     onSetColumnValueMode(
@@ -340,7 +429,8 @@ export function HeaderConfigurationStep({
       false,
     );
     onApproveColumn(issue.column);
-    onBulkColumnAction(issue.column, "include_valid");
+    onBulkColumnAction(issue.column, issue.valueMode === "skip_existing" ? "skip_existing" : "include_valid");
+    focusNextUnresolved(issue.id);
   };
   const canApplyHeaderDecision = useMemo(() => {
     if (!activeIssue) return false;
@@ -375,7 +465,30 @@ export function HeaderConfigurationStep({
       {headers.length ? (
         <div className="sipena-header-config-grid">
           <aside className="sipena-header-list" aria-label="Urutan header Excel">
-            {headers.map((issue, index) => (
+            <div className="sipena-header-list-tools">
+              <div className="sipena-header-filter-tabs" role="tablist" aria-label="Filter header">
+                {(["action", "all", "done"] as HeaderFilter[]).map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    className={cn(headerFilter === filter && "sipena-header-filter-tabs--active")}
+                    onClick={() => setHeaderFilter(filter)}
+                  >
+                    {filterLabel(filter)}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Cari header"
+                aria-label="Cari header"
+              />
+            </div>
+            {filteredHeaders.map((issue) => {
+              const headerIndex = headers.findIndex((item) => item.id === issue.id);
+              return (
               <button
                 key={issue.id}
                 type="button"
@@ -387,7 +500,7 @@ export function HeaderConfigurationStep({
                 )}
                 onClick={() => setActiveIssueId(issue.id)}
               >
-                <span className="sipena-header-list-state">{issue.isResolved ? "✓" : index + 1}</span>
+                <span className="sipena-header-list-state">{issue.isResolved ? "✓" : headerIndex + 1}</span>
                 <span className="min-w-0">
                   <span className="sipena-header-list-meta">
                     <span>{issue.categoryLabel}</span>
@@ -397,7 +510,13 @@ export function HeaderConfigurationStep({
                   <small>{headerDecisionSummary(issue)}</small>
                 </span>
               </button>
-            ))}
+            );})}
+            {!filteredHeaders.length ? (
+              <div className="sipena-header-list-empty">
+                <b>Tidak ada header di filter ini.</b>
+                <span>Ubah filter atau kata pencarian untuk melihat header lain.</span>
+              </div>
+            ) : null}
           </aside>
 
           {activeIssue ? (
@@ -415,27 +534,44 @@ export function HeaderConfigurationStep({
               <div className="sipena-header-sequence-actions">
                 <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
                 <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
-                {!activeIssue.isResolved && activeIssue.category !== "target_required" ? (
-                  <button
-                    type="button"
-                    className="sipena-column-btn sipena-column-btn-primary"
-                    onClick={() => applyHeaderDecision(activeIssue)}
-                    disabled={!canApplyHeaderDecision}
-                  >
-                    {headerPrimaryLabel(activeIssue)}
-                  </button>
-                ) : null}
-                {!activeIssue.isResolved && activeIssue.column.type !== "identity" ? (
-                  <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => onBulkColumnAction(activeIssue.column, "skip_all")}>
-                    Lewati header
-                  </button>
-                ) : null}
                 {activeIssue.column.type !== "identity" ? (
                   <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
                     Reset
                   </button>
                 ) : null}
               </div>
+
+              {activeIssue.column.type !== "identity" && !activeIssue.isResolved ? (
+              <div className="sipena-header-decision-panel">
+                <HeaderTargetForm
+                  issue={activeIssue}
+                  assignments={assignments}
+                  chapters={chapters}
+                  onApproveColumn={onApproveColumn}
+                  onIgnoreColumn={onIgnoreColumn}
+                  onSetColumnTarget={onSetColumnTarget}
+                  onSetColumnValueMode={onSetColumnValueMode}
+                  onBulkColumnAction={onBulkColumnAction}
+                  onAfterApply={focusNextUnresolved}
+                />
+
+                <div className="sipena-header-decision-secondary">
+                  <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => {
+                    onBulkColumnAction(activeIssue.column, "skip_all");
+                    focusNextUnresolved(activeIssue.id);
+                  }}>
+                    Lewati header
+                  </button>
+                </div>
+              </div>
+              ) : null}
+
+              {activeIssue.column.type !== "identity" && activeIssue.isResolved ? (
+                <div className="sipena-header-resolved-note">
+                  <b>Header selesai</b>
+                  <span>Keputusan sudah diterapkan. Gunakan Reset jika ingin mengatur ulang header ini.</span>
+                </div>
+              ) : null}
 
               <dl className="sipena-header-counts">
                 <div><dt>Baru</dt><dd>{activeIssue.counts.newValues}</dd></div>
@@ -453,60 +589,6 @@ export function HeaderConfigurationStep({
               </div>
 
               <HeaderColumnPreview model={model} issue={activeIssue} />
-
-              {activeIssue.column.type !== "identity" && !activeIssue.isResolved ? (
-              <div className="sipena-header-decision-panel">
-                <HeaderTargetForm
-                  issue={activeIssue}
-                  assignments={assignments}
-                  chapters={chapters}
-                  onApproveColumn={onApproveColumn}
-                  onIgnoreColumn={onIgnoreColumn}
-                  onSetColumnTarget={onSetColumnTarget}
-                />
-
-                <div className="sipena-header-value-mode">
-                  <b>Aturan nilai kolom</b>
-                  <div>
-                    {(["fill_empty_only", "skip_existing", "overwrite_existing"] as ColumnValueMode[]).map((mode) => (
-                      <label key={mode} className={cn(activeIssue.valueMode === mode && "sipena-header-value-mode--active")}>
-                        <input
-                          type="radio"
-                          name={`header-mode-${activeIssue.column.id}`}
-                          checked={activeIssue.valueMode === mode}
-                          onChange={() => onSetColumnValueMode(activeIssue.column, mode, false)}
-                        />
-                        <span>{valueModeLabel(mode)}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {activeIssue.valueMode === "overwrite_existing" ? (
-                    <div className="sipena-header-overwrite-confirm">
-                      <span>
-                        Tombol ini mengizinkan penggantian <b>{activeIssue.counts.overwrite} nilai lama</b> pada header ini.
-                      </span>
-                      <button
-                        type="button"
-                        className="sipena-column-btn sipena-column-btn-primary"
-                        onClick={() => applyHeaderDecision(activeIssue)}
-                        disabled={!canApplyHeaderDecision}
-                      >
-                        Konfirmasi timpa
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="sipena-column-btn sipena-column-btn-primary sipena-header-mode-save"
-                      onClick={() => applyHeaderDecision(activeIssue)}
-                      disabled={!canApplyHeaderDecision}
-                    >
-                      Simpan aturan nilai
-                    </button>
-                  )}
-                </div>
-              </div>
-              ) : null}
             </div>
           ) : null}
         </div>

@@ -373,6 +373,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(headerStepSource).toContain("Konfigurasi Header");
     expect(headerStepSource).toContain("buildHeaderConfigurationQueue");
     expect(headerStepSource).toContain('onSetColumnValueMode(issue.column, "overwrite_existing", true)');
+    expect(headerStepSource).toContain('type HeaderFilter = "action" | "all" | "done"');
+    expect(headerStepSource).toContain('placeholder="Cari header"');
+    expect(headerStepSource).toContain("Contoh nilai terdampak");
+    expect(headerStepSource).toContain("Simpan target & aturan");
     expect(headerStepSource).not.toContain('type="checkbox"');
     expect(headerStepSource).toContain("Saran AI:");
     expect(issueStepSource).toContain("masalah tersisa");
@@ -384,11 +388,15 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("sipena-issue-active-summary");
     expect(globalStyles).toContain("sipena-header-config-grid");
     expect(headerStepSource).toContain("Urutan header Excel");
+    expect(globalStyles).toContain("sipena-header-list-tools");
+    expect(globalStyles).toContain("sipena-header-filter-tabs");
+    expect(globalStyles).toContain("sipena-header-decision-panel");
+    expect(globalStyles).toContain("position: sticky");
     expect(globalStyles).toContain("sipena-header-sequence-actions");
     expect(globalStyles).toContain("sipena-issue-list-item--done");
     expect(globalStyles).toContain("sipena-import-body--issue-step");
     expect(globalStyles).toContain("scroll-padding-bottom: 128px");
-    expect(globalStyles).toContain("grid-template-columns: clamp(220px, 24vw, 300px) minmax(0, 1fr)");
+    expect(globalStyles).toContain("grid-template-columns: clamp(230px, 25vw, 320px) minmax(0, 1fr)");
     expect(globalStyles).toContain("scroll-snap-type: x proximity");
     expect(globalStyles).toContain("sipena-preview-modebar");
     expect(globalStyles).toContain("sipena-preview-status-pill--ready");
