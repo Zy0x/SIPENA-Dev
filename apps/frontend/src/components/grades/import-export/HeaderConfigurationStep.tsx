@@ -338,10 +338,16 @@ export function HeaderConfigurationStep({
       onBulkColumnAction(issue.column, "skip_all");
       return;
     }
+    if (issue.category === "overwrite" && issue.valueMode === "overwrite_existing") {
+      onSetColumnValueMode(issue.column, "overwrite_existing", true);
+      onApproveColumn(issue.column);
+      onBulkColumnAction(issue.column, "include_valid");
+      return;
+    }
     onSetColumnValueMode(
       issue.column,
       issue.valueMode,
-      issue.valueMode === "overwrite_existing" ? !issue.requiresOverwriteConfirmation : false,
+      false,
     );
     onApproveColumn(issue.column);
     onBulkColumnAction(issue.column, "include_valid");
@@ -350,9 +356,6 @@ export function HeaderConfigurationStep({
     if (!activeIssue) return false;
     if (activeIssue.column.effectiveInclude === false || activeIssue.column.isIgnored) return true;
     if (activeIssue.category === "target_required") return hasUsableTarget(activeIssue.column);
-    if (activeIssue.category === "overwrite" && activeIssue.valueMode === "overwrite_existing") {
-      return !activeIssue.requiresOverwriteConfirmation;
-    }
     return true;
   }, [activeIssue]);
 
@@ -473,14 +476,9 @@ export function HeaderConfigurationStep({
                     ))}
                   </div>
                   {activeIssue.valueMode === "overwrite_existing" ? (
-                    <label className="sipena-header-overwrite-confirm">
-                      <input
-                        type="checkbox"
-                        checked={!activeIssue.requiresOverwriteConfirmation}
-                        onChange={(event) => onSetColumnValueMode(activeIssue.column, "overwrite_existing", event.target.checked)}
-                      />
-                      <span>Saya paham nilai lama pada kolom ini dapat diganti.</span>
-                    </label>
+                    <div className="sipena-header-overwrite-confirm">
+                      Tombol <b>Konfirmasi timpa</b> akan mengizinkan penggantian {activeIssue.counts.overwrite} nilai lama pada header ini.
+                    </div>
                   ) : null}
                 </div>
 

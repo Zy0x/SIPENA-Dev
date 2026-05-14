@@ -199,9 +199,7 @@ export function buildColumnDetailCopy(column: SpreadsheetPreviewColumn) {
 
 function isIssueCell(cell: SpreadsheetPreviewCell): boolean {
   if (cell.effectiveInclude === false || cell.isManuallySkipped) return false;
-  if (cell.status === "invalid") return true;
-  if (cell.isBlockedByColumn || cell.isBlockedByTarget) return false;
-  return (cell.status === "blocked" || cell.status === "manual_required") && !cell.isBlockedByRow;
+  return cell.status === "invalid";
 }
 
 function cellPriority(cell: SpreadsheetPreviewCell): number {

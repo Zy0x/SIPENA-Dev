@@ -78,6 +78,7 @@ import { HeaderConfigurationStep } from "./import-export/HeaderConfigurationStep
 import { ImportDropzone } from "./import-export/ImportDropzone";
 import { ImportIssueResolutionStep } from "./import-export/ImportIssueResolutionStep";
 import { getActiveHeaderConfigurationIssues, getActiveImportIssues } from "./import-export/importIssueQueue";
+import { getImportStepReadiness } from "./import-export/importStepReadiness";
 import { ImportStepper } from "./import-export/ImportStepper";
 import { ImportSummaryPanel } from "./import-export/ImportSummaryPanel";
 import { ManualChoiceCard } from "./import-export/ManualChoiceCard";
@@ -3914,24 +3915,18 @@ export default function GradeImportExportDialog({
   }, [aiAssist.status, handleRequestAiAssist, hasAiAssistableItems, open, stepIndex, tab]);
 
   const canGoNext = useMemo(() => {
-    if (stepIndex === 0) return hasPlan && !unsupported && !regionSelectionPending;
-    if (stepIndex === 1) return hasPlan && !unsupported && !regionSelectionPending;
-    if (stepIndex === 2) return hasPlan && !unsupported && !regionSelectionPending && activeImportIssueCount === 0;
-    if (stepIndex === 3) return hasPlan && !unsupported && !regionSelectionPending && activeImportIssueCount === 0 && activeHeaderIssueCount === 0;
-    if (stepIndex === 4 || stepIndex === 5) {
-      return hasPlan
-        && activeImportIssueCount === 0
-        && activeHeaderIssueCount === 0
-        && (executableImportPlan?.summary.blockedCount || 0) === 0
-        && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) === 0;
-    }
-    if (stepIndex >= importSteps.length - 1) return false;
-    return hasPlan;
+    return getImportStepReadiness({
+      stepIndex,
+      stepCount: importSteps.length,
+      hasPlan,
+      unsupported,
+      regionSelectionPending,
+      activeImportIssueCount,
+      activeHeaderIssueCount,
+    });
   }, [
     activeHeaderIssueCount,
     activeImportIssueCount,
-    executableImportPlan?.summary.blockedCount,
-    executableImportPlan?.summary.overwriteNeedsConfirmationCount,
     hasPlan,
     regionSelectionPending,
     stepIndex,
@@ -4061,7 +4056,7 @@ export default function GradeImportExportDialog({
           return;
         }
 
-        if (blocked || activeImportIssueCount > 0 || activeHeaderIssueCount > 0) {
+        if (activeImportIssueCount > 0 || activeHeaderIssueCount > 0) {
           showWarning(
             "Import belum siap",
             activeImportIssueCount > 0
@@ -4092,7 +4087,7 @@ export default function GradeImportExportDialog({
           return;
         }
         if (executablePlan.summary.blockedCount > 0) {
-          setStepIndex(activeImportIssueCount > 0 ? 2 : 3);
+          setStepIndex(activeImportIssueCount > 0 ? 2 : activeHeaderIssueCount > 0 ? 3 : 4);
           showWarning(
             "Simpan belum bisa karena masih ada item yang perlu dipilih.",
             `${executablePlan.summary.blockedCount} item masih perlu dicek sebelum nilai disimpan.`,
@@ -4257,11 +4252,14 @@ export default function GradeImportExportDialog({
     if (stepIndex === 3 && activeHeaderIssueCount > 0) {
       return `Selesaikan ${activeHeaderIssueCount} header di Konfigurasi Header terlebih dahulu.`;
     }
-    if (stepIndex >= 2 && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) {
+    if (stepIndex === 6 && (executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0) > 0) {
       return "Nilai lama yang akan diganti harus dikonfirmasi dulu.";
     }
-    if (stepIndex >= 4 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
+    if (stepIndex === 6 && (executableImportPlan?.summary.blockedCount || 0) > 0) {
       return `Simpan belum bisa karena masih ada ${executableImportPlan?.summary.blockedCount || 0} item yang perlu dipilih.`;
+    }
+    if (stepIndex === 4 || stepIndex === 5) {
+      return "Masalah utama dan header sudah selesai. Periksa tabel lalu lanjut.";
     }
     if (stepIndex >= 2 && executableImportPlan) {
       const skipped = executableImportPlan.summary.skippedEmptyCount
@@ -4302,8 +4300,7 @@ export default function GradeImportExportDialog({
       }
       if (stepIndex === 2 && activeImportIssueCount > 0) return `Selesaikan ${activeImportIssueCount} masalah utama terlebih dahulu.`;
       if (stepIndex === 3 && activeHeaderIssueCount > 0) return `Selesaikan ${activeHeaderIssueCount} header terlebih dahulu.`;
-      if (stepIndex >= 4 && (blockedItemCount > 0 || blocked)) return "Selesaikan item yang wajib dipilih terlebih dahulu.";
-      if (activeImportIssueCount > 0 || needsCheckCount > 0) return "Periksa item yang perlu dicek terlebih dahulu.";
+      if (activeImportIssueCount > 0) return "Selesaikan masalah di Daftar Bermasalah terlebih dahulu.";
       if (activeHeaderIssueCount > 0) return "Selesaikan Konfigurasi Header terlebih dahulu.";
       return "Periksa item yang perlu dicek terlebih dahulu.";
     }
@@ -4334,7 +4331,6 @@ export default function GradeImportExportDialog({
     executionState === "analyzing"
     || executionState === "importing"
     || (stepIndex > 0 && stepIndex < 6 && !canGoNext)
-    || (stepIndex === 6 && (blocked || activeImportIssueCount > 0 || activeHeaderIssueCount > 0))
     || (stepIndex === 6 && readyImportCount === 0)
   );
   const exportPrimaryDisabled = tab === "export" && (

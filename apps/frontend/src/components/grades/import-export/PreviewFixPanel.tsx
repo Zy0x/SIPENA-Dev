@@ -134,13 +134,11 @@ export function PreviewFixPanel({
   selection,
   selectionState,
   students,
+  actionPlacement = "top",
   onApproveColumn,
-  onIgnoreColumn,
-  onIgnoreCell,
   onIgnoreRow,
   onResetRowSelection,
   onChooseStudent,
-  onMarkRowUnresolved,
   onApplySafeFixes,
   onApproveSuggestions,
   onSetColumnInclude,
@@ -157,6 +155,7 @@ export function PreviewFixPanel({
   selection: Selection;
   selectionState: ImportSelectionState;
   students: ImportWebStudent[];
+  actionPlacement?: "top" | "hidden";
   onApproveColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreColumn: (column: SpreadsheetPreviewColumn) => void;
   onIgnoreCell: (cell: SpreadsheetPreviewCell) => void;
@@ -240,6 +239,49 @@ export function PreviewFixPanel({
     }
     onSetCellInclude(targetCell, targetRow, targetColumn, true);
   };
+  const topActions = (() => {
+    if (actionPlacement === "hidden" || isRowOnlySelection) return null;
+    if (!selection) {
+      return (
+        <>
+          <SettingButton tone="primary" onClick={onApplySafeFixes}>Pakai perbaikan aman</SettingButton>
+          <SettingButton onClick={onApproveSuggestions}>Pakai saran SIPENA</SettingButton>
+        </>
+      );
+    }
+    if (targetCell && isGradeCell) {
+      return (
+        <>
+          <SettingButton
+            tone="primary"
+            onClick={handlePrimaryCellAction}
+            disabled={targetCell.isBlockedByColumn || targetCell.isBlockedByRow || targetCell.isBlockedByTarget}
+          >
+            {needsSuggestedApproval ? "Pakai saran" : shouldConfirmOverwrite ? "Konfirmasi timpa" : "Pakai nilai"}
+          </SettingButton>
+          <SettingButton tone="warning" onClick={() => onSetCellInclude(targetCell, targetRow!, targetColumn!, false)}>Lewati nilai</SettingButton>
+          <SettingButton onClick={() => onResetCellSelection(targetCell)}>Reset</SettingButton>
+          <SettingButton onClick={() => setShowDetail((current) => !current)}>
+            {showDetail ? "Sembunyikan detail" : "Lihat detail"}
+          </SettingButton>
+        </>
+      );
+    }
+    if (targetColumn) {
+      return (
+        <>
+          <SettingButton tone="primary" onClick={() => onBulkColumnAction(targetColumn, "include_valid")}>Pakai kolom</SettingButton>
+          <SettingButton tone="warning" onClick={() => onBulkColumnAction(targetColumn, "skip_all")}>Lewati kolom</SettingButton>
+          {targetColumn.status === "new_column" ? <SettingButton tone="primary" onClick={() => onApproveColumn(targetColumn)}>Konfirmasi kolom baru</SettingButton> : null}
+          <SettingButton onClick={() => onResetColumnSelection(targetColumn)}>Reset</SettingButton>
+          <SettingButton onClick={() => setShowDetail((current) => !current)}>
+            {showDetail ? "Sembunyikan detail" : "Lihat detail"}
+          </SettingButton>
+        </>
+      );
+    }
+    return null;
+  })();
 
   return (
     <aside className="sipena-preview-fix-panel" aria-live="polite">
@@ -266,6 +308,11 @@ export function PreviewFixPanel({
             <p className="sipena-reason-desc">{activeHint.description}</p>
           </div>
           <span className="sipena-reason-action">{activeHint.actionLabel}</span>
+        </div>
+      ) : null}
+      {topActions ? (
+        <div className="sipena-preview-fix-action-strip">
+          {topActions}
         </div>
       ) : null}
 
@@ -446,50 +493,6 @@ export function PreviewFixPanel({
             </SettingButton>
           </div>
         </div>
-      ) : null}
-
-      {!isRowOnlySelection ? (
-      <div className="sipena-preview-fix-actions">
-        {!selection ? (
-          <>
-            <SettingButton tone="primary" onClick={onApplySafeFixes}>Pakai perbaikan aman</SettingButton>
-            <SettingButton onClick={onApproveSuggestions}>Pakai saran SIPENA</SettingButton>
-          </>
-        ) : targetCell && isGradeCell ? (
-          <>
-            <SettingButton
-              tone="primary"
-              onClick={handlePrimaryCellAction}
-              disabled={targetCell.isBlockedByColumn || targetCell.isBlockedByRow || targetCell.isBlockedByTarget}
-            >
-              {needsSuggestedApproval ? "Pakai saran" : shouldConfirmOverwrite ? "Konfirmasi timpa" : "Pakai nilai"}
-            </SettingButton>
-            <SettingButton onClick={() => onSetCellInclude(targetCell, targetRow!, targetColumn!, false)}>Lewati nilai ini</SettingButton>
-            <SettingButton onClick={() => onResetCellSelection(targetCell)}>Reset pilihan</SettingButton>
-          </>
-        ) : targetColumn ? (
-          <>
-            <SettingButton tone="primary" onClick={() => onBulkColumnAction(targetColumn, "include_valid")}>Pakai kolom</SettingButton>
-            <SettingButton onClick={() => onBulkColumnAction(targetColumn, "skip_all")}>Lewati kolom</SettingButton>
-            {targetColumn.status === "new_column" ? <SettingButton tone="primary" onClick={() => onApproveColumn(targetColumn)}>Konfirmasi kolom baru</SettingButton> : null}
-            <SettingButton onClick={() => onResetColumnSelection(targetColumn)}>Reset kolom</SettingButton>
-            {showDetail ? (
-              <>
-                <SettingButton onClick={() => onBulkColumnAction(targetColumn, "skip_existing")}>Lewati nilai lama</SettingButton>
-                <SettingButton onClick={() => onIgnoreColumn(targetColumn)}>Abaikan kolom</SettingButton>
-              </>
-            ) : null}
-          </>
-        ) : targetRow ? (
-          <>
-            <SettingButton onClick={() => onIgnoreRow(targetRow)}>Lewati baris</SettingButton>
-            <SettingButton onClick={() => onResetRowSelection(targetRow)}>Reset</SettingButton>
-          </>
-        ) : null}
-        <SettingButton onClick={() => setShowDetail((current) => !current)}>
-          {showDetail ? "Sembunyikan detail" : "Lihat detail"}
-        </SettingButton>
-      </div>
       ) : null}
 
       {showDetail ? (

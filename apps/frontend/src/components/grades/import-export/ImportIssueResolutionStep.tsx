@@ -404,6 +404,7 @@ export function ImportIssueResolutionStep({
                 selection={selection}
                 selectionState={selectionState}
                 students={students}
+                actionPlacement="hidden"
                 onApproveColumn={onApproveColumn}
                 onIgnoreColumn={(column) => {
                   rememberIssue(activeIssue, "skipped", "Dilewati");

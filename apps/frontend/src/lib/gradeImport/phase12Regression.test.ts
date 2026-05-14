@@ -331,8 +331,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("Identitas template SIPENA valid. Periksa Daftar Bermasalah dulu sebelum melihat tabel verifikasi.");
     expect(dialogSource).toContain("getActiveImportIssues(spreadsheetPreview)");
     expect(dialogSource).toContain("getActiveHeaderConfigurationIssues(spreadsheetPreview, effectiveSelectionState)");
-    expect(dialogSource).toContain("stepIndex === 2) return hasPlan && !unsupported && !regionSelectionPending && activeImportIssueCount === 0");
-    expect(dialogSource).toContain("stepIndex === 3) return hasPlan && !unsupported && !regionSelectionPending && activeImportIssueCount === 0 && activeHeaderIssueCount === 0");
+    expect(dialogSource).toContain("getImportStepReadiness");
     expect(dialogSource).toContain("buildImportDecisionGraph");
     expect(dialogSource).toContain("buildFinalReviewModel");
     expect(dialogSource).not.toContain("FinalReviewSpreadsheetTable");
@@ -359,6 +358,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("ignoredCells: current.ignoredCells.filter");
     expect(fixPanelSource).toContain("Pakai rekomendasi");
     expect(fixPanelSource).toContain("Pilih Siswa yang Sudah Ada");
+    expect(fixPanelSource).toContain('actionPlacement?: "top" | "hidden"');
+    expect(fixPanelSource).not.toContain("sipena-preview-fix-actions");
     expect(fixPanelSource).not.toContain("Terapkan pemeriksaan otomatis");
     expect(issueStepSource).toContain("Daftar Bermasalah");
     expect(issueStepSource).not.toContain("InlineColumnTargetFix");
@@ -371,6 +372,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(issueStepSource).not.toContain("Pakai saran AI");
     expect(headerStepSource).toContain("Konfigurasi Header");
     expect(headerStepSource).toContain("buildHeaderConfigurationQueue");
+    expect(headerStepSource).toContain('onSetColumnValueMode(issue.column, "overwrite_existing", true)');
+    expect(headerStepSource).not.toContain('type="checkbox"');
     expect(headerStepSource).toContain("Saran AI:");
     expect(issueStepSource).toContain("masalah tersisa");
     expect(dialogSource).toContain("importBodyRef.current?.scrollTo({ top: 0");
