@@ -226,6 +226,10 @@ export function HeaderConfigurationStep({
   };
 
   const suggestion = activeIssue ? columnAiSuggestion(activeIssue.column, aiAssist) : undefined;
+  const applyHeader = (issue: HeaderConfigurationIssue) => {
+    onApproveColumn(issue.column);
+    onBulkColumnAction(issue.column, "include_valid");
+  };
 
   return (
     <section className="sipena-header-config-step">
@@ -353,7 +357,7 @@ export function HeaderConfigurationStep({
               </div>
 
               <div className="sipena-header-actions">
-                <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={() => onBulkColumnAction(activeIssue.column, "include_valid")}>
+                <button type="button" className="sipena-column-btn sipena-column-btn-primary" onClick={() => applyHeader(activeIssue)}>
                   Pakai header
                 </button>
                 <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={() => onBulkColumnAction(activeIssue.column, "skip_all")}>

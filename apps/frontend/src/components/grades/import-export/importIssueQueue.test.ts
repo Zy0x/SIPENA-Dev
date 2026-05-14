@@ -216,6 +216,80 @@ describe("invalid issue queue", () => {
     expect(activeHeaderIssues.map((issue) => issue.column.id)).toContain("excel-col-5");
   });
 
+  it("keeps unresolved header confirmations in Konfigurasi Header before value categories", () => {
+    const preview = {
+      ...model([previewRow("row-12", {
+        cells: [
+          gradeCell("row-12", "identity-no", { status: "unchanged" }),
+          gradeCell("row-12", "identity-nisn", { status: "unchanged" }),
+          gradeCell("row-12", "identity-name", { status: "unchanged" }),
+          gradeCell("row-12", "excel-col-4", { status: "skipped", oldValue: 75, newValue: 82, effectiveInclude: false }),
+          gradeCell("row-12", "excel-col-5", { status: "new_value" }),
+        ],
+      })]),
+      columns: columns.map((column) => column.id === "excel-col-4"
+        ? {
+          ...column,
+          status: "needs_check" as const,
+          targetLabel: "BAB 1 - Tugas mirip",
+          conflictIds: ["column:COLUMN_ASSIGNMENT_SIMILAR_MATCH::4:"],
+        }
+        : column),
+    } satisfies SpreadsheetPreviewModel;
+
+    const issue = buildHeaderConfigurationQueue(preview).find((item) => item.column.id === "excel-col-4");
+
+    expect(issue).toMatchObject({ category: "target_required", isResolved: false });
+    expect(getActiveHeaderConfigurationIssues(preview).map((item) => item.column.id)).toContain("excel-col-4");
+  });
+
+  it("does not reopen resolved header confirmations with no active conflict ids", () => {
+    const preview = {
+      ...model([previewRow("row-13", {
+        cells: [
+          gradeCell("row-13", "identity-no", { status: "unchanged" }),
+          gradeCell("row-13", "identity-nisn", { status: "unchanged" }),
+          gradeCell("row-13", "identity-name", { status: "unchanged" }),
+          gradeCell("row-13", "excel-col-4", { status: "skipped", oldValue: 75, newValue: 82, effectiveInclude: false }),
+          gradeCell("row-13", "excel-col-5", { status: "new_value" }),
+        ],
+      })]),
+      columns: columns.map((column) => column.id === "excel-col-4"
+        ? {
+          ...column,
+          status: "needs_check" as const,
+          targetLabel: "BAB 1 - Tugas mirip",
+          conflictIds: [],
+        }
+        : column),
+    } satisfies SpreadsheetPreviewModel;
+
+    const issue = buildHeaderConfigurationQueue(preview, {
+      columnSettings: {
+        "excel-col-4": {
+          columnId: "excel-col-4",
+          include: true,
+          valueMode: "skip_existing",
+          overwriteConfirmed: false,
+        },
+      },
+      cellSettings: {},
+    }).find((item) => item.column.id === "excel-col-4");
+
+    expect(issue).toMatchObject({ category: "overwrite", isResolved: true });
+    expect(getActiveHeaderConfigurationIssues(preview, {
+      columnSettings: {
+        "excel-col-4": {
+          columnId: "excel-col-4",
+          include: true,
+          valueMode: "skip_existing",
+          overwriteConfirmed: false,
+        },
+      },
+      cellSettings: {},
+    }).map((item) => item.column.id)).not.toContain("excel-col-4");
+  });
+
   it("requires an explicit header decision for overwrite columns", () => {
     const overwriteRow = previewRow("row-11", {
       studentName: "Siswa Lama",

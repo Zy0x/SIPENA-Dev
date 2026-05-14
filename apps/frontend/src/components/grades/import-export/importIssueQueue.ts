@@ -376,10 +376,12 @@ function columnCells(model: SpreadsheetPreviewModel, column: SpreadsheetPreviewC
 
 function hasColumnTargetIssue(column: SpreadsheetPreviewColumn, cells: SpreadsheetPreviewCell[]): boolean {
   if (column.effectiveInclude === false || column.isIgnored) return false;
+  const hasUnresolvedConfirmation = column.status === "needs_check" && Boolean(column.conflictIds?.length);
   return column.status === "manual_required"
     || column.status === "blocked"
     || column.status === "invalid"
     || column.status === "new_column"
+    || hasUnresolvedConfirmation
     || Boolean(column.isNewStructure)
     || cells.some((cell) => cell.isBlockedByColumn || cell.isBlockedByTarget);
 }
