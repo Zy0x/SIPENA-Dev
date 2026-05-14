@@ -58,7 +58,7 @@ describe("clean import/export UX source guards", () => {
     expect(issueBodyStyles).toContain("overflow-y: auto");
     expect(issueBodyStyles).toContain("padding-bottom: 18px");
     expect(issueBodyStyles).not.toContain("overflow-y: hidden");
-    expect(issueListStyles).toContain("max-height: clamp(300px, calc(100dvh - 340px), 620px)");
+    expect(issueListStyles).toContain("max-height: clamp(360px, calc(100dvh - 250px), 760px)");
     expect(issueListStyles).toContain("overscroll-behavior: contain");
     expect(issueFixStackStyles).toContain("overflow-y: visible");
     expect(cssSource).not.toContain("height: clamp(520px, calc(100dvh - 238px), 720px)");

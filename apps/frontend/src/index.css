@@ -1520,7 +1520,7 @@
   position: sticky;
   top: 12px;
   height: auto;
-  max-height: clamp(300px, calc(100dvh - 340px), 620px);
+  max-height: clamp(360px, calc(100dvh - 250px), 760px);
   overscroll-behavior: contain;
   overflow-y: auto;
   scrollbar-gutter: stable;
