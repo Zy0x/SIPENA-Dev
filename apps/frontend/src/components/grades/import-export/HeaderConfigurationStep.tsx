@@ -58,6 +58,12 @@ function previewValue(value: string | number | null | undefined): string {
   return String(value);
 }
 
+function headerPreviewValueCount(model: SpreadsheetPreviewModel, column: SpreadsheetPreviewColumn): number {
+  return model.rows.reduce((count, row) => (
+    row.cells.some((cell) => cell.columnId === column.id) ? count + 1 : count
+  ), 0);
+}
+
 function headerDecisionSummary(issue: HeaderConfigurationIssue): string {
   if (issue.column.type === "identity") return "Kolom identitas hanya untuk mencocokkan siswa. Tidak ada nilai yang disimpan dari header ini.";
   if (issue.category === "skipped") return "Semua nilai pada header ini sama, kosong, atau sudah dilewati. Header aman tanpa konfirmasi.";
@@ -368,11 +374,14 @@ export function HeaderConfigurationStep({
   const [headerFilter, setHeaderFilter] = useState<HeaderFilter>("action");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeIssueId, setActiveIssueId] = useState<string | null>(activeIssues[0]?.id || headers[0]?.id || null);
+  const [openEvidenceByHeaderId, setOpenEvidenceByHeaderId] = useState<Record<string, boolean>>({});
   const selectedIssue = headers.find((issue) => issue.id === activeIssueId);
   const activeIssue = selectedIssue || activeIssues[0] || headers[0];
   const activeHeaderIndex = activeIssue ? Math.max(0, headers.findIndex((issue) => issue.id === activeIssue.id)) : -1;
   const completedHeaderCount = headers.filter((issue) => issue.isResolved).length;
   const totalHeaderCount = headers.length;
+  const isEvidenceOpen = activeIssue ? Boolean(openEvidenceByHeaderId[activeIssue.id]) : false;
+  const activePreviewCount = activeIssue ? headerPreviewValueCount(model, activeIssue.column) : 0;
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredHeaders = headers.filter((issue) => {
     if (headerFilter === "action" && issue.isResolved) return false;
@@ -447,6 +456,13 @@ export function HeaderConfigurationStep({
     if (!activeIssue || headers.length === 0) return;
     const previous = headers[activeHeaderIndex - 1] || headers[headers.length - 1];
     setActiveIssueId(previous.id);
+  };
+  const toggleActiveEvidence = () => {
+    if (!activeIssue) return;
+    setOpenEvidenceByHeaderId((current) => ({
+      ...current,
+      [activeIssue.id]: !current[activeIssue.id],
+    }));
   };
 
   return (
@@ -536,12 +552,24 @@ export function HeaderConfigurationStep({
                 <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
               </div>
 
-              <div className="sipena-header-workspace">
+              <div className={cn("sipena-header-workspace", isEvidenceOpen && "sipena-header-workspace--evidence-open")}>
                 <div className="sipena-header-editor-panel">
                   <div className="sipena-header-panel-title">
-                    <b>Keputusan header</b>
+                    <div className="sipena-header-panel-title-row">
+                      <b>Keputusan header</b>
+                      <button type="button" className="sipena-column-btn" onClick={toggleActiveEvidence}>
+                        {isEvidenceOpen ? "Sembunyikan contoh" : `Lihat contoh nilai (${activePreviewCount})`}
+                      </button>
+                    </div>
                     <span>Atur target dan aturan nilai untuk seluruh kolom ini.</span>
                   </div>
+
+                  <dl className="sipena-header-counts sipena-header-counts--compact">
+                    <div><dt>Baru</dt><dd>{activeIssue.counts.newValues}</dd></div>
+                    <div><dt>Timpa</dt><dd>{activeIssue.counts.overwrite}</dd></div>
+                    <div><dt>Dilewati</dt><dd>{activeIssue.counts.skipped}</dd></div>
+                    <div><dt>Invalid</dt><dd>{activeIssue.counts.invalid}</dd></div>
+                  </dl>
 
                   {activeIssue.column.type !== "identity" && !activeIssue.isResolved ? (
                     <>
@@ -589,24 +617,19 @@ export function HeaderConfigurationStep({
                   ) : null}
                 </div>
 
-                <div className="sipena-header-evidence-panel">
-                  <dl className="sipena-header-counts">
-                    <div><dt>Baru</dt><dd>{activeIssue.counts.newValues}</dd></div>
-                    <div><dt>Timpa</dt><dd>{activeIssue.counts.overwrite}</dd></div>
-                    <div><dt>Dilewati</dt><dd>{activeIssue.counts.skipped}</dd></div>
-                    <div><dt>Invalid</dt><dd>{activeIssue.counts.invalid}</dd></div>
-                  </dl>
+                {isEvidenceOpen ? (
+                  <div className="sipena-header-evidence-panel">
+                    <div className="sipena-header-info">
+                      <b>{activeIssue.detailTitle}</b>
+                      <ul>{activeIssue.detailBullets.slice(0, 2).map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
+                      {suggestion ? (
+                        <p><b>Saran AI:</b> {suggestion.reason} ({Math.round(suggestion.confidence * 100)}%).</p>
+                      ) : null}
+                    </div>
 
-                  <div className="sipena-header-info">
-                    <b>{activeIssue.detailTitle}</b>
-                    <ul>{activeIssue.detailBullets.slice(0, 2).map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
-                    {suggestion ? (
-                      <p><b>Saran AI:</b> {suggestion.reason} ({Math.round(suggestion.confidence * 100)}%).</p>
-                    ) : null}
+                    <HeaderColumnPreview model={model} issue={activeIssue} />
                   </div>
-
-                  <HeaderColumnPreview model={model} issue={activeIssue} />
-                </div>
+                ) : null}
               </div>
             </div>
           ) : null}

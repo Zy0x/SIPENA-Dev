@@ -397,9 +397,15 @@ describe("phase 12 grade import regression suite", () => {
     expect(headerStepSource).toContain("sipena-header-workspace");
     expect(headerStepSource).toContain("sipena-header-editor-panel");
     expect(headerStepSource).toContain("sipena-header-evidence-panel");
+    expect(headerStepSource).toContain("openEvidenceByHeaderId");
+    expect(headerStepSource).toContain("Lihat contoh nilai");
+    expect(headerStepSource).toContain("Sembunyikan contoh");
+    expect(headerStepSource).toContain("isEvidenceOpen ? (");
     expect(globalStyles).toContain("sipena-header-workspace");
+    expect(globalStyles).toContain("sipena-header-workspace--evidence-open");
     expect(globalStyles).toContain("sipena-header-editor-panel");
     expect(globalStyles).toContain("sipena-header-evidence-panel");
+    expect(globalStyles).toContain("grid-template-columns: minmax(0, 1fr)");
     expect(globalStyles).not.toContain("sipena-header-decision-panel");
     expect(globalStyles).toContain("sipena-header-sequence-actions");
     expect(globalStyles).toContain("sipena-issue-list-item--done");

@@ -2366,9 +2366,13 @@
 
 .sipena-header-workspace {
   display: grid;
-  grid-template-columns: minmax(300px, 0.88fr) minmax(0, 1.12fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-height: 0;
+}
+
+.sipena-header-workspace--evidence-open {
+  grid-template-columns: minmax(300px, 0.88fr) minmax(0, 1.12fr);
 }
 
 .sipena-header-editor-panel,
@@ -2402,6 +2406,13 @@
   gap: 3px;
 }
 
+.sipena-header-panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .sipena-header-panel-title b {
   font-size: 14px;
   font-weight: 900;
@@ -2412,6 +2423,10 @@
   font-size: 12px;
   line-height: 1.45;
   color: #64748b;
+}
+
+.sipena-header-counts--compact {
+  grid-template-columns: repeat(4, minmax(88px, 1fr));
 }
 
 .sipena-header-resolved-note {
