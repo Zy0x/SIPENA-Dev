@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import type {
   ColumnValueMode,
@@ -105,6 +106,7 @@ function HeaderTargetForm({
   onNextHeader,
   onSkipHeader,
   onResetHeader,
+  actionsHost,
 }: {
   issue: HeaderConfigurationIssue;
   assignments: ColumnSettingsAssignmentOption[];
@@ -119,6 +121,7 @@ function HeaderTargetForm({
   onNextHeader: () => void;
   onSkipHeader: () => void;
   onResetHeader: () => void;
+  actionsHost: HTMLDivElement | null;
 }) {
   const column = issue.column;
   const [targetChoice, setTargetChoice] = useState<TargetChoice>(() => issue.category === "target_required" ? "new_assignment" : defaultTargetChoice(column));
@@ -198,18 +201,22 @@ function HeaderTargetForm({
     }
   };
 
+  const actionButtons = (
+    <div className="sipena-header-unified-actions">
+      <button type="button" className="sipena-column-btn" onClick={onPreviousHeader}>Sebelumnya</button>
+      <button type="button" className="sipena-column-btn" onClick={onNextHeader}>Header berikutnya</button>
+      <span aria-hidden="true" className="sipena-header-action-spacer" />
+      <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={onSkipHeader}>Lewati header</button>
+      <button type="button" className="sipena-column-btn" onClick={onResetHeader}>Reset</button>
+      <button type="button" className="sipena-column-btn sipena-column-btn-primary sipena-header-target-save" onClick={applyTarget} disabled={!canSaveTarget}>
+        {targetChoice === "ignore" ? "Lewati header" : headerPrimaryLabel(issue)}
+      </button>
+    </div>
+  );
+
   return (
     <div className="sipena-header-target-form">
-      <div className="sipena-header-unified-actions">
-        <button type="button" className="sipena-column-btn" onClick={onPreviousHeader}>Sebelumnya</button>
-        <button type="button" className="sipena-column-btn" onClick={onNextHeader}>Header berikutnya</button>
-        <span aria-hidden="true" className="sipena-header-action-spacer" />
-        <button type="button" className="sipena-column-btn sipena-column-btn-warning" onClick={onSkipHeader}>Lewati header</button>
-        <button type="button" className="sipena-column-btn" onClick={onResetHeader}>Reset</button>
-        <button type="button" className="sipena-column-btn sipena-column-btn-primary sipena-header-target-save" onClick={applyTarget} disabled={!canSaveTarget}>
-          {targetChoice === "ignore" ? "Lewati header" : headerPrimaryLabel(issue)}
-        </button>
-      </div>
+      {actionsHost ? createPortal(actionButtons, actionsHost) : null}
       <label>
         <span>Target header</span>
         <select value={targetChoice} onChange={(event) => setTargetChoice(event.target.value as TargetChoice)}>
@@ -390,6 +397,7 @@ export function HeaderConfigurationStep({
   const [searchTerm, setSearchTerm] = useState("");
   const [activeIssueId, setActiveIssueId] = useState<string | null>(activeIssues[0]?.id || headers[0]?.id || null);
   const [openEvidenceByHeaderId, setOpenEvidenceByHeaderId] = useState<Record<string, boolean>>({});
+  const [headerActionHost, setHeaderActionHost] = useState<HTMLDivElement | null>(null);
   const selectedIssue = headers.find((issue) => issue.id === activeIssueId);
   const activeIssue = selectedIssue || activeIssues[0] || headers[0];
   const activeHeaderIndex = activeIssue ? Math.max(0, headers.findIndex((issue) => issue.id === activeIssue.id)) : -1;
@@ -562,6 +570,24 @@ export function HeaderConfigurationStep({
                   {activeIssue.isResolved ? "Selesai" : "Perlu aksi"}
                 </span>
               </div>
+              <div className="sipena-header-action-slot" ref={setHeaderActionHost}>
+                {activeIssue.column.type !== "identity" && activeIssue.isResolved ? (
+                  <div className="sipena-header-unified-actions">
+                    <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
+                    <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
+                    <span aria-hidden="true" className="sipena-header-action-spacer" />
+                    <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
+                      Reset
+                    </button>
+                  </div>
+                ) : null}
+                {activeIssue.column.type === "identity" ? (
+                  <div className="sipena-header-unified-actions">
+                    <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
+                    <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
+                  </div>
+                ) : null}
+              </div>
               <div className={cn("sipena-header-workspace", isEvidenceOpen && "sipena-header-workspace--evidence-open")}>
                 <div className="sipena-header-editor-panel">
                   <div className="sipena-header-panel-title">
@@ -600,6 +626,7 @@ export function HeaderConfigurationStep({
                           focusNextUnresolved(activeIssue.id);
                         }}
                         onResetHeader={() => onResetColumnSelection(activeIssue.column)}
+                        actionsHost={headerActionHost}
                       />
                     </>
                   ) : null}
@@ -608,11 +635,6 @@ export function HeaderConfigurationStep({
                     <div className="sipena-header-resolved-note">
                       <b>Header selesai</b>
                       <span>Keputusan sudah diterapkan. Gunakan Reset jika ingin mengatur ulang header ini.</span>
-                      <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
-                      <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
-                      <button type="button" className="sipena-column-btn" onClick={() => onResetColumnSelection(activeIssue.column)}>
-                        Reset
-                      </button>
                     </div>
                   ) : null}
 
@@ -620,8 +642,6 @@ export function HeaderConfigurationStep({
                     <div className="sipena-header-resolved-note">
                       <b>Header identitas</b>
                       <span>Kolom ini hanya dipakai untuk mencocokkan siswa dan otomatis dilewati saat simpan nilai.</span>
-                      <button type="button" className="sipena-column-btn" onClick={previousHeader}>Sebelumnya</button>
-                      <button type="button" className="sipena-column-btn" onClick={nextHeader}>Header berikutnya</button>
                     </div>
                   ) : null}
                 </div>
