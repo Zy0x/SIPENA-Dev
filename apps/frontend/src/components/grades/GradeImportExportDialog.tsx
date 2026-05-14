@@ -117,6 +117,8 @@ interface GradeImportExportDialogProps {
     gradeType: "assignment" | "sts" | "sas";
     value: number;
     assignmentId?: string;
+    academicYearId?: string | null;
+    semesterId?: string | null;
   }>) => Promise<{ savedCount: number; skippedUnchangedCount?: number } | void>;
   onEnsureAssignmentTarget?: (target: GradeTarget) => Promise<GradeTarget>;
   onImportComplete?: () => void | Promise<void>;
@@ -2972,12 +2974,14 @@ async function executeClientSideImport({
   onSaveGrade,
   onSaveGradesBatch,
   onEnsureAssignmentTarget,
+  importContext,
   onProgress,
 }: {
   executablePlan: ReturnType<typeof buildExecutableImportOperations>;
   onSaveGrade?: GradeImportExportDialogProps["onSaveGrade"];
   onSaveGradesBatch?: GradeImportExportDialogProps["onSaveGradesBatch"];
   onEnsureAssignmentTarget?: GradeImportExportDialogProps["onEnsureAssignmentTarget"];
+  importContext: ImportPlanContext;
   onProgress: (progress: ImportExecutionProgress) => void;
 }): Promise<ImportExecutionSummary> {
   const summary = emptyExecutionSummary();
@@ -3047,6 +3051,8 @@ async function executeClientSideImport({
         gradeType: operationTarget.gradeType,
         value: executableOperation.value,
         assignmentId: operationTarget.gradeType === "assignment" ? operationTarget.assignmentId : undefined,
+        academicYearId: importContext.academicYearId || null,
+        semesterId: importContext.semesterId || null,
       });
       batchOperations.push({ ...operation, target: operationTarget });
     } else if (onSaveGrade) {
@@ -4191,6 +4197,7 @@ export default function GradeImportExportDialog({
             onSaveGrade,
             onSaveGradesBatch,
             onEnsureAssignmentTarget,
+            importContext,
             onProgress: setExecutionProgress,
           });
           setExecutionSummary(summary);

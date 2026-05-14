@@ -374,7 +374,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     redo,
     canUndo,
     canRedo,
-  } = useGradesWithUndo(isGuestMode ? "" : selectedSubjectId);
+  } = useGradesWithUndo(isGuestMode ? "" : selectedSubjectId, isGuestMode ? "" : selectedClassId);
   const {
     chapters: ownerChapters,
     createBulkChapters,
@@ -450,7 +450,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       })),
     classId,
     subjectId,
-    semesterId: activeSemesterId,
+    semesterId: activeSemesterId || selectedClass?.semester_id || null,
     academicYearId: activeYear?.id || selectedClass?.academic_year_id || selectedSubject?.academic_year_id || null,
   }), [
     activeSemesterId,
@@ -460,6 +460,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     classId,
     grades,
     selectedClass?.academic_year_id,
+    selectedClass?.semester_id,
     selectedSubject?.academic_year_id,
     students,
     subjectId,

@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useGrades, type BulkGradeInput, type GradeBatchChangedRow } from './useGrades';
 import { useEnhancedToast } from '@/contexts/ToastContext';
+import { gradeBatchChangeToBulkInput, type GradeBatchChangeInput } from './gradeBatchChangeMapper';
+
+export type { GradeBatchChangeInput } from './gradeBatchChangeMapper';
 
 interface GradeChange {
   studentId: string;
@@ -11,13 +14,6 @@ interface GradeChange {
   semesterId?: string | null;
   oldValue: number | null;
   newValue: number | null;
-}
-
-export interface GradeBatchChangeInput {
-  studentId: string;
-  gradeType: string;
-  assignmentId?: string;
-  value: number | null;
 }
 
 interface UndoState {
@@ -123,13 +119,9 @@ export function useGradesWithUndo(subjectId?: string, classId?: string) {
       return { savedCount: 0, skippedUnchangedCount: inputs.length };
     }
 
-    const result = await gradesHook.upsertGradesBatch.mutateAsync(inputs.map((input) => ({
-      student_id: input.studentId,
-      subject_id: subjectId,
-      assignment_id: input.assignmentId,
-      grade_type: input.gradeType,
-      value: input.value,
-    })));
+    const result = await gradesHook.upsertGradesBatch.mutateAsync(
+      inputs.map((input) => gradeBatchChangeToBulkInput(input, subjectId)),
+    );
     const changes = result.changedRows.map(changeFromRpcRow);
 
     recordUndoBatch(changes, `${changes.length} nilai dari import tersimpan sebagai satu riwayat undo.`);
