@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
@@ -32,6 +32,12 @@ const assignments = [
 ];
 
 const context: ImportPlanContext = { students, chapters, assignments };
+
+function repoPath(relativePath: string): string {
+  const direct = resolve(process.cwd(), relativePath);
+  if (existsSync(direct)) return direct;
+  return resolve(process.cwd(), "../..", relativePath);
+}
 
 function workbookResult(sheets: Record<string, unknown[][]>) {
   const workbook = XLSX.utils.book_new();
@@ -305,25 +311,28 @@ describe("phase 12 grade import regression suite", () => {
   });
 
   it("guards unified contextual import policy in source until a component test harness is added", () => {
-    const dialogSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/GradeImportExportDialog.tsx"), "utf8");
-    const overlaySource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/ColumnSettingsOverlay.tsx"), "utf8");
-    const previewSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/SmartSpreadsheetPreview.tsx"), "utf8");
-    const previewBannerSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewSummaryBanner.tsx"), "utf8");
-    const previewBadgeSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewCellBadge.tsx"), "utf8");
-    const issueStepSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/ImportIssueResolutionStep.tsx"), "utf8");
-    const fixPanelSource = readFileSync(resolve(process.cwd(), "apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
-    const globalStyles = readFileSync(resolve(process.cwd(), "apps/frontend/src/index.css"), "utf8");
+    const dialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeImportExportDialog.tsx"), "utf8");
+    const overlaySource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/ColumnSettingsOverlay.tsx"), "utf8");
+    const previewSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/SmartSpreadsheetPreview.tsx"), "utf8");
+    const previewBannerSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewSummaryBanner.tsx"), "utf8");
+    const previewBadgeSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewCellBadge.tsx"), "utf8");
+    const issueStepSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/ImportIssueResolutionStep.tsx"), "utf8");
+    const headerStepSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/HeaderConfigurationStep.tsx"), "utf8");
+    const fixPanelSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
+    const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).not.toContain("ImportComplexityMode");
     expect(dialogSource).not.toContain("Mode Cepat aktif");
     expect(dialogSource).not.toContain("Mode Lanjutan aktif");
-    expect(dialogSource).toContain('const importSteps = ["Upload", "Pemeriksaan", "Daftar Bermasalah", "Verifikasi Tabel", "Review Akhir", "Simpan"]');
+    expect(dialogSource).toContain('const importSteps = ["Upload", "Pemeriksaan", "Daftar Bermasalah", "Konfigurasi Header", "Verifikasi Tabel", "Review Akhir", "Simpan"]');
     expect(dialogSource).not.toContain("AI Agent Menyelesaikan");
     expect(dialogSource).toContain("Template resmi siap diperiksa");
     expect(dialogSource).toContain("Identitas template SIPENA valid. Periksa Daftar Bermasalah dulu sebelum melihat tabel verifikasi.");
     expect(dialogSource).toContain("getActiveImportIssues(spreadsheetPreview)");
+    expect(dialogSource).toContain("getActiveHeaderConfigurationIssues(spreadsheetPreview, effectiveSelectionState)");
     expect(dialogSource).toContain("stepIndex === 2) return hasPlan && !unsupported && !regionSelectionPending && activeImportIssueCount === 0");
+    expect(dialogSource).toContain("stepIndex === 3) return hasPlan && !unsupported && !regionSelectionPending && activeImportIssueCount === 0 && activeHeaderIssueCount === 0");
     expect(dialogSource).toContain("buildImportDecisionGraph");
     expect(dialogSource).toContain("buildFinalReviewModel");
     expect(dialogSource).not.toContain("FinalReviewSpreadsheetTable");
@@ -352,13 +361,16 @@ describe("phase 12 grade import regression suite", () => {
     expect(fixPanelSource).toContain("Pilih Siswa yang Sudah Ada");
     expect(fixPanelSource).not.toContain("Terapkan pemeriksaan otomatis");
     expect(issueStepSource).toContain("Daftar Bermasalah");
-    expect(issueStepSource).toContain("InlineColumnTargetFix");
+    expect(issueStepSource).not.toContain("InlineColumnTargetFix");
     expect(issueStepSource).toContain("Bandingkan baris nama redundan");
     expect(issueStepSource).toContain("Item {activeIndex + 1} dari {issueBoard.length}");
     expect(issueStepSource).toContain("completedIssues");
-    expect(issueStepSource).toContain("AutomaticHeaderCheckDialog");
-    expect(issueStepSource).toContain("sipena-auto-check-trigger--attention");
-    expect(issueStepSource).toContain("Pakai saran AI");
+    expect(issueStepSource).not.toContain("AutomaticHeaderCheckDialog");
+    expect(issueStepSource).not.toContain("sipena-auto-check-trigger--attention");
+    expect(issueStepSource).not.toContain("Pakai saran AI");
+    expect(headerStepSource).toContain("Konfigurasi Header");
+    expect(headerStepSource).toContain("buildHeaderConfigurationQueue");
+    expect(headerStepSource).toContain("Saran AI:");
     expect(issueStepSource).toContain("masalah tersisa");
     expect(dialogSource).toContain("importBodyRef.current?.scrollTo({ top: 0");
     expect(dialogSource).toContain("sipena-import-body--issue-step");
@@ -366,7 +378,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("sipena-preview-cell-details");
     expect(globalStyles).toContain("sipena-preview-cell-actions");
     expect(globalStyles).toContain("sipena-issue-active-summary");
-    expect(globalStyles).toContain("sipena-auto-check-overlay");
+    expect(globalStyles).toContain("sipena-header-config-grid");
+    expect(globalStyles).toContain("sipena-header-category-bar");
     expect(globalStyles).toContain("sipena-issue-list-item--done");
     expect(globalStyles).toContain("sipena-import-body--issue-step");
     expect(globalStyles).toContain("scroll-padding-bottom: 128px");
@@ -384,11 +397,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(dialogSource).toContain("Target SIPENA");
     expect(dialogSource).toContain("Nilai Excel");
     expect(dialogSource).toContain("Nilai final");
-    expect(dialogSource).toContain("Buka Daftar Bermasalah");
+    expect(dialogSource).toContain("Buka Verifikasi Tabel");
     expect(dialogSource).toContain("Ringkasan tabel terverifikasi");
     expect(dialogSource).toContain("Review Akhir menampilkan tabel keputusan final sebelum simpan");
     expect(dialogSource).toContain("reviewDecisionValueLabel");
-    expect(dialogSource).toContain("Buka Daftar Bermasalah");
+    expect(dialogSource).toContain("Konfigurasi Header atau nilai dari Verifikasi Tabel");
     expect(dialogSource).not.toContain("warning utama");
     expect(dialogSource).not.toContain("item diblokir");
     expect(dialogSource).not.toContain("title: cleanBackendText(code");
@@ -429,15 +442,15 @@ describe("phase 12 grade import regression suite", () => {
     expect(fixPanelSource).toContain('(["inherit_column", "fill_empty_only", "skip_existing", "overwrite_existing"] as CellValueMode[])');
     expect(fixPanelSource).toContain('(columnSetting?.valueMode || targetColumn.effectiveValueMode) === "overwrite_existing"');
     expect(fixPanelSource).not.toContain("complexityMode");
-    expect(issueStepSource).toContain("Target kolom");
-    expect(issueStepSource).toContain("Pilih target");
+    expect(headerStepSource).toContain("Target header");
+    expect(headerStepSource).toContain("Konfigurasi Header");
     expect(dialogSource).toContain("sipena-smart-fix-needs");
     expect(dialogSource).toContain("Tinjau item perlu dicek");
     expect(issueStepSource).not.toContain("complexityMode");
   });
 
   it("guards atomic batch import RPC and duplicate-grade hard errors in SQL", () => {
-    const sql = readFileSync(resolve(process.cwd(), "supabase/migrations/20260509142802_atomic_grade_import.sql"), "utf8");
+    const sql = readFileSync(repoPath("supabase/migrations/20260509142802_atomic_grade_import.sql"), "utf8");
 
     expect(sql).toContain("CREATE OR REPLACE FUNCTION public.import_grades_batch(p_items jsonb)");
     expect(sql).toContain("pg_advisory_xact_lock");

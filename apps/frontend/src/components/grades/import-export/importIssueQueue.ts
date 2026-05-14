@@ -1,4 +1,6 @@
 import type {
+  ColumnValueMode,
+  ImportSelectionState,
   SpreadsheetPreviewCell,
   SpreadsheetPreviewColumn,
   SpreadsheetPreviewModel,
@@ -30,6 +32,31 @@ export interface InvalidIssue {
   detailBullets: string[];
   primaryActionLabel: string;
   skipActionLabel: string;
+}
+
+export type HeaderConfigurationCategory = "target_required" | "overwrite" | "new_values" | "skipped";
+
+export interface HeaderConfigurationIssue {
+  id: string;
+  column: SpreadsheetPreviewColumn;
+  category: HeaderConfigurationCategory;
+  categoryLabel: string;
+  title: string;
+  description: string;
+  detailTitle: string;
+  detailBullets: string[];
+  counts: {
+    newValues: number;
+    skipped: number;
+    overwrite: number;
+    invalid: number;
+    blocked: number;
+    valid: number;
+  };
+  valueMode: ColumnValueMode;
+  isResolved: boolean;
+  requiresOverwriteConfirmation: boolean;
+  recommendedActionLabel: string;
 }
 
 function formatValue(value: string | number | null | undefined): string {
@@ -172,12 +199,9 @@ export function buildColumnDetailCopy(column: SpreadsheetPreviewColumn) {
 
 function isIssueCell(cell: SpreadsheetPreviewCell): boolean {
   if (cell.effectiveInclude === false || cell.isManuallySkipped) return false;
-  return cell.status === "invalid"
-    || cell.status === "blocked"
-    || cell.status === "manual_required"
-    || cell.isBlockedByColumn
-    || cell.isBlockedByRow
-    || cell.isBlockedByTarget;
+  if (cell.status === "invalid") return true;
+  if (cell.isBlockedByColumn || cell.isBlockedByTarget) return false;
+  return (cell.status === "blocked" || cell.status === "manual_required") && !cell.isBlockedByRow;
 }
 
 function cellPriority(cell: SpreadsheetPreviewCell): number {
@@ -319,27 +343,6 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
     }
   }
 
-  for (const column of model.columns) {
-    if (column.type === "identity" || column.effectiveInclude === false || column.isIgnored) continue;
-    if (column.status !== "manual_required" && column.status !== "blocked" && column.status !== "invalid") continue;
-    const detail = buildColumnDetailCopy(column);
-    issues.push({
-      id: `column:${column.id}`,
-      kind: "column",
-      fixKind: "column",
-      scope: "column",
-      rootCause: columnRootCause(column),
-      column,
-      title: "Target kolom perlu dicek",
-      description: `${column.header}: ${detail.bullets[0]}`,
-      detailTitle: detail.title,
-      detailBullets: detail.bullets,
-      primaryActionLabel: "Atur kolom",
-      skipActionLabel: "Lewati kolom",
-      priority: 1,
-    });
-  }
-
   return issues
     .sort((left, right) => left.priority - right.priority)
     .map((issue) => ({
@@ -363,4 +366,127 @@ export function buildInvalidIssueQueue(model: SpreadsheetPreviewModel): InvalidI
 
 export function getActiveImportIssues(model: SpreadsheetPreviewModel | null | undefined): InvalidIssue[] {
   return model ? buildInvalidIssueQueue(model) : [];
+}
+
+function columnCells(model: SpreadsheetPreviewModel, column: SpreadsheetPreviewColumn): SpreadsheetPreviewCell[] {
+  return model.rows
+    .map((row) => row.cells.find((cell) => cell.columnId === column.id))
+    .filter(Boolean) as SpreadsheetPreviewCell[];
+}
+
+function hasColumnTargetIssue(column: SpreadsheetPreviewColumn, cells: SpreadsheetPreviewCell[]): boolean {
+  if (column.effectiveInclude === false || column.isIgnored) return false;
+  return column.status === "manual_required"
+    || column.status === "blocked"
+    || column.status === "invalid"
+    || column.status === "new_column"
+    || Boolean(column.isNewStructure)
+    || cells.some((cell) => cell.isBlockedByColumn || cell.isBlockedByTarget);
+}
+
+function columnCounts(column: SpreadsheetPreviewColumn, cells: SpreadsheetPreviewCell[]): HeaderConfigurationIssue["counts"] {
+  return {
+    newValues: cells.filter((cell) => ["new_value", "manual_included", "included"].includes(cell.status) && cell.effectiveInclude !== false).length,
+    skipped: cells.filter((cell) =>
+      cell.effectiveInclude === false
+      || cell.isAutoSkippedSameValue
+      || ["skipped", "manual_skipped", "ignored"].includes(cell.status)).length,
+    overwrite: cells.filter((cell) =>
+      cell.requiresConfirmation
+      || cell.status === "changed"
+      || cell.status === "overwrite"
+      || (
+        cell.oldValue !== null
+        && cell.oldValue !== undefined
+        && cell.newValue !== null
+        && cell.newValue !== undefined
+        && String(cell.oldValue) !== String(cell.newValue)
+      )).length,
+    invalid: cells.filter((cell) => cell.status === "invalid").length,
+    blocked: cells.filter((cell) => cell.status === "blocked" || cell.status === "manual_required" || cell.isBlockedByColumn || cell.isBlockedByTarget).length,
+    valid: column.stats?.validValues ?? cells.filter((cell) => cell.newValue !== null && cell.newValue !== undefined && cell.status !== "invalid").length,
+  };
+}
+
+function headerCategory(column: SpreadsheetPreviewColumn, counts: HeaderConfigurationIssue["counts"], hasTargetIssue: boolean): HeaderConfigurationCategory {
+  if (hasTargetIssue) return "target_required";
+  if (counts.overwrite > 0) return "overwrite";
+  if (counts.newValues > 0) return "new_values";
+  return "skipped";
+}
+
+function headerCategoryLabel(category: HeaderConfigurationCategory): string {
+  if (category === "target_required") return "Perlu target";
+  if (category === "overwrite") return "Akan ditimpa";
+  if (category === "new_values") return "Akan ditambahkan";
+  return "Akan dilewati";
+}
+
+function headerActionLabel(category: HeaderConfigurationCategory, valueMode: ColumnValueMode): string {
+  if (category === "target_required") return "Atur target kolom";
+  if (category === "overwrite" && valueMode !== "overwrite_existing") return "Pilih mode nilai";
+  if (category === "overwrite") return "Konfirmasi timpa";
+  if (category === "new_values") return "Isi nilai kosong";
+  return "Lewati nilai";
+}
+
+export function buildHeaderConfigurationQueue(
+  model: SpreadsheetPreviewModel | null | undefined,
+  selectionState?: ImportSelectionState,
+): HeaderConfigurationIssue[] {
+  if (!model) return [];
+  return model.columns
+    .filter((column) => column.type !== "identity")
+    .map((column) => {
+      const cells = columnCells(model, column);
+      const counts = columnCounts(column, cells);
+      return { column, cells, counts };
+    })
+    .filter(({ column, counts }) =>
+      column.effectiveInclude !== false
+      || counts.valid > 0
+      || counts.skipped > 0
+      || counts.overwrite > 0
+      || counts.newValues > 0
+      || counts.blocked > 0)
+    .map(({ column, cells, counts }) => {
+      const setting = selectionState?.columnSettings[column.id];
+      const valueMode = setting?.valueMode || column.effectiveValueMode || "fill_empty_only";
+      const hasTargetIssue = hasColumnTargetIssue(column, cells);
+      const category = headerCategory(column, counts, hasTargetIssue);
+      const detail = buildColumnDetailCopy(column);
+      const include = setting?.include ?? column.effectiveInclude !== false;
+      const requiresOverwriteConfirmation = include && counts.overwrite > 0 && valueMode === "overwrite_existing" && !setting?.overwriteConfirmed && !column.overwriteConfirmed;
+      const isResolved = !include
+        || (
+          !hasTargetIssue
+          && (
+            counts.overwrite === 0
+            || (Boolean(setting) && (valueMode !== "overwrite_existing" || Boolean(setting?.overwriteConfirmed || column.overwriteConfirmed)))
+          )
+        );
+
+      return {
+        id: `header:${column.id}`,
+        column,
+        category,
+        categoryLabel: headerCategoryLabel(category),
+        title: column.header,
+        description: `${headerCategoryLabel(category)} - ${counts.valid} nilai terbaca, ${counts.overwrite} timpa, ${counts.newValues} baru, ${counts.skipped} dilewati.`,
+        detailTitle: detail.title,
+        detailBullets: detail.bullets,
+        counts,
+        valueMode,
+        isResolved,
+        requiresOverwriteConfirmation,
+        recommendedActionLabel: headerActionLabel(category, valueMode),
+      };
+    });
+}
+
+export function getActiveHeaderConfigurationIssues(
+  model: SpreadsheetPreviewModel | null | undefined,
+  selectionState?: ImportSelectionState,
+): HeaderConfigurationIssue[] {
+  return buildHeaderConfigurationQueue(model, selectionState).filter((issue) => !issue.isResolved);
 }

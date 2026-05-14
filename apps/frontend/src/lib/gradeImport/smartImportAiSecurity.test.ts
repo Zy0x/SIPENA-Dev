@@ -1,19 +1,24 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("smart import AI edge function security guards", () => {
   const normalizeNewlines = (value: string) => value.replace(/\r\n/g, "\n");
+  const repoPath = (relativePath: string) => {
+    const direct = resolve(process.cwd(), relativePath);
+    if (existsSync(direct)) return direct;
+    return resolve(process.cwd(), "../..", relativePath);
+  };
   const functionSource = () => readFileSync(
-    resolve(process.cwd(), "supabase/functions/smart-import-assist/index.ts"),
+    repoPath("supabase/functions/smart-import-assist/index.ts"),
     "utf8",
   );
   const functionConfig = () => readFileSync(
-    resolve(process.cwd(), "supabase/functions/smart-import-assist/config.toml"),
+    repoPath("supabase/functions/smart-import-assist/config.toml"),
     "utf8",
   );
   const supabaseConfig = () => readFileSync(
-    resolve(process.cwd(), "supabase/config.toml"),
+    repoPath("supabase/config.toml"),
     "utf8",
   );
 

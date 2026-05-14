@@ -7,7 +7,7 @@ import type {
   SpreadsheetPreviewRow,
 } from "@/lib/gradeImport";
 
-import { buildInvalidIssueQueue, getActiveImportIssues } from "./importIssueQueue";
+import { buildHeaderConfigurationQueue, buildInvalidIssueQueue, getActiveHeaderConfigurationIssues, getActiveImportIssues } from "./importIssueQueue";
 
 const columns: SpreadsheetPreviewColumn[] = [
   { id: "identity-no", header: "No", type: "identity", status: "unchanged" },
@@ -75,7 +75,7 @@ function model(rows: SpreadsheetPreviewRow[]): SpreadsheetPreviewModel {
 }
 
 describe("invalid issue queue", () => {
-  it("prioritizes invalid values before row and column issues", () => {
+  it("prioritizes invalid values before row issues", () => {
     const invalidRow = previewRow("row-5", {
       studentName: "Ahmad",
       cells: [
@@ -201,12 +201,52 @@ describe("invalid issue queue", () => {
     expect(issues.some((issue) => issue.kind === "cell" && issue.row?.id === "row-10")).toBe(true);
   });
 
-  it("adds target column issues once", () => {
+  it("keeps target column issues out of Daftar Bermasalah", () => {
     const issues = buildInvalidIssueQueue(model([]));
 
-    expect(issues.filter((issue) => issue.kind === "column" && issue.column?.id === "excel-col-5")).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ rootCause: "column_target", scope: "column" });
-    expect(issues[0]).toMatchObject({ fixKind: "column" });
+    expect(issues.filter((issue) => issue.kind === "column" && issue.column?.id === "excel-col-5")).toHaveLength(0);
+  });
+
+  it("moves target column issues to Konfigurasi Header", () => {
+    const headerIssues = buildHeaderConfigurationQueue(model([]));
+    const activeHeaderIssues = getActiveHeaderConfigurationIssues(model([]));
+
+    expect(headerIssues.filter((issue) => issue.column.id === "excel-col-5")).toHaveLength(1);
+    expect(headerIssues.find((issue) => issue.column.id === "excel-col-5")).toMatchObject({ category: "target_required", isResolved: false });
+    expect(activeHeaderIssues.map((issue) => issue.column.id)).toContain("excel-col-5");
+  });
+
+  it("requires an explicit header decision for overwrite columns", () => {
+    const overwriteRow = previewRow("row-11", {
+      studentName: "Siswa Lama",
+      cells: [
+        gradeCell("row-11", "identity-no", { status: "unchanged" }),
+        gradeCell("row-11", "identity-nisn", { status: "unchanged" }),
+        gradeCell("row-11", "identity-name", { status: "unchanged" }),
+        gradeCell("row-11", "excel-col-4", { status: "changed", oldValue: 75, newValue: 82, requiresConfirmation: true }),
+        gradeCell("row-11", "excel-col-5", { status: "new_value" }),
+      ],
+    });
+    const preview = model([overwriteRow]);
+
+    expect(buildHeaderConfigurationQueue(preview).find((issue) => issue.column.id === "excel-col-4")).toMatchObject({
+      category: "overwrite",
+      isResolved: false,
+    });
+    expect(buildHeaderConfigurationQueue(preview, {
+      columnSettings: {
+        "excel-col-4": {
+          columnId: "excel-col-4",
+          include: true,
+          valueMode: "skip_existing",
+          overwriteConfirmed: false,
+        },
+      },
+      cellSettings: {},
+    }).find((issue) => issue.column.id === "excel-col-4")).toMatchObject({
+      category: "overwrite",
+      isResolved: true,
+    });
   });
 
   it("uses active issues instead of stale summary counts for step gating", () => {
