@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.15";
-export const VERSION_DATE = "2026-05-15";
+export const APP_VERSION = "2.4.16";
+export const VERSION_DATE = "2026-05-16";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.16": "Restore Backup Nilai dibuat interaktif dengan side inspector, pemilihan mode di footer preview, konfirmasi akhir read-only, dan validasi identitas siswa yang lebih ketat.",
   "2.4.15": "Restore Backup Nilai kini memilih baris backup kanonik saat ada duplikat, menampilkan catatan per nilai lewat tooltip, dan memperbesar area drag-drop upload.",
   "2.4.14": "Preview Restore Backup Nilai disamakan langsung dengan struktur modal dan tabel spreadsheet Import/Ekspor agar sticky column, scroll, dan warna status konsisten.",
   "2.4.13": "Preview Restore Backup Nilai mengikuti responsivitas spreadsheet Import, mengunci scroll tabel di dalam modal, dan menghapus tombol tutup redundan.",

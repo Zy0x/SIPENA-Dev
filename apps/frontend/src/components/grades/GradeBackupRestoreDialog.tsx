@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArchiveRestore,
   CheckCircle2,
+  ChevronDown,
   FileSpreadsheet,
   Loader2,
   RotateCcw,
@@ -36,7 +37,7 @@ import {
 } from "@/lib/gradeImport";
 import { cn } from "@/lib/utils";
 
-type RestoreStep = "upload" | "validate" | "preview" | "mode" | "confirm" | "running" | "result";
+type RestoreStep = "upload" | "validate" | "preview" | "confirm" | "running" | "result";
 
 interface GradeBackupRestoreDialogProps {
   open: boolean;
@@ -90,6 +91,16 @@ function operationNotes(operation: GradeBackupRestoreOperation): string[] {
   ];
 }
 
+function isIdentityWarning(conflict: GradeBackupRestoreOperation["conflicts"][number]) {
+  return conflict.type === "student"
+    && conflict.severity === "warning"
+    && (conflict.code === "RESTORE_STUDENT_NAME_CHANGED" || conflict.code === "RESTORE_STUDENT_NISN_CHANGED");
+}
+
+function operationHasIdentityWarning(operation: GradeBackupRestoreOperation) {
+  return operation.conflicts.some(isIdentityWarning);
+}
+
 function operationCellTitle(operation: GradeBackupRestoreOperation) {
   return [
     statusLabel(operation.status),
@@ -116,6 +127,14 @@ function stickyStyle(index: number): CSSProperties | undefined {
   if (index === 1) return { left: "var(--sipena-preview-sticky-2)" };
   if (index === 2) return { left: "var(--sipena-preview-sticky-3)" };
   return undefined;
+}
+
+function operationIsIncludedInBatch(operation: GradeBackupRestoreOperation, batch: GradeBackupRestoreBatchBuildResult | null | undefined) {
+  if (!batch) return false;
+  return batch.items.some((item) => item.studentId === operation.studentId
+    && item.gradeType === operation.gradeType
+    && (item.assignmentId || "") === (operation.assignmentId || "")
+    && item.value === operation.backupValue);
 }
 
 function SummaryMetric({ label, value, tone }: { label: string; value: number; tone?: string }) {
@@ -149,60 +168,197 @@ function OperationNoteBadge({ operation }: { operation: GradeBackupRestoreOperat
   );
 }
 
-function OperationRow({
-  operation,
-  selectable,
-  checked,
-  onCheckedChange,
+function RestoreModeFooterCard({
+  mode,
+  onModeChange,
+  overwriteCount,
+  selectedOverwriteCount,
+  includeNullOverwrites,
+  onIncludeNullOverwritesChange,
+  identityWarningCount,
+  allowIdentityMismatch,
+  onAllowIdentityMismatchChange,
+  onSelectAllOverwrite,
+  onClearOverwrite,
 }: {
-  operation: GradeBackupRestoreOperation;
-  selectable: boolean;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
+  mode: GradeBackupRestoreMode;
+  onModeChange: (mode: GradeBackupRestoreMode) => void;
+  overwriteCount: number;
+  selectedOverwriteCount: number;
+  includeNullOverwrites: boolean;
+  onIncludeNullOverwritesChange: (checked: boolean) => void;
+  identityWarningCount: number;
+  allowIdentityMismatch: boolean;
+  onAllowIdentityMismatchChange: (checked: boolean) => void;
+  onSelectAllOverwrite: () => void;
+  onClearOverwrite: () => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-lg border bg-card p-3 text-sm md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
-      <div className="flex items-start gap-3">
-        {selectable ? (
-          <Checkbox
-            checked={checked}
-            onCheckedChange={(value) => onCheckedChange(value === true)}
-            aria-label={`Pilih restore ${operation.studentName || operation.backupStudentName || operation.studentId}`}
-            className="mt-1"
-          />
-        ) : (
-          <span className="mt-1 h-4 w-4" aria-hidden="true" />
-        )}
-        <div className="min-w-0">
-          <div className="font-medium text-foreground">
-            {operation.studentName || operation.backupStudentName || operation.studentId}
+    <details className="sipena-restore-mode-card">
+      <summary className="sipena-restore-mode-summary">
+        <span className="min-w-0">
+          <span className="block text-xs font-semibold text-blue-700">Mode restore</span>
+          <span className="block truncate text-sm font-semibold text-slate-950">{modeLabel(mode)}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </summary>
+      <div className="sipena-restore-mode-content">
+        <RadioGroup value={mode} onValueChange={(value) => onModeChange(value as GradeBackupRestoreMode)} className="grid gap-2 md:grid-cols-3">
+          {[
+            ["fill_empty_only", "Isi kosong saja", "Nilai lama tidak ditimpa."],
+            ["overwrite_selected", "Timpa dipilih", `${selectedOverwriteCount}/${overwriteCount} nilai timpa dipilih.`],
+            ["full_confirmed", "Restore penuh", "Konfirmasi final diperlukan."],
+          ].map(([value, title, description]) => (
+            <label key={value} className="flex cursor-pointer gap-2 rounded-lg border bg-white p-2 text-xs">
+              <RadioGroupItem value={value} className="mt-0.5" />
+              <span className="min-w-0">
+                <span className="block font-semibold">{title}</span>
+                <span className="block text-muted-foreground">{description}</span>
+              </span>
+            </label>
+          ))}
+        </RadioGroup>
+
+        {mode === "overwrite_selected" ? (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onSelectAllOverwrite}>Pilih semua timpa</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onClearOverwrite}>Hapus pilihan timpa</Button>
           </div>
-          <div className="truncate text-xs text-muted-foreground">
-            {gradeBackupOperationLabel(operation)}
-            {operation.chapterName ? ` - ${operation.chapterName}` : ""}
-          </div>
-        </div>
+        ) : null}
+
+        {mode === "full_confirmed" ? (
+          <label className="flex items-start gap-2 rounded-lg border bg-amber-50/60 p-2 text-xs dark:bg-amber-950/20">
+            <Checkbox checked={includeNullOverwrites} onCheckedChange={(value) => onIncludeNullOverwritesChange(value === true)} />
+            <span>Kosongkan nilai web jika backup kosong. Konfirmasi tambahan diminta di step konfirmasi.</span>
+          </label>
+        ) : null}
+
+        {identityWarningCount > 0 ? (
+          <label className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/70 p-2 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-100">
+            <Checkbox checked={allowIdentityMismatch} onCheckedChange={(value) => onAllowIdentityMismatchChange(value === true)} />
+            <span>Izinkan restore untuk {identityWarningCount} nilai dengan identitas siswa berubah setelah saya cek detailnya.</span>
+          </label>
+        ) : null}
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs md:max-w-[16rem]">
-        <div className="rounded-md bg-muted/50 px-2 py-1">
-          <span className="text-muted-foreground">Saat ini</span>
-          <div className="font-semibold">{operation.currentValue ?? "Kosong"}</div>
-        </div>
-        <div className="rounded-md bg-muted/50 px-2 py-1">
-          <span className="text-muted-foreground">Backup</span>
-          <div className="font-semibold">{operation.backupValue ?? "Kosong"}</div>
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 md:justify-end">
-        <Badge variant={statusTone(operation.status)}>{statusLabel(operation.status)}</Badge>
-        {operation.conflicts.length > 0 ? <Badge variant="destructive">{operation.conflicts.length} konflik</Badge> : null}
-        <OperationNoteBadge operation={operation} />
-      </div>
-    </div>
+    </details>
   );
 }
 
-function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
+function RestoreOperationInspector({
+  operation,
+  mode,
+  readOnly,
+  checked,
+  onCheckedChange,
+  onClose,
+}: {
+  operation: GradeBackupRestoreOperation | null;
+  mode: GradeBackupRestoreMode;
+  readOnly: boolean;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  onClose: () => void;
+}) {
+  if (!operation) {
+    return (
+      <aside className="sipena-restore-inspector sipena-restore-inspector--empty">
+        <div className="text-sm font-semibold text-foreground">Detail nilai</div>
+        <p className="mt-2 text-sm text-muted-foreground">Pilih salah satu cell nilai pada tabel untuk melihat detail restore.</p>
+      </aside>
+    );
+  }
+
+  const notes = operationNotes(operation);
+  const canSelectOverwrite = mode === "overwrite_selected" && operation.status === "overwrite" && !readOnly;
+
+  return (
+    <aside className="sipena-restore-inspector sipena-restore-inspector--active" aria-live="polite">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-foreground">Detail nilai</div>
+          <div className="mt-1 truncate text-xs text-muted-foreground">{gradeBackupOperationLabel(operation)}</div>
+        </div>
+        <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={onClose}>Tutup</Button>
+      </div>
+
+      <div className="mt-4 grid gap-3 text-sm">
+        <div className="rounded-lg border bg-muted/30 p-3">
+          <div className="text-xs font-semibold uppercase text-muted-foreground">Siswa aktif</div>
+          <div className="mt-1 font-semibold">{operation.studentName || "Tidak ditemukan"}</div>
+          <div className="mt-1 text-xs text-muted-foreground">NISN: {operation.studentNisn || "Kosong"}</div>
+          <div className="mt-1 break-all text-[11px] text-muted-foreground">student_id: {operation.studentId}</div>
+        </div>
+
+        <div className="rounded-lg border bg-muted/30 p-3">
+          <div className="text-xs font-semibold uppercase text-muted-foreground">Backup</div>
+          <div className="mt-1 font-semibold">{operation.backupStudentName || "Tidak ada di _students"}</div>
+          <div className="mt-1 text-xs text-muted-foreground">NISN backup: {operation.backupStudentNisn || "Kosong"}</div>
+          <div className="mt-1 text-xs text-muted-foreground">Target: {gradeBackupOperationLabel(operation)}{operation.chapterName ? ` - ${operation.chapterName}` : ""}</div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg border bg-background p-3">
+            <div className="text-xs text-muted-foreground">Saat ini</div>
+            <div className="mt-1 text-lg font-semibold">{valueLabel(operation.currentValue)}</div>
+          </div>
+          <div className="rounded-lg border bg-background p-3">
+            <div className="text-xs text-muted-foreground">Backup</div>
+            <div className="mt-1 text-lg font-semibold">{valueLabel(operation.backupValue)}</div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Badge variant={statusTone(operation.status)}>{statusLabel(operation.status)}</Badge>
+          {operationHasIdentityWarning(operation) ? <Badge variant="warning">Identitas berubah</Badge> : null}
+          {operation.conflicts.some((conflict) => conflict.severity === "blocked") ? <Badge variant="destructive">Diblokir</Badge> : null}
+        </div>
+
+        {canSelectOverwrite ? (
+          <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
+            <Checkbox checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} />
+            <span>
+              <span className="block font-semibold">Timpa nilai ini</span>
+              <span className="text-xs text-muted-foreground">Hanya cell overwrite yang dicentang akan masuk batch restore.</span>
+            </span>
+          </label>
+        ) : null}
+
+        {notes.length > 0 ? (
+          <div className="rounded-lg border bg-background p-3">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Catatan dan konflik</div>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+              {notes.map((note) => <li key={note}>{note}</li>)}
+            </ul>
+          </div>
+        ) : (
+          <div className="rounded-lg border bg-emerald-50/60 p-3 text-xs text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-200">
+            Tidak ada catatan khusus untuk cell ini.
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function RestorePreviewTable({
+  plan,
+  mode,
+  selectedOperationIds,
+  selectedOperationId,
+  batchPreview,
+  readOnly = false,
+  onSelectOperation,
+  onToggleOperation,
+}: {
+  plan: GradeBackupRestorePlan;
+  mode: GradeBackupRestoreMode;
+  selectedOperationIds: string[];
+  selectedOperationId: string | null;
+  batchPreview?: GradeBackupRestoreBatchBuildResult | null;
+  readOnly?: boolean;
+  onSelectOperation: (operationId: string | null) => void;
+  onToggleOperation: (operationId: string, checked: boolean) => void;
+}) {
   const columns = useMemo(() => {
     const byKey = new Map<string, GradeBackupRestoreOperation>();
     plan.operations.forEach((operation) => {
@@ -254,15 +410,20 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
     if (status === "unchanged") return "Sama";
     return "Skip";
   };
+  const selectedOperation = selectedOperationId
+    ? plan.operations.find((operation) => operation.id === selectedOperationId) || null
+    : null;
 
   return (
     <Card className="min-w-0 overflow-hidden">
       <CardHeader className="space-y-3 pb-3">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0">
-            <CardTitle className="text-base">Preview tabel restore</CardTitle>
+            <CardTitle className="text-base">{readOnly ? "Preview akhir restore" : "Preview tabel restore"}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Bandingkan nilai backup dengan nilai halaman aktif sebelum memilih mode restore.
+              {readOnly
+                ? "Cek ulang nilai yang akan diproses sebelum menjalankan restore."
+                : "Klik cell untuk melihat detail, lalu pilih mode dan nilai yang akan diproses."}
             </p>
           </div>
           <div className="flex min-w-0 max-w-full gap-1.5 overflow-x-auto pb-1 lg:justify-end">
@@ -283,12 +444,13 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
           </Alert>
         ) : (
           <>
-            <section className="sipena-preview-grid-wrap">
-              <div className="sipena-preview-scroll">
+            <div className="sipena-restore-preview-layout">
+              <section className="sipena-preview-grid-wrap">
+                <div className="sipena-preview-scroll">
                 <table className="sipena-preview-table">
                   <thead>
                     <tr>
-                      {["No", "ID", "Siswa"].map((header, index) => (
+                      {["No", "NISN", "Siswa"].map((header, index) => (
                         <th key={header} className="sipena-preview-sticky-left" style={stickyStyle(index)}>
                           <span className="block truncate">{header}</span>
                         </th>
@@ -326,10 +488,32 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
                             );
                           }
                           const notes = operationNotes(operation);
+                          const checked = selectedOperationIds.includes(operation.id);
+                          const isSelected = selectedOperationId === operation.id;
+                          const isIncluded = operationIsIncludedInBatch(operation, batchPreview);
+                          const canCheck = mode === "overwrite_selected" && operation.status === "overwrite" && !readOnly;
+                          const selectOperation = () => onSelectOperation(operation.id);
                           return (
                             <td
                               key={column.key}
-                              className={cn("sipena-preview-cell", previewCellClass(operation.status))}
+                              className={cn(
+                                "sipena-preview-cell",
+                                previewCellClass(operation.status),
+                                "sipena-restore-cell-interactive",
+                                isSelected && "sipena-restore-cell-selected",
+                                readOnly && isIncluded && "sipena-restore-cell-final-included",
+                              )}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Detail restore ${row.name} ${column.label}`}
+                              aria-pressed={isSelected}
+                              onClick={selectOperation}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  selectOperation();
+                                }
+                              }}
                               title={operationCellTitle(operation)}
                             >
                               <div className="sipena-preview-cell-main">
@@ -346,7 +530,16 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
                                   </span>
                                 </span>
                                 <span className="sipena-preview-cell-badges">
-                                  <span className="sipena-preview-cell-badge">{statusBadgeText(operation.status)}</span>
+                                  {canCheck ? (
+                                    <span className="sipena-restore-cell-checkbox" onClick={(event) => event.stopPropagation()}>
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={(value) => onToggleOperation(operation.id, value === true)}
+                                        aria-label={`Pilih timpa ${row.name} ${column.label}`}
+                                      />
+                                    </span>
+                                  ) : null}
+                                  <span className="sipena-preview-cell-badge">{readOnly && isIncluded ? "Diproses" : statusBadgeText(operation.status)}</span>
                                   <OperationNoteBadge operation={operation} />
                                 </span>
                               </div>
@@ -357,8 +550,19 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </section>
+                </div>
+              </section>
+              <RestoreOperationInspector
+                operation={selectedOperation}
+                mode={mode}
+                readOnly={readOnly}
+                checked={selectedOperation ? selectedOperationIds.includes(selectedOperation.id) : false}
+                onCheckedChange={(checked) => {
+                  if (selectedOperation) onToggleOperation(selectedOperation.id, checked);
+                }}
+                onClose={() => onSelectOperation(null)}
+              />
+            </div>
           </>
         )}
       </CardContent>
@@ -380,15 +584,18 @@ export default function GradeBackupRestoreDialog({
   const [fileName, setFileName] = useState("");
   const [plan, setPlan] = useState<GradeBackupRestorePlan | null>(null);
   const [readErrors, setReadErrors] = useState<string[]>([]);
+  const [readWarnings, setReadWarnings] = useState<string[]>([]);
   const [isReading, setIsReading] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [mode, setMode] = useState<GradeBackupRestoreMode>("fill_empty_only");
   const [allowContextMismatch, setAllowContextMismatch] = useState(false);
+  const [allowIdentityMismatch, setAllowIdentityMismatch] = useState(false);
   const [includeNullOverwrites, setIncludeNullOverwrites] = useState(false);
   const [confirmationText, setConfirmationText] = useState("");
   const [nullConfirmationText, setNullConfirmationText] = useState("");
   const [selectedOperationIds, setSelectedOperationIds] = useState<string[]>([]);
+  const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null);
   const [restoreResult, setRestoreResult] = useState<{
     savedCount: number;
     skippedUnchangedCount: number;
@@ -401,15 +608,18 @@ export default function GradeBackupRestoreDialog({
     setFileName("");
     setPlan(null);
     setReadErrors([]);
+    setReadWarnings([]);
     setIsReading(false);
     setIsDragActive(false);
     setIsRestoring(false);
     setMode("fill_empty_only");
     setAllowContextMismatch(false);
+    setAllowIdentityMismatch(false);
     setIncludeNullOverwrites(false);
     setConfirmationText("");
     setNullConfirmationText("");
     setSelectedOperationIds([]);
+    setSelectedOperationId(null);
     setRestoreResult(null);
     setRestoreError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -435,17 +645,19 @@ export default function GradeBackupRestoreDialog({
       mode,
       selectedOperationIds,
       allowContextMismatch,
+      allowIdentityMismatch,
       includeNullOverwrites,
       confirmationText,
       nullOverwriteConfirmationText: nullConfirmationText,
     });
-  }, [allowContextMismatch, confirmationText, includeNullOverwrites, mode, nullConfirmationText, plan, selectedOperationIds]);
+  }, [allowContextMismatch, allowIdentityMismatch, confirmationText, includeNullOverwrites, mode, nullConfirmationText, plan, selectedOperationIds]);
 
   const handleFile = useCallback(async (file: File | null) => {
     if (!file) return;
     setIsReading(true);
     setFileName(file.name);
     setReadErrors([]);
+    setReadWarnings([]);
     setRestoreResult(null);
     setRestoreError(null);
     try {
@@ -454,10 +666,13 @@ export default function GradeBackupRestoreDialog({
       const nextPlan = buildGradeBackupRestorePlan(source, restoreContext);
       setPlan(nextPlan);
       setSelectedOperationIds(nextPlan.operations.filter((operation) => operation.status === "added").map((operation) => operation.id));
+      setSelectedOperationId(null);
       setReadErrors(source.errors.map((error) => error.message));
+      setReadWarnings(source.warnings.map((warning) => warning.message));
       setStep(source.ok ? "preview" : "validate");
     } catch (caught) {
       setReadErrors([caught instanceof Error ? caught.message : "Backup gagal dibaca. Pilih file backup SIPENA yang valid."]);
+      setReadWarnings([]);
       setStep("validate");
     } finally {
       setIsReading(false);
@@ -487,16 +702,6 @@ export default function GradeBackupRestoreDialog({
       ? Array.from(new Set([...current, operationId]))
       : current.filter((item) => item !== operationId));
   }, []);
-
-  const selectColumn = useCallback((gradeType: string, assignmentId: string | undefined, checked: boolean) => {
-    const ids = overwriteOperations
-      .filter((operation) => operation.gradeType === gradeType && (operation.assignmentId || "") === (assignmentId || ""))
-      .map((operation) => operation.id);
-    setSelectedOperationIds((current) => {
-      if (checked) return Array.from(new Set([...current, ...ids]));
-      return current.filter((item) => !ids.includes(item));
-    });
-  }, [overwriteOperations]);
 
   const executeRestore = useCallback(async () => {
     if (!batchPreview || !plan || batchPreview.blockedReasons.length > 0 || batchPreview.items.length === 0) return;
@@ -534,6 +739,10 @@ export default function GradeBackupRestoreDialog({
 
   const canContinueFromPreview = Boolean(plan && plan.source.ok && plan.operations.length > 0);
   const canRunRestore = Boolean(batchPreview && batchPreview.items.length > 0 && batchPreview.blockedReasons.length === 0 && !isRestoring);
+  const identityWarningCount = useMemo(
+    () => plan?.operations.filter(operationHasIdentityWarning).length || 0,
+    [plan],
+  );
 
   return (
     <TooltipProvider delayDuration={120}>
@@ -561,11 +770,10 @@ export default function GradeBackupRestoreDialog({
           <main className="min-w-0 space-y-4">
             <section className="min-w-0 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
               <div className="-mx-1 overflow-x-auto px-1 pb-1">
-              <div className="grid min-w-[42rem] grid-cols-4 gap-2">
+              <div className="grid min-w-[34rem] grid-cols-3 gap-2">
                 {[
                   ["upload", "Upload & Validasi"],
-                  ["preview", "Preview"],
-                  ["mode", "Mode"],
+                  ["preview", "Preview & Pilih Mode"],
                   ["confirm", "Konfirmasi"],
                 ].map(([key, label], index) => (
                   <div
@@ -647,11 +855,22 @@ export default function GradeBackupRestoreDialog({
                       </AlertDescription>
                     </Alert>
                   ) : null}
+                  {readWarnings.length > 0 ? (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Backup memiliki catatan</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc space-y-1 pl-4">
+                          {readWarnings.slice(0, 4).map((warning) => <li key={warning}>{warning}</li>)}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
                 </CardContent>
               </Card>
             ) : null}
 
-            {plan && (step === "preview" || step === "mode" || step === "confirm" || step === "running" || step === "result") ? (
+            {plan && (step === "preview" || step === "confirm" || step === "running" || step === "result") ? (
               <>
                 <div className="-mx-1 overflow-x-auto px-1 pb-1">
                   <div className="grid min-w-[52rem] grid-cols-6 gap-2">
@@ -684,119 +903,57 @@ export default function GradeBackupRestoreDialog({
                   </Alert>
                 ) : null}
 
-                {step === "preview" ? (
-                  <RestorePreviewTable plan={plan} />
+                {plan.source.warnings.length > 0 ? (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Audit backup memiliki catatan</AlertTitle>
+                    <AlertDescription>
+                      <ul className="list-disc space-y-1 pl-4">
+                        {plan.source.warnings.slice(0, 4).map((warning) => <li key={warning.message}>{warning.message}</li>)}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
                 ) : null}
 
-                {step === "mode" || step === "confirm" ? (
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Pilih mode restore</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <RadioGroup value={mode} onValueChange={(value) => setMode(value as GradeBackupRestoreMode)}>
-                          {[
-                            ["fill_empty_only", "Restore nilai kosong saja", "Default aman. Nilai lama tidak ditimpa."],
-                            ["overwrite_selected", "Timpa nilai yang dipilih", "Pilih item overwrite satu per satu, per kolom, atau semua."],
-                            ["full_confirmed", "Restore penuh dengan konfirmasi", "Mode berisiko. Butuh frasa konfirmasi."],
-                          ].map(([value, title, description]) => (
-                            <label key={value} className="flex cursor-pointer gap-3 rounded-lg border p-3">
-                              <RadioGroupItem value={value} className="mt-1" />
-                              <span>
-                                <span className="block text-sm font-medium">{title}</span>
-                                <span className="text-xs text-muted-foreground">{description}</span>
-                              </span>
-                            </label>
-                          ))}
-                        </RadioGroup>
+                {identityWarningCount > 0 ? (
+                  <Alert variant={allowIdentityMismatch ? "default" : "destructive"}>
+                    <ShieldAlert className="h-4 w-4" />
+                    <AlertTitle>Identitas siswa berubah</AlertTitle>
+                    <AlertDescription>
+                      {identityWarningCount} nilai memiliki nama atau NISN aktif yang berbeda dari backup. Klik cell untuk cek detail, lalu aktifkan izin di footer preview jika restore tetap benar.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
 
-                        {mode === "full_confirmed" ? (
-                          <div className="space-y-3 rounded-lg border bg-amber-50/50 p-3 dark:bg-amber-950/20">
-                            <Label htmlFor="restore-confirmation">Ketik {RESTORE_CONFIRMATION}</Label>
-                            <Input
-                              id="restore-confirmation"
-                              value={confirmationText}
-                              onChange={(event) => setConfirmationText(event.target.value)}
-                              placeholder={RESTORE_CONFIRMATION}
-                            />
-                            <label className="flex items-start gap-2 text-sm">
-                              <Checkbox checked={includeNullOverwrites} onCheckedChange={(value) => setIncludeNullOverwrites(value === true)} />
-                              <span>Kosongkan nilai web jika backup kosong.</span>
-                            </label>
-                            {includeNullOverwrites ? (
-                              <>
-                                <Label htmlFor="restore-null-confirmation">Ketik {NULL_CONFIRMATION}</Label>
-                                <Input
-                                  id="restore-null-confirmation"
-                                  value={nullConfirmationText}
-                                  onChange={(event) => setNullConfirmationText(event.target.value)}
-                                  placeholder={NULL_CONFIRMATION}
-                                />
-                              </>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <CardTitle className="text-base">Item restore</CardTitle>
-                          {mode === "overwrite_selected" ? (
-                            <div className="flex flex-wrap gap-2">
-                              <Button type="button" variant="outline" size="sm" onClick={() => setSelectedOperationIds(Array.from(new Set([...selectedOperationIds, ...overwriteOperations.map((item) => item.id)])))}>
-                                Pilih semua timpa
-                              </Button>
-                              <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedOperationIds(selectedOperationIds.filter((id) => !overwriteOperations.some((item) => item.id === id)))}>
-                                Hapus pilihan
-                              </Button>
-                            </div>
-                          ) : null}
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        {mode === "overwrite_selected" && overwriteOperations.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {Array.from(new Map(overwriteOperations.map((operation) => [
-                              `${operation.gradeType}:${operation.assignmentId || ""}`,
-                              operation,
-                            ])).values()).map((operation) => (
-                              <Button
-                                key={`${operation.gradeType}:${operation.assignmentId || ""}`}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => selectColumn(operation.gradeType, operation.assignmentId, true)}
-                              >
-                                Pilih {gradeBackupOperationLabel(operation)}
-                              </Button>
-                            ))}
-                          </div>
-                        ) : null}
-                        <div className="max-h-[22rem] space-y-2 overflow-y-auto pr-1">
-                          {plan.operations.slice(0, 60).map((operation) => (
-                            <OperationRow
-                              key={operation.id}
-                              operation={operation}
-                              selectable={mode === "overwrite_selected" && operation.status === "overwrite"}
-                              checked={selectedOperationIds.includes(operation.id)}
-                              onCheckedChange={(checked) => toggleOperation(operation.id, checked)}
-                            />
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                {step === "preview" ? (
+                  <RestorePreviewTable
+                    plan={plan}
+                    mode={mode}
+                    selectedOperationIds={selectedOperationIds}
+                    selectedOperationId={selectedOperationId}
+                    batchPreview={batchPreview}
+                    onSelectOperation={setSelectedOperationId}
+                    onToggleOperation={toggleOperation}
+                  />
                 ) : null}
 
                 {step === "confirm" ? (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Konfirmasi akhir</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
+                  <>
+                    <RestorePreviewTable
+                      plan={plan}
+                      mode={mode}
+                      selectedOperationIds={selectedOperationIds}
+                      selectedOperationId={selectedOperationId}
+                      batchPreview={batchPreview}
+                      readOnly
+                      onSelectOperation={setSelectedOperationId}
+                      onToggleOperation={toggleOperation}
+                    />
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Konfirmasi akhir</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
                       <Alert>
                         <CheckCircle2 className="h-4 w-4" />
                         <AlertTitle>{modeLabel(mode)}</AlertTitle>
@@ -804,6 +961,28 @@ export default function GradeBackupRestoreDialog({
                           {batchPreview?.items.length || 0} nilai akan dikirim ke pipeline simpan nilai existing. Restore dapat di-undo dari riwayat terakhir.
                         </AlertDescription>
                       </Alert>
+                      {mode === "full_confirmed" ? (
+                        <div className="space-y-3 rounded-lg border bg-amber-50/50 p-3 dark:bg-amber-950/20">
+                          <Label htmlFor="restore-confirmation">Ketik {RESTORE_CONFIRMATION}</Label>
+                          <Input
+                            id="restore-confirmation"
+                            value={confirmationText}
+                            onChange={(event) => setConfirmationText(event.target.value)}
+                            placeholder={RESTORE_CONFIRMATION}
+                          />
+                          {includeNullOverwrites ? (
+                            <>
+                              <Label htmlFor="restore-null-confirmation">Ketik {NULL_CONFIRMATION}</Label>
+                              <Input
+                                id="restore-null-confirmation"
+                                value={nullConfirmationText}
+                                onChange={(event) => setNullConfirmationText(event.target.value)}
+                                placeholder={NULL_CONFIRMATION}
+                              />
+                            </>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {batchPreview?.blockedReasons.length ? (
                         <Alert variant="destructive">
                           <XCircle className="h-4 w-4" />
@@ -822,8 +1001,9 @@ export default function GradeBackupRestoreDialog({
                           <AlertDescription>{restoreError}</AlertDescription>
                         </Alert>
                       ) : null}
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </>
                 ) : null}
 
                 {step === "running" ? (
@@ -871,27 +1051,40 @@ export default function GradeBackupRestoreDialog({
         <footer className="z-20 shrink-0 border-t border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-5">
           <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-200 dark:ring-blue-900/70">
-                <ShieldCheck className="h-4 w-4 shrink-0" />
-                <span className="truncate">{step === "result" ? "Restore selesai" : "Mode restore aman"}</span>
-              </span>
-              <span className="max-w-[min(78vw,760px)] truncate" title="Restore tidak menyimpan data sebelum preview, mode, dan konfirmasi selesai.">
-                Restore tidak menyimpan data sebelum preview, mode, dan konfirmasi selesai.
-              </span>
+              {step === "preview" ? (
+                <RestoreModeFooterCard
+                  mode={mode}
+                  onModeChange={setMode}
+                  overwriteCount={overwriteOperations.length}
+                  selectedOverwriteCount={overwriteOperations.filter((operation) => selectedOperationIds.includes(operation.id)).length}
+                  includeNullOverwrites={includeNullOverwrites}
+                  onIncludeNullOverwritesChange={setIncludeNullOverwrites}
+                  identityWarningCount={identityWarningCount}
+                  allowIdentityMismatch={allowIdentityMismatch}
+                  onAllowIdentityMismatchChange={setAllowIdentityMismatch}
+                  onSelectAllOverwrite={() => setSelectedOperationIds((current) => Array.from(new Set([...current, ...overwriteOperations.map((operation) => operation.id)])))}
+                  onClearOverwrite={() => setSelectedOperationIds((current) => current.filter((id) => !overwriteOperations.some((operation) => operation.id === id)))}
+                />
+              ) : (
+                <>
+                  <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-200 dark:ring-blue-900/70">
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{step === "result" ? "Restore selesai" : modeLabel(mode)}</span>
+                  </span>
+                  <span className="max-w-[min(78vw,760px)] truncate" title="Restore tidak menyimpan data sebelum preview, mode, dan konfirmasi selesai.">
+                    Restore tidak menyimpan data sebelum preview, mode, dan konfirmasi selesai.
+                  </span>
+                </>
+              )}
             </div>
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
             {step !== "upload" && step !== "running" && step !== "result" ? (
-              <Button type="button" variant="outline" className="min-h-10 w-full rounded-full sm:w-auto" onClick={() => setStep(step === "confirm" ? "mode" : step === "mode" ? "preview" : "upload")} disabled={isRestoring}>
+              <Button type="button" variant="outline" className="min-h-10 w-full rounded-full sm:w-auto" onClick={() => setStep(step === "confirm" ? "preview" : "upload")} disabled={isRestoring}>
                 Kembali
               </Button>
             ) : null}
             {step === "preview" ? (
-              <Button type="button" className="min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => setStep("mode")} disabled={!canContinueFromPreview}>
-                Pilih Mode
-              </Button>
-            ) : null}
-            {step === "mode" ? (
-              <Button type="button" className="min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => setStep("confirm")}>
+              <Button type="button" className="min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => setStep("confirm")} disabled={!canContinueFromPreview}>
                 Review Konfirmasi
               </Button>
             ) : null}

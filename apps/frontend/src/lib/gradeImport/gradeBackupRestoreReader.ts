@@ -125,7 +125,9 @@ export interface GradeBackupRestoreOperation {
   status: GradeBackupRestoreOperationStatus;
   studentId: string;
   studentName?: string;
+  studentNisn?: string | null;
   backupStudentName?: string;
+  backupStudentNisn?: string;
   gradeType: RestorableGradeType;
   assignmentId?: string;
   assignmentName?: string;
@@ -170,6 +172,7 @@ export interface GradeBackupRestoreBatchBuildOptions {
   mode: GradeBackupRestoreMode;
   selectedOperationIds?: string[];
   allowContextMismatch?: boolean;
+  allowIdentityMismatch?: boolean;
   includeNullOverwrites?: boolean;
   confirmationText?: string;
   nullOverwriteConfirmationText?: string;
@@ -192,6 +195,7 @@ const REQUIRED_BACKUP_SHEETS = ["_manifest", "_students", "_structure", "_grades
 const RESTORABLE_GRADE_TYPES = new Set<RestorableGradeType>(["assignment", "sts", "sas"]);
 const FULL_RESTORE_CONFIRMATION = "RESTORE NILAI";
 const NULL_OVERWRITE_CONFIRMATION = "KOSONGKAN NILAI";
+const IDENTITY_WARNING_CODES = new Set(["RESTORE_STUDENT_NAME_CHANGED", "RESTORE_STUDENT_NISN_CHANGED"]);
 
 function readError(code: WorkbookReadError["code"], message: string, details?: string): WorkbookReadError {
   return { code, message, details };
@@ -260,6 +264,45 @@ function parseStudents(sheet: WorkbookSheetData): ParsedGradeBackupStudent[] {
       return { studentId, name, normalizedName, nisn, normalizedNisn };
     })
     .filter((item) => item.studentId);
+}
+
+function validateBackupStudents(
+  students: ParsedGradeBackupStudent[],
+  errors: WorkbookReadError[],
+  warnings: WorkbookReadError[],
+) {
+  const byId = new Map<string, ParsedGradeBackupStudent[]>();
+  const byNisn = new Map<string, ParsedGradeBackupStudent[]>();
+
+  students.forEach((student) => {
+    const idEntries = byId.get(student.studentId) || [];
+    idEntries.push(student);
+    byId.set(student.studentId, idEntries);
+
+    if (student.normalizedNisn) {
+      const nisnEntries = byNisn.get(student.normalizedNisn) || [];
+      nisnEntries.push(student);
+      byNisn.set(student.normalizedNisn, nisnEntries);
+    }
+  });
+
+  byId.forEach((entries, studentId) => {
+    if (entries.length <= 1) return;
+    errors.push(readError(
+      "IMPORT_WORKBOOK_READ_FAILED",
+      `Backup berisi student_id duplikat (${studentId}). Restore diblokir agar nilai tidak masuk ke siswa yang salah.`,
+      "_students.student_id",
+    ));
+  });
+
+  byNisn.forEach((entries, nisn) => {
+    if (entries.length <= 1) return;
+    warnings.push(readError(
+      "IMPORT_WORKBOOK_READ_FAILED",
+      `Backup memiliki NISN duplikat (${nisn}) untuk ${entries.length} siswa. Periksa identitas siswa sebelum restore.`,
+      "_students.nisn",
+    ));
+  });
 }
 
 function parseStructure(sheet: WorkbookSheetData): ParsedGradeBackupStructure[] {
@@ -372,6 +415,7 @@ export function readGradeBackupWorkbook(input: WorkbookReadResult | ArrayBuffer,
   const students = studentsSheet ? parseStudents(studentsSheet) : [];
   const structure = structureSheet ? parseStructure(structureSheet) : [];
   const grades = gradesSheet ? parseGrades(gradesSheet, gradeErrors) : [];
+  validateBackupStudents(students, errors, warnings);
   errors.push(...gradeErrors);
 
   return {
@@ -565,8 +609,8 @@ function duplicateBackupWarnings(
     if (!selected) return;
     const valuesAreSame = entries.every((entry) => Object.is(entry.value, selected.value));
     const warning = valuesAreSame
-      ? `Backup memiliki ${entries.length} baris duplikat identik untuk target ini; restore memakai baris paling sesuai.`
-      : `Backup memiliki ${entries.length} baris duplikat dengan nilai berbeda untuk target ini; restore memakai baris paling sesuai berdasarkan konteks/waktu.`;
+      ? `Backup memiliki ${entries.length} baris nilai duplikat identik untuk target ini; restore memakai baris paling sesuai.`
+      : `Backup memiliki ${entries.length} baris nilai duplikat dengan nilai berbeda untuk target ini; restore memakai baris paling sesuai berdasarkan konteks/waktu.`;
     warnings.set(selected.rowIndex, [warning]);
   });
 
@@ -606,6 +650,10 @@ function operationSummary(operations: GradeBackupRestoreOperation[], contextConf
   };
 }
 
+function hasIdentityWarning(operation: GradeBackupRestoreOperation): boolean {
+  return operation.conflicts.some((conflict) => conflict.type === "student" && conflict.severity === "warning" && IDENTITY_WARNING_CODES.has(conflict.code));
+}
+
 export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, context: GradeBackupRestoreContext): GradeBackupRestorePlan {
   const currentStudents = new Map(context.students.map((student) => [student.id, student]));
   const backupStudents = new Map(source.students.map((student) => [student.studentId, student]));
@@ -624,6 +672,16 @@ export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, conte
     const currentStudent = currentStudents.get(backupGrade.studentId);
     const backupStudent = backupStudents.get(backupGrade.studentId);
 
+    if (!backupStudent) {
+      conflicts.push({
+        code: "RESTORE_BACKUP_STUDENT_METADATA_MISSING",
+        type: "student",
+        severity: "blocked",
+        message: "Baris nilai backup mengarah ke siswa yang tidak ada di sheet _students.",
+        operationId,
+      });
+    }
+
     if (!currentStudent) {
       conflicts.push({
         code: "RESTORE_STUDENT_NOT_FOUND",
@@ -634,11 +692,23 @@ export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, conte
       });
     } else if (backupStudent) {
       if (normalizeName(currentStudent.name).normalized !== backupStudent.normalizedName) {
-        warnings.push("Nama siswa berbeda dari backup, tetapi ID siswa cocok.");
+        conflicts.push({
+          code: "RESTORE_STUDENT_NAME_CHANGED",
+          type: "student",
+          severity: "warning",
+          message: "Nama siswa aktif berbeda dari backup, walau student_id sama.",
+          operationId,
+        });
       }
       const currentNisn = normalizeNisn(currentStudent.nisn || "").normalized;
       if (backupStudent.normalizedNisn && currentNisn && currentNisn !== backupStudent.normalizedNisn) {
-        warnings.push("NISN siswa berbeda dari backup.");
+        conflicts.push({
+          code: "RESTORE_STUDENT_NISN_CHANGED",
+          type: "student",
+          severity: "warning",
+          message: "NISN siswa aktif berbeda dari backup, walau student_id sama.",
+          operationId,
+        });
       }
     }
 
@@ -745,7 +815,9 @@ export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, conte
       status,
       studentId: backupGrade.studentId,
       studentName: currentStudent?.name,
+      studentNisn: currentStudent?.nisn,
       backupStudentName: backupStudent?.name,
+      backupStudentNisn: backupStudent?.nisn,
       gradeType: backupGrade.gradeType,
       assignmentId: backupGrade.gradeType === "assignment" ? backupGrade.assignmentId || undefined : undefined,
       assignmentName,
@@ -773,6 +845,10 @@ function canUsePlan(plan: GradeBackupRestorePlan, options: GradeBackupRestoreBat
   const hasBlockingContext = plan.contextConflicts.some((conflictItem) => conflictItem.severity === "blocked");
   if (hasBlockingContext && !options.allowContextMismatch) {
     blockedReasons.push("Konteks backup berbeda dari halaman aktif. Pilih mode paksa restore lintas konteks jika benar-benar yakin.");
+  }
+  const hasStudentIdentityWarnings = plan.operations.some(hasIdentityWarning);
+  if (hasStudentIdentityWarnings && !options.allowIdentityMismatch) {
+    blockedReasons.push("Ada nama atau NISN siswa yang berbeda dari backup. Aktifkan izin restore untuk siswa dengan identitas berubah jika sudah diverifikasi.");
   }
   if (options.mode === "full_confirmed" && options.confirmationText !== FULL_RESTORE_CONFIRMATION) {
     blockedReasons.push(`Ketik ${FULL_RESTORE_CONFIRMATION} untuk menjalankan restore penuh.`);
@@ -808,6 +884,7 @@ export function buildGradeBackupRestoreBatchItems(
 
   const items = plan.operations.flatMap((operation): GradeBackupRestoreBatchItem[] => {
     if (operation.conflicts.some((conflictItem) => conflictItem.severity === "blocked")) return [];
+    if (hasIdentityWarning(operation) && !options.allowIdentityMismatch) return [];
     const isAdded = operation.status === "added";
     const isOverwrite = operation.status === "overwrite";
     const isClear = operation.status === "skipped" && operation.backupValue === null && operation.currentValue !== null;

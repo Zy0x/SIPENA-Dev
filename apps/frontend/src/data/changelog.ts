@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.16",
+    version: "2.4.16",
+    title: "Restore Backup Nilai: Tabel Interaktif dan Validasi Identitas",
+    description: "Restore Backup Nilai kini memakai tabel interaktif dengan detail per cell, mode restore di footer preview, dan validasi identitas siswa yang lebih aman.",
+    type: "improvement",
+    is_critical: true,
+    released_at: "2026-05-16",
+    details: [
+      "Cell preview restore bisa dipilih untuk membuka detail nilai, catatan, konflik, dan identitas siswa.",
+      "Mode restore dipindahkan ke footer preview sehingga pilihan timpa dapat dikontrol langsung dari tabel.",
+      "Restore memblokir perubahan nilai saat nama atau NISN siswa berbeda sampai user memberi izin eksplisit.",
+    ],
+  },
+  {
     id: "v2.4.15",
     version: "2.4.15",
     title: "Restore Backup Nilai: Catatan dan Upload Diperjelas",

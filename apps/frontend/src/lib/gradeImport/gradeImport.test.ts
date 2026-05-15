@@ -598,7 +598,7 @@ describe("SIPENA grade backup restore reader", () => {
 
     expect(plan.operations.some((item) => item.rowIndex === 2)).toBe(false);
     expect(plan.operations.find((item) => item.rowIndex === 3)?.status).toBe("added");
-    expect(plan.operations.find((item) => item.rowIndex === 3)?.warnings[0]).toContain("baris duplikat dengan nilai berbeda");
+    expect(plan.operations.find((item) => item.rowIndex === 3)?.warnings[0]).toContain("baris nilai duplikat dengan nilai berbeda");
     expect(plan.summary.skipped).toBe(0);
     expect(result.items).toEqual([
       expect.objectContaining({ studentId: "student-1", gradeType: "assignment", assignmentId: "assignment-1", value: 88 }),
@@ -642,8 +642,108 @@ describe("SIPENA grade backup restore reader", () => {
 
     expect(plan.operations).toHaveLength(1);
     expect(plan.operations[0]).toMatchObject({ status: "unchanged", backupValue: 75, currentValue: 75 });
-    expect(plan.operations[0].warnings[0]).toContain("baris duplikat identik");
+    expect(plan.operations[0].warnings[0]).toContain("baris nilai duplikat identik");
     expect(plan.summary.skipped).toBe(0);
+  });
+
+  it("blocks restore until identity mismatch is explicitly allowed", () => {
+    const source = readGradeBackupWorkbook(backupReadResult());
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      students: [{ id: "student-1", name: "Ahmad Baru", nisn: "999" }, exportContext.students[1]],
+      grades: [],
+    });
+    const operation = plan.operations.find((item) => item.studentId === "student-1");
+    const blocked = buildGradeBackupRestoreBatchItems(plan, { mode: "fill_empty_only" });
+    const allowed = buildGradeBackupRestoreBatchItems(plan, { mode: "fill_empty_only", allowIdentityMismatch: true });
+
+    expect(operation?.conflicts.map((item) => item.code)).toEqual(expect.arrayContaining([
+      "RESTORE_STUDENT_NAME_CHANGED",
+      "RESTORE_STUDENT_NISN_CHANGED",
+    ]));
+    expect(blocked.items).toHaveLength(0);
+    expect(blocked.blockedReasons[0]).toContain("nama atau NISN siswa");
+    expect(allowed.items.length).toBeGreaterThan(0);
+  });
+
+  it("does not match similar student names when student_id differs", () => {
+    const source = readGradeBackupWorkbook(backupReadResult({
+      ...exportContext,
+      students: [
+        { id: "razak-1", name: "Abdul Razak", nisn: "2" },
+        { id: "razak-2", name: "M. Razak Abdillah", nisn: "14" },
+      ],
+      grades: [{
+        id: "razak-grade",
+        student_id: "razak-1",
+        subject_id: "subject-1",
+        assignment_id: "assignment-1",
+        grade_type: "assignment",
+        value: 80,
+        semester_id: "semester-1",
+        academic_year_id: "year-1",
+      }],
+    }));
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      students: [{ id: "razak-2", name: "M. Razak Abdillah", nisn: "14" }],
+      grades: [],
+    });
+
+    expect(plan.operations).toHaveLength(1);
+    expect(plan.operations[0].studentId).toBe("razak-1");
+    expect(plan.operations[0].status).toBe("invalid");
+    expect(plan.operations[0].conflicts.map((item) => item.code)).toContain("RESTORE_STUDENT_NOT_FOUND");
+  });
+
+  it("rejects duplicate student_id metadata in backup students sheet", () => {
+    const workbook = buildFullGradeBackupWorkbook(exportContext);
+    workbook.Sheets._students = XLSX.utils.aoa_to_sheet([
+      ["student_id", "name", "normalized_name", "nisn", "normalized_nisn"],
+      ["student-1", "Ahmad", "ahmad", "00123", "00123"],
+      ["student-1", "Ahmad Duplikat", "ahmad duplikat", "00999", "00999"],
+    ]);
+    const source = readGradeBackupWorkbook(readWorkbookBuffer(XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer, "backup.xlsx"));
+
+    expect(source.ok).toBe(false);
+    expect(source.errors.map((item) => item.message).join(" ")).toContain("student_id duplikat");
+  });
+
+  it("warns when backup students sheet has duplicate NISN", () => {
+    const workbook = buildFullGradeBackupWorkbook(exportContext);
+    workbook.Sheets._students = XLSX.utils.aoa_to_sheet([
+      ["student_id", "name", "normalized_name", "nisn", "normalized_nisn"],
+      ["student-1", "Ahmad", "ahmad", "00123", "00123"],
+      ["student-2", "Budi", "budi", "00123", "00123"],
+    ]);
+    const source = readGradeBackupWorkbook(readWorkbookBuffer(XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer, "backup.xlsx"));
+
+    expect(source.ok).toBe(true);
+    expect(source.warnings.map((item) => item.message).join(" ")).toContain("NISN duplikat");
+  });
+
+  it("blocks grade rows that point to students missing from backup metadata", () => {
+    const source = readGradeBackupWorkbook(backupReadResult({
+      ...exportContext,
+      grades: [{
+        id: "ghost-grade",
+        student_id: "ghost-student",
+        subject_id: "subject-1",
+        assignment_id: "assignment-1",
+        grade_type: "assignment",
+        value: 80,
+        semester_id: "semester-1",
+        academic_year_id: "year-1",
+      }],
+    }));
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      students: [{ id: "ghost-student", name: "Ghost Student", nisn: "404" }],
+      grades: [],
+    });
+
+    expect(plan.operations[0].status).toBe("invalid");
+    expect(plan.operations[0].conflicts.map((item) => item.code)).toContain("RESTORE_BACKUP_STUDENT_METADATA_MISSING");
   });
 
   it("blocks off-context grade rows inside backup metadata", () => {
