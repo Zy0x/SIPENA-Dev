@@ -15,11 +15,6 @@ on:
         description: "Ikut sync branch main saat branch selector bukan main/all?"
         required: false
         default: ""
-        type: choice
-        options:
-          - ""
-          - "true"
-          - "false"
       max_branches:
         description: "Maksimum branch jika branch_selector=all_recent. Kosongkan untuk config."
         required: false
@@ -28,20 +23,10 @@ on:
         description: "Mode sinkronisasi file. Kosongkan untuk config."
         required: false
         default: ""
-        type: choice
-        options:
-          - ""
-          - whitelist
-          - blacklist
       allow_delete:
         description: "Izinkan rsync --delete. Kosongkan untuk config."
         required: false
         default: ""
-        type: choice
-        options:
-          - ""
-          - "true"
-          - "false"
       dry_run:
         description: "Simulasi tanpa commit/push."
         required: false
@@ -187,7 +172,7 @@ jobs:
           case "$BRANCH_SELECTOR" in
             all|all_recent|changed_branch) ;;
             *)
-              if [[ "$BRANCH_SELECTOR" == *".."* || "$BRANCH_SELECTOR" == /* || "$BRANCH_SELECTOR" == *"~"* || "$BRANCH_SELECTOR" == *"^"* || "$BRANCH_SELECTOR" == *":"* || "$BRANCH_SELECTOR" == *"?"* || "$BRANCH_SELECTOR" == *"*"* || "$BRANCH_SELECTOR" == *"["* || "$BRANCH_SELECTOR" == *"\\"* ]]; then
+              if ! git check-ref-format --branch "$BRANCH_SELECTOR" >/dev/null 2>&1; then
                 echo "Branch selector tidak valid: $BRANCH_SELECTOR"
                 exit 1
               fi
@@ -263,13 +248,19 @@ jobs:
 
           TOKEN="${SYNC_SOURCE_PAT:-${SYNC_PROJECT_WEB_PAT:-${REPO_DISPATCH_PAT:-}}}"
           if [ -n "$TOKEN" ]; then
-            git clone --no-checkout "https://x-access-token:${TOKEN}@github.com/${SOURCE_REPOSITORY}.git" source
+            git -c http.extraheader="AUTHORIZATION: bearer ${TOKEN}" \
+              clone --no-checkout "https://github.com/${SOURCE_REPOSITORY}.git" source
           else
             git clone --no-checkout "https://github.com/${SOURCE_REPOSITORY}.git" source
           fi
 
           cd source
-          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
+          if [ -n "$TOKEN" ]; then
+            git -c http.extraheader="AUTHORIZATION: bearer ${TOKEN}" \
+              fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
+          else
+            git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
+          fi
 
       - name: Resolve branch list
         shell: bash
@@ -316,6 +307,13 @@ jobs:
 
           awk 'NF && !seen[$0]++' "${GITHUB_WORKSPACE}/branches.txt" > "${GITHUB_WORKSPACE}/branches.unique.txt"
           mv "${GITHUB_WORKSPACE}/branches.unique.txt" "${GITHUB_WORKSPACE}/branches.txt"
+
+          while IFS= read -r branch; do
+            if ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then
+              echo "Branch source tidak valid: $branch"
+              exit 1
+            fi
+          done < "${GITHUB_WORKSPACE}/branches.txt"
 
           echo "Branch yang akan disinkronkan:"
           cat "${GITHUB_WORKSPACE}/branches.txt"
@@ -393,9 +391,19 @@ jobs:
                 exit 1
               fi
               for path in "${whitelist_paths[@]}"; do
+                if [[ "$path" = /* || "$path" = *".."* || "$path" = *"\\"* ]]; then
+                  echo "Path whitelist tidak aman: $path"
+                  exit 1
+                fi
+
                 if [ -e "${GITHUB_WORKSPACE}/source/$path" ]; then
-                  mkdir -p "$(dirname "$path")"
-                  rsync -a --checksum "${delete_flag[@]}" "${GITHUB_WORKSPACE}/source/$path" "$path"
+                  if [ -d "${GITHUB_WORKSPACE}/source/$path" ]; then
+                    mkdir -p "$path"
+                    rsync -a --checksum "${delete_flag[@]}" "${GITHUB_WORKSPACE}/source/$path/" "$path/"
+                  else
+                    mkdir -p "$(dirname "$path")"
+                    rsync -a --checksum "${delete_flag[@]}" "${GITHUB_WORKSPACE}/source/$path" "$path"
+                  fi
                 else
                   echo "Path whitelist tidak ditemukan di source: $path"
                 fi
