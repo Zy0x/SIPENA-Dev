@@ -248,7 +248,8 @@ jobs:
 
           TOKEN="${SYNC_SOURCE_PAT:-${SYNC_PROJECT_WEB_PAT:-${REPO_DISPATCH_PAT:-}}}"
           if [ -n "$TOKEN" ]; then
-            git -c http.extraheader="AUTHORIZATION: bearer ${TOKEN}" \
+            AUTH_HEADER="$(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')"
+            git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${AUTH_HEADER}" \
               clone --no-checkout "https://github.com/${SOURCE_REPOSITORY}.git" source
           else
             git clone --no-checkout "https://github.com/${SOURCE_REPOSITORY}.git" source
@@ -256,7 +257,7 @@ jobs:
 
           cd source
           if [ -n "$TOKEN" ]; then
-            git -c http.extraheader="AUTHORIZATION: bearer ${TOKEN}" \
+            git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${AUTH_HEADER}" \
               fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
           else
             git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
