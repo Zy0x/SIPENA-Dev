@@ -470,6 +470,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("readGradeBackupWorkbook");
     expect(restoreDialogSource).toContain("buildGradeBackupRestorePlan");
     expect(restoreDialogSource).toContain("buildGradeBackupRestoreBatchItems");
+    expect(restoreDialogSource).toContain("RestorePreviewTable");
+    expect(restoreDialogSource).toContain("Preview tabel restore");
+    expect(restoreDialogSource).toContain("<TableHeader");
+    expect(restoreDialogSource).toContain("Saat ini");
+    expect(restoreDialogSource).toContain("Backup");
     expect(restoreDialogSource).toContain("RESTORE NILAI");
     expect(restoreDialogSource).toContain("KOSONGKAN NILAI");
     expect(previewBadgeSource).toContain("Tooltip");

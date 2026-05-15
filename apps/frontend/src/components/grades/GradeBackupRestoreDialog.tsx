@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   buildGradeBackupRestoreBatchItems,
   buildGradeBackupRestorePlan,
@@ -76,6 +77,22 @@ function modeLabel(mode: GradeBackupRestoreMode) {
   if (mode === "fill_empty_only") return "Restore nilai kosong saja";
   if (mode === "overwrite_selected") return "Timpa nilai yang dipilih";
   return "Restore penuh dengan konfirmasi";
+}
+
+function valueLabel(value: number | null) {
+  return value === null ? "Kosong" : String(value);
+}
+
+function operationTargetKey(operation: Pick<GradeBackupRestoreOperation, "gradeType" | "assignmentId">) {
+  return `${operation.gradeType}:${operation.assignmentId || ""}`;
+}
+
+function previewCellClass(status: GradeBackupRestoreOperation["status"]) {
+  if (status === "added") return "border-emerald-200 bg-emerald-50/80 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-50";
+  if (status === "overwrite") return "border-amber-200 bg-amber-50/80 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-50";
+  if (status === "invalid") return "border-destructive/30 bg-destructive/10 text-destructive";
+  if (status === "skipped") return "border-slate-200 bg-slate-50/80 text-slate-700 dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-200";
+  return "border-border bg-muted/30 text-muted-foreground";
 }
 
 function SummaryMetric({ label, value, tone }: { label: string; value: number; tone?: string }) {
@@ -140,6 +157,144 @@ function OperationRow({
   );
 }
 
+function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
+  const columns = useMemo(() => {
+    const byKey = new Map<string, GradeBackupRestoreOperation>();
+    plan.operations.forEach((operation) => {
+      const key = operationTargetKey(operation);
+      if (!byKey.has(key)) byKey.set(key, operation);
+    });
+    return Array.from(byKey.entries()).map(([key, operation]) => ({
+      key,
+      label: gradeBackupOperationLabel(operation),
+      sublabel: operation.chapterName || (operation.gradeType === "assignment" ? "Tugas" : "Nilai akhir"),
+    }));
+  }, [plan.operations]);
+
+  const rows = useMemo(() => {
+    const orderedStudentIds = [
+      ...plan.source.students.map((student) => student.studentId),
+      ...plan.operations.map((operation) => operation.studentId),
+    ];
+    const uniqueIds = Array.from(new Set(orderedStudentIds));
+    return uniqueIds
+      .map((studentId) => {
+        const operation = plan.operations.find((item) => item.studentId === studentId);
+        const backupStudent = plan.source.students.find((student) => student.studentId === studentId);
+        return {
+          studentId,
+          name: operation?.studentName || backupStudent?.name || operation?.backupStudentName || studentId,
+          nisn: backupStudent?.nisn || "",
+        };
+      })
+      .filter((row) => plan.operations.some((operation) => operation.studentId === row.studentId));
+  }, [plan.operations, plan.source.students]);
+
+  const operationByCell = useMemo(() => {
+    const map = new Map<string, GradeBackupRestoreOperation>();
+    plan.operations.forEach((operation) => {
+      map.set(`${operation.studentId}|${operationTargetKey(operation)}`, operation);
+    });
+    return map;
+  }, [plan.operations]);
+
+  return (
+    <Card>
+      <CardHeader className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-base">Preview tabel restore</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Bandingkan nilai backup dengan nilai halaman aktif sebelum memilih mode restore.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(["added", "overwrite", "unchanged", "skipped", "invalid"] as const).map((status) => (
+              <Badge key={status} variant={statusTone(status)}>{statusLabel(status)}</Badge>
+            ))}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {columns.length === 0 || rows.length === 0 ? (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Tidak ada nilai untuk ditampilkan</AlertTitle>
+            <AlertDescription>Backup terbaca, tetapi tidak ada baris nilai yang bisa dibuat menjadi preview tabel.</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="overflow-hidden rounded-xl border">
+            <div className="max-h-[28rem] overflow-auto">
+              <Table className="min-w-[760px]">
+                <TableHeader className="sticky top-0 z-20 bg-background">
+                  <TableRow>
+                    <TableHead className="sticky left-0 z-30 min-w-[14rem] bg-background shadow-[1px_0_0_hsl(var(--border))]">
+                      Siswa
+                    </TableHead>
+                    {columns.map((column) => (
+                      <TableHead key={column.key} className="min-w-[11rem]">
+                        <div className="font-semibold text-foreground">{column.label}</div>
+                        <div className="text-xs font-normal text-muted-foreground">{column.sublabel}</div>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow key={row.studentId}>
+                      <TableCell className="sticky left-0 z-10 min-w-[14rem] bg-background shadow-[1px_0_0_hsl(var(--border))]">
+                        <div className="font-medium text-foreground">{row.name}</div>
+                        <div className="text-xs text-muted-foreground">{row.nisn || row.studentId}</div>
+                      </TableCell>
+                      {columns.map((column) => {
+                        const operation = operationByCell.get(`${row.studentId}|${column.key}`);
+                        if (!operation) {
+                          return (
+                            <TableCell key={column.key} className="min-w-[11rem] text-muted-foreground">
+                              -
+                            </TableCell>
+                          );
+                        }
+                        return (
+                          <TableCell key={column.key} className="min-w-[11rem] p-2 align-top">
+                            <div className={cn("space-y-2 rounded-lg border p-2", previewCellClass(operation.status))}>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium">{statusLabel(operation.status)}</span>
+                                <Badge variant={statusTone(operation.status)} className="shrink-0 px-2 py-0 text-[10px]">
+                                  {operation.status === "overwrite" ? "Timpa" : operation.status === "added" ? "Baru" : operation.status === "invalid" ? "Konflik" : operation.status === "unchanged" ? "Sama" : "Skip"}
+                                </Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <div className="text-muted-foreground">Saat ini</div>
+                                  <div className="text-sm font-semibold text-foreground">{valueLabel(operation.currentValue)}</div>
+                                </div>
+                                <div>
+                                  <div className="text-muted-foreground">Backup</div>
+                                  <div className="text-sm font-semibold text-foreground">{valueLabel(operation.backupValue)}</div>
+                                </div>
+                              </div>
+                              {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
+                                <div className="text-[11px] leading-4 text-muted-foreground">
+                                  {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
+                                </div>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function GradeBackupRestoreDialog({
   open,
   onOpenChange,
@@ -201,11 +356,6 @@ export default function GradeBackupRestoreDialog({
     () => plan?.operations.filter((operation) => operation.status === "overwrite") || [],
     [plan],
   );
-  const restorableOperations = useMemo(
-    () => plan?.operations.filter((operation) => operation.status === "added" || operation.status === "overwrite") || [],
-    [plan],
-  );
-
   const batchPreview = useMemo(() => {
     if (!plan) return null;
     return buildGradeBackupRestoreBatchItems(plan, {
@@ -414,29 +564,7 @@ export default function GradeBackupRestoreDialog({
                 ) : null}
 
                 {step === "preview" ? (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Preview dampak restore</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {restorableOperations.slice(0, 8).map((operation) => (
-                        <OperationRow
-                          key={operation.id}
-                          operation={operation}
-                          selectable={false}
-                          checked={false}
-                          onCheckedChange={() => {}}
-                        />
-                      ))}
-                      {restorableOperations.length === 0 ? (
-                        <Alert>
-                          <AlertTriangle className="h-4 w-4" />
-                          <AlertTitle>Tidak ada nilai siap restore</AlertTitle>
-                          <AlertDescription>Backup terbaca, tetapi semua nilai sama, kosong, atau konflik.</AlertDescription>
-                        </Alert>
-                      ) : null}
-                    </CardContent>
-                  </Card>
+                  <RestorePreviewTable plan={plan} />
                 ) : null}
 
                 {step === "mode" || step === "confirm" ? (

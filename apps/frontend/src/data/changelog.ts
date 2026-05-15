@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.10",
+    version: "2.4.10",
+    title: "Restore Backup Nilai: Preview Tabel",
+    description: "Restore Backup Nilai kini menampilkan preview tabel seperti import agar perubahan nilai lebih mudah dicek sebelum disimpan.",
+    type: "improvement",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Preview restore dibuat dalam bentuk tabel siswa dan kolom nilai.",
+      "Setiap sel menampilkan nilai saat ini, nilai backup, dan status tambah, timpa, sama, dilewati, atau konflik.",
+      "Tabel mendukung scroll horizontal dan vertikal agar tetap terbaca pada data nilai yang banyak.",
+    ],
+  },
+  {
     id: "v2.4.9",
     version: "2.4.9",
     title: "Backup/Restore Nilai: Akurasi Data Diperketat",
