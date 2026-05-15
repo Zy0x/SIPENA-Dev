@@ -270,6 +270,10 @@ describe("official SIPENA grade template exporter", () => {
     expect(guideSheet.A16?.v).toBe("Template dibuat dari browser, sehingga bukan jaminan file tidak berubah. SIPENA tetap memvalidasi terhadap data web saat upload.");
     expect(workbook.Sheets._rules.A2?.v).toBe("template_version");
     expect(workbook.Sheets._rules.B2?.v).toBe("2.0.0");
+    expect(String(workbook.Sheets._rules.B7?.v)).toContain("–");
+    expect(String(workbook.Sheets._rules.B7?.v)).toContain("—");
+    expect(String(workbook.Sheets._rules.B7?.v)).not.toContain("â");
+    expect(workbook.Sheets._examples.B5?.v).toBe("Siap import");
     expect(workbook.Sheets._examples.A6?.v).toBe("8/10");
   });
 
@@ -340,6 +344,39 @@ describe("SIPENA current grades and backup exporters", () => {
     expect(nilaiRows[0]).toEqual(["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1", "STS", "SAS"]);
     expect(nilaiRows[1]).toEqual([1, "00123", "Ahmad", 85, 90, ""]);
     expect(nilaiRows[2]).toEqual([2, "00456", "Budi", "", "", ""]);
+  });
+
+  it("exports current grades from the active academic year before newer old-year records", () => {
+    const workbook = buildCurrentGradesExportWorkbook({
+      ...exportContext,
+      grades: [
+        {
+          id: "old-year-grade",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 40,
+          semester_id: "semester-1",
+          academic_year_id: "year-old",
+          updated_at: "2026-05-15T12:00:00.000Z",
+        },
+        {
+          id: "active-year-grade",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 86,
+          semester_id: "semester-1",
+          academic_year_id: "year-1",
+          updated_at: "2026-05-14T12:00:00.000Z",
+        },
+      ],
+    });
+    const nilaiRows = XLSX.utils.sheet_to_json(workbook.Sheets.Nilai, { header: 1 }) as unknown[][];
+
+    expect(nilaiRows[1]).toEqual([1, "00123", "Ahmad", 86, "", ""]);
   });
 
   it("exports full backup sheets with hidden metadata and available grade rows", () => {

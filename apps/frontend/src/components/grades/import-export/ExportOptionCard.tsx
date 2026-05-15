@@ -24,21 +24,22 @@ export function ExportOptionCard({ title, description, meta, selected, tone, ico
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={selected}
       className={cn(
-        "flex min-h-[112px] min-w-0 gap-3 rounded-[18px] border bg-white p-3 text-left shadow-sm transition hover:border-indigo-200 hover:shadow-md dark:bg-slate-950",
+        "group flex h-full min-h-[136px] w-full min-w-0 gap-3 rounded-[18px] border bg-white p-3.5 text-left shadow-sm transition hover:border-indigo-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-slate-950 dark:focus-visible:ring-offset-slate-950",
         selected ? "border-indigo-300 ring-2 ring-indigo-100 dark:border-indigo-700 dark:ring-indigo-950" : "border-slate-300 dark:border-slate-800",
       )}
     >
       <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border", toneClass[tone])}>
         {icon}
       </div>
-      <div className="min-w-0 flex-1 space-y-1">
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex min-w-0 items-start justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{title}</p>
+          <p className="text-sm font-semibold leading-5 text-slate-950 dark:text-slate-50">{title}</p>
           {selected ? <CheckCircle2 className="h-5 w-5 shrink-0 text-indigo-600" /> : null}
         </div>
-        <p className="text-xs leading-5 text-muted-foreground">{description}</p>
-        <p className="text-xs font-medium text-muted-foreground">{meta}</p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
+        <p className="mt-auto border-t border-slate-100 pt-2 text-xs font-medium leading-5 text-muted-foreground dark:border-slate-800">{meta}</p>
       </div>
     </button>
   );

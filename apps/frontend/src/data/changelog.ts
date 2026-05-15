@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.7",
+    version: "2.4.7",
+    title: "Export Nilai: Tampilan Lebih Rapi dan Template Lebih Aman",
+    description: "Tab Export Nilai kini memakai ruang dialog dengan lebih seimbang, sementara workbook export/template lebih konsisten dengan konteks semester dan tahun ajaran aktif.",
+    type: "improvement",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Kartu Template Resmi, Export Nilai Saat Ini, dan Backup Lengkap dibuat sejajar pada layar lebar agar tidak menyisakan area kosong besar.",
+      "Panel Preview workbook dirapikan menjadi ringkasan konteks dan metrik yang lebih padat.",
+      "Tombol download dan status bawah kini mengikuti mode export yang sedang dipilih.",
+      "Template resmi tidak bisa dibuat saat semester atau tahun ajaran aktif belum jelas.",
+      "Export nilai saat ini memprioritaskan nilai dari tahun ajaran aktif agar tidak tertukar dengan data lama.",
+    ],
+  },
+  {
     id: "v2.4.6",
     version: "2.4.6",
     title: "SmartImport Nilai: Audit Keamanan Import/Ekspor",

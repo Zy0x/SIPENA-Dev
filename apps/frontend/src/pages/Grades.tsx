@@ -531,10 +531,20 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     selectedSubject,
     students,
   ]);
+  const canDownloadGradeTemplate = Boolean(
+    selectedClass
+    && selectedSubject
+    && (activeSemester?.id || selectedClass.semester_id)
+    && (activeYear?.id || selectedClass.academic_year_id || selectedSubject.academic_year_id),
+  );
 
   const handleDownloadOfficialTemplate = useCallback(() => {
     if (!selectedClass || !selectedSubject) {
       showError("Template belum siap", "Pilih kelas dan mata pelajaran terlebih dahulu.");
+      return;
+    }
+    if (!(activeSemester?.id || selectedClass.semester_id) || !(activeYear?.id || selectedClass.academic_year_id || selectedSubject.academic_year_id)) {
+      showError("Template belum siap", "Pilih semester dan tahun ajaran aktif terlebih dahulu.");
       return;
     }
 
@@ -1462,7 +1472,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           studentCount={students.length}
           chapterCount={chapters.length}
           assignmentCount={allAssignments.length}
-          canDownloadOfficialTemplate={Boolean(selectedClass && selectedSubject)}
+          canDownloadOfficialTemplate={canDownloadGradeTemplate}
           isDownloadingTemplate={isDownloadingOfficialTemplate}
           onDownloadOfficialTemplate={handleDownloadOfficialTemplate}
           isExportingCurrentGrades={isExportingCurrentGrades}

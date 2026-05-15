@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 
-import { getScopedGradeValue, type GradeValueRecord } from "../gradeValueSelection";
+import type { GradeValueRecord } from "../gradeValueSelection";
 import { normalizeName, normalizeNisn, normalizeText, toCanonicalChapterName } from "./textNormalizer";
 
 export interface GradeExportStudent {
@@ -193,14 +193,54 @@ function buildExportColumns(context: GradeExportContext): ExportColumn[] {
   ];
 }
 
+function matchesExportColumn(grade: GradeExportGrade, column: ExportColumn): boolean {
+  return grade.grade_type === column.gradeType
+    && (column.assignmentId ? grade.assignment_id === column.assignmentId : !grade.assignment_id);
+}
+
+function sortByNewest(left: GradeExportGrade, right: GradeExportGrade) {
+  const leftTime = Date.parse(left.updated_at || left.created_at || "");
+  const rightTime = Date.parse(right.updated_at || right.created_at || "");
+  return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0);
+}
+
+function pickScopedGrade(grades: GradeExportGrade[], column: ExportColumn, semesterId?: string | null): GradeExportGrade | null {
+  const candidates = grades.filter((grade) => matchesExportColumn(grade, column));
+  if (candidates.length === 0) return null;
+
+  if (semesterId) {
+    const exactSemester = candidates.filter((grade) => grade.semester_id === semesterId);
+    if (exactSemester.length > 0) return [...exactSemester].sort(sortByNewest)[0];
+
+    const legacySemester = candidates.filter((grade) => !grade.semester_id);
+    if (legacySemester.length > 0) return [...legacySemester].sort(sortByNewest)[0];
+
+    return null;
+  }
+
+  return [...candidates].sort(sortByNewest)[0];
+}
+
 function getStudentGradeValue(context: GradeExportContext, studentId: string, column: ExportColumn): number | "" {
   const studentGrades = context.grades.filter((grade) => grade.student_id === studentId);
-  const value = getScopedGradeValue(studentGrades, {
-    gradeType: column.gradeType,
-    assignmentId: column.assignmentId,
-    semesterId: context.semesterId || null,
-  });
-  return value ?? "";
+  if (context.academicYearId) {
+    const exactYear = pickScopedGrade(
+      studentGrades.filter((grade) => grade.academic_year_id === context.academicYearId),
+      column,
+      context.semesterId || null,
+    );
+    if (exactYear) return exactYear.value ?? "";
+
+    const legacyYear = pickScopedGrade(
+      studentGrades.filter((grade) => !grade.academic_year_id),
+      column,
+      context.semesterId || null,
+    );
+    return legacyYear?.value ?? "";
+  }
+
+  const value = pickScopedGrade(studentGrades, column, context.semesterId || null);
+  return value?.value ?? "";
 }
 
 function createGuideSheet(type: "current" | "backup") {

@@ -248,7 +248,7 @@ function createExamplesSheet() {
     ["85", "Siap import", "Angka 0 sampai 100 valid."],
     ["85,5", "Perlu dicek ringan", "Koma desimal dibaca sebagai 85.5."],
     ["85%", "Perlu dicek ringan", "Persen dibaca sebagai 85."],
-    ["90/100", "Dikonversi", "Pecahan valid otomatis dibaca sebagai nilai 0-100."],
+    ["90/100", "Siap import", "Skala 100 dibaca sebagai nilai 90."],
     ["8/10", "Perlu dicek", "SIPENA menyarankan 80, tetapi tidak menyimpan sebelum disetujui."],
     ["-", "Dilewati", "Kosong dan tidak menghapus nilai lama."],
     ["belum dinilai", "Dilewati", "Kosong dan tidak menghapus nilai lama."],

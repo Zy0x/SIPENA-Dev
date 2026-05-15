@@ -4335,7 +4335,11 @@ export default function GradeImportExportDialog({
     ? 0
     : executableImportPlan?.summary.overwriteNeedsConfirmationCount || 0;
   const importReadinessMessage = useMemo(() => {
-    if (tab !== "import") return "Data tidak akan ditimpa tanpa konfirmasi.";
+    if (tab !== "import") {
+      if (exportMode === "official") return "Template kosong untuk input nilai baru.";
+      if (exportMode === "current") return "Workbook berisi nilai tersimpan untuk dicek atau dilengkapi.";
+      return "Backup menyertakan metadata tersembunyi untuk arsip pemeriksaan.";
+    }
     if (regionSelectionPending) return "Pilih tabel nilai yang ingin dipakai.";
     if (unsupported) return "Format file belum bisa dibaca.";
     if (stepIndex === 2 && activeImportIssueCount > 0) {
@@ -4362,7 +4366,7 @@ export default function GradeImportExportDialog({
       return `${executableImportPlan.summary.executableCount} nilai akan disimpan, ${skipped} dilewati karena kosong/nilai lama.`;
     }
     return "Default aman aktif: SIPENA hanya mengisi nilai yang masih kosong.";
-  }, [activeHeaderIssueCount, activeImportIssueCount, blockedItemCount, executableImportPlan, overwriteNeedsConfirmationCount, regionSelectionPending, stepIndex, tab, unsupported, workflowIssuesResolved]);
+  }, [activeHeaderIssueCount, activeImportIssueCount, blockedItemCount, executableImportPlan, exportMode, overwriteNeedsConfirmationCount, regionSelectionPending, stepIndex, tab, unsupported, workflowIssuesResolved]);
 
   const primaryLabel = useMemo(() => {
     if (tab === "export") {
@@ -4440,7 +4444,7 @@ export default function GradeImportExportDialog({
     : contextLabel || "Pilih kelas, mapel, dan semester terlebih dahulu";
   const isPreviewFixStep = tab === "import" && (stepIndex === 2 || stepIndex === 3 || stepIndex === 4);
   const footerStatusLabel = useMemo(() => {
-    if (tab === "export") return "Mode export";
+    if (tab === "export") return modeLabel;
     if (regionSelectionPending) return "Pilih tabel";
     if (unsupported) return "File belum valid";
     if (stepIndex === 2 && activeImportIssueCount > 0) return `${activeImportIssueCount} masalah tersisa`;
@@ -4458,6 +4462,7 @@ export default function GradeImportExportDialog({
     readyImportCount,
     regionSelectionPending,
     stepIndex,
+    modeLabel,
     tab,
     unsupported,
     workflowIssuesResolved,
@@ -4606,35 +4611,37 @@ export default function GradeImportExportDialog({
             </TabsContent>
 
             <TabsContent value="export" className="m-0 min-w-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-              <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
                 <main className="min-w-0 space-y-3">
-                  <ExportOptionCard
-                    title="Template Resmi SIPENA"
-                    description="File kosong sesuai kelas, mapel, semester, siswa, BAB, dan tugas aktif."
-                    meta="Paling terarah untuk input nilai baru"
-                    selected={exportMode === "official"}
-                    tone="official"
-                    icon={<FileSpreadsheet className="h-5 w-5" />}
-                    onClick={() => setExportMode("official")}
-                  />
-                  <ExportOptionCard
-                    title="Export Nilai Saat Ini"
-                    description="Berisi nilai yang sudah tersimpan untuk dicek atau dilengkapi."
-                    meta="Untuk pemeriksaan nilai saat ini"
-                    selected={exportMode === "current"}
-                    tone="current"
-                    icon={<Download className="h-5 w-5" />}
-                    onClick={() => setExportMode("current")}
-                  />
-                  <ExportOptionCard
-                    title="Backup Lengkap"
-                    description="Arsip workbook sebelum perubahan besar."
-                    meta="Arsip pemeriksaan sebelum import massal"
-                    selected={exportMode === "backup"}
-                    tone="backup"
-                    icon={<Archive className="h-5 w-5" />}
-                    onClick={() => setExportMode("backup")}
-                  />
+                  <div className="grid min-w-0 items-stretch gap-3 md:grid-cols-3 xl:auto-rows-fr">
+                    <ExportOptionCard
+                      title="Template Resmi SIPENA"
+                      description="File kosong sesuai kelas, mapel, semester, siswa, BAB, dan tugas aktif."
+                      meta="Paling terarah untuk input nilai baru"
+                      selected={exportMode === "official"}
+                      tone="official"
+                      icon={<FileSpreadsheet className="h-5 w-5" />}
+                      onClick={() => setExportMode("official")}
+                    />
+                    <ExportOptionCard
+                      title="Export Nilai Saat Ini"
+                      description="Berisi nilai yang sudah tersimpan untuk dicek atau dilengkapi."
+                      meta="Untuk pemeriksaan nilai saat ini"
+                      selected={exportMode === "current"}
+                      tone="current"
+                      icon={<Download className="h-5 w-5" />}
+                      onClick={() => setExportMode("current")}
+                    />
+                    <ExportOptionCard
+                      title="Backup Lengkap"
+                      description="Arsip workbook sebelum perubahan besar."
+                      meta="Arsip pemeriksaan sebelum import massal"
+                      selected={exportMode === "backup"}
+                      tone="backup"
+                      icon={<Archive className="h-5 w-5" />}
+                      onClick={() => setExportMode("backup")}
+                    />
+                  </div>
 
                   {backupIncompleteWarning ? (
                     <RiskAlert title="Export lengkap belum membawa semua konteks" tone="warning">
@@ -4700,7 +4707,8 @@ export default function GradeImportExportDialog({
                 }
                 aria-describedby={importPrimaryDisabledReason ? "sipena-import-disabled-reason" : undefined}
                 className={cn(
-                  "min-h-10 w-full min-w-0 gap-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto",
+                  "min-h-10 w-full min-w-0 gap-2 rounded-full text-white sm:w-auto",
+                  tab === "export" ? "bg-violet-600 hover:bg-violet-700" : "bg-blue-600 hover:bg-blue-700",
                 )}
                 onClick={handlePrimaryAction}
               >
