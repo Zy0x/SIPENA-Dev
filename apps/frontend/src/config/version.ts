@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.11";
+export const APP_VERSION = "2.4.12";
 export const VERSION_DATE = "2026-05-15";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.12": "Modal Restore Backup Nilai dibuat hampir memenuhi layar dan tabel preview memakai grid responsif dinamis dengan scroll serta warna status yang lebih jelas.",
   "2.4.11": "Preview Restore Backup Nilai dirapikan agar tabel tidak terpotong, responsif di desktop, dan memakai tampilan ringkas di mobile.",
   "2.4.10": "Restore Backup Nilai kini memiliki preview tabel siswa dan kolom nilai agar status tambah, timpa, sama, dilewati, dan konflik terlihat sebelum restore.",
   "2.4.9": "Backup dan Restore Nilai diperketat agar metadata Supabase tetap presisi, row legacy tidak tertukar konteks, dan restore tidak memproses nilai ganda.",

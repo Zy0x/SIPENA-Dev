@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.12",
+    version: "2.4.12",
+    title: "Restore Backup Nilai: Modal Lebar dan Tabel Dinamis",
+    description: "Modal Restore Backup Nilai kini hampir memenuhi layar, sementara tabel preview memakai ukuran kolom dinamis agar tidak overlap atau terpotong.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Ukuran modal restore disamakan dengan pola modal Import/Ekspor agar ruang preview jauh lebih lega.",
+      "Tabel restore memakai grid responsif dengan scroll horizontal dan vertikal yang stabil.",
+      "Nilai baru diberi warna hijau dan nilai yang akan ditimpa diberi warna kuning agar status perubahan mudah dibaca.",
+    ],
+  },
+  {
     id: "v2.4.11",
     version: "2.4.11",
     title: "Restore Backup Nilai: Preview Responsif",

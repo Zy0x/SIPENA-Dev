@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   AlertTriangle,
   ArchiveRestore,
@@ -87,11 +87,11 @@ function operationTargetKey(operation: Pick<GradeBackupRestoreOperation, "gradeT
 }
 
 function previewCellClass(status: GradeBackupRestoreOperation["status"]) {
-  if (status === "added") return "border-emerald-200 bg-emerald-50/80 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-50";
-  if (status === "overwrite") return "border-amber-200 bg-amber-50/80 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-50";
-  if (status === "invalid") return "border-destructive/30 bg-destructive/10 text-destructive";
-  if (status === "skipped") return "border-slate-200 bg-slate-50/80 text-slate-700 dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-200";
-  return "border-border bg-muted/30 text-muted-foreground";
+  if (status === "added") return "border-emerald-300 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/35 dark:text-emerald-50 dark:ring-emerald-900/40";
+  if (status === "overwrite") return "border-amber-300 bg-amber-50 text-amber-950 ring-1 ring-amber-100 dark:border-amber-800 dark:bg-amber-950/35 dark:text-amber-50 dark:ring-amber-900/40";
+  if (status === "invalid") return "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/15";
+  if (status === "skipped") return "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200";
+  return "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200";
 }
 
 function SummaryMetric({ label, value, tone }: { label: string; value: number; tone?: string }) {
@@ -197,6 +197,10 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
     return map;
   }, [plan.operations]);
 
+  const previewGridStyle = useMemo<CSSProperties>(() => ({
+    gridTemplateColumns: `clamp(12rem, 16vw, 18rem) repeat(${columns.length}, minmax(clamp(8.75rem, 9vw, 11.5rem), 1fr))`,
+  }), [columns.length]);
+
   const statusBadgeText = (status: GradeBackupRestoreOperation["status"]) => {
     if (status === "overwrite") return "Timpa";
     if (status === "added") return "Baru";
@@ -233,67 +237,70 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
           </Alert>
         ) : (
           <>
-            <div className="sipena-restore-preview-scroll hidden max-h-[28rem] overflow-auto rounded-xl border md:block">
-              <table className="w-max min-w-full border-separate border-spacing-0 text-xs">
-                <thead className="sticky top-0 z-20 bg-background">
-                  <tr>
-                    <th className="sticky left-0 z-30 w-44 min-w-44 max-w-52 border-b bg-background px-3 py-2 text-left font-semibold text-foreground shadow-[1px_0_0_hsl(var(--border))]">
-                      Siswa
-                    </th>
-                    {columns.map((column) => (
-                      <th key={column.key} className="w-32 min-w-32 border-b bg-background px-2 py-2 text-left align-bottom">
-                        <div className="truncate font-semibold text-foreground" title={column.label}>{column.label}</div>
-                        <div className="truncate text-[11px] font-normal text-muted-foreground" title={column.sublabel}>{column.sublabel}</div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.studentId} className="border-b">
-                      <td className="sticky left-0 z-10 w-44 min-w-44 max-w-52 border-b bg-background px-3 py-2 shadow-[1px_0_0_hsl(var(--border))]">
-                        <div className="truncate font-medium text-foreground" title={row.name}>{row.name}</div>
-                        <div className="truncate text-[11px] text-muted-foreground" title={row.nisn || row.studentId}>{row.nisn || row.studentId}</div>
-                      </td>
-                      {columns.map((column) => {
-                        const operation = operationByCell.get(`${row.studentId}|${column.key}`);
-                        if (!operation) {
-                          return (
-                            <td key={column.key} className="w-32 min-w-32 border-b px-2 py-2 text-center text-muted-foreground">
-                              -
-                            </td>
-                          );
-                        }
-                        return (
-                          <td key={column.key} className={cn("w-32 min-w-32 border-b px-2 py-2 align-top", previewCellClass(operation.status))}>
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="truncate font-medium" title={statusLabel(operation.status)}>{statusLabel(operation.status)}</span>
-                              <Badge variant={statusTone(operation.status)} className="shrink-0 px-1.5 py-0 text-[10px] leading-4">
-                                {statusBadgeText(operation.status)}
-                              </Badge>
-                            </div>
-                            <div className="mt-1 grid grid-cols-2 gap-1">
-                              <div className="min-w-0">
-                                <div className="truncate text-[10px] text-muted-foreground">Saat ini</div>
-                                <div className="truncate text-sm font-semibold text-foreground">{valueLabel(operation.currentValue)}</div>
-                              </div>
-                              <div className="min-w-0">
-                                <div className="truncate text-[10px] text-muted-foreground">Backup</div>
-                                <div className="truncate text-sm font-semibold text-foreground">{valueLabel(operation.backupValue)}</div>
-                              </div>
-                            </div>
-                            {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
-                              <div className="mt-1 truncate text-[10px] leading-4 text-muted-foreground">
-                                {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
-                              </div>
-                            ) : null}
-                          </td>
-                        );
-                      })}
-                    </tr>
+            <div className="sipena-restore-preview-scroll hidden h-[min(58dvh,39rem)] min-h-[24rem] overflow-auto rounded-2xl border border-slate-200 bg-white text-xs shadow-inner dark:border-slate-800 dark:bg-slate-950 md:block">
+              <div className="min-w-max">
+                <div
+                  className="sipena-restore-preview-grid sticky top-0 z-30 grid min-w-max border-b border-slate-200 bg-slate-50/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95"
+                  style={previewGridStyle}
+                >
+                  <div className="sticky left-0 z-40 min-w-0 border-r border-slate-200 bg-slate-50/95 px-4 py-3 font-semibold text-slate-900 shadow-[1px_0_0_hsl(var(--border))] dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-100">
+                    Siswa
+                  </div>
+                  {columns.map((column) => (
+                    <div key={column.key} className="min-w-0 border-r border-slate-200 px-3 py-3 align-bottom last:border-r-0 dark:border-slate-800">
+                      <div className="truncate font-semibold text-slate-900 dark:text-slate-100" title={column.label}>{column.label}</div>
+                      <div className="truncate text-[11px] font-normal text-muted-foreground" title={column.sublabel}>{column.sublabel}</div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+                {rows.map((row) => (
+                  <div
+                    key={row.studentId}
+                    className="sipena-restore-preview-grid grid min-w-max border-b border-slate-200 last:border-b-0 dark:border-slate-800"
+                    style={previewGridStyle}
+                  >
+                    <div className="sticky left-0 z-20 min-w-0 border-r border-slate-200 bg-white px-4 py-3 shadow-[1px_0_0_hsl(var(--border))] dark:border-slate-800 dark:bg-slate-950">
+                      <div className="truncate font-medium text-slate-950 dark:text-slate-50" title={row.name}>{row.name}</div>
+                      <div className="truncate text-[11px] text-muted-foreground" title={row.nisn || row.studentId}>{row.nisn || row.studentId}</div>
+                    </div>
+                    {columns.map((column) => {
+                      const operation = operationByCell.get(`${row.studentId}|${column.key}`);
+                      if (!operation) {
+                        return (
+                          <div key={column.key} className="min-w-0 border-r border-slate-200 px-3 py-3 text-center text-muted-foreground last:border-r-0 dark:border-slate-800">
+                            -
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={column.key} className={cn("min-w-0 border-r px-3 py-2.5 last:border-r-0", previewCellClass(operation.status))}>
+                          <div className="flex min-w-0 items-center justify-between gap-2">
+                            <span className="min-w-0 truncate font-medium" title={statusLabel(operation.status)}>{statusLabel(operation.status)}</span>
+                            <Badge variant={statusTone(operation.status)} className="shrink-0 px-1.5 py-0 text-[10px] leading-4">
+                              {statusBadgeText(operation.status)}
+                            </Badge>
+                          </div>
+                          <div className="mt-1.5 grid min-w-0 grid-cols-2 gap-2">
+                            <div className="min-w-0 rounded-md bg-white/65 px-2 py-1 dark:bg-slate-950/45">
+                              <div className="truncate text-[10px] text-muted-foreground">Saat ini</div>
+                              <div className="truncate text-base font-semibold leading-5 text-slate-950 dark:text-slate-50">{valueLabel(operation.currentValue)}</div>
+                            </div>
+                            <div className="min-w-0 rounded-md bg-white/65 px-2 py-1 dark:bg-slate-950/45">
+                              <div className="truncate text-[10px] text-muted-foreground">Backup</div>
+                              <div className="truncate text-base font-semibold leading-5 text-slate-950 dark:text-slate-50">{valueLabel(operation.backupValue)}</div>
+                            </div>
+                          </div>
+                          {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
+                            <div className="mt-1.5 truncate text-[10px] leading-4 text-muted-foreground">
+                              {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="sipena-restore-preview-mobile space-y-3 md:hidden">
               {rows.map((row) => {
@@ -501,8 +508,8 @@ export default function GradeBackupRestoreDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex h-[min(100dvh-1rem,48rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden p-0">
-        <div className="border-b px-4 py-4 sm:px-6">
+      <DialogContent className="sipena-grade-restore-dialog flex h-[calc(100dvh-0.25rem)] max-h-[980px] w-[calc(100vw-0.25rem)] max-w-[1880px] flex-col gap-0 overflow-hidden rounded-[24px] border-slate-300 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(96dvh,980px)] sm:w-[calc(100vw-0.75rem)] xl:w-[min(98vw,1880px)]">
+        <div className="shrink-0 border-b px-4 py-4 sm:px-6">
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">
               <ArchiveRestore className="h-5 w-5" />
@@ -516,9 +523,9 @@ export default function GradeBackupRestoreDialog({
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-h-0 flex-1 bg-slate-50/70 dark:bg-slate-950">
           <div className="space-y-4 p-4 sm:p-6">
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
               {[
                 ["upload", "Upload"],
                 ["preview", "Preview"],
@@ -589,7 +596,7 @@ export default function GradeBackupRestoreDialog({
 
             {plan && (step === "preview" || step === "mode" || step === "confirm" || step === "running" || step === "result") ? (
               <>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 2xl:grid-cols-6">
                   <SummaryMetric label="Tambah" value={plan.summary.added} />
                   <SummaryMetric label="Timpa" value={plan.summary.overwrite} tone="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20" />
                   <SummaryMetric label="Sama" value={plan.summary.unchanged} />
@@ -802,7 +809,7 @@ export default function GradeBackupRestoreDialog({
           </div>
         </ScrollArea>
 
-        <div className="flex flex-col-reverse gap-2 border-t bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="shrink-0 flex flex-col-reverse gap-2 border-t bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={isRestoring} className="sm:w-auto">
             Tutup
           </Button>
