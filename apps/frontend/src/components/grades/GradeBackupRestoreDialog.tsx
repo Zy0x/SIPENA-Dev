@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArchiveRestore,
@@ -87,11 +87,11 @@ function operationTargetKey(operation: Pick<GradeBackupRestoreOperation, "gradeT
 }
 
 function previewCellClass(status: GradeBackupRestoreOperation["status"]) {
-  if (status === "added") return "border-emerald-300 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/35 dark:text-emerald-50 dark:ring-emerald-900/40";
-  if (status === "overwrite") return "border-amber-300 bg-amber-50 text-amber-950 ring-1 ring-amber-100 dark:border-amber-800 dark:bg-amber-950/35 dark:text-amber-50 dark:ring-amber-900/40";
-  if (status === "invalid") return "border-destructive/40 bg-destructive/10 text-destructive ring-1 ring-destructive/15";
-  if (status === "skipped") return "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200";
-  return "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200";
+  if (status === "added") return "sipena-restore-cell--added";
+  if (status === "overwrite") return "sipena-restore-cell--overwrite";
+  if (status === "invalid") return "sipena-restore-cell--invalid";
+  if (status === "skipped") return "sipena-restore-cell--skipped";
+  return "sipena-restore-cell--unchanged";
 }
 
 function SummaryMetric({ label, value, tone }: { label: string; value: number; tone?: string }) {
@@ -197,10 +197,6 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
     return map;
   }, [plan.operations]);
 
-  const previewGridStyle = useMemo<CSSProperties>(() => ({
-    gridTemplateColumns: `clamp(12rem, 16vw, 18rem) repeat(${columns.length}, minmax(clamp(8.75rem, 9vw, 11.5rem), 1fr))`,
-  }), [columns.length]);
-
   const statusBadgeText = (status: GradeBackupRestoreOperation["status"]) => {
     if (status === "overwrite") return "Timpa";
     if (status === "added") return "Baru";
@@ -210,7 +206,7 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
   };
 
   return (
-    <Card>
+    <Card className="min-w-0 overflow-hidden">
       <CardHeader className="space-y-3 pb-3">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0">
@@ -219,16 +215,16 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
               Bandingkan nilai backup dengan nilai halaman aktif sebelum memilih mode restore.
             </p>
           </div>
-          <div className="flex min-w-0 flex-wrap gap-1.5 lg:justify-end">
+          <div className="flex min-w-0 max-w-full gap-1.5 overflow-x-auto pb-1 lg:justify-end">
             {(["added", "overwrite", "unchanged", "skipped", "invalid"] as const).map((status) => (
-              <Badge key={status} variant={statusTone(status)} className="px-2 py-0.5 text-[11px]">
+              <Badge key={status} variant={statusTone(status)} className="shrink-0 px-2 py-0.5 text-[11px]">
                 {statusLabel(status)}
               </Badge>
             ))}
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0 overflow-hidden">
         {columns.length === 0 || rows.length === 0 ? (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
@@ -237,71 +233,70 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
           </Alert>
         ) : (
           <>
-            <div className="sipena-restore-preview-scroll hidden h-[min(58dvh,39rem)] min-h-[24rem] overflow-auto rounded-2xl border border-slate-200 bg-white text-xs shadow-inner dark:border-slate-800 dark:bg-slate-950 md:block">
-              <div className="min-w-max">
-                <div
-                  className="sipena-restore-preview-grid sticky top-0 z-30 grid min-w-max border-b border-slate-200 bg-slate-50/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95"
-                  style={previewGridStyle}
-                >
-                  <div className="sticky left-0 z-40 min-w-0 border-r border-slate-200 bg-slate-50/95 px-4 py-3 font-semibold text-slate-900 shadow-[1px_0_0_hsl(var(--border))] dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-100">
-                    Siswa
-                  </div>
+            <section className="sipena-preview-grid-wrap sipena-restore-preview-wrap hidden md:block">
+              <div className="sipena-preview-scroll sipena-restore-preview-scroll">
+                <table className="sipena-preview-table sipena-restore-preview-table">
+                  <thead>
+                    <tr>
+                      <th className="sipena-preview-sticky-left" style={{ left: 0 }}>
+                        Siswa
+                      </th>
                   {columns.map((column) => (
-                    <div key={column.key} className="min-w-0 border-r border-slate-200 px-3 py-3 align-bottom last:border-r-0 dark:border-slate-800">
+                        <th key={column.key}>
                       <div className="truncate font-semibold text-slate-900 dark:text-slate-100" title={column.label}>{column.label}</div>
                       <div className="truncate text-[11px] font-normal text-muted-foreground" title={column.sublabel}>{column.sublabel}</div>
-                    </div>
+                        </th>
                   ))}
-                </div>
-                {rows.map((row) => (
-                  <div
-                    key={row.studentId}
-                    className="sipena-restore-preview-grid grid min-w-max border-b border-slate-200 last:border-b-0 dark:border-slate-800"
-                    style={previewGridStyle}
-                  >
-                    <div className="sticky left-0 z-20 min-w-0 border-r border-slate-200 bg-white px-4 py-3 shadow-[1px_0_0_hsl(var(--border))] dark:border-slate-800 dark:bg-slate-950">
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr key={row.studentId}>
+                        <td className="sipena-preview-cell sipena-preview-sticky-left sipena-restore-student-cell" style={{ left: 0 }}>
                       <div className="truncate font-medium text-slate-950 dark:text-slate-50" title={row.name}>{row.name}</div>
                       <div className="truncate text-[11px] text-muted-foreground" title={row.nisn || row.studentId}>{row.nisn || row.studentId}</div>
-                    </div>
+                        </td>
                     {columns.map((column) => {
                       const operation = operationByCell.get(`${row.studentId}|${column.key}`);
                       if (!operation) {
                         return (
-                          <div key={column.key} className="min-w-0 border-r border-slate-200 px-3 py-3 text-center text-muted-foreground last:border-r-0 dark:border-slate-800">
+                              <td key={column.key} className="sipena-preview-cell sipena-restore-cell--empty text-center text-muted-foreground">
                             -
-                          </div>
+                              </td>
                         );
                       }
                       return (
-                        <div key={column.key} className={cn("min-w-0 border-r px-3 py-2.5 last:border-r-0", previewCellClass(operation.status))}>
-                          <div className="flex min-w-0 items-center justify-between gap-2">
-                            <span className="min-w-0 truncate font-medium" title={statusLabel(operation.status)}>{statusLabel(operation.status)}</span>
+                            <td key={column.key} className={cn("sipena-preview-cell sipena-restore-value-cell", previewCellClass(operation.status))}>
+                              <div className="sipena-restore-cell-main">
+                                <span className="min-w-0 truncate font-semibold" title={statusLabel(operation.status)}>{statusLabel(operation.status)}</span>
                             <Badge variant={statusTone(operation.status)} className="shrink-0 px-1.5 py-0 text-[10px] leading-4">
                               {statusBadgeText(operation.status)}
                             </Badge>
                           </div>
-                          <div className="mt-1.5 grid min-w-0 grid-cols-2 gap-2">
-                            <div className="min-w-0 rounded-md bg-white/65 px-2 py-1 dark:bg-slate-950/45">
+                              <div className="sipena-restore-value-grid">
+                                <div className="sipena-restore-value-box">
                               <div className="truncate text-[10px] text-muted-foreground">Saat ini</div>
-                              <div className="truncate text-base font-semibold leading-5 text-slate-950 dark:text-slate-50">{valueLabel(operation.currentValue)}</div>
+                                  <div className="sipena-restore-score">{valueLabel(operation.currentValue)}</div>
                             </div>
-                            <div className="min-w-0 rounded-md bg-white/65 px-2 py-1 dark:bg-slate-950/45">
+                                <div className="sipena-restore-value-box">
                               <div className="truncate text-[10px] text-muted-foreground">Backup</div>
-                              <div className="truncate text-base font-semibold leading-5 text-slate-950 dark:text-slate-50">{valueLabel(operation.backupValue)}</div>
+                                  <div className="sipena-restore-score">{valueLabel(operation.backupValue)}</div>
                             </div>
                           </div>
                           {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
-                            <div className="mt-1.5 truncate text-[10px] leading-4 text-muted-foreground">
+                                <div className="mt-1 truncate text-[10px] leading-4 text-muted-foreground">
                               {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
                             </div>
                           ) : null}
-                        </div>
+                            </td>
                       );
                     })}
-                  </div>
-                ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            </section>
             <div className="sipena-restore-preview-mobile space-y-3 md:hidden">
               {rows.map((row) => {
                 const rowOperations = columns
@@ -525,25 +520,27 @@ export default function GradeBackupRestoreDialog({
 
         <ScrollArea className="min-h-0 flex-1 bg-slate-50/70 dark:bg-slate-950">
           <div className="space-y-4 p-4 sm:p-6">
-            <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-              {[
-                ["upload", "Upload"],
-                ["preview", "Preview"],
-                ["mode", "Mode"],
-                ["confirm", "Konfirmasi"],
-              ].map(([key, label], index) => (
-                <div
-                  key={key}
-                  className={cn(
-                    "min-w-0 rounded-lg border px-3 py-2 text-xs font-medium",
-                    step === key || (step === "validate" && key === "upload") || (step === "running" && key === "confirm") || (step === "result" && key === "confirm")
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "bg-muted/30 text-muted-foreground",
-                  )}
-                >
-                  <span className="block truncate">{index + 1}. {label}</span>
-                </div>
-              ))}
+            <div className="-mx-1 overflow-x-auto px-1 pb-1">
+              <div className="grid min-w-[42rem] grid-cols-4 gap-2">
+                {[
+                  ["upload", "Upload"],
+                  ["preview", "Preview"],
+                  ["mode", "Mode"],
+                  ["confirm", "Konfirmasi"],
+                ].map(([key, label], index) => (
+                  <div
+                    key={key}
+                    className={cn(
+                      "min-w-0 rounded-lg border px-3 py-2 text-xs font-medium",
+                      step === key || (step === "validate" && key === "upload") || (step === "running" && key === "confirm") || (step === "result" && key === "confirm")
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "bg-muted/30 text-muted-foreground",
+                    )}
+                  >
+                    <span className="block truncate">{index + 1}. {label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {step === "upload" || step === "validate" ? (
@@ -596,13 +593,15 @@ export default function GradeBackupRestoreDialog({
 
             {plan && (step === "preview" || step === "mode" || step === "confirm" || step === "running" || step === "result") ? (
               <>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 2xl:grid-cols-6">
-                  <SummaryMetric label="Tambah" value={plan.summary.added} />
-                  <SummaryMetric label="Timpa" value={plan.summary.overwrite} tone="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20" />
-                  <SummaryMetric label="Sama" value={plan.summary.unchanged} />
-                  <SummaryMetric label="Dilewati" value={plan.summary.skipped} />
-                  <SummaryMetric label="Konflik" value={plan.summary.invalid} tone="border-destructive/30 bg-destructive/5" />
-                  <SummaryMetric label="Siap" value={plan.summary.restorable} tone="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20" />
+                <div className="-mx-1 overflow-x-auto px-1 pb-1">
+                  <div className="grid min-w-[52rem] grid-cols-6 gap-2">
+                    <SummaryMetric label="Tambah" value={plan.summary.added} />
+                    <SummaryMetric label="Timpa" value={plan.summary.overwrite} tone="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20" />
+                    <SummaryMetric label="Sama" value={plan.summary.unchanged} />
+                    <SummaryMetric label="Dilewati" value={plan.summary.skipped} />
+                    <SummaryMetric label="Konflik" value={plan.summary.invalid} tone="border-destructive/30 bg-destructive/5" />
+                    <SummaryMetric label="Siap" value={plan.summary.restorable} tone="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20" />
+                  </div>
                 </div>
 
                 {plan.contextConflicts.length > 0 ? (
@@ -809,11 +808,8 @@ export default function GradeBackupRestoreDialog({
           </div>
         </ScrollArea>
 
-        <div className="shrink-0 flex flex-col-reverse gap-2 border-t bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={isRestoring} className="sm:w-auto">
-            Tutup
-          </Button>
-          <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="shrink-0 flex justify-end gap-2 border-t bg-background px-4 py-3 sm:px-6">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             {step !== "upload" && step !== "running" && step !== "result" ? (
               <Button type="button" variant="outline" onClick={() => setStep(step === "confirm" ? "mode" : step === "mode" ? "preview" : "upload")} disabled={isRestoring}>
                 Kembali

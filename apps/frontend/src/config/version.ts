@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.12";
+export const APP_VERSION = "2.4.13";
 export const VERSION_DATE = "2026-05-15";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.13": "Preview Restore Backup Nilai mengikuti responsivitas spreadsheet Import, mengunci scroll tabel di dalam modal, dan menghapus tombol tutup redundan.",
   "2.4.12": "Modal Restore Backup Nilai dibuat hampir memenuhi layar dan tabel preview memakai grid responsif dinamis dengan scroll serta warna status yang lebih jelas.",
   "2.4.11": "Preview Restore Backup Nilai dirapikan agar tabel tidak terpotong, responsif di desktop, dan memakai tampilan ringkas di mobile.",
   "2.4.10": "Restore Backup Nilai kini memiliki preview tabel siswa dan kolom nilai agar status tambah, timpa, sama, dilewati, dan konflik terlihat sebelum restore.",

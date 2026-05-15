@@ -165,18 +165,21 @@
 }
 
 .sipena-grade-import-dialog button,
-.sipena-grade-import-dialog [role="tab"] {
+.sipena-grade-import-dialog [role="tab"],
+.sipena-grade-restore-dialog button {
   user-select: none;
 }
 
-.sipena-grade-import-dialog > button[aria-label="Tutup dialog"] {
+.sipena-grade-import-dialog > button[aria-label="Tutup dialog"],
+.sipena-grade-restore-dialog > button[aria-label="Tutup dialog"] {
   border: 1px solid #fecaca;
   background: #fef2f2;
   color: #b91c1c;
   opacity: 1;
 }
 
-.sipena-grade-import-dialog > button[aria-label="Tutup dialog"]:hover {
+.sipena-grade-import-dialog > button[aria-label="Tutup dialog"]:hover,
+.sipena-grade-restore-dialog > button[aria-label="Tutup dialog"]:hover {
   background: #fee2e2;
   color: #991b1b;
 }
@@ -817,6 +820,112 @@
 
 .sipena-preview-cell-action-safe:hover {
   background: #dcfce7;
+}
+
+.sipena-restore-preview-wrap {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.sipena-restore-preview-scroll {
+  max-height: min(58dvh, 620px);
+  overscroll-behavior: contain;
+}
+
+.sipena-restore-preview-table {
+  --sipena-restore-student-width: clamp(220px, 18vw, 320px);
+  font-size: 13px;
+}
+
+.sipena-restore-preview-table th,
+.sipena-restore-preview-table td {
+  min-width: clamp(150px, 10vw, 188px);
+  height: auto;
+  min-height: 66px;
+  padding: 10px 12px;
+}
+
+.sipena-restore-preview-table th:first-child,
+.sipena-restore-preview-table td:first-child {
+  width: var(--sipena-restore-student-width);
+  min-width: var(--sipena-restore-student-width);
+  max-width: var(--sipena-restore-student-width);
+}
+
+.sipena-restore-student-cell {
+  background: #ffffff !important;
+  color: #0f172a;
+  box-shadow: 1px 0 0 #cbd5e1;
+}
+
+.sipena-restore-value-cell {
+  cursor: default;
+}
+
+.sipena-restore-value-cell:hover {
+  box-shadow: inherit;
+}
+
+.sipena-restore-cell-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sipena-restore-value-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sipena-restore-value-box {
+  min-width: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 6px 8px;
+}
+
+.sipena-restore-score {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #020617;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.sipena-restore-cell--added {
+  background: #f0fdf4 !important;
+  color: #14532d;
+  box-shadow: inset 0 0 0 1px #86efac;
+}
+
+.sipena-restore-cell--overwrite {
+  background: #fef3c7 !important;
+  color: #92400e;
+  box-shadow: inset 0 0 0 2px #f59e0b;
+}
+
+.sipena-restore-cell--unchanged {
+  background: #ffffff !important;
+  color: #334155;
+}
+
+.sipena-restore-cell--skipped,
+.sipena-restore-cell--empty {
+  background: #f8fafc !important;
+  color: #64748b;
+}
+
+.sipena-restore-cell--invalid {
+  background: #ffe4e6 !important;
+  color: #9f1239;
+  box-shadow: inset 0 0 0 2px #e11d48;
 }
 
 .sipena-preview-fix-panel {

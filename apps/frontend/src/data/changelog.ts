@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.13",
+    version: "2.4.13",
+    title: "Restore Backup Nilai: Tabel Preview Distabilkan",
+    description: "Preview Restore Backup Nilai kini memakai pola spreadsheet Import agar area kanan tidak overlap, tabel bisa discroll, dan footer lebih bersih.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Tabel restore dipindahkan ke wrapper scroll seperti spreadsheet Import sehingga lebar tabel tidak lagi mendorong isi modal.",
+      "Kolom siswa tetap sticky, sedangkan kolom nilai bisa discroll horizontal dan vertikal di area tabel.",
+      "Tombol Tutup redundan di footer dihapus; dialog tetap bisa ditutup lewat tombol X.",
+    ],
+  },
+  {
     id: "v2.4.12",
     version: "2.4.12",
     title: "Restore Backup Nilai: Modal Lebar dan Tabel Dinamis",
