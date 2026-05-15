@@ -480,6 +480,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("sipena-preview-table");
     expect(restoreDialogSource).toContain("sipena-preview-cell--new-value");
     expect(restoreDialogSource).toContain("sipena-preview-cell--overwrite");
+    expect(restoreDialogSource).toContain("TooltipProvider");
+    expect(restoreDialogSource).toContain("operationNotes");
+    expect(restoreDialogSource).toContain("OperationNoteBadge");
+    expect(restoreDialogSource).toContain("Upload & Validasi");
+    expect(restoreDialogSource).toContain("sipena-restore-dropzone");
+    expect(restoreDialogSource).toContain("onDrop={handleUploadDrop}");
+    expect(restoreDialogSource).toContain("onDragOver={handleUploadDragOver}");
     expect(restoreDialogSource).toContain("sipena-preview-sticky-left sipena-preview-visual--neutral");
     expect(restoreDialogSource).toContain("stickyStyle(index)");
     expect(restoreDialogSource).toContain("[\"No\", \"ID\", \"Siswa\"]");
@@ -499,6 +506,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-preview-table");
     expect(globalStyles).toContain(".sipena-preview-cell--new-value");
     expect(globalStyles).toContain(".sipena-preview-cell--overwrite");
+    expect(globalStyles).toContain(".sipena-restore-dropzone");
+    expect(globalStyles).toContain("@keyframes sipena-restore-drop-pulse");
+    expect(globalStyles).toContain(".sipena-preview-cell-note-badge");
     expect(globalStyles).toContain("max-height: min(66dvh, 680px)");
     expect(restoreDialogSource).toContain("Saat ini");
     expect(restoreDialogSource).toContain("Backup");

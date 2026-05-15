@@ -512,6 +512,67 @@ function preferredBackupRowIndexes(grades: ParsedGradeBackupValue[], manifest?: 
   return selected;
 }
 
+function fallbackBackupGrade(entries: ParsedGradeBackupValue[], manifest?: GradeBackupManifest): ParsedGradeBackupValue | undefined {
+  return [...entries].sort((left, right) => {
+    const scoreDelta = scopePriority(right, manifest) - scopePriority(left, manifest);
+    if (scoreDelta !== 0) return scoreDelta;
+    const timeDelta = scopedTimestamp(right) - scopedTimestamp(left);
+    if (timeDelta !== 0) return timeDelta;
+    return right.rowIndex - left.rowIndex;
+  })[0];
+}
+
+function canonicalBackupGrades(
+  grades: ParsedGradeBackupValue[],
+  preferredRows: Set<number>,
+  manifest?: GradeBackupManifest,
+): ParsedGradeBackupValue[] {
+  const byTarget = new Map<string, ParsedGradeBackupValue[]>();
+  grades.forEach((grade) => {
+    const key = gradeTargetKey(grade);
+    const entries = byTarget.get(key) || [];
+    entries.push(grade);
+    byTarget.set(key, entries);
+  });
+
+  const selected: ParsedGradeBackupValue[] = [];
+  byTarget.forEach((entries) => {
+    const preferred = entries.find((entry) => preferredRows.has(entry.rowIndex));
+    const fallback = preferred || fallbackBackupGrade(entries, manifest);
+    if (fallback) selected.push(fallback);
+  });
+
+  return selected.sort((left, right) => left.rowIndex - right.rowIndex);
+}
+
+function duplicateBackupWarnings(
+  grades: ParsedGradeBackupValue[],
+  selectedGrades: ParsedGradeBackupValue[],
+): Map<number, string[]> {
+  const selectedRowIndexes = new Set(selectedGrades.map((grade) => grade.rowIndex));
+  const byTarget = new Map<string, ParsedGradeBackupValue[]>();
+  grades.forEach((grade) => {
+    const key = gradeTargetKey(grade);
+    const entries = byTarget.get(key) || [];
+    entries.push(grade);
+    byTarget.set(key, entries);
+  });
+
+  const warnings = new Map<number, string[]>();
+  byTarget.forEach((entries) => {
+    if (entries.length <= 1) return;
+    const selected = entries.find((entry) => selectedRowIndexes.has(entry.rowIndex));
+    if (!selected) return;
+    const valuesAreSame = entries.every((entry) => Object.is(entry.value, selected.value));
+    const warning = valuesAreSame
+      ? `Backup memiliki ${entries.length} baris duplikat identik untuk target ini; restore memakai baris paling sesuai.`
+      : `Backup memiliki ${entries.length} baris duplikat dengan nilai berbeda untuk target ini; restore memakai baris paling sesuai berdasarkan konteks/waktu.`;
+    warnings.set(selected.rowIndex, [warning]);
+  });
+
+  return warnings;
+}
+
 function findCurrentValue(context: GradeBackupRestoreContext, backupGrade: ParsedGradeBackupValue): number | null {
   const studentGrades = context.grades.filter((grade) => {
     if (grade.student_id !== backupGrade.studentId) return false;
@@ -553,11 +614,13 @@ export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, conte
   const backupStructure = new Map(source.structure.filter((item) => item.assignmentId).map((item) => [item.assignmentId || "", item]));
   const contextConflicts = buildContextConflicts(source, context);
   const preferredRows = preferredBackupRowIndexes(source.grades, source.manifest);
+  const selectedBackupGrades = canonicalBackupGrades(source.grades, preferredRows, source.manifest);
+  const duplicateWarnings = duplicateBackupWarnings(source.grades, selectedBackupGrades);
 
-  const operations = source.grades.map((backupGrade): GradeBackupRestoreOperation => {
+  const operations = selectedBackupGrades.map((backupGrade): GradeBackupRestoreOperation => {
     const operationId = `restore:${backupGrade.studentId}:${backupGrade.gradeType}:${backupGrade.assignmentId || "final"}:${backupGrade.rowIndex}`;
     const conflicts: GradeBackupRestoreConflict[] = [];
-    const warnings: string[] = [];
+    const warnings: string[] = [...(duplicateWarnings.get(backupGrade.rowIndex) || [])];
     const currentStudent = currentStudents.get(backupGrade.studentId);
     const backupStudent = backupStudents.get(backupGrade.studentId);
 
@@ -663,17 +726,10 @@ export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, conte
       });
     }
 
-    const isPreferredBackupRow = preferredRows.has(backupGrade.rowIndex);
-    if (!isPreferredBackupRow) {
-      warnings.push("Baris backup ini dilewati karena ada nilai lain dengan target yang sama dan konteks/waktu lebih sesuai.");
-    }
-
     const currentValue = currentStudent ? findCurrentValue(context, backupGrade) : null;
     let status: GradeBackupRestoreOperationStatus = "skipped";
     if (conflicts.some((item) => item.severity === "blocked")) {
       status = "invalid";
-    } else if (!isPreferredBackupRow) {
-      status = "skipped";
     } else if (backupGrade.value === null) {
       status = currentValue === null ? "unchanged" : "skipped";
     } else if (currentValue === null) {

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.15",
+    version: "2.4.15",
+    title: "Restore Backup Nilai: Catatan dan Upload Diperjelas",
+    description: "Preview Restore Backup Nilai kini tidak lagi menandai nilai duplikat yang sama sebagai Skip, serta catatan per nilai bisa dibuka langsung dari sel tabel.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Backup dengan baris nilai duplikat kini memakai baris kanonik paling sesuai dan menaruh informasi duplikat sebagai catatan.",
+      "Catatan dan konflik per nilai dapat dilihat lewat hover atau fokus pada badge catatan di tabel restore.",
+      "Area upload backup dibuat lebih besar, mendukung drag-drop langsung, dan memiliki state visual saat file sedang diarahkan atau dibaca.",
+    ],
+  },
+  {
     id: "v2.4.14",
     version: "2.4.14",
     title: "Restore Backup Nilai: Preview Disamakan dengan Import",

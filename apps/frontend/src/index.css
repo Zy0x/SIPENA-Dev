@@ -779,6 +779,108 @@
   border: 1px solid currentColor;
 }
 
+.sipena-preview-cell-note-badge {
+  flex: 0 0 auto;
+  cursor: help;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.sipena-preview-cell-note-badge:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.sipena-restore-dropzone {
+  position: relative;
+  display: flex;
+  min-height: 18rem;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px dashed #bfdbfe;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(239, 246, 255, 0.8), rgba(255, 255, 255, 0.96));
+  padding: 28px;
+  text-align: center;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.sipena-restore-dropzone::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 18px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.sipena-restore-dropzone:hover,
+.sipena-restore-dropzone--active {
+  border-color: #2563eb;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.18), transparent 36%),
+    linear-gradient(180deg, #eff6ff, #ffffff);
+  box-shadow: 0 18px 45px rgba(37, 99, 235, 0.16);
+  transform: translateY(-1px);
+}
+
+.sipena-restore-dropzone--active::after {
+  opacity: 1;
+  animation: sipena-restore-drop-pulse 1.15s ease-in-out infinite;
+}
+
+.sipena-restore-dropzone--loading {
+  cursor: progress;
+  animation: sipena-restore-drop-pulse 1.15s ease-in-out infinite;
+}
+
+.sipena-restore-dropzone-icon {
+  display: inline-flex;
+  height: 68px;
+  width: 68px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow:
+    inset 0 0 0 1px #bfdbfe,
+    0 14px 28px rgba(37, 99, 235, 0.12);
+}
+
+@keyframes sipena-restore-drop-pulse {
+  0%,
+  100% {
+    box-shadow: 0 18px 45px rgba(37, 99, 235, 0.14);
+  }
+  50% {
+    box-shadow: 0 20px 56px rgba(37, 99, 235, 0.26);
+  }
+}
+
+@media (max-width: 640px) {
+  .sipena-restore-dropzone {
+    min-height: 15rem;
+    padding: 22px;
+  }
+}
+
 .sipena-preview-cell-actions {
   display: flex;
   margin-top: 6px;

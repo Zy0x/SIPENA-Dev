@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import {
   AlertTriangle,
   ArchiveRestore,
@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   buildGradeBackupRestoreBatchItems,
   buildGradeBackupRestorePlan,
@@ -82,6 +83,22 @@ function valueLabel(value: number | null) {
   return value === null ? "Kosong" : String(value);
 }
 
+function operationNotes(operation: GradeBackupRestoreOperation): string[] {
+  return [
+    ...operation.conflicts.map((conflict) => conflict.message),
+    ...operation.warnings,
+  ];
+}
+
+function operationCellTitle(operation: GradeBackupRestoreOperation) {
+  return [
+    statusLabel(operation.status),
+    `Saat ini: ${valueLabel(operation.currentValue)}`,
+    `Backup: ${valueLabel(operation.backupValue)}`,
+    ...operationNotes(operation),
+  ].join(" / ");
+}
+
 function operationTargetKey(operation: Pick<GradeBackupRestoreOperation, "gradeType" | "assignmentId">) {
   return `${operation.gradeType}:${operation.assignmentId || ""}`;
 }
@@ -107,6 +124,28 @@ function SummaryMetric({ label, value, tone }: { label: string; value: number; t
       <div className="truncate text-lg font-semibold leading-none">{value}</div>
       <div className="mt-1 truncate text-xs text-muted-foreground">{label}</div>
     </div>
+  );
+}
+
+function OperationNoteBadge({ operation }: { operation: GradeBackupRestoreOperation }) {
+  const notes = operationNotes(operation);
+  if (notes.length === 0) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="sipena-preview-cell-note-badge" aria-label={`Lihat ${notes.length} catatan restore`}>
+          {notes.length} catatan
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="end" className="max-w-[min(26rem,calc(100vw-2rem))]">
+        <div className="space-y-1 text-xs">
+          {notes.map((note) => (
+            <p key={note}>{note}</p>
+          ))}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -157,7 +196,7 @@ function OperationRow({
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
         <Badge variant={statusTone(operation.status)}>{statusLabel(operation.status)}</Badge>
         {operation.conflicts.length > 0 ? <Badge variant="destructive">{operation.conflicts.length} konflik</Badge> : null}
-        {operation.warnings.length > 0 ? <Badge variant="outline">{operation.warnings.length} catatan</Badge> : null}
+        <OperationNoteBadge operation={operation} />
       </div>
     </div>
   );
@@ -199,7 +238,11 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
   const operationByCell = useMemo(() => {
     const map = new Map<string, GradeBackupRestoreOperation>();
     plan.operations.forEach((operation) => {
-      map.set(`${operation.studentId}|${operationTargetKey(operation)}`, operation);
+      const key = `${operation.studentId}|${operationTargetKey(operation)}`;
+      const current = map.get(key);
+      if (!current || (current.status === "skipped" && operation.status !== "skipped")) {
+        map.set(key, operation);
+      }
     });
     return map;
   }, [plan.operations]);
@@ -282,12 +325,12 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
                               </td>
                             );
                           }
-                          const hasNotes = operation.conflicts.length > 0 || operation.warnings.length > 0;
+                          const notes = operationNotes(operation);
                           return (
                             <td
                               key={column.key}
                               className={cn("sipena-preview-cell", previewCellClass(operation.status))}
-                              title={`${statusLabel(operation.status)} / Saat ini: ${valueLabel(operation.currentValue)} / Backup: ${valueLabel(operation.backupValue)}`}
+                              title={operationCellTitle(operation)}
                             >
                               <div className="sipena-preview-cell-main">
                                 <span className="min-w-0 flex-1">
@@ -295,15 +338,16 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
                                   <span className="sipena-preview-cell-details">
                                     <span className="sipena-preview-cell-detail-line">Saat ini: {valueLabel(operation.currentValue)}</span>
                                     <span className="sipena-preview-cell-detail-line">Backup: {valueLabel(operation.backupValue)}</span>
-                                    {hasNotes ? (
-                                      <span className="sipena-preview-cell-detail-line">
-                                        {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
+                                    {notes.length > 0 ? (
+                                      <span className="sipena-preview-cell-detail-line" title={notes[0]}>
+                                        {notes[0]}
                                       </span>
                                     ) : null}
                                   </span>
                                 </span>
                                 <span className="sipena-preview-cell-badges">
                                   <span className="sipena-preview-cell-badge">{statusBadgeText(operation.status)}</span>
+                                  <OperationNoteBadge operation={operation} />
                                 </span>
                               </div>
                             </td>
@@ -337,6 +381,7 @@ export default function GradeBackupRestoreDialog({
   const [plan, setPlan] = useState<GradeBackupRestorePlan | null>(null);
   const [readErrors, setReadErrors] = useState<string[]>([]);
   const [isReading, setIsReading] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [mode, setMode] = useState<GradeBackupRestoreMode>("fill_empty_only");
   const [allowContextMismatch, setAllowContextMismatch] = useState(false);
@@ -357,6 +402,7 @@ export default function GradeBackupRestoreDialog({
     setPlan(null);
     setReadErrors([]);
     setIsReading(false);
+    setIsDragActive(false);
     setIsRestoring(false);
     setMode("fill_empty_only");
     setAllowContextMismatch(false);
@@ -418,6 +464,24 @@ export default function GradeBackupRestoreDialog({
     }
   }, [restoreContext]);
 
+  const handleUploadDragOver = useCallback((event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    if (!isReading) setIsDragActive(true);
+  }, [isReading]);
+
+  const handleUploadDragLeave = useCallback((event: DragEvent<HTMLLabelElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
+    setIsDragActive(false);
+  }, []);
+
+  const handleUploadDrop = useCallback((event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragActive(false);
+    if (isReading) return;
+    void handleFile(event.dataTransfer.files?.[0] || null);
+  }, [handleFile, isReading]);
+
   const toggleOperation = useCallback((operationId: string, checked: boolean) => {
     setSelectedOperationIds((current) => checked
       ? Array.from(new Set([...current, operationId]))
@@ -472,7 +536,8 @@ export default function GradeBackupRestoreDialog({
   const canRunRestore = Boolean(batchPreview && batchPreview.items.length > 0 && batchPreview.blockedReasons.length === 0 && !isRestoring);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <TooltipProvider delayDuration={120}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sipena-grade-import-dialog sipena-grade-restore-dialog flex h-[calc(100dvh-0.25rem)] max-h-[980px] w-[calc(100vw-0.25rem)] max-w-[1880px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-slate-300 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(96dvh,980px)] sm:w-[calc(100vw-0.75rem)] xl:w-[min(98vw,1880px)]">
         <header className="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-5">
           <div className="flex min-w-0 flex-col gap-2 pr-10 lg:flex-row lg:items-center lg:justify-between">
@@ -498,7 +563,7 @@ export default function GradeBackupRestoreDialog({
               <div className="-mx-1 overflow-x-auto px-1 pb-1">
               <div className="grid min-w-[42rem] grid-cols-4 gap-2">
                 {[
-                  ["upload", "Upload"],
+                  ["upload", "Upload & Validasi"],
                   ["preview", "Preview"],
                   ["mode", "Mode"],
                   ["confirm", "Konfirmasi"],
@@ -525,21 +590,40 @@ export default function GradeBackupRestoreDialog({
                   <CardTitle className="text-base">Upload file backup SIPENA</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="rounded-xl border border-dashed bg-muted/20 p-5 text-center">
-                    <FileSpreadsheet className="mx-auto h-9 w-9 text-muted-foreground" />
-                    <p className="mt-3 text-sm font-medium">Pilih workbook Backup Nilai SIPENA (.xlsx)</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      File harus memiliki sheet _manifest, _students, _structure, dan _grades.
-                    </p>
+                  <label
+                    htmlFor="grade-backup-restore-file"
+                    className={cn(
+                      "sipena-restore-dropzone",
+                      isDragActive && "sipena-restore-dropzone--active",
+                      isReading && "sipena-restore-dropzone--loading",
+                    )}
+                    onDragEnter={handleUploadDragOver}
+                    onDragOver={handleUploadDragOver}
+                    onDragLeave={handleUploadDragLeave}
+                    onDrop={handleUploadDrop}
+                    aria-disabled={isReading}
+                  >
+                    <span className="sipena-restore-dropzone-icon">
+                      {isReading ? <Loader2 className="h-9 w-9 animate-spin" /> : <FileSpreadsheet className="h-9 w-9" />}
+                    </span>
+                    <span className="mt-4 text-base font-semibold">Tarik dan lepas workbook Backup Nilai SIPENA</span>
+                    <span className="mt-1 max-w-xl text-sm text-muted-foreground">
+                      Atau klik area ini untuk memilih file .xlsx. File harus memiliki sheet _manifest, _students, _structure, dan _grades.
+                    </span>
+                    <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm">
+                      <Upload className="h-4 w-4" />
+                      Pilih file backup
+                    </span>
                     <Input
+                      id="grade-backup-restore-file"
                       ref={fileInputRef}
                       type="file"
                       accept=".xlsx,.xls"
-                      className="mt-4"
+                      className="sr-only"
                       disabled={isReading}
                       onChange={(event) => void handleFile(event.target.files?.[0] || null)}
                     />
-                  </div>
+                  </label>
                   {isReading ? (
                     <Alert>
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -820,7 +904,8 @@ export default function GradeBackupRestoreDialog({
           </div>
           </div>
         </footer>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 }

@@ -596,11 +596,54 @@ describe("SIPENA grade backup restore reader", () => {
     const plan = buildGradeBackupRestorePlan(source, { ...exportContext, grades: [] });
     const result = buildGradeBackupRestoreBatchItems(plan, { mode: "fill_empty_only" });
 
-    expect(plan.operations.find((item) => item.rowIndex === 2)?.status).toBe("skipped");
+    expect(plan.operations.some((item) => item.rowIndex === 2)).toBe(false);
     expect(plan.operations.find((item) => item.rowIndex === 3)?.status).toBe("added");
+    expect(plan.operations.find((item) => item.rowIndex === 3)?.warnings[0]).toContain("baris duplikat dengan nilai berbeda");
+    expect(plan.summary.skipped).toBe(0);
     expect(result.items).toEqual([
       expect.objectContaining({ studentId: "student-1", gradeType: "assignment", assignmentId: "assignment-1", value: 88 }),
     ]);
+  });
+
+  it("does not surface identical duplicate backup rows as skipped in restore preview", () => {
+    const source = readGradeBackupWorkbook(backupReadResult({
+      ...exportContext,
+      grades: [
+        {
+          id: "same-assignment-newer",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 75,
+          semester_id: "semester-1",
+          academic_year_id: "year-1",
+          created_at: "2026-05-02T00:00:00.000Z",
+          updated_at: "2026-05-02T00:00:00.000Z",
+        },
+        {
+          id: "same-assignment-older",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 75,
+          semester_id: "semester-1",
+          academic_year_id: "year-1",
+          created_at: "2026-05-01T00:00:00.000Z",
+          updated_at: "2026-05-01T00:00:00.000Z",
+        },
+      ],
+    }));
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      grades: [{ ...exportContext.grades[0], value: 75 }],
+    });
+
+    expect(plan.operations).toHaveLength(1);
+    expect(plan.operations[0]).toMatchObject({ status: "unchanged", backupValue: 75, currentValue: 75 });
+    expect(plan.operations[0].warnings[0]).toContain("baris duplikat identik");
+    expect(plan.summary.skipped).toBe(0);
   });
 
   it("blocks off-context grade rows inside backup metadata", () => {
