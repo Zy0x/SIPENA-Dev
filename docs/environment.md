@@ -1,0 +1,21 @@
+# Environment
+
+Frontend minimal:
+
+- `VITE_AUTH_PROVIDER`
+- `VITE_DATA_PROVIDER`
+- `VITE_STORAGE_PROVIDER`
+- `VITE_REALTIME_PROVIDER`
+- `VITE_FUNCTION_PROVIDER`
+- `VITE_API_BASE_URL`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Backend minimal:
+
+- `DATABASE_URL`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Jangan commit secret asli. Gunakan file `.example` sebagai template.
