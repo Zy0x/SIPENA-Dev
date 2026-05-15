@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.17",
+    version: "2.4.17",
+    title: "Restore Backup Nilai: Mode Overlay dan Seleksi Timpa",
+    description: "Restore Backup Nilai kini lebih sederhana: mode restore memakai dropdown overlay, detail cell hanya muncul saat dipilih, dan nilai timpa dipilih lewat dialog khusus.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-16",
+    details: [
+      "Dropdown mode restore tidak lagi memperbesar footer, dan setiap opsi memiliki tooltip penjelasan.",
+      "Dialog khusus ditambahkan untuk memilih nilai yang akan menimpa nilai lama agar lebih mudah dicek.",
+      "Baris nilai backup yang duplikat identik kini di-deduplikasi diam-diam tanpa catatan konflik yang membingungkan.",
+    ],
+  },
+  {
     id: "v2.4.16",
     version: "2.4.16",
     title: "Restore Backup Nilai: Tabel Interaktif dan Validasi Identitas",

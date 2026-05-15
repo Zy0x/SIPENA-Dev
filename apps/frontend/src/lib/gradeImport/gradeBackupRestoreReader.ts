@@ -608,10 +608,10 @@ function duplicateBackupWarnings(
     const selected = entries.find((entry) => selectedRowIndexes.has(entry.rowIndex));
     if (!selected) return;
     const valuesAreSame = entries.every((entry) => Object.is(entry.value, selected.value));
-    const warning = valuesAreSame
-      ? `Backup memiliki ${entries.length} baris nilai duplikat identik untuk target ini; restore memakai baris paling sesuai.`
-      : `Backup memiliki ${entries.length} baris nilai duplikat dengan nilai berbeda untuk target ini; restore memakai baris paling sesuai berdasarkan konteks/waktu.`;
-    warnings.set(selected.rowIndex, [warning]);
+    if (valuesAreSame) return;
+    warnings.set(selected.rowIndex, [
+      `Backup memiliki ${entries.length} baris nilai duplikat dengan nilai berbeda untuk target ini; restore memakai baris paling sesuai berdasarkan konteks/waktu.`,
+    ]);
   });
 
   return warnings;

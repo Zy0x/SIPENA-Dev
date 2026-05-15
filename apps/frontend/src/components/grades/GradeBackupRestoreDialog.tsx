@@ -18,9 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -168,6 +169,32 @@ function OperationNoteBadge({ operation }: { operation: GradeBackupRestoreOperat
   );
 }
 
+const MODE_OPTIONS: Array<{
+  value: GradeBackupRestoreMode;
+  title: string;
+  description: string;
+  tooltip: string;
+}> = [
+  {
+    value: "fill_empty_only",
+    title: "Isi kosong saja",
+    description: "Nilai lama tidak ditimpa.",
+    tooltip: "Mode paling aman. Restore hanya mengisi cell yang saat ini kosong.",
+  },
+  {
+    value: "overwrite_selected",
+    title: "Timpa dipilih",
+    description: "Pilih nilai timpa dari dialog.",
+    tooltip: "Buka daftar nilai yang akan menimpa nilai lama, lalu pilih satu per satu atau sekaligus.",
+  },
+  {
+    value: "full_confirmed",
+    title: "Restore penuh",
+    description: "Perlu konfirmasi final.",
+    tooltip: "Mode paling berisiko. Semua nilai valid diproses setelah konfirmasi RESTORE NILAI.",
+  },
+];
+
 function RestoreModeFooterCard({
   mode,
   onModeChange,
@@ -178,8 +205,7 @@ function RestoreModeFooterCard({
   identityWarningCount,
   allowIdentityMismatch,
   onAllowIdentityMismatchChange,
-  onSelectAllOverwrite,
-  onClearOverwrite,
+  onOpenOverwriteDialog,
 }: {
   mode: GradeBackupRestoreMode;
   onModeChange: (mode: GradeBackupRestoreMode) => void;
@@ -190,57 +216,203 @@ function RestoreModeFooterCard({
   identityWarningCount: number;
   allowIdentityMismatch: boolean;
   onAllowIdentityMismatchChange: (checked: boolean) => void;
-  onSelectAllOverwrite: () => void;
-  onClearOverwrite: () => void;
+  onOpenOverwriteDialog: () => void;
 }) {
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+
   return (
-    <details className="sipena-restore-mode-card">
-      <summary className="sipena-restore-mode-summary">
+    <Popover open={modeMenuOpen} onOpenChange={setModeMenuOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" className="sipena-restore-mode-trigger">
         <span className="min-w-0">
           <span className="block text-xs font-semibold text-blue-700">Mode restore</span>
           <span className="block truncate text-sm font-semibold text-slate-950">{modeLabel(mode)}</span>
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-      </summary>
-      <div className="sipena-restore-mode-content">
-        <RadioGroup value={mode} onValueChange={(value) => onModeChange(value as GradeBackupRestoreMode)} className="grid gap-2 md:grid-cols-3">
-          {[
-            ["fill_empty_only", "Isi kosong saja", "Nilai lama tidak ditimpa."],
-            ["overwrite_selected", "Timpa dipilih", `${selectedOverwriteCount}/${overwriteCount} nilai timpa dipilih.`],
-            ["full_confirmed", "Restore penuh", "Konfirmasi final diperlukan."],
-          ].map(([value, title, description]) => (
-            <label key={value} className="flex cursor-pointer gap-2 rounded-lg border bg-white p-2 text-xs">
-              <RadioGroupItem value={value} className="mt-0.5" />
-              <span className="min-w-0">
-                <span className="block font-semibold">{title}</span>
-                <span className="block text-muted-foreground">{description}</span>
-              </span>
-            </label>
-          ))}
-        </RadioGroup>
-
-        {mode === "overwrite_selected" ? (
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onSelectAllOverwrite}>Pilih semua timpa</Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onClearOverwrite}>Hapus pilihan timpa</Button>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" side="top" sideOffset={10} className="sipena-restore-mode-popover">
+        <div className="space-y-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">Mode restore</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">Arahkan cursor ke opsi untuk melihat detail.</div>
           </div>
-        ) : null}
+          <RadioGroup
+            value={mode}
+            onValueChange={(value) => {
+              const nextMode = value as GradeBackupRestoreMode;
+              onModeChange(nextMode);
+              setModeMenuOpen(false);
+              if (nextMode === "overwrite_selected") window.setTimeout(onOpenOverwriteDialog, 0);
+            }}
+            className="grid gap-2"
+          >
+            {MODE_OPTIONS.map((option) => (
+              <Tooltip key={option.value}>
+                <TooltipTrigger asChild>
+                  <label className="flex cursor-pointer gap-2 rounded-lg border bg-white p-2 text-xs transition hover:border-blue-300 hover:bg-blue-50/60">
+                    <RadioGroupItem value={option.value} className="mt-0.5" />
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{option.title}</span>
+                      <span className="block text-muted-foreground">
+                        {option.value === "overwrite_selected"
+                          ? `${selectedOverwriteCount}/${overwriteCount} nilai timpa dipilih.`
+                          : option.description}
+                      </span>
+                    </span>
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent side="right" align="center" className="max-w-xs text-xs">
+                  {option.tooltip}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </RadioGroup>
 
-        {mode === "full_confirmed" ? (
-          <label className="flex items-start gap-2 rounded-lg border bg-amber-50/60 p-2 text-xs dark:bg-amber-950/20">
-            <Checkbox checked={includeNullOverwrites} onCheckedChange={(value) => onIncludeNullOverwritesChange(value === true)} />
-            <span>Kosongkan nilai web jika backup kosong. Konfirmasi tambahan diminta di step konfirmasi.</span>
-          </label>
-        ) : null}
+          {mode === "overwrite_selected" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full justify-center"
+              onClick={() => {
+                setModeMenuOpen(false);
+                window.setTimeout(onOpenOverwriteDialog, 0);
+              }}
+            >
+              Atur nilai yang ditimpa
+            </Button>
+          ) : null}
 
-        {identityWarningCount > 0 ? (
-          <label className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/70 p-2 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-100">
-            <Checkbox checked={allowIdentityMismatch} onCheckedChange={(value) => onAllowIdentityMismatchChange(value === true)} />
-            <span>Izinkan restore untuk {identityWarningCount} nilai dengan identitas siswa berubah setelah saya cek detailnya.</span>
-          </label>
-        ) : null}
-      </div>
-    </details>
+          {mode === "full_confirmed" ? (
+            <label className="flex items-start gap-2 rounded-lg border bg-amber-50/60 p-2 text-xs dark:bg-amber-950/20">
+              <Checkbox checked={includeNullOverwrites} onCheckedChange={(value) => onIncludeNullOverwritesChange(value === true)} />
+              <span>Kosongkan nilai web jika backup kosong. Konfirmasi tambahan diminta di step konfirmasi.</span>
+            </label>
+          ) : null}
+
+          {identityWarningCount > 0 ? (
+            <label className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/70 p-2 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-100">
+              <Checkbox checked={allowIdentityMismatch} onCheckedChange={(value) => onAllowIdentityMismatchChange(value === true)} />
+              <span>Izinkan restore untuk {identityWarningCount} nilai dengan identitas siswa berubah setelah saya cek detailnya.</span>
+            </label>
+          ) : null}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function OverwriteSelectionDialog({
+  open,
+  onOpenChange,
+  operations,
+  selectedOperationIds,
+  onToggleOperation,
+  onSelectAll,
+  onClear,
+  onInspectOperation,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  operations: GradeBackupRestoreOperation[];
+  selectedOperationIds: string[];
+  onToggleOperation: (operationId: string, checked: boolean) => void;
+  onSelectAll: () => void;
+  onClear: () => void;
+  onInspectOperation: (operationId: string) => void;
+}) {
+  const selectedCount = operations.filter((operation) => selectedOperationIds.includes(operation.id)).length;
+  const notedCount = operations.filter((operation) => operationNotes(operation).length > 0).length;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl overflow-hidden p-0">
+        <DialogHeader className="border-b px-5 py-4">
+          <DialogTitle className="text-base">Pilih nilai yang akan ditimpa</DialogTitle>
+          <DialogDescription>
+            Pilih hanya nilai yang memang boleh mengganti nilai halaman aktif.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[min(68dvh,620px)] overflow-y-auto px-5 py-4">
+          <div className="mb-3 grid gap-2 sm:grid-cols-3">
+            <SummaryMetric label="Nilai timpa" value={operations.length} tone="border-amber-200 bg-amber-50/50" />
+            <SummaryMetric label="Dipilih" value={selectedCount} tone="border-blue-200 bg-blue-50/50" />
+            <SummaryMetric label="Ada catatan" value={notedCount} tone={notedCount ? "border-red-200 bg-red-50/50" : undefined} />
+          </div>
+          {operations.length === 0 ? (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertTitle>Tidak ada nilai yang perlu ditimpa</AlertTitle>
+              <AlertDescription>Mode ini belum memiliki kandidat overwrite pada backup yang dipilih.</AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid gap-2">
+              {operations.map((operation) => {
+                const notes = operationNotes(operation);
+                const checked = selectedOperationIds.includes(operation.id);
+                return (
+                  <label
+                    key={operation.id}
+                    className={cn(
+                      "grid cursor-pointer gap-3 rounded-xl border bg-white p-3 text-sm transition hover:border-blue-300 hover:bg-blue-50/40 sm:grid-cols-[auto_minmax(0,1fr)_auto]",
+                      checked && "border-blue-300 bg-blue-50/70",
+                      notes.length > 0 && "border-amber-200",
+                    )}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(value) => onToggleOperation(operation.id, value === true)}
+                      className="mt-1"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{operation.studentName || operation.backupStudentName || operation.studentId}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {gradeBackupOperationLabel(operation)}{operation.chapterName ? ` - ${operation.chapterName}` : ""}
+                      </span>
+                      {notes.length > 0 ? (
+                        <span className="mt-1 block truncate text-xs text-amber-700" title={notes.join(" / ")}>
+                          {notes[0]}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="grid grid-cols-[auto_auto_auto] items-center gap-2 text-xs">
+                      <span className="rounded-lg bg-muted px-2 py-1">
+                        <span className="block text-muted-foreground">Saat ini</span>
+                        <span className="font-semibold">{valueLabel(operation.currentValue)}</span>
+                      </span>
+                      <span className="text-muted-foreground">{"->"}</span>
+                      <span className="rounded-lg bg-amber-50 px-2 py-1 text-amber-900">
+                        <span className="block text-amber-700">Backup</span>
+                        <span className="font-semibold">{valueLabel(operation.backupValue)}</span>
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="col-span-3 justify-self-end px-2"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          onInspectOperation(operation.id);
+                          onOpenChange(false);
+                        }}
+                      >
+                        Detail
+                      </Button>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <DialogFooter className="border-t px-5 py-4">
+          <Button type="button" variant="ghost" onClick={onClear}>Hapus pilihan</Button>
+          <Button type="button" variant="outline" onClick={onSelectAll}>Pilih semua</Button>
+          <Button type="button" onClick={() => onOpenChange(false)}>Selesai</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -444,7 +616,7 @@ function RestorePreviewTable({
           </Alert>
         ) : (
           <>
-            <div className="sipena-restore-preview-layout">
+            <div className={cn("sipena-restore-preview-layout", selectedOperation && "sipena-restore-preview-layout--with-inspector")}>
               <section className="sipena-preview-grid-wrap">
                 <div className="sipena-preview-scroll">
                 <table className="sipena-preview-table">
@@ -552,16 +724,16 @@ function RestorePreviewTable({
                 </table>
                 </div>
               </section>
-              <RestoreOperationInspector
-                operation={selectedOperation}
-                mode={mode}
-                readOnly={readOnly}
-                checked={selectedOperation ? selectedOperationIds.includes(selectedOperation.id) : false}
-                onCheckedChange={(checked) => {
-                  if (selectedOperation) onToggleOperation(selectedOperation.id, checked);
-                }}
-                onClose={() => onSelectOperation(null)}
-              />
+              {selectedOperation ? (
+                <RestoreOperationInspector
+                  operation={selectedOperation}
+                  mode={mode}
+                  readOnly={readOnly}
+                  checked={selectedOperationIds.includes(selectedOperation.id)}
+                  onCheckedChange={(checked) => onToggleOperation(selectedOperation.id, checked)}
+                  onClose={() => onSelectOperation(null)}
+                />
+              ) : null}
             </div>
           </>
         )}
@@ -596,6 +768,7 @@ export default function GradeBackupRestoreDialog({
   const [nullConfirmationText, setNullConfirmationText] = useState("");
   const [selectedOperationIds, setSelectedOperationIds] = useState<string[]>([]);
   const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null);
+  const [overwriteDialogOpen, setOverwriteDialogOpen] = useState(false);
   const [restoreResult, setRestoreResult] = useState<{
     savedCount: number;
     skippedUnchangedCount: number;
@@ -620,6 +793,7 @@ export default function GradeBackupRestoreDialog({
     setNullConfirmationText("");
     setSelectedOperationIds([]);
     setSelectedOperationId(null);
+    setOverwriteDialogOpen(false);
     setRestoreResult(null);
     setRestoreError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -702,6 +876,14 @@ export default function GradeBackupRestoreDialog({
       ? Array.from(new Set([...current, operationId]))
       : current.filter((item) => item !== operationId));
   }, []);
+
+  const selectAllOverwriteOperations = useCallback(() => {
+    setSelectedOperationIds((current) => Array.from(new Set([...current, ...overwriteOperations.map((operation) => operation.id)])));
+  }, [overwriteOperations]);
+
+  const clearOverwriteOperations = useCallback(() => {
+    setSelectedOperationIds((current) => current.filter((id) => !overwriteOperations.some((operation) => operation.id === id)));
+  }, [overwriteOperations]);
 
   const executeRestore = useCallback(async () => {
     if (!batchPreview || !plan || batchPreview.blockedReasons.length > 0 || batchPreview.items.length === 0) return;
@@ -1062,8 +1244,7 @@ export default function GradeBackupRestoreDialog({
                   identityWarningCount={identityWarningCount}
                   allowIdentityMismatch={allowIdentityMismatch}
                   onAllowIdentityMismatchChange={setAllowIdentityMismatch}
-                  onSelectAllOverwrite={() => setSelectedOperationIds((current) => Array.from(new Set([...current, ...overwriteOperations.map((operation) => operation.id)])))}
-                  onClearOverwrite={() => setSelectedOperationIds((current) => current.filter((id) => !overwriteOperations.some((operation) => operation.id === id)))}
+                  onOpenOverwriteDialog={() => setOverwriteDialogOpen(true)}
                 />
               ) : (
                 <>
@@ -1099,6 +1280,16 @@ export default function GradeBackupRestoreDialog({
         </footer>
         </DialogContent>
       </Dialog>
+      <OverwriteSelectionDialog
+        open={overwriteDialogOpen}
+        onOpenChange={setOverwriteDialogOpen}
+        operations={overwriteOperations}
+        selectedOperationIds={selectedOperationIds}
+        onToggleOperation={toggleOperation}
+        onSelectAll={selectAllOverwriteOperations}
+        onClear={clearOverwriteOperations}
+        onInspectOperation={setSelectedOperationId}
+      />
     </TooltipProvider>
   );
 }

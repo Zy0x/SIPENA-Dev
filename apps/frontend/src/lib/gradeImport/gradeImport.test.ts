@@ -605,7 +605,7 @@ describe("SIPENA grade backup restore reader", () => {
     ]);
   });
 
-  it("does not surface identical duplicate backup rows as skipped in restore preview", () => {
+  it("deduplicates identical backup rows without showing a noisy restore warning", () => {
     const source = readGradeBackupWorkbook(backupReadResult({
       ...exportContext,
       grades: [
@@ -642,7 +642,7 @@ describe("SIPENA grade backup restore reader", () => {
 
     expect(plan.operations).toHaveLength(1);
     expect(plan.operations[0]).toMatchObject({ status: "unchanged", backupValue: 75, currentValue: 75 });
-    expect(plan.operations[0].warnings[0]).toContain("baris nilai duplikat identik");
+    expect(plan.operations[0].warnings).toEqual([]);
     expect(plan.summary.skipped).toBe(0);
   });
 

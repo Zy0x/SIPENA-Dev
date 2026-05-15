@@ -492,6 +492,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("[\"No\", \"NISN\", \"Siswa\"]");
     expect(restoreDialogSource).toContain("RestoreOperationInspector");
     expect(restoreDialogSource).toContain("RestoreModeFooterCard");
+    expect(restoreDialogSource).toContain("OverwriteSelectionDialog");
+    expect(restoreDialogSource).toContain("sipena-restore-mode-trigger");
+    expect(restoreDialogSource).toContain("sipena-restore-mode-popover");
     expect(restoreDialogSource).toContain("Preview & Pilih Mode");
     expect(restoreDialogSource).toContain("allowIdentityMismatch");
     expect(restoreDialogSource).toContain("sipena-restore-cell-interactive");
@@ -515,7 +518,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-preview-cell--overwrite");
     expect(globalStyles).toContain(".sipena-restore-dropzone");
     expect(globalStyles).toContain(".sipena-restore-inspector");
-    expect(globalStyles).toContain(".sipena-restore-mode-card");
+    expect(globalStyles).toContain(".sipena-restore-mode-trigger");
+    expect(globalStyles).toContain(".sipena-restore-mode-popover");
     expect(globalStyles).toContain("@keyframes sipena-restore-drop-pulse");
     expect(globalStyles).toContain(".sipena-preview-cell-note-badge");
     expect(globalStyles).toContain("max-height: min(66dvh, 680px)");

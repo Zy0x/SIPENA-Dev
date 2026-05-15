@@ -881,7 +881,7 @@
 }
 
 @media (min-width: 1180px) {
-  .sipena-restore-preview-layout {
+  .sipena-restore-preview-layout--with-inspector {
     grid-template-columns: minmax(0, 1fr) 360px;
     align-items: start;
   }
@@ -947,36 +947,43 @@
   justify-content: center;
 }
 
-.sipena-restore-mode-card {
-  width: min(860px, 100%);
-  border: 1px solid #bfdbfe;
-  border-radius: 18px;
-  background: #eff6ff;
-  color: #0f172a;
-  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
-}
-
-.sipena-restore-mode-summary {
+.sipena-restore-mode-trigger {
   display: flex;
+  width: min(320px, 100%);
   min-height: 48px;
-  cursor: pointer;
-  list-style: none;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 18px;
+  background: #eff6ff;
   padding: 8px 12px;
-  user-select: none;
+  color: #0f172a;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.sipena-restore-mode-summary::-webkit-details-marker {
-  display: none;
+.sipena-restore-mode-trigger:hover {
+  border-color: #60a5fa;
+  background: #dbeafe;
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.16);
 }
 
-.sipena-restore-mode-content {
-  display: grid;
-  gap: 10px;
-  border-top: 1px solid rgba(37, 99, 235, 0.18);
-  padding: 10px;
+.sipena-restore-mode-trigger:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.sipena-restore-mode-popover {
+  width: min(390px, calc(100vw - 1rem));
+  border-radius: 18px;
+  border-color: #bfdbfe;
+  padding: 12px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
 
 @media (max-width: 640px) {
