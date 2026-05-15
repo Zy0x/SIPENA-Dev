@@ -1234,7 +1234,7 @@ export default function GradeBackupRestoreDialog({
           <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {step === "preview" ? (
-                <>
+                <div className="sipena-restore-footer-mode-controls">
                   <RestoreModeFooterCard
                     mode={mode}
                     onModeChange={setMode}
@@ -1261,7 +1261,7 @@ export default function GradeBackupRestoreDialog({
                       <span className="truncate">Kosongkan nilai web jika backup kosong</span>
                     </label>
                   ) : null}
-                </>
+                </div>
               ) : (
                 <>
                   <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-200 dark:ring-blue-900/70">
@@ -1294,18 +1294,18 @@ export default function GradeBackupRestoreDialog({
           </div>
           </div>
         </footer>
+        <OverwriteSelectionDialog
+          open={overwriteDialogOpen}
+          onOpenChange={setOverwriteDialogOpen}
+          operations={overwriteOperations}
+          selectedOperationIds={selectedOperationIds}
+          onToggleOperation={toggleOperation}
+          onSelectAll={selectAllOverwriteOperations}
+          onClear={clearOverwriteOperations}
+          onInspectOperation={setSelectedOperationId}
+        />
         </DialogContent>
       </Dialog>
-      <OverwriteSelectionDialog
-        open={overwriteDialogOpen}
-        onOpenChange={setOverwriteDialogOpen}
-        operations={overwriteOperations}
-        selectedOperationIds={selectedOperationIds}
-        onToggleOperation={toggleOperation}
-        onSelectAll={selectAllOverwriteOperations}
-        onClear={clearOverwriteOperations}
-        onInspectOperation={setSelectedOperationId}
-      />
     </TooltipProvider>
   );
 }

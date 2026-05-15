@@ -986,6 +986,15 @@
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
 
+.sipena-restore-footer-mode-controls {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .sipena-restore-overwrite-layer {
   pointer-events: none;
   position: fixed;

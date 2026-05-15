@@ -1405,7 +1405,7 @@ export function SpreadsheetTable({
             size="icon"
             onClick={handleReset}
             disabled={formatLocked}
-            title="Reset semua"
+            title="Reset semua pengaturan"
             className={`h-9 w-9 sm:h-10 sm:w-10 ${formatLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
             style={{ touchAction: 'manipulation' }}
           >

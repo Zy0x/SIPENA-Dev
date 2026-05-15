@@ -321,6 +321,7 @@ describe("phase 12 grade import regression suite", () => {
     const headerStepSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/HeaderConfigurationStep.tsx"), "utf8");
     const fixPanelSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
     const gradesPageSource = readFileSync(repoPath("apps/frontend/src/pages/Grades.tsx"), "utf8");
+    const spreadsheetSource = readFileSync(repoPath("apps/frontend/src/components/grades/SpreadsheetTable.tsx"), "utf8");
     const restoreDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeBackupRestoreDialog.tsx"), "utf8");
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
@@ -496,6 +497,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("sipena-restore-mode-trigger");
     expect(restoreDialogSource).toContain("sipena-restore-mode-popover");
     expect(restoreDialogSource).toContain("sipena-restore-overwrite-layer");
+    expect(restoreDialogSource).toContain("sipena-restore-footer-mode-controls");
+    expect(restoreDialogSource.indexOf("<OverwriteSelectionDialog")).toBeLessThan(restoreDialogSource.indexOf("</DialogContent>"));
     expect(restoreDialogSource).toContain("Kosongkan nilai web jika backup kosong");
     expect(restoreDialogSource).toContain("sipena-guided-action");
     expect(restoreDialogSource).toContain("sipena-ai-note-badge");
@@ -524,6 +527,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-restore-inspector");
     expect(globalStyles).toContain(".sipena-restore-mode-trigger");
     expect(globalStyles).toContain(".sipena-restore-mode-popover");
+    expect(globalStyles).toContain(".sipena-restore-footer-mode-controls");
     expect(globalStyles).toContain(".sipena-restore-overwrite-backdrop");
     expect(globalStyles).toContain(".sipena-danger-icon-button");
     expect(globalStyles).toContain("@keyframes sipena-guided-action-pulse");
@@ -537,6 +541,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(previewBadgeSource).toContain("Tooltip");
     expect(previewBadgeSource).toContain("previewCellBadgeText");
     expect(statusBadgeSource).toContain("description?: ReactNode");
+    expect(spreadsheetSource).toContain('title="Reset semua pengaturan"');
+    expect(spreadsheetSource).not.toContain('title="Reset semua"');
     expect(dialogSource).toContain("Pemeriksaan otomatis");
     expect(dialogSource).toContain("Saran AI");
     expect(dialogSource).toContain("requestSmartImportAssist");

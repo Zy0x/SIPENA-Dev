@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.19",
+    version: "2.4.19",
+    title: "Restore Backup Nilai: Kontrol Footer dan Modal Timpa",
+    description: "Kontrol mode Restore Backup Nilai kini lebih rapi dan dialog pilihan timpa tidak lagi menutup modal restore utama.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-16",
+    details: [
+      "Aksi mode penuh dan timpa tampil sejajar dengan dropdown mode restore.",
+      "Dialog daftar nilai timpa dipasang di dalam modal restore agar tombolnya tidak menutup seluruh flow restore.",
+      "Tooltip Reset pada spreadsheet nilai diperjelas menjadi Reset semua pengaturan.",
+    ],
+  },
+  {
     id: "v2.4.18",
     version: "2.4.18",
     title: "Restore Backup Nilai: Footer Mode dan Catatan Lebih Jelas",
