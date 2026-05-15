@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.19";
+export const APP_VERSION = "2.4.20";
 export const VERSION_DATE = "2026-05-16";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.20": "Restore Backup Nilai menghapus cache sesi upload lama saat file baru atau file yang sama dipilih ulang, sehingga preview dan konflik selalu dihitung dari workbook terbaru.",
   "2.4.19": "Restore Backup Nilai memperbaiki posisi aksi footer agar sejajar dengan dropdown mode, mencegah dialog overwrite menutup modal restore utama, dan memperjelas tooltip reset spreadsheet.",
   "2.4.18": "Restore Backup Nilai menyempurnakan footer mode penuh dan timpa, memperjelas dialog pilihan overwrite dengan backdrop blur, menata warna tombol sesuai aksi, serta menjelaskan catatan duplikat _grades secara lebih faktual.",
   "2.4.17": "Restore Backup Nilai diperbaiki agar mode tampil sebagai dropdown overlay, pilihan timpa dibuka lewat dialog khusus, inspector detail hanya muncul setelah cell diklik, dan duplikat nilai identik tidak lagi menjadi catatan konflik.",

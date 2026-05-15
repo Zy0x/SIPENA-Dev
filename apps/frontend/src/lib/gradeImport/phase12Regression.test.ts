@@ -471,6 +471,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("readGradeBackupWorkbook");
     expect(restoreDialogSource).toContain("buildGradeBackupRestorePlan");
     expect(restoreDialogSource).toContain("buildGradeBackupRestoreBatchItems");
+    expect(restoreDialogSource).toContain("uploadRunRef");
+    expect(restoreDialogSource).toContain("resetUploadState");
+    expect(restoreDialogSource).toContain("event.currentTarget.value = \"\"");
     expect(restoreDialogSource).toContain("RestorePreviewTable");
     expect(restoreDialogSource).toContain("Preview tabel restore");
     expect(restoreDialogSource).toContain("sipena-grade-restore-dialog");

@@ -752,6 +752,7 @@ export default function GradeBackupRestoreDialog({
   onRestoreComplete,
 }: GradeBackupRestoreDialogProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadRunRef = useRef(0);
   const [step, setStep] = useState<RestoreStep>("upload");
   const [fileName, setFileName] = useState("");
   const [plan, setPlan] = useState<GradeBackupRestorePlan | null>(null);
@@ -777,6 +778,7 @@ export default function GradeBackupRestoreDialog({
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const reset = useCallback(() => {
+    uploadRunRef.current += 1;
     setStep("upload");
     setFileName("");
     setPlan(null);
@@ -797,6 +799,26 @@ export default function GradeBackupRestoreDialog({
     setRestoreResult(null);
     setRestoreError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
+  const resetUploadState = useCallback((nextFileName: string) => {
+    setStep("upload");
+    setFileName(nextFileName);
+    setPlan(null);
+    setReadErrors([]);
+    setReadWarnings([]);
+    setIsDragActive(false);
+    setMode("fill_empty_only");
+    setAllowContextMismatch(false);
+    setAllowIdentityMismatch(false);
+    setIncludeNullOverwrites(false);
+    setConfirmationText("");
+    setNullConfirmationText("");
+    setSelectedOperationIds([]);
+    setSelectedOperationId(null);
+    setOverwriteDialogOpen(false);
+    setRestoreResult(null);
+    setRestoreError(null);
   }, []);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
@@ -828,14 +850,13 @@ export default function GradeBackupRestoreDialog({
 
   const handleFile = useCallback(async (file: File | null) => {
     if (!file) return;
+    const runId = uploadRunRef.current + 1;
+    uploadRunRef.current = runId;
+    resetUploadState(file.name);
     setIsReading(true);
-    setFileName(file.name);
-    setReadErrors([]);
-    setReadWarnings([]);
-    setRestoreResult(null);
-    setRestoreError(null);
     try {
       const workbook = await readWorkbookFile(file);
+      if (uploadRunRef.current !== runId) return;
       const source = readGradeBackupWorkbook(workbook);
       const nextPlan = buildGradeBackupRestorePlan(source, restoreContext);
       setPlan(nextPlan);
@@ -845,13 +866,14 @@ export default function GradeBackupRestoreDialog({
       setReadWarnings(source.warnings.map((warning) => warning.message));
       setStep(source.ok ? "preview" : "validate");
     } catch (caught) {
+      if (uploadRunRef.current !== runId) return;
       setReadErrors([caught instanceof Error ? caught.message : "Backup gagal dibaca. Pilih file backup SIPENA yang valid."]);
       setReadWarnings([]);
       setStep("validate");
     } finally {
-      setIsReading(false);
+      if (uploadRunRef.current === runId) setIsReading(false);
     }
-  }, [restoreContext]);
+  }, [resetUploadState, restoreContext]);
 
   const handleUploadDragOver = useCallback((event: DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
@@ -1011,7 +1033,14 @@ export default function GradeBackupRestoreDialog({
                       accept=".xlsx,.xls"
                       className="sr-only"
                       disabled={isReading}
-                      onChange={(event) => void handleFile(event.target.files?.[0] || null)}
+                      onClick={(event) => {
+                        event.currentTarget.value = "";
+                      }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] || null;
+                        event.currentTarget.value = "";
+                        void handleFile(file);
+                      }}
                     />
                   </label>
                   {isReading ? (

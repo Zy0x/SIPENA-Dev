@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.20",
+    version: "2.4.20",
+    title: "Restore Backup Nilai: Upload Tanpa Cache Lama",
+    description: "Upload backup restore kini selalu memulai sesi bersih agar file lama tidak memengaruhi preview file berikutnya.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-16",
+    details: [
+      "State preview, mode, pilihan timpa, konfirmasi, error, dan hasil restore dibersihkan setiap kali file backup baru mulai dibaca.",
+      "Input file dikosongkan saat diklik dan setelah berubah agar memilih file yang sama tetap memicu validasi ulang.",
+      "Hasil pembacaan workbook lama tidak bisa menimpa sesi upload yang lebih baru.",
+    ],
+  },
+  {
     id: "v2.4.19",
     version: "2.4.19",
     title: "Restore Backup Nilai: Kontrol Footer dan Modal Timpa",
