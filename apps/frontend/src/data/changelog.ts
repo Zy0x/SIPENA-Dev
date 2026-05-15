@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.21",
+    version: "2.4.21",
+    title: "Restore Backup Nilai: Deteksi Edit Excel",
+    description: "Restore Backup Nilai kini membaca perubahan nilai yang diedit langsung pada sheet Nilai di workbook backup.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-16",
+    details: [
+      "Nilai pada sheet Nilai yang terlihat di Excel dipakai sebagai sumber override atas metadata _grades tersembunyi.",
+      "Preview restore kini bisa mendeteksi nilai yang diubah manual di workbook backup sebelum diunggah ulang.",
+      "Mapping tetap aman memakai metadata siswa dan struktur backup agar perubahan tidak masuk ke siswa atau tugas yang salah.",
+    ],
+  },
+  {
     id: "v2.4.20",
     version: "2.4.20",
     title: "Restore Backup Nilai: Upload Tanpa Cache Lama",

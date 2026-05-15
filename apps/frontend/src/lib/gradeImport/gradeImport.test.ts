@@ -476,6 +476,26 @@ describe("SIPENA grade backup restore reader", () => {
     });
   });
 
+  it("uses edited values from the visible Nilai sheet instead of stale hidden metadata", () => {
+    const workbook = buildFullGradeBackupWorkbook(exportContext);
+    workbook.Sheets.Nilai.D2 = { t: "n", v: 88 };
+    const source = readGradeBackupWorkbook(readWorkbookBuffer(XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer, "backup.xlsx"));
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      grades: [{ ...exportContext.grades[0], value: 85 }],
+    });
+    const operation = plan.operations.find((item) => item.studentId === "student-1" && item.assignmentId === "assignment-1");
+
+    expect(source.ok).toBe(true);
+    expect(source.grades.find((item) => (
+      item.studentId === "student-1"
+      && item.assignmentId === "assignment-1"
+      && item.semesterId === "semester-1"
+      && item.academicYearId === "year-1"
+    ))?.value).toBe(88);
+    expect(operation).toMatchObject({ backupValue: 88, currentValue: 85, status: "overwrite" });
+  });
+
   it("rejects a non-backup workbook", () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Nama", "Nilai"], ["Ahmad", 90]]), "Nilai");
@@ -596,10 +616,11 @@ describe("SIPENA grade backup restore reader", () => {
     const plan = buildGradeBackupRestorePlan(source, { ...exportContext, grades: [] });
     const result = buildGradeBackupRestoreBatchItems(plan, { mode: "fill_empty_only" });
 
-    expect(plan.operations.some((item) => item.rowIndex === 2)).toBe(false);
-    expect(plan.operations.find((item) => item.rowIndex === 3)?.status).toBe("added");
-    expect(plan.operations.find((item) => item.rowIndex === 3)?.warnings[0]).toContain("baris _grades untuk target yang sama dengan nilai berbeda");
-    expect(plan.operations.find((item) => item.rowIndex === 3)?.warnings[0]).toContain("Ini bukan konflik nama atau NISN siswa");
+    const operation = plan.operations.find((item) => item.studentId === "student-1" && item.assignmentId === "assignment-1");
+    expect(operation?.status).toBe("added");
+    expect(operation?.backupValue).toBe(88);
+    expect(operation?.warnings[0]).toContain("baris _grades untuk target yang sama dengan nilai berbeda");
+    expect(operation?.warnings[0]).toContain("Ini bukan konflik nama atau NISN siswa");
     expect(plan.summary.skipped).toBe(0);
     expect(result.items).toEqual([
       expect.objectContaining({ studentId: "student-1", gradeType: "assignment", assignmentId: "assignment-1", value: 88 }),

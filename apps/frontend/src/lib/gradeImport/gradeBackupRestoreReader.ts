@@ -241,6 +241,14 @@ function parseBackupValue(value: WorkbookCell | undefined): { ok: boolean; value
   return { ok: false, value: null, message: "Nilai backup harus berupa angka 0 sampai 100 atau kosong." };
 }
 
+function visibleTargetKey(input: Pick<ParsedGradeBackupValue, "studentId" | "gradeType" | "assignmentId">) {
+  return [input.studentId, input.gradeType, input.assignmentId || ""].join("|");
+}
+
+function scopedVisibleTargetKey(input: Pick<ParsedGradeBackupValue, "studentId" | "gradeType" | "assignmentId" | "semesterId" | "academicYearId">) {
+  return [visibleTargetKey(input), input.semesterId || "", input.academicYearId || ""].join("|");
+}
+
 function parseManifest(sheet: WorkbookSheetData): GradeBackupManifest | null {
   const rows = sheet.rows.slice(1);
   const manifest: GradeBackupManifest = { app: "", export_type: "" };
@@ -376,6 +384,144 @@ function parseGrades(sheet: WorkbookSheetData, errors: WorkbookReadError[]): Par
   });
 }
 
+function resolveVisibleGradeColumn(header: WorkbookCell | undefined, structure: ParsedGradeBackupStructure[]): Pick<ParsedGradeBackupValue, "gradeType" | "assignmentId"> | null {
+  const rawHeader = cellText(header);
+  const normalizedHeader = normalizeText(rawHeader);
+  if (!normalizedHeader) return null;
+  if (normalizedHeader === "sts") return { gradeType: "sts" };
+  if (normalizedHeader === "sas") return { gradeType: "sas" };
+
+  const parts = rawHeader.split(/\s+[-–—]\s+/).map((part) => part.trim()).filter(Boolean);
+  const chapterName = parts.length >= 2 ? parts[0] : "";
+  const assignmentName = parts.length >= 2 ? parts.slice(1).join(" - ") : rawHeader;
+  const normalizedChapter = normalizeText(toCanonicalChapterName(chapterName));
+  const normalizedAssignment = normalizeText(assignmentName);
+  const assignmentRows = structure.filter((item) => item.assignmentId);
+
+  const exact = assignmentRows.find((item) => (
+    item.normalizedAssignmentName === normalizedAssignment
+    && (!normalizedChapter || item.normalizedChapterName === normalizedChapter)
+  ));
+  if (exact?.assignmentId) return { gradeType: "assignment", assignmentId: exact.assignmentId };
+
+  const assignmentMatches = assignmentRows.filter((item) => item.normalizedAssignmentName === normalizedAssignment);
+  if (assignmentMatches.length === 1 && assignmentMatches[0].assignmentId) {
+    return { gradeType: "assignment", assignmentId: assignmentMatches[0].assignmentId };
+  }
+
+  return null;
+}
+
+function findVisibleRowStudent(row: WorkbookCell[], students: ParsedGradeBackupStudent[], rowIndex: number): ParsedGradeBackupStudent | null {
+  const normalizedNisn = normalizeNisn(cellText(row[1])).normalized;
+  const normalizedName = normalizeName(cellText(row[2])).normalized;
+  const orderedStudent = students[rowIndex - 2];
+  const orderedNisnMatches = !normalizedNisn || normalizedNisn === (orderedStudent?.normalizedNisn || "");
+  const orderedNameMatches = !normalizedName || normalizedName === orderedStudent?.normalizedName;
+  if (orderedStudent && orderedNisnMatches && orderedNameMatches) return orderedStudent;
+
+  if (normalizedNisn) {
+    const nisnMatches = students.filter((student) => student.normalizedNisn === normalizedNisn);
+    const exact = nisnMatches.find((student) => !normalizedName || student.normalizedName === normalizedName);
+    if (exact) return exact;
+    if (nisnMatches.length === 1 && !normalizedName) return nisnMatches[0];
+  }
+
+  if (normalizedName) {
+    const nameMatches = students.filter((student) => student.normalizedName === normalizedName);
+    if (nameMatches.length === 1) return nameMatches[0];
+  }
+
+  return null;
+}
+
+function rowHasVisibleGradeValue(row: WorkbookCell[], columns: Array<Pick<ParsedGradeBackupValue, "gradeType" | "assignmentId"> | null>) {
+  return columns.some((target, offset) => target && parseBackupValue(row[offset + 3]).value !== null);
+}
+
+function parseVisibleGrades(
+  sheet: WorkbookSheetData | null,
+  students: ParsedGradeBackupStudent[],
+  structure: ParsedGradeBackupStructure[],
+  manifest: GradeBackupManifest | null,
+  metadataTargetKeys: Set<string>,
+  errors: WorkbookReadError[],
+  warnings: WorkbookReadError[],
+): ParsedGradeBackupValue[] {
+  if (!sheet || sheet.rows.length < 2) return [];
+  const header = sheet.rows[0] || [];
+  const columns = header.slice(3).map((cell) => resolveVisibleGradeColumn(cell, structure));
+  const warnedColumns = new Set<number>();
+
+  return sheet.rows.slice(1).flatMap((row, index) => {
+    const rowIndex = index + 2;
+    const student = findVisibleRowStudent(row, students, rowIndex);
+    if (!student) {
+      if (rowHasVisibleGradeValue(row, columns)) {
+        warnings.push(readError(
+          "IMPORT_WORKBOOK_READ_FAILED",
+          `Baris ${rowIndex} pada sheet Nilai tidak cocok dengan metadata siswa backup, sehingga perubahan nilai di baris ini dilewati.`,
+          `Nilai:${rowIndex}`,
+        ));
+      }
+      return [];
+    }
+
+    return columns.flatMap((target, offset) => {
+      const columnIndex = offset + 4;
+      const rawValue = row[offset + 3];
+      if (!target) {
+        if (parseBackupValue(rawValue).value !== null && !warnedColumns.has(columnIndex)) {
+          warnedColumns.add(columnIndex);
+          warnings.push(readError(
+            "IMPORT_WORKBOOK_READ_FAILED",
+            `Kolom ${cellText(header[offset + 3]) || columnIndex} pada sheet Nilai tidak cocok dengan metadata struktur backup, sehingga dilewati.`,
+            `Nilai:${columnIndex}`,
+          ));
+        }
+        return [];
+      }
+
+      const parsedValue = parseBackupValue(rawValue);
+      const base = {
+        studentId: student.studentId,
+        gradeType: target.gradeType,
+        assignmentId: target.assignmentId || null,
+      };
+      if (parsedValue.value === null && !metadataTargetKeys.has(visibleTargetKey(base))) return [];
+      if (!parsedValue.ok) {
+        errors.push(readError("IMPORT_WORKBOOK_READ_FAILED", parsedValue.message || "Nilai backup tidak valid.", `Nilai:${rowIndex}:${columnIndex}`));
+        return [];
+      }
+
+      return [{
+        ...base,
+        subjectId: manifest?.subject_id || null,
+        value: parsedValue.value,
+        semesterId: manifest?.semester_id || null,
+        academicYearId: manifest?.academic_year_id || null,
+        createdAt: manifest?.generated_at || null,
+        updatedAt: manifest?.generated_at || null,
+        rowIndex,
+      } satisfies ParsedGradeBackupValue];
+    });
+  });
+}
+
+function mergeVisibleGrades(metadataGrades: ParsedGradeBackupValue[], visibleGrades: ParsedGradeBackupValue[]) {
+  if (visibleGrades.length === 0) return metadataGrades;
+  const metadataByScopedTarget = new Map(metadataGrades.map((grade) => [scopedVisibleTargetKey(grade), grade]));
+  const hydratedVisibleGrades = visibleGrades.map((grade) => {
+    const metadataGrade = metadataByScopedTarget.get(scopedVisibleTargetKey(grade));
+    return metadataGrade ? { ...metadataGrade, ...grade, gradeId: metadataGrade.gradeId } : grade;
+  });
+  const visibleByScopedTarget = new Map(hydratedVisibleGrades.map((grade) => [scopedVisibleTargetKey(grade), grade]));
+  const merged = metadataGrades
+    .filter((grade) => !visibleByScopedTarget.has(scopedVisibleTargetKey(grade)))
+    .concat(hydratedVisibleGrades);
+  return merged;
+}
+
 export function readGradeBackupWorkbook(input: WorkbookReadResult | ArrayBuffer, fileName = "backup-nilai.xlsx"): GradeBackupReadResult {
   const workbook = input instanceof ArrayBuffer ? readWorkbookBuffer(input, fileName) : input;
   const errors: WorkbookReadError[] = [];
@@ -398,6 +544,7 @@ export function readGradeBackupWorkbook(input: WorkbookReadResult | ArrayBuffer,
   const studentsSheet = getSheet(workbook, "_students");
   const structureSheet = getSheet(workbook, "_structure");
   const gradesSheet = getSheet(workbook, "_grades");
+  const visibleGradesSheet = getSheet(workbook, "Nilai");
   const manifest = manifestSheet ? parseManifest(manifestSheet) : null;
 
   if (!manifest) {
@@ -414,7 +561,12 @@ export function readGradeBackupWorkbook(input: WorkbookReadResult | ArrayBuffer,
   const gradeErrors: WorkbookReadError[] = [];
   const students = studentsSheet ? parseStudents(studentsSheet) : [];
   const structure = structureSheet ? parseStructure(structureSheet) : [];
-  const grades = gradesSheet ? parseGrades(gradesSheet, gradeErrors) : [];
+  const metadataGrades = gradesSheet ? parseGrades(gradesSheet, gradeErrors) : [];
+  const metadataTargetKeys = new Set(metadataGrades
+    .filter((grade) => scopePriority(grade, manifest || undefined) >= 0)
+    .map(visibleTargetKey));
+  const visibleGrades = parseVisibleGrades(visibleGradesSheet, students, structure, manifest, metadataTargetKeys, gradeErrors, warnings);
+  const grades = mergeVisibleGrades(metadataGrades, visibleGrades);
   validateBackupStudents(students, errors, warnings);
   errors.push(...gradeErrors);
 
@@ -531,7 +683,7 @@ function scopePriority(grade: ParsedGradeBackupValue, manifest?: GradeBackupMani
   return score;
 }
 
-function preferredBackupRowIndexes(grades: ParsedGradeBackupValue[], manifest?: GradeBackupManifest): Set<number> {
+function preferredBackupRows(grades: ParsedGradeBackupValue[], manifest?: GradeBackupManifest): Set<ParsedGradeBackupValue> {
   const byTarget = new Map<string, ParsedGradeBackupValue[]>();
   grades.forEach((grade) => {
     const key = gradeTargetKey(grade);
@@ -540,7 +692,7 @@ function preferredBackupRowIndexes(grades: ParsedGradeBackupValue[], manifest?: 
     byTarget.set(key, entries);
   });
 
-  const selected = new Set<number>();
+  const selected = new Set<ParsedGradeBackupValue>();
   byTarget.forEach((entries) => {
     const ordered = [...entries].sort((left, right) => {
       const scoreDelta = scopePriority(right, manifest) - scopePriority(left, manifest);
@@ -550,7 +702,7 @@ function preferredBackupRowIndexes(grades: ParsedGradeBackupValue[], manifest?: 
       return right.rowIndex - left.rowIndex;
     });
     const best = ordered.find((entry) => scopePriority(entry, manifest) >= 0);
-    if (best) selected.add(best.rowIndex);
+    if (best) selected.add(best);
   });
 
   return selected;
@@ -568,7 +720,7 @@ function fallbackBackupGrade(entries: ParsedGradeBackupValue[], manifest?: Grade
 
 function canonicalBackupGrades(
   grades: ParsedGradeBackupValue[],
-  preferredRows: Set<number>,
+  preferredRows: Set<ParsedGradeBackupValue>,
   manifest?: GradeBackupManifest,
 ): ParsedGradeBackupValue[] {
   const byTarget = new Map<string, ParsedGradeBackupValue[]>();
@@ -581,7 +733,7 @@ function canonicalBackupGrades(
 
   const selected: ParsedGradeBackupValue[] = [];
   byTarget.forEach((entries) => {
-    const preferred = entries.find((entry) => preferredRows.has(entry.rowIndex));
+    const preferred = entries.find((entry) => preferredRows.has(entry));
     const fallback = preferred || fallbackBackupGrade(entries, manifest);
     if (fallback) selected.push(fallback);
   });
@@ -665,7 +817,7 @@ export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, conte
   const currentChapters = new Map(context.chapters.map((chapter) => [chapter.id, chapter]));
   const backupStructure = new Map(source.structure.filter((item) => item.assignmentId).map((item) => [item.assignmentId || "", item]));
   const contextConflicts = buildContextConflicts(source, context);
-  const preferredRows = preferredBackupRowIndexes(source.grades, source.manifest);
+  const preferredRows = preferredBackupRows(source.grades, source.manifest);
   const selectedBackupGrades = canonicalBackupGrades(source.grades, preferredRows, source.manifest);
   const duplicateWarnings = duplicateBackupWarnings(source.grades, selectedBackupGrades);
 

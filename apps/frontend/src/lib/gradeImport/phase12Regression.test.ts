@@ -323,6 +323,7 @@ describe("phase 12 grade import regression suite", () => {
     const gradesPageSource = readFileSync(repoPath("apps/frontend/src/pages/Grades.tsx"), "utf8");
     const spreadsheetSource = readFileSync(repoPath("apps/frontend/src/components/grades/SpreadsheetTable.tsx"), "utf8");
     const restoreDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeBackupRestoreDialog.tsx"), "utf8");
+    const restoreReaderSource = readFileSync(repoPath("apps/frontend/src/lib/gradeImport/gradeBackupRestoreReader.ts"), "utf8");
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
@@ -471,6 +472,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("readGradeBackupWorkbook");
     expect(restoreDialogSource).toContain("buildGradeBackupRestorePlan");
     expect(restoreDialogSource).toContain("buildGradeBackupRestoreBatchItems");
+    expect(restoreReaderSource).toContain("parseVisibleGrades");
+    expect(restoreReaderSource).toContain("mergeVisibleGrades");
+    expect(restoreReaderSource).toContain('getSheet(workbook, "Nilai")');
     expect(restoreDialogSource).toContain("uploadRunRef");
     expect(restoreDialogSource).toContain("resetUploadState");
     expect(restoreDialogSource).toContain("event.currentTarget.value = \"\"");
