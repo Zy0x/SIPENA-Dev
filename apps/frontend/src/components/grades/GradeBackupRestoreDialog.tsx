@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -156,10 +156,12 @@ function OperationNoteBadge({ operation }: { operation: GradeBackupRestoreOperat
       <TooltipTrigger asChild>
         <button type="button" className="sipena-preview-cell-note-badge" aria-label={`Lihat ${notes.length} catatan restore`}>
           {notes.length} catatan
+          <span className="sipena-ai-note-badge">AI</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" align="end" className="max-w-[min(26rem,calc(100vw-2rem))]">
         <div className="space-y-1 text-xs">
+          <p className="font-semibold text-blue-700">AI membantu menjelaskan catatan audit; keputusan restore tetap dihitung dari data backup dan halaman aktif.</p>
           {notes.map((note) => (
             <p key={note}>{note}</p>
           ))}
@@ -200,8 +202,6 @@ function RestoreModeFooterCard({
   onModeChange,
   overwriteCount,
   selectedOverwriteCount,
-  includeNullOverwrites,
-  onIncludeNullOverwritesChange,
   identityWarningCount,
   allowIdentityMismatch,
   onAllowIdentityMismatchChange,
@@ -211,8 +211,6 @@ function RestoreModeFooterCard({
   onModeChange: (mode: GradeBackupRestoreMode) => void;
   overwriteCount: number;
   selectedOverwriteCount: number;
-  includeNullOverwrites: boolean;
-  onIncludeNullOverwritesChange: (checked: boolean) => void;
   identityWarningCount: number;
   allowIdentityMismatch: boolean;
   onAllowIdentityMismatchChange: (checked: boolean) => void;
@@ -284,13 +282,6 @@ function RestoreModeFooterCard({
             </Button>
           ) : null}
 
-          {mode === "full_confirmed" ? (
-            <label className="flex items-start gap-2 rounded-lg border bg-amber-50/60 p-2 text-xs dark:bg-amber-950/20">
-              <Checkbox checked={includeNullOverwrites} onCheckedChange={(value) => onIncludeNullOverwritesChange(value === true)} />
-              <span>Kosongkan nilai web jika backup kosong. Konfirmasi tambahan diminta di step konfirmasi.</span>
-            </label>
-          ) : null}
-
           {identityWarningCount > 0 ? (
             <label className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/70 p-2 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-100">
               <Checkbox checked={allowIdentityMismatch} onCheckedChange={(value) => onAllowIdentityMismatchChange(value === true)} />
@@ -326,15 +317,24 @@ function OverwriteSelectionDialog({
   const notedCount = operations.filter((operation) => operationNotes(operation).length > 0).length;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl overflow-hidden p-0">
-        <DialogHeader className="border-b px-5 py-4">
-          <DialogTitle className="text-base">Pilih nilai yang akan ditimpa</DialogTitle>
-          <DialogDescription>
-            Pilih hanya nilai yang memang boleh mengganti nilai halaman aktif.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[min(68dvh,620px)] overflow-y-auto px-5 py-4">
+    <div className={cn("sipena-restore-overwrite-layer", open && "sipena-restore-overwrite-layer--open")} aria-hidden={!open}>
+      <div className="sipena-restore-overwrite-backdrop" onClick={() => onOpenChange(false)} />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="restore-overwrite-title"
+        className="sipena-restore-overwrite-dialog"
+      >
+        <header className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <h2 id="restore-overwrite-title" className="text-base font-semibold text-slate-950">Pilih nilai yang akan ditimpa</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Pilih hanya nilai yang memang boleh mengganti nilai halaman aktif.</p>
+          </div>
+          <Button type="button" variant="ghost" size="icon" className="sipena-danger-icon-button" onClick={() => onOpenChange(false)} aria-label="Tutup daftar nilai timpa">
+            <XCircle className="h-4 w-4" />
+          </Button>
+        </header>
+        <div className="max-h-[min(72dvh,720px)] overflow-y-auto px-5 py-4 sm:px-6">
           <div className="mb-3 grid gap-2 sm:grid-cols-3">
             <SummaryMetric label="Nilai timpa" value={operations.length} tone="border-amber-200 bg-amber-50/50" />
             <SummaryMetric label="Dipilih" value={selectedCount} tone="border-blue-200 bg-blue-50/50" />
@@ -372,7 +372,7 @@ function OverwriteSelectionDialog({
                       </span>
                       {notes.length > 0 ? (
                         <span className="mt-1 block truncate text-xs text-amber-700" title={notes.join(" / ")}>
-                          {notes[0]}
+                          <span className="sipena-ai-note-badge mr-1">AI</span>{notes[0]}
                         </span>
                       ) : null}
                     </span>
@@ -388,9 +388,9 @@ function OverwriteSelectionDialog({
                       </span>
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="col-span-3 justify-self-end px-2"
+                        className="col-span-3 justify-self-end border-blue-200 text-blue-700 hover:bg-blue-50"
                         onClick={(event) => {
                           event.preventDefault();
                           onInspectOperation(operation.id);
@@ -406,13 +406,13 @@ function OverwriteSelectionDialog({
             </div>
           )}
         </div>
-        <DialogFooter className="border-t px-5 py-4">
-          <Button type="button" variant="ghost" onClick={onClear}>Hapus pilihan</Button>
-          <Button type="button" variant="outline" onClick={onSelectAll}>Pilih semua</Button>
-          <Button type="button" onClick={() => onOpenChange(false)}>Selesai</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <footer className="flex flex-col-reverse gap-2 border-t px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <Button type="button" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={onClear}>Hapus pilihan</Button>
+          <Button type="button" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50" onClick={onSelectAll}>Pilih semua</Button>
+          <Button type="button" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => onOpenChange(false)}>Selesai</Button>
+        </footer>
+      </section>
+    </div>
   );
 }
 
@@ -1234,18 +1234,34 @@ export default function GradeBackupRestoreDialog({
           <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {step === "preview" ? (
-                <RestoreModeFooterCard
-                  mode={mode}
-                  onModeChange={setMode}
-                  overwriteCount={overwriteOperations.length}
-                  selectedOverwriteCount={overwriteOperations.filter((operation) => selectedOperationIds.includes(operation.id)).length}
-                  includeNullOverwrites={includeNullOverwrites}
-                  onIncludeNullOverwritesChange={setIncludeNullOverwrites}
-                  identityWarningCount={identityWarningCount}
-                  allowIdentityMismatch={allowIdentityMismatch}
-                  onAllowIdentityMismatchChange={setAllowIdentityMismatch}
-                  onOpenOverwriteDialog={() => setOverwriteDialogOpen(true)}
-                />
+                <>
+                  <RestoreModeFooterCard
+                    mode={mode}
+                    onModeChange={setMode}
+                    overwriteCount={overwriteOperations.length}
+                    selectedOverwriteCount={overwriteOperations.filter((operation) => selectedOperationIds.includes(operation.id)).length}
+                    identityWarningCount={identityWarningCount}
+                    allowIdentityMismatch={allowIdentityMismatch}
+                    onAllowIdentityMismatchChange={setAllowIdentityMismatch}
+                    onOpenOverwriteDialog={() => setOverwriteDialogOpen(true)}
+                  />
+                  {mode === "overwrite_selected" ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-10 rounded-full border-amber-300 bg-amber-50 px-4 font-semibold text-amber-900 shadow-sm hover:bg-amber-100"
+                      onClick={() => setOverwriteDialogOpen(true)}
+                    >
+                      Atur nilai timpa ({overwriteOperations.filter((operation) => selectedOperationIds.includes(operation.id)).length}/{overwriteOperations.length})
+                    </Button>
+                  ) : null}
+                  {mode === "full_confirmed" ? (
+                    <label className="flex min-h-10 max-w-full items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-950 shadow-sm">
+                      <Checkbox checked={includeNullOverwrites} onCheckedChange={(value) => setIncludeNullOverwrites(value === true)} />
+                      <span className="truncate">Kosongkan nilai web jika backup kosong</span>
+                    </label>
+                  ) : null}
+                </>
               ) : (
                 <>
                   <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-200 dark:ring-blue-900/70">
@@ -1265,12 +1281,12 @@ export default function GradeBackupRestoreDialog({
               </Button>
             ) : null}
             {step === "preview" ? (
-              <Button type="button" className="min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => setStep("confirm")} disabled={!canContinueFromPreview}>
+              <Button type="button" className="sipena-guided-action min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => setStep("confirm")} disabled={!canContinueFromPreview}>
                 Review Konfirmasi
               </Button>
             ) : null}
             {step === "confirm" ? (
-              <Button type="button" className="min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => void executeRestore()} disabled={!canRunRestore}>
+              <Button type="button" className="sipena-guided-action min-h-10 w-full rounded-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto" onClick={() => void executeRestore()} disabled={!canRunRestore}>
                 {isRestoring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                 Jalankan Restore
               </Button>

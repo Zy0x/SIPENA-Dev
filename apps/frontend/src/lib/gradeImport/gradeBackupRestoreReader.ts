@@ -593,6 +593,7 @@ function duplicateBackupWarnings(
   grades: ParsedGradeBackupValue[],
   selectedGrades: ParsedGradeBackupValue[],
 ): Map<number, string[]> {
+  const duplicateValueLabel = (entry: ParsedGradeBackupValue) => `${entry.value === null ? "Kosong" : entry.value} (baris ${entry.rowIndex})`;
   const selectedRowIndexes = new Set(selectedGrades.map((grade) => grade.rowIndex));
   const byTarget = new Map<string, ParsedGradeBackupValue[]>();
   grades.forEach((grade) => {
@@ -609,8 +610,11 @@ function duplicateBackupWarnings(
     if (!selected) return;
     const valuesAreSame = entries.every((entry) => Object.is(entry.value, selected.value));
     if (valuesAreSame) return;
+    const valueDetails = entries
+      .map(duplicateValueLabel)
+      .join(", ");
     warnings.set(selected.rowIndex, [
-      `Backup memiliki ${entries.length} baris nilai duplikat dengan nilai berbeda untuk target ini; restore memakai baris paling sesuai berdasarkan konteks/waktu.`,
+      `Backup memiliki ${entries.length} baris _grades untuk target yang sama dengan nilai berbeda: ${valueDetails}. Restore memilih ${duplicateValueLabel(selected)} karena konteks semester/tahun ajaran dan waktu paling sesuai. Ini bukan konflik nama atau NISN siswa.`,
     ]);
   });
 

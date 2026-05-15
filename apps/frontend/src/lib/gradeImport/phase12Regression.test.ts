@@ -495,6 +495,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("OverwriteSelectionDialog");
     expect(restoreDialogSource).toContain("sipena-restore-mode-trigger");
     expect(restoreDialogSource).toContain("sipena-restore-mode-popover");
+    expect(restoreDialogSource).toContain("sipena-restore-overwrite-layer");
+    expect(restoreDialogSource).toContain("Kosongkan nilai web jika backup kosong");
+    expect(restoreDialogSource).toContain("sipena-guided-action");
+    expect(restoreDialogSource).toContain("sipena-ai-note-badge");
     expect(restoreDialogSource).toContain("Preview & Pilih Mode");
     expect(restoreDialogSource).toContain("allowIdentityMismatch");
     expect(restoreDialogSource).toContain("sipena-restore-cell-interactive");
@@ -520,6 +524,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-restore-inspector");
     expect(globalStyles).toContain(".sipena-restore-mode-trigger");
     expect(globalStyles).toContain(".sipena-restore-mode-popover");
+    expect(globalStyles).toContain(".sipena-restore-overwrite-backdrop");
+    expect(globalStyles).toContain(".sipena-danger-icon-button");
+    expect(globalStyles).toContain("@keyframes sipena-guided-action-pulse");
     expect(globalStyles).toContain("@keyframes sipena-restore-drop-pulse");
     expect(globalStyles).toContain(".sipena-preview-cell-note-badge");
     expect(globalStyles).toContain("max-height: min(66dvh, 680px)");

@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.17";
+export const APP_VERSION = "2.4.18";
 export const VERSION_DATE = "2026-05-16";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.18": "Restore Backup Nilai menyempurnakan footer mode penuh dan timpa, memperjelas dialog pilihan overwrite dengan backdrop blur, menata warna tombol sesuai aksi, serta menjelaskan catatan duplikat _grades secara lebih faktual.",
   "2.4.17": "Restore Backup Nilai diperbaiki agar mode tampil sebagai dropdown overlay, pilihan timpa dibuka lewat dialog khusus, inspector detail hanya muncul setelah cell diklik, dan duplikat nilai identik tidak lagi menjadi catatan konflik.",
   "2.4.16": "Restore Backup Nilai dibuat interaktif dengan side inspector, pemilihan mode di footer preview, konfirmasi akhir read-only, dan validasi identitas siswa yang lebih ketat.",
   "2.4.15": "Restore Backup Nilai kini memilih baris backup kanonik saat ada duplikat, menampilkan catatan per nilai lewat tooltip, dan memperbesar area drag-drop upload.",

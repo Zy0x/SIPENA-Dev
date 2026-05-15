@@ -986,6 +986,83 @@
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
 
+.sipena-restore-overwrite-layer {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10080;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.sipena-restore-overwrite-layer--open {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.sipena-restore-overwrite-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.46);
+  backdrop-filter: blur(8px);
+}
+
+.sipena-restore-overwrite-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, calc(100vw - 1.25rem));
+  max-height: min(92dvh, 860px);
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+}
+
+.sipena-danger-icon-button,
+.sipena-grade-restore-dialog > button[aria-label="Tutup dialog"] {
+  border: 1px solid #fecaca !important;
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+}
+
+.sipena-danger-icon-button:hover,
+.sipena-grade-restore-dialog > button[aria-label="Tutup dialog"]:hover {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+
+.sipena-guided-action:not(:disabled) {
+  animation: sipena-guided-action-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes sipena-guided-action-pulse {
+  0%,
+  100% {
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+  }
+  50% {
+    box-shadow: 0 14px 34px rgba(37, 99, 235, 0.34);
+  }
+}
+
+.sipena-ai-note-badge {
+  display: inline-flex;
+  margin-left: 4px;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #1d4ed8;
+}
+
 @media (max-width: 640px) {
   .sipena-restore-dropzone {
     min-height: 15rem;

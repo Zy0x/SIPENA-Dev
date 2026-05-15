@@ -598,7 +598,8 @@ describe("SIPENA grade backup restore reader", () => {
 
     expect(plan.operations.some((item) => item.rowIndex === 2)).toBe(false);
     expect(plan.operations.find((item) => item.rowIndex === 3)?.status).toBe("added");
-    expect(plan.operations.find((item) => item.rowIndex === 3)?.warnings[0]).toContain("baris nilai duplikat dengan nilai berbeda");
+    expect(plan.operations.find((item) => item.rowIndex === 3)?.warnings[0]).toContain("baris _grades untuk target yang sama dengan nilai berbeda");
+    expect(plan.operations.find((item) => item.rowIndex === 3)?.warnings[0]).toContain("Ini bukan konflik nama atau NISN siswa");
     expect(plan.summary.skipped).toBe(0);
     expect(result.items).toEqual([
       expect.objectContaining({ studentId: "student-1", gradeType: "assignment", assignmentId: "assignment-1", value: 88 }),

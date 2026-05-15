@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.18",
+    version: "2.4.18",
+    title: "Restore Backup Nilai: Footer Mode dan Catatan Lebih Jelas",
+    description: "Footer Restore Backup Nilai kini menampilkan aksi mode penuh dan timpa secara langsung, sementara dialog overwrite dan catatan konflik dibuat lebih mudah dipahami.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-16",
+    details: [
+      "Opsi kosongkan nilai web tampil di footer saat Restore penuh dipilih.",
+      "Daftar nilai yang ditimpa memakai backdrop blur dan area dialog lebih luas agar fokus pengguna tidak pecah.",
+      "Catatan duplikat _grades menjelaskan nilai dan baris yang berbeda, plus badge AI sebagai bantuan penjelasan audit.",
+    ],
+  },
+  {
     id: "v2.4.17",
     version: "2.4.17",
     title: "Restore Backup Nilai: Mode Overlay dan Seleksi Timpa",
