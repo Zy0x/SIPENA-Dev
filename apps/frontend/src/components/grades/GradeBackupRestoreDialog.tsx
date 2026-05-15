@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   AlertTriangle,
   ArchiveRestore,
@@ -6,6 +6,7 @@ import {
   FileSpreadsheet,
   Loader2,
   RotateCcw,
+  ShieldCheck,
   ShieldAlert,
   Upload,
   XCircle,
@@ -20,7 +21,6 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   buildGradeBackupRestoreBatchItems,
   buildGradeBackupRestorePlan,
@@ -87,11 +87,18 @@ function operationTargetKey(operation: Pick<GradeBackupRestoreOperation, "gradeT
 }
 
 function previewCellClass(status: GradeBackupRestoreOperation["status"]) {
-  if (status === "added") return "sipena-restore-cell--added";
-  if (status === "overwrite") return "sipena-restore-cell--overwrite";
-  if (status === "invalid") return "sipena-restore-cell--invalid";
-  if (status === "skipped") return "sipena-restore-cell--skipped";
-  return "sipena-restore-cell--unchanged";
+  if (status === "added") return "sipena-preview-cell--new-value";
+  if (status === "overwrite") return "sipena-preview-cell--overwrite";
+  if (status === "invalid") return "sipena-preview-cell--invalid";
+  if (status === "skipped") return "sipena-preview-cell--skipped";
+  return "sipena-preview-cell--unchanged";
+}
+
+function stickyStyle(index: number): CSSProperties | undefined {
+  if (index === 0) return { left: 0 };
+  if (index === 1) return { left: "var(--sipena-preview-sticky-2)" };
+  if (index === 2) return { left: "var(--sipena-preview-sticky-3)" };
+  return undefined;
 }
 
 function SummaryMetric({ label, value, tone }: { label: string; value: number; tone?: string }) {
@@ -233,118 +240,81 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
           </Alert>
         ) : (
           <>
-            <section className="sipena-preview-grid-wrap sipena-restore-preview-wrap hidden md:block">
-              <div className="sipena-preview-scroll sipena-restore-preview-scroll">
-                <table className="sipena-preview-table sipena-restore-preview-table">
+            <section className="sipena-preview-grid-wrap">
+              <div className="sipena-preview-scroll">
+                <table className="sipena-preview-table">
                   <thead>
                     <tr>
-                      <th className="sipena-preview-sticky-left" style={{ left: 0 }}>
-                        Siswa
-                      </th>
-                  {columns.map((column) => (
-                        <th key={column.key}>
-                      <div className="truncate font-semibold text-slate-900 dark:text-slate-100" title={column.label}>{column.label}</div>
-                      <div className="truncate text-[11px] font-normal text-muted-foreground" title={column.sublabel}>{column.sublabel}</div>
+                      {["No", "ID", "Siswa"].map((header, index) => (
+                        <th key={header} className="sipena-preview-sticky-left" style={stickyStyle(index)}>
+                          <span className="block truncate">{header}</span>
                         </th>
-                  ))}
+                      ))}
+                      {columns.map((column) => (
+                        <th key={column.key}>
+                          <span className="block truncate" title={column.label}>{column.label}</span>
+                          <span className="sipena-preview-header-target" title={column.sublabel}>{column.sublabel}</span>
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => (
+                    {rows.map((row, rowIndex) => (
                       <tr key={row.studentId}>
-                        <td className="sipena-preview-cell sipena-preview-sticky-left sipena-restore-student-cell" style={{ left: 0 }}>
-                      <div className="truncate font-medium text-slate-950 dark:text-slate-50" title={row.name}>{row.name}</div>
-                      <div className="truncate text-[11px] text-muted-foreground" title={row.nisn || row.studentId}>{row.nisn || row.studentId}</div>
+                        <td className="sipena-preview-cell sipena-preview-sticky-left sipena-preview-visual--neutral" style={stickyStyle(0)}>
+                          <span className="sipena-preview-cell-value">{rowIndex + 1}</span>
                         </td>
-                    {columns.map((column) => {
-                      const operation = operationByCell.get(`${row.studentId}|${column.key}`);
-                      if (!operation) {
-                        return (
-                              <td key={column.key} className="sipena-preview-cell sipena-restore-cell--empty text-center text-muted-foreground">
-                            -
+                        <td className="sipena-preview-cell sipena-preview-sticky-left sipena-preview-visual--neutral" style={stickyStyle(1)}>
+                          <span className="sipena-preview-cell-value" title={row.nisn || row.studentId}>{row.nisn || row.studentId}</span>
+                        </td>
+                        <td className="sipena-preview-cell sipena-preview-sticky-left sipena-preview-visual--neutral" style={stickyStyle(2)}>
+                          <span className="sipena-preview-cell-value" title={row.name}>{row.name}</span>
+                          <span className="sipena-preview-cell-details">
+                            <span className="sipena-preview-cell-detail-line">{row.nisn || row.studentId}</span>
+                          </span>
+                        </td>
+                        {columns.map((column) => {
+                          const operation = operationByCell.get(`${row.studentId}|${column.key}`);
+                          if (!operation) {
+                            return (
+                              <td key={column.key} className="sipena-preview-cell sipena-preview-cell--ignored text-center text-muted-foreground">
+                                <span className="sipena-final-result-empty" aria-label="Tidak ada nilai">-</span>
                               </td>
-                        );
-                      }
-                      return (
-                            <td key={column.key} className={cn("sipena-preview-cell sipena-restore-value-cell", previewCellClass(operation.status))}>
-                              <div className="sipena-restore-cell-main">
-                                <span className="min-w-0 truncate font-semibold" title={statusLabel(operation.status)}>{statusLabel(operation.status)}</span>
-                            <Badge variant={statusTone(operation.status)} className="shrink-0 px-1.5 py-0 text-[10px] leading-4">
-                              {statusBadgeText(operation.status)}
-                            </Badge>
-                          </div>
-                              <div className="sipena-restore-value-grid">
-                                <div className="sipena-restore-value-box">
-                              <div className="truncate text-[10px] text-muted-foreground">Saat ini</div>
-                                  <div className="sipena-restore-score">{valueLabel(operation.currentValue)}</div>
-                            </div>
-                                <div className="sipena-restore-value-box">
-                              <div className="truncate text-[10px] text-muted-foreground">Backup</div>
-                                  <div className="sipena-restore-score">{valueLabel(operation.backupValue)}</div>
-                            </div>
-                          </div>
-                          {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
-                                <div className="mt-1 truncate text-[10px] leading-4 text-muted-foreground">
-                              {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
-                            </div>
-                          ) : null}
+                            );
+                          }
+                          const hasNotes = operation.conflicts.length > 0 || operation.warnings.length > 0;
+                          return (
+                            <td
+                              key={column.key}
+                              className={cn("sipena-preview-cell", previewCellClass(operation.status))}
+                              title={`${statusLabel(operation.status)} / Saat ini: ${valueLabel(operation.currentValue)} / Backup: ${valueLabel(operation.backupValue)}`}
+                            >
+                              <div className="sipena-preview-cell-main">
+                                <span className="min-w-0 flex-1">
+                                  <span className="sipena-preview-cell-value">{valueLabel(operation.backupValue)}</span>
+                                  <span className="sipena-preview-cell-details">
+                                    <span className="sipena-preview-cell-detail-line">Saat ini: {valueLabel(operation.currentValue)}</span>
+                                    <span className="sipena-preview-cell-detail-line">Backup: {valueLabel(operation.backupValue)}</span>
+                                    {hasNotes ? (
+                                      <span className="sipena-preview-cell-detail-line">
+                                        {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                </span>
+                                <span className="sipena-preview-cell-badges">
+                                  <span className="sipena-preview-cell-badge">{statusBadgeText(operation.status)}</span>
+                                </span>
+                              </div>
                             </td>
-                      );
-                    })}
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </section>
-            <div className="sipena-restore-preview-mobile space-y-3 md:hidden">
-              {rows.map((row) => {
-                const rowOperations = columns
-                  .map((column) => ({
-                    column,
-                    operation: operationByCell.get(`${row.studentId}|${column.key}`),
-                  }))
-                  .filter((item): item is { column: typeof columns[number]; operation: GradeBackupRestoreOperation } => Boolean(item.operation));
-                return (
-                  <div key={row.studentId} className="rounded-xl border bg-background p-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium text-foreground" title={row.name}>{row.name}</div>
-                      <div className="truncate text-xs text-muted-foreground" title={row.nisn || row.studentId}>{row.nisn || row.studentId}</div>
-                    </div>
-                    <div className="mt-3 grid gap-2">
-                      {rowOperations.map(({ column, operation }) => (
-                        <div key={column.key} className={cn("rounded-lg border px-3 py-2 text-xs", previewCellClass(operation.status))}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="truncate font-semibold text-foreground" title={column.label}>{column.label}</div>
-                              <div className="truncate text-[11px] text-muted-foreground" title={column.sublabel}>{column.sublabel}</div>
-                            </div>
-                            <Badge variant={statusTone(operation.status)} className="shrink-0 px-2 py-0 text-[10px]">
-                              {statusBadgeText(operation.status)}
-                            </Badge>
-                          </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <div className="min-w-0 rounded-md bg-background/60 px-2 py-1">
-                              <div className="truncate text-[10px] text-muted-foreground">Saat ini</div>
-                              <div className="truncate text-sm font-semibold text-foreground">{valueLabel(operation.currentValue)}</div>
-                            </div>
-                            <div className="min-w-0 rounded-md bg-background/60 px-2 py-1">
-                              <div className="truncate text-[10px] text-muted-foreground">Backup</div>
-                              <div className="truncate text-sm font-semibold text-foreground">{valueLabel(operation.backupValue)}</div>
-                            </div>
-                          </div>
-                          {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
-                            <div className="mt-2 text-[11px] leading-4 text-muted-foreground">
-                              {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
-                            </div>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </>
         )}
       </CardContent>
@@ -503,24 +473,29 @@ export default function GradeBackupRestoreDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sipena-grade-restore-dialog flex h-[calc(100dvh-0.25rem)] max-h-[980px] w-[calc(100vw-0.25rem)] max-w-[1880px] flex-col gap-0 overflow-hidden rounded-[24px] border-slate-300 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(96dvh,980px)] sm:w-[calc(100vw-0.75rem)] xl:w-[min(98vw,1880px)]">
-        <div className="shrink-0 border-b px-4 py-4 sm:px-6">
-          <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">
+      <DialogContent className="sipena-grade-import-dialog sipena-grade-restore-dialog flex h-[calc(100dvh-0.25rem)] max-h-[980px] w-[calc(100vw-0.25rem)] max-w-[1880px] grid-rows-none flex-col gap-0 overflow-hidden rounded-[24px] border-slate-300 bg-white p-0 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:h-[min(96dvh,980px)] sm:w-[calc(100vw-0.75rem)] xl:w-[min(98vw,1880px)]">
+        <header className="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-5">
+          <div className="flex min-w-0 flex-col gap-2 pr-10 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/70">
               <ArchiveRestore className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <DialogTitle>Restore Backup Nilai</DialogTitle>
-              <DialogDescription className="mt-1">
+                <DialogTitle className="text-base font-semibold tracking-normal text-slate-950 dark:text-slate-50">
+                  Restore Backup Nilai
+                </DialogTitle>
+                <DialogDescription className="mt-0.5 max-w-[min(76vw,920px)] truncate text-xs leading-5 text-muted-foreground" title="Restore selalu lewat preview dan konfirmasi sebelum nilai disimpan.">
                 Restore selalu lewat preview dan konfirmasi sebelum nilai disimpan.
               </DialogDescription>
             </div>
           </div>
-        </div>
+          </div>
+        </header>
 
-        <ScrollArea className="min-h-0 flex-1 bg-slate-50/70 dark:bg-slate-950">
-          <div className="space-y-4 p-4 sm:p-6">
-            <div className="-mx-1 overflow-x-auto px-1 pb-1">
+        <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden bg-slate-50/70 px-3 py-2.5 dark:bg-slate-950 sm:px-5">
+          <main className="min-w-0 space-y-4">
+            <section className="min-w-0 rounded-[24px] border border-border bg-white p-4 shadow-sm dark:bg-slate-950">
+              <div className="-mx-1 overflow-x-auto px-1 pb-1">
               <div className="grid min-w-[42rem] grid-cols-4 gap-2">
                 {[
                   ["upload", "Upload"],
@@ -542,6 +517,7 @@ export default function GradeBackupRestoreDialog({
                 ))}
               </div>
             </div>
+            </section>
 
             {step === "upload" || step === "validate" ? (
               <Card>
@@ -805,34 +781,45 @@ export default function GradeBackupRestoreDialog({
                 ) : null}
               </>
             ) : null}
-          </div>
-        </ScrollArea>
+          </main>
+        </div>
 
-        <div className="shrink-0 flex justify-end gap-2 border-t bg-background px-4 py-3 sm:px-6">
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        <footer className="z-20 shrink-0 border-t border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 sm:px-5">
+          <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 ring-1 ring-blue-100 dark:bg-blue-950/30 dark:text-blue-200 dark:ring-blue-900/70">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                <span className="truncate">{step === "result" ? "Restore selesai" : "Mode restore aman"}</span>
+              </span>
+              <span className="max-w-[min(78vw,760px)] truncate" title="Restore tidak menyimpan data sebelum preview, mode, dan konfirmasi selesai.">
+                Restore tidak menyimpan data sebelum preview, mode, dan konfirmasi selesai.
+              </span>
+            </div>
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
             {step !== "upload" && step !== "running" && step !== "result" ? (
-              <Button type="button" variant="outline" onClick={() => setStep(step === "confirm" ? "mode" : step === "mode" ? "preview" : "upload")} disabled={isRestoring}>
+              <Button type="button" variant="outline" className="min-h-10 w-full rounded-full sm:w-auto" onClick={() => setStep(step === "confirm" ? "mode" : step === "mode" ? "preview" : "upload")} disabled={isRestoring}>
                 Kembali
               </Button>
             ) : null}
             {step === "preview" ? (
-              <Button type="button" onClick={() => setStep("mode")} disabled={!canContinueFromPreview}>
+              <Button type="button" className="min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => setStep("mode")} disabled={!canContinueFromPreview}>
                 Pilih Mode
               </Button>
             ) : null}
             {step === "mode" ? (
-              <Button type="button" onClick={() => setStep("confirm")}>
+              <Button type="button" className="min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => setStep("confirm")}>
                 Review Konfirmasi
               </Button>
             ) : null}
             {step === "confirm" ? (
-              <Button type="button" onClick={() => void executeRestore()} disabled={!canRunRestore}>
+              <Button type="button" className="min-h-10 w-full rounded-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => void executeRestore()} disabled={!canRunRestore}>
                 {isRestoring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                 Jalankan Restore
               </Button>
             ) : null}
           </div>
-        </div>
+          </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.14",
+    version: "2.4.14",
+    title: "Restore Backup Nilai: Preview Disamakan dengan Import",
+    description: "Modal dan tabel Restore Backup Nilai kini mengikuti struktur spreadsheet Import/Ekspor agar tidak ada perbedaan layout, overlap, atau clipping di area kanan.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Dialog restore memakai class modal Import/Ekspor yang sama untuk ukuran, scroll body, dan footer.",
+      "Tabel restore memakai tiga kolom identitas sticky seperti tabel Import: No, ID, dan Siswa.",
+      "Sel status restore memakai warna existing dari spreadsheet Import untuk nilai baru, timpa, sama, dilewati, dan invalid.",
+    ],
+  },
+  {
     id: "v2.4.13",
     version: "2.4.13",
     title: "Restore Backup Nilai: Tabel Preview Distabilkan",
