@@ -1249,14 +1249,14 @@ export default function GradeBackupRestoreDialog({
                     <Button
                       type="button"
                       variant="outline"
-                      className="min-h-10 rounded-full border-amber-300 bg-amber-50 px-4 font-semibold text-amber-900 shadow-sm hover:bg-amber-100"
+                      className="min-h-10 shrink-0 rounded-full border-amber-300 bg-amber-50 px-4 font-semibold text-amber-900 shadow-sm hover:bg-amber-100"
                       onClick={() => setOverwriteDialogOpen(true)}
                     >
                       Atur nilai timpa ({overwriteOperations.filter((operation) => selectedOperationIds.includes(operation.id)).length}/{overwriteOperations.length})
                     </Button>
                   ) : null}
                   {mode === "full_confirmed" ? (
-                    <label className="flex min-h-10 max-w-full items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-950 shadow-sm">
+                    <label className="flex min-h-10 max-w-full shrink-0 items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-950 shadow-sm">
                       <Checkbox checked={includeNullOverwrites} onCheckedChange={(value) => setIncludeNullOverwrites(value === true)} />
                       <span className="truncate">Kosongkan nilai web jika backup kosong</span>
                     </label>

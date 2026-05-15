@@ -990,9 +990,26 @@
   display: flex;
   min-width: 0;
   max-width: 100%;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
+}
+
+.sipena-restore-footer-mode-controls .sipena-restore-mode-trigger {
+  flex: 0 0 clamp(260px, 24vw, 320px);
+  width: auto;
+}
+
+@media (max-width: 640px) {
+  .sipena-restore-footer-mode-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .sipena-restore-footer-mode-controls .sipena-restore-mode-trigger {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 
 .sipena-restore-overwrite-layer {

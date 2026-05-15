@@ -528,6 +528,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-restore-mode-trigger");
     expect(globalStyles).toContain(".sipena-restore-mode-popover");
     expect(globalStyles).toContain(".sipena-restore-footer-mode-controls");
+    expect(globalStyles).toContain("flex-wrap: nowrap");
+    expect(globalStyles).toContain(".sipena-restore-footer-mode-controls .sipena-restore-mode-trigger");
     expect(globalStyles).toContain(".sipena-restore-overwrite-backdrop");
     expect(globalStyles).toContain(".sipena-danger-icon-button");
     expect(globalStyles).toContain("@keyframes sipena-guided-action-pulse");
