@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 
 import type {
   CellValueMode,
@@ -282,9 +282,20 @@ export function SmartSpreadsheetPreview({
                       const column = model.columns[index];
                       const detailLines = previewCellDetailLines(cell, column);
                       const visual = getCellPreviewVisualState(cell, column, row);
+                      const openCellDetail = () => setSelection({ kind: "cell", cell, row, column });
+                      const handleCellKeyDown = (event: KeyboardEvent<HTMLTableCellElement>) => {
+                        if (column.type === "identity") return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          toggleCellInclude(cell, row, column);
+                        }
+                      };
                       return (
                         <td
                           key={cell.id}
+                          role={column.type === "identity" ? undefined : "button"}
+                          tabIndex={column.type === "identity" ? undefined : 0}
+                          aria-label={cellActionLabel(cell, column, visual.description)}
                           className={cn(
                             "sipena-preview-cell",
                             visual.className,
@@ -295,8 +306,9 @@ export function SmartSpreadsheetPreview({
                             index < 3 && "sipena-preview-sticky-left",
                           )}
                           style={stickyStyle(index)}
-                          onClick={() => toggleCellInclude(cell, row, column)}
-                          onDoubleClick={() => setSelection({ kind: "cell", cell, row, column })}
+                          onClick={() => column.type === "identity" ? undefined : toggleCellInclude(cell, row, column)}
+                          onKeyDown={handleCellKeyDown}
+                          onDoubleClick={column.type === "identity" ? undefined : openCellDetail}
                           title={column.type === "identity" ? cell.displayValue : detailLines.join(" / ") || `${visual.description} Klik sel untuk pakai/lewati. Klik dua kali untuk detail.`}
                         >
                           <div className="sipena-preview-cell-main">
@@ -318,6 +330,19 @@ export function SmartSpreadsheetPreview({
                               {cell.isAutoSkippedSameValue ? <MiniStatusBadge label="Sama" description="Nilai Excel sama dengan nilai SIPENA, jadi otomatis dilewati." /> : null}
                               {cell.status === "overwrite" ? <MiniStatusBadge label="Timpa" description="Nilai Excel akan mengganti nilai SIPENA setelah konfirmasi." /> : null}
                               {cell.requiresConfirmation ? <MiniStatusBadge label="Perlu cek" description="Nilai valid, tetapi keputusan target atau aksi masih perlu dicek." /> : null}
+                              {column.type !== "identity" ? (
+                                <button
+                                  type="button"
+                                  className="sipena-import-cell-detail-button"
+                                  aria-label={`Atur detail ${column.header} baris ${row.rowIndex}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openCellDetail();
+                                  }}
+                                >
+                                  Atur
+                                </button>
+                              ) : null}
                             </span>
                           </div>
                         </td>
@@ -380,4 +405,11 @@ export function SmartSpreadsheetPreview({
       ) : null}
     </div>
   );
+}
+
+function cellActionLabel(cell: SpreadsheetPreviewCell, column: SpreadsheetPreviewColumn, visualDescription: string): string {
+  if (column.type === "identity") return `${column.header}: ${cell.displayValue || "-"}`;
+  const value = previewCellDisplayValue(cell, column);
+  const nextAction = cell.effectiveInclude === false || cell.isManuallySkipped ? "pakai nilai" : "lewati nilai";
+  return `${column.header}, ${value}. ${visualDescription}. Enter untuk ${nextAction}, tombol Atur untuk detail.`;
 }

@@ -89,6 +89,22 @@ function normalizeRows(rows: unknown[][]): WorkbookCell[][] {
   });
 }
 
+function excelErrorLabel(cell: XLSX.CellObject): string {
+  const knownErrors: Record<number, string> = {
+    0: "#NULL!",
+    7: "#DIV/0!",
+    15: "#VALUE!",
+    23: "#REF!",
+    29: "#NAME?",
+    36: "#NUM!",
+    42: "#N/A",
+    43: "#GETTING_DATA",
+  };
+  if (typeof cell.w === "string" && cell.w.trim()) return cell.w;
+  if (typeof cell.v === "number" && knownErrors[cell.v]) return knownErrors[cell.v];
+  return "#VALUE!";
+}
+
 export function rowValues(row: WorkbookRowAddressed): WorkbookCell[] {
   return row.values;
 }
@@ -114,7 +130,8 @@ function normalizeAddressedRows(sheet: XLSX.WorkSheet | undefined): WorkbookRowA
 
     for (let columnIndex = range.s.c; columnIndex <= range.e.c; columnIndex += 1) {
       const address = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
-      const value = normalizeCell(sheet[address]?.v);
+      const rawCell = sheet[address] as XLSX.CellObject | undefined;
+      const value = rawCell?.t === "e" ? excelErrorLabel(rawCell) : normalizeCell(rawCell?.v);
       if (value !== null) hasValue = true;
 
       cells.push({

@@ -118,7 +118,8 @@ interface GradeImportExportDialogProps {
     academicYearId?: string | null;
     semesterId?: string | null;
   }>) => Promise<{ savedCount: number; skippedUnchangedCount?: number } | void>;
-  onEnsureAssignmentTarget?: (target: GradeTarget) => Promise<GradeTarget>;
+  onEnsureAssignmentTarget?: (target: GradeTarget) => Promise<EnsuredImportTarget>;
+  onRollbackCreatedImportStructure?: (created: { assignmentIds: string[]; chapterIds: string[] }) => Promise<void>;
   onImportComplete?: () => void | Promise<void>;
   canUndoImport?: boolean;
   canRedoImport?: boolean;
@@ -128,6 +129,10 @@ interface GradeImportExportDialogProps {
 }
 
 type ExportMode = "official" | "current" | "backup";
+type EnsuredImportTarget = GradeTarget & {
+  createdChapterId?: string;
+  createdAssignmentId?: string;
+};
 type ImportExecutionState = "idle" | "analyzing" | "ready" | "failed" | "importing" | "success";
 type ImportHistoryActionState = "idle" | "undoing" | "redoing";
 type AiAssistState = "idle" | "loading" | "success" | "error";
@@ -2942,6 +2947,7 @@ async function executeClientSideImport({
   onSaveGrade,
   onSaveGradesBatch,
   onEnsureAssignmentTarget,
+  onRollbackCreatedImportStructure,
   importContext,
   onProgress,
 }: {
@@ -2949,15 +2955,22 @@ async function executeClientSideImport({
   onSaveGrade?: GradeImportExportDialogProps["onSaveGrade"];
   onSaveGradesBatch?: GradeImportExportDialogProps["onSaveGradesBatch"];
   onEnsureAssignmentTarget?: GradeImportExportDialogProps["onEnsureAssignmentTarget"];
+  onRollbackCreatedImportStructure?: GradeImportExportDialogProps["onRollbackCreatedImportStructure"];
   importContext: ImportPlanContext;
   onProgress: (progress: ImportExecutionProgress) => void;
 }): Promise<ImportExecutionSummary> {
   const summary = emptyExecutionSummary();
   const operations = executablePlan.operations;
   const warnings = new Set<string>();
-  const ensuredAssignmentTargets = new Map<string, GradeTarget>();
+  const ensuredAssignmentTargets = new Map<string, EnsuredImportTarget>();
+  const createdAssignmentIds = new Set<string>();
+  const createdChapterIds = new Set<string>();
   const batchItems: Parameters<NonNullable<GradeImportExportDialogProps["onSaveGradesBatch"]>>[0] = [];
   const batchOperations: GradeOperation[] = [];
+
+  if (executablePlan.summary.blockedCount > 0 || executablePlan.summary.overwriteNeedsConfirmationCount > 0) {
+    throw new Error("Import dibatalkan karena masih ada nilai yang perlu dicek atau konfirmasi timpa.");
+  }
 
   summary.skippedCount = executablePlan.summary.totalOperations - executablePlan.summary.executableCount;
   if (executablePlan.summary.skippedManualCount > 0) warnings.add("Sebagian nilai dilewati sesuai pilihan manual.");
@@ -2994,6 +3007,9 @@ async function executeClientSideImport({
           ensuredAssignmentTargets.set(key, await onEnsureAssignmentTarget(operationTarget));
         }
         operationTarget = ensuredAssignmentTargets.get(key) || operationTarget;
+        const ensuredTarget = ensuredAssignmentTargets.get(key);
+        if (ensuredTarget?.createdAssignmentId) createdAssignmentIds.add(ensuredTarget.createdAssignmentId);
+        if (ensuredTarget?.createdChapterId) createdChapterIds.add(ensuredTarget.createdChapterId);
       } catch (caught) {
         summary.failedCount += 1;
         summary.failedRows.push({
@@ -3052,6 +3068,19 @@ async function executeClientSideImport({
       summary.successCount += batchResult.savedCount;
       summary.skippedCount += batchResult.skippedUnchangedCount || 0;
     } catch (caught) {
+      if (onRollbackCreatedImportStructure && (createdAssignmentIds.size > 0 || createdChapterIds.size > 0)) {
+        try {
+          await onRollbackCreatedImportStructure({
+            assignmentIds: Array.from(createdAssignmentIds),
+            chapterIds: Array.from(createdChapterIds),
+          });
+          warnings.add("BAB/tugas baru yang dibuat selama import sudah dibatalkan karena nilai gagal disimpan.");
+        } catch (rollbackError) {
+          warnings.add(rollbackError instanceof Error
+            ? `Rollback struktur import gagal: ${cleanBackendText(rollbackError.message)}`
+            : "Rollback struktur import gagal. Periksa BAB/tugas baru sebelum mencoba lagi.");
+        }
+      }
       summary.failedCount += batchItems.length;
       batchOperations.slice(0, 20).forEach((operation) => {
         summary.failedRows.push({
@@ -3239,6 +3268,7 @@ export default function GradeImportExportDialog({
   onSaveGrade,
   onSaveGradesBatch,
   onEnsureAssignmentTarget,
+  onRollbackCreatedImportStructure,
   onImportComplete,
   canUndoImport = false,
   canRedoImport = false,
@@ -3862,7 +3892,8 @@ export default function GradeImportExportDialog({
 
   const hasPlan = Boolean(plan || basePlan);
   const blocked = hasBlockedConflicts(plan);
-  const unsupported = plan?.sourceType === "unsupported";
+  const unsupported = plan?.sourceType === "unsupported"
+    || (plan?.sourceType === "free_unstructured" && plan.gradeOperations.length === 0);
   const regionSelectionPending = isRegionSelectionPending(analysis);
   const smartFixResult = useMemo(() => (
     plan ? simplifyImportConflicts({ plan, resolverState: effectiveResolverState, updateMode: effectiveUpdateMode }) : null
@@ -4135,7 +4166,7 @@ export default function GradeImportExportDialog({
           selectionState: effectiveSelectionState,
           updateMode: effectiveUpdateMode,
         });
-        if (!workflowIssuesResolved && executablePlan.summary.overwriteNeedsConfirmationCount > 0) {
+        if (executablePlan.summary.overwriteNeedsConfirmationCount > 0) {
           setStepIndex(3);
           showWarning(
             "Nilai lama perlu dikonfirmasi dulu.",
@@ -4143,7 +4174,7 @@ export default function GradeImportExportDialog({
           );
           return;
         }
-        if (!workflowIssuesResolved && executablePlan.summary.blockedCount > 0) {
+        if (executablePlan.summary.blockedCount > 0) {
           setStepIndex(activeImportIssueCount > 0 ? 2 : activeHeaderIssueCount > 0 ? 3 : 4);
           showWarning(
             "Simpan belum bisa karena masih ada item yang perlu dipilih.",
@@ -4169,6 +4200,7 @@ export default function GradeImportExportDialog({
             onSaveGrade,
             onSaveGradesBatch,
             onEnsureAssignmentTarget,
+            onRollbackCreatedImportStructure,
             importContext,
             onProgress: setExecutionProgress,
           });
@@ -4243,6 +4275,7 @@ export default function GradeImportExportDialog({
     onSaveGrade,
     onSaveGradesBatch,
     onEnsureAssignmentTarget,
+    onRollbackCreatedImportStructure,
     plan,
     effectiveResolverState,
     effectiveSelectionState,

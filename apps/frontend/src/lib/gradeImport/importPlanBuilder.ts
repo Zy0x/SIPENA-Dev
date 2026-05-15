@@ -35,6 +35,7 @@ export interface ImportPlanExistingGrade {
   assignment_id?: string | null;
   value: number | null;
   semester_id?: string | null;
+  academic_year_id?: string | null;
 }
 
 export interface ImportPlanContext {
@@ -274,9 +275,20 @@ function targetKey(target: GradeTarget | undefined): string {
   return `special:${target.gradeType}`;
 }
 
-function findExistingGrade(existingGrades: ImportPlanExistingGrade[], studentId: string, target: GradeTarget): ImportPlanExistingGrade | undefined {
+function scopeMatches(contextValue: string | null | undefined, gradeValue: string | null | undefined): boolean {
+  return contextValue ? gradeValue === contextValue : !gradeValue;
+}
+
+function findExistingGrade(
+  existingGrades: ImportPlanExistingGrade[],
+  studentId: string,
+  target: GradeTarget,
+  context: ImportPlanContext,
+): ImportPlanExistingGrade | undefined {
   return existingGrades.find((grade) => {
     if (grade.student_id !== studentId || grade.grade_type !== target.gradeType) return false;
+    if (!scopeMatches(context.semesterId, grade.semester_id)) return false;
+    if (!scopeMatches(context.academicYearId, grade.academic_year_id)) return false;
     if (target.gradeType !== "assignment") return true;
     return Boolean(target.assignmentId && grade.assignment_id === target.assignmentId);
   });
@@ -483,19 +495,16 @@ export function buildImportPlan(
 
       const target = column.target || { gradeType: "assignment" as const };
       const existing = studentMapping?.studentId && column.target
-        ? findExistingGrade(context.existingGrades || [], studentMapping.studentId, column.target)
+        ? findExistingGrade(context.existingGrades || [], studentMapping.studentId, column.target, context)
         : undefined;
       const selected = selectedColumns.size === 0 || selectedColumns.has(column.columnIndex);
-      const isAutoConverted = parsedValue.status === "needs_confirmation"
-        && parsedValue.suggestedValue !== undefined
-        && parsedValue.warnings.some((warning) => warning.code.includes("GRADE_VALUE_FRACTION"));
-      const operationValue = isAutoConverted ? parsedValue.suggestedValue ?? null : parsedValue.value;
+      const operationValue = parsedValue.value;
       const baseAction = decideOperationAction(operationValue, existing?.value, updateMode, selected);
       const action: GradeOperation["action"] = operationConflicts.length
         ? "blocked"
         : skipStudentRow
         ? "skip_empty"
-        : (!isAutoConverted && parsedValue.status === "needs_confirmation") || column.status === "needs_confirmation" || studentMapping?.status === "ambiguous"
+        : parsedValue.status === "needs_confirmation" || column.status === "needs_confirmation" || studentMapping?.status === "ambiguous"
           ? "needs_confirmation"
           : baseAction;
 
@@ -512,10 +521,7 @@ export function buildImportPlan(
         rawValue,
         value: operationValue,
         suggestedValue: parsedValue.suggestedValue,
-        isAutoConverted,
-        conversionLabel: isAutoConverted && parsedValue.suggestedValue !== undefined
-          ? `${rawValue ?? ""} dikonversi ke ${parsedValue.suggestedValue}`
-          : undefined,
+        isAutoConverted: false,
         existingValue: existing?.value,
         updateMode,
         action,

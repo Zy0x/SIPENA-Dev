@@ -243,7 +243,7 @@ describe("import plan fail-closed regression", () => {
       plan: missingStudentPlan,
       resolverState: { ignoredColumns: [4] },
     }).summary.skippedManualCount).toBe(1);
-    expect(buildExecutableImportOperations({ plan: fractionPlan }).summary.executableCount).toBe(1);
+    expect(buildExecutableImportOperations({ plan: fractionPlan }).summary.executableCount).toBe(0);
     expect(buildExecutableImportOperations({
       plan: fractionPlan,
       selectionState: {
@@ -261,6 +261,32 @@ describe("import plan fail-closed regression", () => {
         },
       },
     }).summary.executableCount).toBe(1);
+  });
+
+  it("matches existing grades only inside the active semester and academic year scope", () => {
+    const analysis = analyzeFreeExcelWorkbook(workbookResult({
+      Nilai: [
+        ["No", "NISN", "Nama Siswa", "BAB 1 - Tugas 1"],
+        [1, "0012345678", "Siti Aminah", 80],
+      ],
+    }), { students });
+    const scopedContext: ImportPlanContext = {
+      ...importContext,
+      semesterId: "semester-1",
+      academicYearId: "year-1",
+    };
+
+    const legacyExisting = buildImportPlan(analysis, {
+      ...scopedContext,
+      existingGrades: [{ student_id: "student-1", grade_type: "assignment", assignment_id: "assignment-1", value: 80, semester_id: null, academic_year_id: null }],
+    });
+    const activeExisting = buildImportPlan(analysis, {
+      ...scopedContext,
+      existingGrades: [{ student_id: "student-1", grade_type: "assignment", assignment_id: "assignment-1", value: 80, semester_id: "semester-1", academic_year_id: "year-1" }],
+    });
+
+    expect(legacyExisting.gradeOperations[0]?.action).toBe("fill_empty");
+    expect(activeExisting.gradeOperations[0]?.action).toBe("skip_existing");
   });
 
   it.each([

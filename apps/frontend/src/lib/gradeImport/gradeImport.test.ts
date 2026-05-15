@@ -196,6 +196,20 @@ describe("gradeImport value parser", () => {
     expect(parsed.conflicts.map((item) => item.code)).toContain("GRADE_VALUE_INVALID");
   });
 
+  it("blocks scaled fractions outside the 0 to 100 grade range", () => {
+    const parsed = parseGradeValue("120/100");
+
+    expect(parsed.status).toBe("invalid");
+    expect(parsed.value).toBeNull();
+    expect(parsed.conflicts.map((item) => item.code)).toContain("GRADE_VALUE_INVALID");
+  });
+
+  it("treats en dash and em dash as empty grade markers", () => {
+    expect(parseGradeValue("\u2013")).toMatchObject({ status: "empty", value: null });
+    expect(parseGradeValue("\u2014")).toMatchObject({ status: "empty", value: null });
+    expect(parseGradeValue("0")).toMatchObject({ status: "valid", value: 0 });
+  });
+
   it.each(["#N/A", "#VALUE!", "#DIV/0!", "nilai bagus"])("blocks invalid value %s", (value) => {
     const parsed = parseGradeValue(value);
 
@@ -307,6 +321,12 @@ describe("official SIPENA grade template exporter", () => {
     expect(sheet.F1?.v).toBeUndefined();
     expect(columnMapRows.slice(1).map((row) => row[1])).toEqual(["BAB 1 - Tugas 2", "SAS"]);
   });
+
+  it("keeps official template autofilter on the header row when there are no students", () => {
+    const workbook = buildOfficialGradeTemplateWorkbook({ ...context, students: [] });
+
+    expect(workbook.Sheets.Isi_Nilai["!autofilter"]?.ref).toBe("A1:H1");
+  });
 });
 
 describe("SIPENA current grades and backup exporters", () => {
@@ -334,6 +354,12 @@ describe("SIPENA current grades and backup exporters", () => {
     expect(gradeRows[0]).toEqual(["grade_id", "student_id", "subject_id", "assignment_id", "grade_type", "value", "semester_id", "academic_year_id"]);
     expect(gradeRows[1]).toContain("grade-1");
   });
+
+  it("keeps current export autofilter on the header row when there are no students", () => {
+    const workbook = buildCurrentGradesExportWorkbook({ ...exportContext, students: [], grades: [] });
+
+    expect(workbook.Sheets.Nilai["!autofilter"]?.ref).toBe("A1:F1");
+  });
 });
 
 describe("gradeImport workbook reader", () => {
@@ -356,6 +382,22 @@ describe("gradeImport workbook reader", () => {
       originalRowIndex: 2,
       originalColumnIndex: 2,
     });
+  });
+
+  it("keeps Excel error cells as error text instead of numeric error codes", () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ["Nama", "Nilai"],
+      ["Aisyah", ""],
+    ]);
+    sheet.B2 = { t: "e", v: 7, w: "#DIV/0!" };
+    XLSX.utils.book_append_sheet(workbook, sheet, "Nilai");
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+    const result = readWorkbookBuffer(buffer, "nilai.xlsx");
+
+    expect(result.ok).toBe(true);
+    expect(result.sheets[0].rows[1][1]).toBe("#DIV/0!");
+    expect(parseGradeValue(result.sheets[0].rows[1][1])).toMatchObject({ status: "invalid" });
   });
 
   it("reads csv input when extension is csv", () => {

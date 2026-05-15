@@ -44,7 +44,8 @@ export function parseGradeValue(value: unknown): GradeValueParseResult {
   const normalized = normalizeText(rawString);
 
   if (!visible) return emptyResult(value);
-  if (EMPTY_GRADE_VALUES.includes(visible.toLowerCase() as typeof EMPTY_GRADE_VALUES[number])
+  if (visible === "\u2013" || visible === "\u2014"
+    || EMPTY_GRADE_VALUES.includes(visible.toLowerCase() as typeof EMPTY_GRADE_VALUES[number])
     || EMPTY_GRADE_VALUES.includes(normalized as typeof EMPTY_GRADE_VALUES[number])
   ) {
     return emptyResult(value);
@@ -83,6 +84,9 @@ export function parseGradeValue(value: unknown): GradeValueParseResult {
     }
 
     const suggestedValue = Number(((numerator / denominator) * 100).toFixed(2));
+    if (!isWithinRange(suggestedValue)) {
+      return invalidResult(value, normalized, "Nilai hasil skala pecahan harus berada pada rentang 0 sampai 100.");
+    }
     return {
       raw: value,
       normalized,

@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.6",
+    version: "2.4.6",
+    title: "SmartImport Nilai: Audit Keamanan Import/Ekspor",
+    description: "Import dan ekspor nilai kini lebih tahan terhadap file Excel bermasalah, saran AI yang belum pasti, overwrite yang tidak terkonfirmasi, serta kegagalan penyimpanan sebagian.",
+    type: "security",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Cell error Excel seperti #DIV/0! kini ditolak sebagai nilai, bukan terbaca sebagai angka.",
+      "Nilai pecahan skala tinggi wajib dicek manual dan tidak lagi masuk antrean simpan tanpa persetujuan.",
+      "Saran AI tetap dianggap butuh konfirmasi pengguna sebelum boleh dieksekusi.",
+      "Import yang membuat BAB atau tugas baru akan membersihkan struktur baru tersebut jika proses simpan gagal.",
+      "Preview spreadsheet dan panel pengaturan kolom diperkuat untuk navigasi keyboard dan fokus dialog.",
+    ],
+  },
+  {
     id: "v2.4.5",
     version: "2.4.5",
     title: "Auth Login: Waiting Time Bertingkat dan Request Reset Admin",

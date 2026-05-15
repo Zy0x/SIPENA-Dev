@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.5";
-export const VERSION_DATE = "2026-05-11";
+export const APP_VERSION = "2.4.6";
+export const VERSION_DATE = "2026-05-15";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.6": "SmartImport nilai diperkuat dengan validasi Excel/AI yang lebih ketat, rollback struktur baru saat import gagal, dan akses keyboard pada preview.",
   "2.4.5": "Proteksi login bertingkat ditambahkan dengan request reset waiting time melalui reCAPTCHA dan panel Admin SIPENA.",
   "2.4.4": "Proteksi login diperkuat dengan kunci sementara setelah tiga kali password salah dan arahan reset password yang lebih jelas.",
   "2.4.3": "SmartImport nilai dibuat lebih aman dengan Import Aman default, validasi Excel lebih ketat, dan preview yang lebih sinkron.",

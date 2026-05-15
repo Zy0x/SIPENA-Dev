@@ -162,7 +162,7 @@ describe("grade import agent decisions", () => {
     expect(parseGradeValue(120).status).toBe("invalid");
   });
 
-  it("AI handle-all resolves unclear items to safe skip instead of leaving blocked", () => {
+  it("AI handle-all keeps unclear items confirm-only instead of deciding automatically", () => {
     const workbook = officialWorkbookWithValue("Tuntas");
     const plan = buildImportPlan(analyzeOfficialTemplateWorkbook(readWorkbook(workbook), importContext), importContext);
     const graph = buildImportDecisionGraph(plan, buildExecutableImportOperations({ plan }));
@@ -175,8 +175,36 @@ describe("grade import agent decisions", () => {
       },
     }, { mode: "aggressive", handleAll: true });
 
-    expect(resolved.summary.blocked).toBe(0);
-    expect(resolved.summary.skip).toBeGreaterThan(0);
+    expect(resolved.summary.blocked).toBe(graph.summary.blocked);
+    expect(resolved.summary.skip).toBe(graph.summary.skip);
+  });
+
+  it("keeps high-confidence AI value suggestions out of executable final counts", () => {
+    const plan = buildImportPlan(analyzeOfficialTemplateWorkbook(readWorkbook(officialWorkbookWithValue("7/10")), importContext), importContext);
+    const graph = buildImportDecisionGraph(plan, buildExecutableImportOperations({ plan }));
+    const resolved = resolveImportDecisionGraphWithAi({ ...graph, officialGoldenPath: false, aiAllowed: true }, {
+      suggestions: [{
+        type: "value",
+        rowIndex: 2,
+        columnIndex: 4,
+        suggestedAction: "Gunakan nilai saran",
+        targetType: "value",
+        suggestedValue: 70,
+        confidence: 0.99,
+        reason: "7/10 setara 70.",
+        requiresConfirmation: true,
+      }],
+      summary: {
+        confidence: 0.99,
+        riskLevel: "low",
+        notes: ["Perlu dicek"],
+      },
+    });
+    const review = buildFinalReviewModel(resolved);
+
+    expect(resolved.summary.aiDecided).toBe(0);
+    expect(resolved.summary.convert).toBe(0);
+    expect(review.canExecute).toBe(false);
   });
 
   it("executor accepts only final executable decisions", () => {

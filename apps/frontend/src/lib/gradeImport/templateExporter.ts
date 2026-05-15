@@ -249,7 +249,7 @@ function createExamplesSheet() {
     ["85,5", "Perlu dicek ringan", "Koma desimal dibaca sebagai 85.5."],
     ["85%", "Perlu dicek ringan", "Persen dibaca sebagai 85."],
     ["90/100", "Dikonversi", "Pecahan valid otomatis dibaca sebagai nilai 0-100."],
-    ["8/10", "Dikonversi", "Pecahan valid otomatis dikonversi menjadi 80."],
+    ["8/10", "Perlu dicek", "SIPENA menyarankan 80, tetapi tidak menyimpan sebelum disetujui."],
     ["-", "Dilewati", "Kosong dan tidak menghapus nilai lama."],
     ["belum dinilai", "Dilewati", "Kosong dan tidak menghapus nilai lama."],
     ["Tuntas", "Perlu dicek", "Teks tidak dikonversi otomatis menjadi angka."],
@@ -278,7 +278,7 @@ function createInputSheet(context: OfficialGradeTemplateContext, columns: Templa
   styleHeaderRow(ws, 0, header.length);
   forceTextColumn(ws, 1, 1, rows.length);
   ws["!autofilter"] = {
-    ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rows.length, 1), c: header.length - 1 } }),
+    ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: header.length - 1 } }),
   };
   return ws;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import type {
   ColumnValueMode,
@@ -129,6 +129,8 @@ export function ColumnSettingsOverlay({
   const [overwriteChecked, setOverwriteChecked] = useState(Boolean(column.overwriteConfirmed));
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showReasonDetail, setShowReasonDetail] = useState(false);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setHeaderLabel(column.header);
@@ -138,6 +140,36 @@ export function ColumnSettingsOverlay({
     setNewAssignmentName(sourceTaskName(column));
     setOverwriteChecked(Boolean(column.overwriteConfirmed));
   }, [chapters, column]);
+
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    window.requestAnimationFrame(() => panelRef.current?.focus());
+    return () => previousFocusRef.current?.focus();
+  }, []);
+
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(panelRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ) || []).filter((item) => !item.hasAttribute("disabled") && !item.getAttribute("aria-hidden"));
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   const activeMode = column.effectiveValueMode || "fill_empty_only";
   const reason = useMemo(() => buildColumnReasonHint(column, aiAssist), [aiAssist, column]);
@@ -232,13 +264,13 @@ export function ColumnSettingsOverlay({
   };
 
   return (
-    <div className="sipena-column-overlay" role="dialog" aria-modal="true" aria-labelledby="sipena-column-overlay-title">
+    <div className="sipena-column-overlay" role="dialog" aria-modal="true" aria-labelledby="sipena-column-overlay-title" aria-describedby="sipena-column-overlay-desc">
       <button type="button" className="sipena-column-overlay-backdrop" aria-label="Tutup pengaturan kolom" onClick={onClose} />
-      <section className="sipena-column-overlay-panel">
+      <section ref={panelRef} tabIndex={-1} className="sipena-column-overlay-panel" onKeyDown={handleDialogKeyDown}>
         <div className="sipena-column-overlay-header">
           <div>
             <h3 id="sipena-column-overlay-title" className="sipena-column-overlay-title">Atur kolom nilai</h3>
-            <p className="sipena-column-overlay-desc">
+            <p id="sipena-column-overlay-desc" className="sipena-column-overlay-desc">
               Tentukan tujuan kolom ini sebelum import.
             </p>
           </div>

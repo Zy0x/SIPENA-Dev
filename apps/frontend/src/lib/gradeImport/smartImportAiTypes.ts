@@ -124,6 +124,25 @@ function cleanNotes(value: unknown, fallback: string[]): string[] {
   return notes.length ? notes : fallback;
 }
 
+function cleanPositiveInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function isKnownWorkbookRow(rowIndex: number | undefined, request: SmartImportAssistRequest): boolean {
+  if (!rowIndex) return false;
+  if (request.workbookSummary.sampleRows.some((row) => row.rowIndex === rowIndex)) return true;
+  return request.workbookSummary.candidateTables.some((table) =>
+    rowIndex >= table.headerRowIndex && rowIndex <= table.dataEndRowIndex,
+  );
+}
+
+function isKnownWorkbookColumn(columnIndex: number | undefined, request: SmartImportAssistRequest): boolean {
+  if (!columnIndex) return false;
+  if (request.workbookSummary.headers.some((header) => header.columnIndex === columnIndex)) return true;
+  const maxColumnCount = request.workbookSummary.sheets.reduce((max, sheet) => Math.max(max, sheet.columnCount), 0);
+  return columnIndex <= maxColumnCount;
+}
+
 function extractJsonLike(value: unknown): unknown {
   if (typeof value !== "string") return value;
   const trimmed = value.trim();
@@ -180,6 +199,11 @@ export function sanitizeSmartImportAssistResponse(
     if (!allowedTypes.has(type as SmartImportAssistType)) return [];
     if (!allowedTargetTypes.has(targetType as SmartImportAssistTargetType)) return [];
 
+    const rowIndex = cleanPositiveInteger(candidate.rowIndex);
+    const columnIndex = cleanPositiveInteger(candidate.columnIndex);
+    if (["student", "value"].includes(type as string) && !isKnownWorkbookRow(rowIndex, request)) return [];
+    if (["column", "structure", "value"].includes(type as string) && !isKnownWorkbookColumn(columnIndex, request)) return [];
+
     const suggestedAction = cleanText(candidate.suggestedAction, "Perlu dicek manual");
     const reason = cleanText(candidate.reason, "Periksa saran ini sebelum dipakai.");
     if (blockedTextPattern.test(suggestedAction) || blockedTextPattern.test(reason)) return [];
@@ -198,8 +222,8 @@ export function sanitizeSmartImportAssistResponse(
 
     return [{
       type: type as SmartImportAssistType,
-      rowIndex: typeof candidate.rowIndex === "number" && Number.isFinite(candidate.rowIndex) ? candidate.rowIndex : undefined,
-      columnIndex: typeof candidate.columnIndex === "number" && Number.isFinite(candidate.columnIndex) ? candidate.columnIndex : undefined,
+      rowIndex,
+      columnIndex,
       sourceId: cleanText(candidate.sourceId) || undefined,
       suggestedAction,
       targetId: targetId || undefined,

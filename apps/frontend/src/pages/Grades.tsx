@@ -420,6 +420,17 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const selectedSubject = isGuestMode
     ? guestData?.subjectInfo
     : subjects.find((s) => s.id === selectedSubjectId);
+  const importChapterCacheRef = useRef<Chapter[]>([]);
+  const importAssignmentCacheRef = useRef<Assignment[]>([]);
+
+  useEffect(() => {
+    importChapterCacheRef.current = chapters;
+  }, [chapters]);
+
+  useEffect(() => {
+    importAssignmentCacheRef.current = allAssignments;
+  }, [allAssignments]);
+
   const gradeImportContext = useMemo<ImportPlanContext>(() => ({
     students: students.map((student) => ({
       id: student.id,
@@ -445,6 +456,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         assignment_id: grade.assignment_id,
         value: grade.value,
         semester_id: grade.semester_id,
+        academic_year_id: grade.academic_year_id,
       })),
     classId,
     subjectId,
@@ -876,7 +888,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     }
   };
 
-  const handleEnsureImportAssignmentTarget = useCallback(async (target: GradeTarget): Promise<GradeTarget> => {
+  const handleEnsureImportAssignmentTarget = useCallback(async (target: GradeTarget): Promise<GradeTarget & { createdChapterId?: string; createdAssignmentId?: string }> => {
     if (target.gradeType !== "assignment") return target;
     if (target.assignmentId) return target;
     if (!subjectId) throw new Error("Pilih mata pelajaran terlebih dahulu.");
@@ -887,29 +899,37 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
     let chapterId = target.chapterId;
     let chapterName = target.chapterName?.trim();
+    let createdChapterId: string | undefined;
 
     if (!chapterId) {
       const requestedChapterName = chapterName;
       if (!requestedChapterName) throw new Error("Nama BAB baru belum diisi.");
 
-      const existingChapter = chapters.find((chapter) => normalize(chapter.name) === normalize(requestedChapterName));
+      const chapterCache = importChapterCacheRef.current;
+      const existingChapter = chapterCache.find((chapter) => normalize(chapter.name) === normalize(requestedChapterName));
       if (existingChapter) {
         chapterId = existingChapter.id;
         chapterName = existingChapter.name;
       } else {
+        const nextChapterOrder = chapterCache.reduce((max, chapter) => Math.max(max, chapter.order_index || 0), 0) + 1;
         const createdChapters = await createBulkChapters.mutateAsync([{
           subject_id: subjectId,
           name: requestedChapterName,
-          order_index: chapters.length + 1,
+          order_index: nextChapterOrder,
         }]);
         const createdChapter = Array.isArray(createdChapters) ? createdChapters[0] as Chapter | undefined : undefined;
         if (!createdChapter?.id) throw new Error("BAB baru gagal dibuat.");
+        importChapterCacheRef.current = [...importChapterCacheRef.current, createdChapter];
         chapterId = createdChapter.id;
         chapterName = createdChapter.name;
+        createdChapterId = createdChapter.id;
       }
+    } else if (!chapterName) {
+      chapterName = importChapterCacheRef.current.find((chapter) => chapter.id === chapterId)?.name || chapterName;
     }
 
-    const existingAssignment = allAssignments.find((assignment) =>
+    const assignmentCache = importAssignmentCacheRef.current;
+    const existingAssignment = assignmentCache.find((assignment) =>
       assignment.chapter_id === chapterId && normalize(assignment.name) === normalize(assignmentName),
     );
     if (existingAssignment) {
@@ -922,14 +942,17 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       };
     }
 
-    const chapterAssignments = allAssignments.filter((assignment) => assignment.chapter_id === chapterId);
+    const chapterAssignments = assignmentCache.filter((assignment) => assignment.chapter_id === chapterId);
+    const nextAssignmentOrder = chapterAssignments.reduce((max, assignment) => Math.max(max, assignment.order_index || 0), 0) + 1;
     const createdAssignments = await createBulkAssignments.mutateAsync([{
       chapter_id: chapterId,
       name: assignmentName,
-      order_index: chapterAssignments.length + 1,
+      order_index: nextAssignmentOrder,
     }]);
     const createdAssignment = Array.isArray(createdAssignments) ? createdAssignments[0] as Assignment | undefined : undefined;
     if (!createdAssignment?.id) throw new Error("Tugas baru gagal dibuat.");
+    importAssignmentCacheRef.current = [...importAssignmentCacheRef.current, createdAssignment];
+    const createdAssignmentId = createdAssignment.id;
 
     return {
       ...target,
@@ -937,8 +960,21 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       chapterName,
       assignmentId: createdAssignment.id,
       assignmentName: createdAssignment.name,
+      createdChapterId,
+      createdAssignmentId,
     };
-  }, [allAssignments, chapters, createBulkAssignments, createBulkChapters, subjectId]);
+  }, [createBulkAssignments, createBulkChapters, subjectId]);
+
+  const handleRollbackCreatedImportStructure = useCallback(async ({ assignmentIds, chapterIds }: { assignmentIds: string[]; chapterIds: string[] }) => {
+    for (const assignmentId of assignmentIds) {
+      await deleteAssignment.mutateAsync(assignmentId);
+      importAssignmentCacheRef.current = importAssignmentCacheRef.current.filter((assignment) => assignment.id !== assignmentId);
+    }
+    for (const chapterId of chapterIds) {
+      await deleteChapter.mutateAsync(chapterId);
+      importChapterCacheRef.current = importChapterCacheRef.current.filter((chapter) => chapter.id !== chapterId);
+    }
+  }, [deleteAssignment, deleteChapter]);
 
   const handleUpdateChapter = async (id: string, name: string) => {
     try {
@@ -1436,6 +1472,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onSaveGrade={handleSaveGrade}
           onSaveGradesBatch={async (items) => saveGradesBatchWithUndo(items)}
           onEnsureAssignmentTarget={handleEnsureImportAssignmentTarget}
+          onRollbackCreatedImportStructure={handleRollbackCreatedImportStructure}
           canUndoImport={canUndo}
           canRedoImport={canRedo}
           onUndoImport={undo}

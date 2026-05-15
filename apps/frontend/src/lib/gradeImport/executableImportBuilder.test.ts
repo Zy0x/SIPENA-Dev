@@ -253,6 +253,38 @@ describe("executable import builder", () => {
     expect(result.summary.overwriteCount).toBe(1);
   });
 
+  it("honors overwrite_selected_columns only for selected and confirmed columns", () => {
+    const selected = buildExecutableImportOperations({
+      plan: plan({
+        updateMode: "overwrite_selected_columns",
+        gradeOperations: [operation({ existingValue: 70, updateMode: "overwrite_selected_columns", action: "overwrite" })],
+      }),
+      updateMode: "overwrite_selected_columns",
+      selectionState: {
+        columnSettings: {
+          "excel-col-4": {
+            columnId: "excel-col-4",
+            columnIndex: 4,
+            include: true,
+            valueMode: "overwrite_existing",
+            overwriteConfirmed: true,
+          },
+        },
+        cellSettings: {},
+      },
+    });
+    const unselected = buildExecutableImportOperations({
+      plan: plan({
+        updateMode: "overwrite_selected_columns",
+        gradeOperations: [operation({ existingValue: 70, updateMode: "overwrite_selected_columns", action: "skip_existing" })],
+      }),
+      updateMode: "overwrite_selected_columns",
+    });
+
+    expect(selected.summary.overwriteCount).toBe(1);
+    expect(unselected.summary.skippedExistingCount).toBe(1);
+  });
+
   it("blocks invalid values", () => {
     const result = buildExecutableImportOperations({
       plan: plan({

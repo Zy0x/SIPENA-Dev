@@ -149,6 +149,37 @@ describe("smart import AI sanitizer", () => {
     expect(result.suggestions[0].requiresConfirmation).toBe(true);
   });
 
+  it("membuang saran AI yang menunjuk baris atau kolom di luar workbook", () => {
+    const result = sanitizeSmartImportAssistResponse({
+      suggestions: [
+        {
+          type: "student",
+          rowIndex: 999,
+          suggestedAction: "Gunakan siswa Ani",
+          targetId: "student-1",
+          targetType: "student",
+          confidence: 0.95,
+          reason: "Nama mirip",
+          requiresConfirmation: true,
+        },
+        {
+          type: "value",
+          rowIndex: 2,
+          columnIndex: 999,
+          suggestedAction: "Gunakan nilai saran",
+          targetType: "value",
+          suggestedValue: 80,
+          confidence: 0.95,
+          reason: "Skala nilai",
+          requiresConfirmation: true,
+        },
+      ],
+      summary: { confidence: 0.95, riskLevel: "medium", notes: [] },
+    }, baseRequest);
+
+    expect(result.suggestions).toEqual([]);
+  });
+
   it("membuang suggestedValue di luar rentang 0 sampai 100", () => {
     const result = sanitizeSmartImportAssistResponse({
       suggestions: [{

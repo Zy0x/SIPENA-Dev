@@ -245,7 +245,7 @@ function createGradesSheet(context: GradeExportContext, columns: ExportColumn[])
   styleHeaderRow(ws, 0, header.length);
   forceTextColumn(ws, 1, 1, rows.length);
   ws["!autofilter"] = {
-    ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rows.length, 1), c: header.length - 1 } }),
+    ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: header.length - 1 } }),
   };
   return ws;
 }

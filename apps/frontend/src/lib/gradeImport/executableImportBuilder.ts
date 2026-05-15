@@ -244,6 +244,14 @@ function overwriteConfirmed(
   return Boolean(cellSetting?.overwriteConfirmed || columnSetting?.overwriteConfirmed);
 }
 
+function isSelectedForOverwrite(
+  operation: GradeOperation,
+  selectionState: ImportSelectionState | undefined,
+): boolean {
+  const columnId = columnIdFor(operation.columnIndex);
+  return operation.action === "overwrite" || selectionState?.columnSettings[columnId]?.include === true;
+}
+
 function isManuallySkipped(
   operation: GradeOperation,
   resolverState: BuildExecutableImportOperationsInput["resolverState"],
@@ -415,12 +423,17 @@ export function buildExecutableImportOperations({
       return;
     }
 
-    if (hasExisting && (mode === "fill_empty_only" || mode === "skip_existing" || mode === "overwrite_selected_columns")) {
+    if (hasExisting && (mode === "fill_empty_only" || mode === "skip_existing")) {
       skippedItems.push(skippedItem(operation, "existing_value", "Nilai lama sudah ada dan mode import tidak mengizinkan overwrite."));
       return;
     }
 
-    if (hasExisting && mode === "overwrite_existing" && !overwriteConfirmed(operation, selectionState)) {
+    if (hasExisting && mode === "overwrite_selected_columns" && !isSelectedForOverwrite(operation, selectionState)) {
+      skippedItems.push(skippedItem(operation, "existing_value", "Nilai lama sudah ada dan mode import tidak mengizinkan overwrite."));
+      return;
+    }
+
+    if (hasExisting && (mode === "overwrite_existing" || mode === "overwrite_selected_columns") && !overwriteConfirmed(operation, selectionState)) {
       blockedItems.push(blockedItem(operation, "overwrite_needs_confirmation", "Overwrite nilai lama perlu konfirmasi user."));
       return;
     }

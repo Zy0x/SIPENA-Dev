@@ -300,7 +300,7 @@ describe("phase 12 grade import regression suite", () => {
     const skippedByRow = buildExecutableImportOperations({ plan, resolverState: { ignoredRows: [2] } });
 
     expect(blocked.summary.overwriteNeedsConfirmationCount).toBe(1);
-    expect(blocked.summary.blockedCount).toBe(1);
+    expect(blocked.summary.blockedCount).toBe(2);
     expect(executable.summary.executableCount).toBe(2);
     expect(executable.summary.overwriteCount).toBe(1);
     expect(executable.operations.find((operation) => operation.rowIndex === 3)?.value).toBe(90);
@@ -324,6 +324,9 @@ describe("phase 12 grade import regression suite", () => {
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
+    expect(dialogSource).toContain("Import dibatalkan karena masih ada nilai yang perlu dicek atau konfirmasi timpa.");
+    expect(dialogSource).toContain("onRollbackCreatedImportStructure");
+    expect(dialogSource).toContain('plan?.sourceType === "free_unstructured" && plan.gradeOperations.length === 0');
     expect(dialogSource).not.toContain("ImportComplexityMode");
     expect(dialogSource).not.toContain("Mode Cepat aktif");
     expect(dialogSource).not.toContain("Mode Lanjutan aktif");

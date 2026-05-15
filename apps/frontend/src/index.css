@@ -692,6 +692,27 @@
   margin-left: 2px;
 }
 
+.sipena-import-cell-detail-button {
+  min-height: 24px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.sipena-preview-cell[role="button"] {
+  cursor: pointer;
+}
+
+.sipena-preview-cell[role="button"]:focus-visible,
+.sipena-import-cell-detail-button:focus-visible,
+.sipena-column-overlay-panel:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: -3px;
+}
+
 .sipena-preview-cell-main {
   display: flex;
   align-items: flex-start;
