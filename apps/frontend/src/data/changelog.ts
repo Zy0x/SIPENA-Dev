@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.8",
+    version: "2.4.8",
+    title: "Input Nilai: Restore Backup Nilai",
+    description: "Halaman Input Nilai kini memiliki Restore Backup khusus dengan preview, validasi konteks, dan konfirmasi sebelum nilai disimpan.",
+    type: "feature",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Dropdown utama diubah menjadi Kelola Nilai dengan grup Import/Ekspor dan Backup/Restore yang lebih jelas.",
+      "Backup Lengkap tetap bisa dibuat dari halaman Input Nilai, sementara restore memakai dialog terpisah yang membaca metadata backup SIPENA.",
+      "Restore menampilkan nilai yang akan ditambahkan, ditimpa, dilewati, sama, atau konflik sebelum proses simpan.",
+      "Nilai lama tidak ditimpa tanpa mode overwrite atau konfirmasi eksplisit.",
+      "Restore memakai pipeline simpan batch existing sehingga hasil restore dapat di-undo dari riwayat terakhir.",
+    ],
+  },
+  {
     id: "v2.4.7",
     version: "2.4.7",
     title: "Export Nilai: Tampilan Lebih Rapi dan Template Lebih Aman",

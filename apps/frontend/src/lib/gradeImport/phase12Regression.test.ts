@@ -321,6 +321,7 @@ describe("phase 12 grade import regression suite", () => {
     const headerStepSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/HeaderConfigurationStep.tsx"), "utf8");
     const fixPanelSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
     const gradesPageSource = readFileSync(repoPath("apps/frontend/src/pages/Grades.tsx"), "utf8");
+    const restoreDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeBackupRestoreDialog.tsx"), "utf8");
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
@@ -462,6 +463,15 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).not.toContain("ImportGradesDialog");
     expect(gradesPageSource).not.toContain("showImportGrades");
     expect(gradesPageSource).not.toContain("Import dari Excel Lama");
+    expect(gradesPageSource).toContain("Kelola Nilai");
+    expect(gradesPageSource).toContain("Backup / Restore");
+    expect(gradesPageSource).toContain("<GradeBackupRestoreDialog");
+    expect(gradesPageSource).toContain("onRestoreBatch={async (items) => saveGradesBatchWithUndo(items)}");
+    expect(restoreDialogSource).toContain("readGradeBackupWorkbook");
+    expect(restoreDialogSource).toContain("buildGradeBackupRestorePlan");
+    expect(restoreDialogSource).toContain("buildGradeBackupRestoreBatchItems");
+    expect(restoreDialogSource).toContain("RESTORE NILAI");
+    expect(restoreDialogSource).toContain("KOSONGKAN NILAI");
     expect(previewBadgeSource).toContain("Tooltip");
     expect(previewBadgeSource).toContain("previewCellBadgeText");
     expect(statusBadgeSource).toContain("description?: ReactNode");

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
+  ArchiveRestore,
   ArrowRight,
   BookOpen,
   Camera,
@@ -66,6 +67,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -83,6 +86,7 @@ import { SmartStudentSearch } from "@/components/grades/SmartStudentSearch";
 import { ChapterStructure } from "@/components/grades/ChapterStructure";
 import { SpreadsheetTable } from "@/components/grades/SpreadsheetTable";
 import { EmptyStudentsState } from "@/components/grades/EmptyStudentsState";
+import GradeBackupRestoreDialog from "@/components/grades/GradeBackupRestoreDialog";
 import GradeImportExportDialog, { type GradeImportExportTab } from "@/components/grades/GradeImportExportDialog";
 import {
   FormulaSettings,
@@ -313,6 +317,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGradeImportExport, setShowGradeImportExport] = useState(false);
   const [gradeImportExportTab, setGradeImportExportTab] = useState<GradeImportExportTab>("import");
+  const [showGradeBackupRestore, setShowGradeBackupRestore] = useState(false);
   const [isDownloadingOfficialTemplate, setIsDownloadingOfficialTemplate] = useState(false);
   const [isExportingCurrentGrades, setIsExportingCurrentGrades] = useState(false);
   const [isExportingGradeBackup, setIsExportingGradeBackup] = useState(false);
@@ -537,6 +542,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     && (activeSemester?.id || selectedClass.semester_id)
     && (activeYear?.id || selectedClass.academic_year_id || selectedSubject.academic_year_id),
   );
+  const gradeBackupRestoreContext = useMemo(
+    () => buildGradeExportContext(),
+    [buildGradeExportContext],
+  );
 
   const handleDownloadOfficialTemplate = useCallback(() => {
     if (!selectedClass || !selectedSubject) {
@@ -644,6 +653,13 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       setIsExportingGradeBackup(false);
     }
   }, [buildGradeExportContext, showError, showWarning, success]);
+
+  const handleRestoreComplete = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["grades"] });
+    queryClient.invalidateQueries({ queryKey: ["chapters"] });
+    queryClient.invalidateQueries({ queryKey: ["assignments"] });
+    queryClient.invalidateQueries({ queryKey: ["all_assignments"] });
+  }, [queryClient]);
 
   const access: GradeInputAccess = isGuestMode
     ? guestData?.access || {
@@ -1098,13 +1114,14 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px]">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px] select-none" aria-label="Kelola file nilai">
             <Upload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Import/Export</span>
+            <span className="hidden sm:inline">Kelola Nilai</span>
             <ChevronDown className="w-3 h-3 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">Import / Ekspor</DropdownMenuLabel>
           <DropdownMenuItem
             onClick={() => {
               setGradeImportExportTab("import");
@@ -1123,11 +1140,37 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             className="gap-2 min-h-[44px]"
           >
             <Download className="w-4 h-4" />
-            Export Nilai
+            Ekspor Nilai Saat Ini
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleDownloadOfficialTemplate}
+            disabled={!canDownloadGradeTemplate || isDownloadingOfficialTemplate}
+            className="gap-2 min-h-[44px]"
+          >
+            {isDownloadingOfficialTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+            Download Template Resmi
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowOCRGrades(true)} className="gap-2 min-h-[44px]">
             <Camera className="w-4 h-4" />
             Import dari Foto (OCR)
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">Backup / Restore</DropdownMenuLabel>
+          <DropdownMenuItem
+            onClick={handleDownloadGradeBackup}
+            disabled={isExportingGradeBackup || !gradeBackupRestoreContext}
+            className="gap-2 min-h-[44px]"
+          >
+            {isExportingGradeBackup ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Buat Backup Lengkap
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setShowGradeBackupRestore(true)}
+            disabled={!gradeBackupRestoreContext}
+            className="gap-2 min-h-[44px]"
+          >
+            <ArchiveRestore className="w-4 h-4" />
+            Restore dari Backup
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -1487,13 +1530,20 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           canRedoImport={canRedo}
           onUndoImport={undo}
           onRedoImport={redo}
-          onImportComplete={() => {
-            queryClient.invalidateQueries({ queryKey: ["grades"] });
-            queryClient.invalidateQueries({ queryKey: ["chapters"] });
-            queryClient.invalidateQueries({ queryKey: ["assignments"] });
-            queryClient.invalidateQueries({ queryKey: ["all_assignments"] });
-          }}
+          onImportComplete={handleRestoreComplete}
           importContext={gradeImportContext}
+        />
+      )}
+
+      {!isGuestMode && selectedSubjectId && selectedClassId && gradeBackupRestoreContext && (
+        <GradeBackupRestoreDialog
+          open={showGradeBackupRestore}
+          onOpenChange={setShowGradeBackupRestore}
+          restoreContext={gradeBackupRestoreContext}
+          onRestoreBatch={async (items) => saveGradesBatchWithUndo(items)}
+          canUndoRestore={canUndo}
+          onUndoRestore={undo}
+          onRestoreComplete={handleRestoreComplete}
         />
       )}
 

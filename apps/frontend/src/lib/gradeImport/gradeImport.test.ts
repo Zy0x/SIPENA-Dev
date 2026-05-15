@@ -10,6 +10,8 @@ import {
   buildFullGradeBackupWorkbook,
   buildOfficialGradeTemplateWorkbook,
   buildCustomGradeTemplateWorkbook,
+  buildGradeBackupRestoreBatchItems,
+  buildGradeBackupRestorePlan,
   getOfficialGradeTemplateFileName,
   matchColumns,
   matchStudents,
@@ -21,6 +23,7 @@ import {
   normalizeWhitespace,
   parseGradeHeader,
   parseGradeValue,
+  readGradeBackupWorkbook,
   readWorkbookBuffer,
   removeZeroWidthChars,
   type GradeExportContext,
@@ -396,6 +399,196 @@ describe("SIPENA current grades and backup exporters", () => {
     const workbook = buildCurrentGradesExportWorkbook({ ...exportContext, students: [], grades: [] });
 
     expect(workbook.Sheets.Nilai["!autofilter"]?.ref).toBe("A1:F1");
+  });
+});
+
+describe("SIPENA grade backup restore reader", () => {
+  function backupReadResult(context: GradeExportContext = exportContext) {
+    const workbook = buildFullGradeBackupWorkbook(context);
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+    return readWorkbookBuffer(buffer, "Backup_Nilai_SIPENA.xlsx");
+  }
+
+  it("reads a valid grade backup workbook", () => {
+    const source = readGradeBackupWorkbook(backupReadResult());
+
+    expect(source.ok).toBe(true);
+    expect(source.manifest).toMatchObject({
+      app: "SIPENA",
+      export_type: "grade_backup",
+      class_id: "class-1",
+      subject_id: "subject-1",
+    });
+    expect(source.students).toHaveLength(2);
+    expect(source.structure.find((item) => item.assignmentId === "assignment-1")).toMatchObject({
+      chapterId: "chapter-1",
+      assignmentName: "Tugas 1",
+    });
+    expect(source.grades.find((item) => item.gradeId === "grade-1")).toMatchObject({
+      studentId: "student-1",
+      gradeType: "assignment",
+      value: 85,
+    });
+  });
+
+  it("rejects a non-backup workbook", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Nama", "Nilai"], ["Ahmad", 90]]), "Nilai");
+    const source = readGradeBackupWorkbook(readWorkbookBuffer(XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer, "nilai.xlsx"));
+
+    expect(source.ok).toBe(false);
+    expect(source.errors.map((item) => item.message)).toContain("Sheet _manifest tidak ditemukan. File ini bukan backup nilai SIPENA lengkap.");
+  });
+
+  it("rejects a backup without manifest", () => {
+    const workbook = buildFullGradeBackupWorkbook(exportContext);
+    delete workbook.Sheets._manifest;
+    workbook.SheetNames = workbook.SheetNames.filter((name) => name !== "_manifest");
+    const source = readGradeBackupWorkbook(readWorkbookBuffer(XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer, "backup.xlsx"));
+
+    expect(source.ok).toBe(false);
+    expect(source.errors.map((item) => item.details)).toContain("_manifest");
+  });
+
+  it("rejects a backup without grades metadata", () => {
+    const workbook = buildFullGradeBackupWorkbook(exportContext);
+    delete workbook.Sheets._grades;
+    workbook.SheetNames = workbook.SheetNames.filter((name) => name !== "_grades");
+    const source = readGradeBackupWorkbook(readWorkbookBuffer(XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer, "backup.xlsx"));
+
+    expect(source.ok).toBe(false);
+    expect(source.errors.map((item) => item.details)).toContain("_grades");
+  });
+
+  it("detects context mismatch before restore", () => {
+    const source = readGradeBackupWorkbook(backupReadResult());
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      classId: "class-other",
+      subjectId: "subject-other",
+      semesterId: "semester-other",
+      academicYearId: "year-other",
+    });
+
+    expect(plan.contextConflicts.map((item) => item.code)).toEqual(expect.arrayContaining([
+      "RESTORE_CLASS_ID_MISMATCH",
+      "RESTORE_SUBJECT_ID_MISMATCH",
+      "RESTORE_SEMESTER_ID_MISMATCH",
+      "RESTORE_ACADEMIC_YEAR_ID_MISMATCH",
+    ]));
+    expect(plan.operations.find((item) => item.studentId === "student-1")?.conflicts.map((item) => item.code)).toContain("RESTORE_GRADE_SUBJECT_MISMATCH");
+  });
+
+  it("keeps zero as zero and blank as null in restore plans", () => {
+    const source = readGradeBackupWorkbook(backupReadResult({
+      ...exportContext,
+      grades: [
+        { ...exportContext.grades[0], value: 0 },
+        { ...exportContext.grades[1], value: null },
+      ],
+    }));
+    const zero = source.grades.find((item) => item.gradeType === "assignment");
+    const blank = source.grades.find((item) => item.gradeType === "sts");
+
+    expect(zero?.value).toBe(0);
+    expect(blank?.value).toBeNull();
+  });
+
+  it("fill_empty_only does not overwrite existing values", () => {
+    const source = readGradeBackupWorkbook(backupReadResult());
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      grades: [
+        {
+          id: "existing",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 70,
+          semester_id: "semester-1",
+          academic_year_id: "year-1",
+        },
+      ],
+    });
+    const result = buildGradeBackupRestoreBatchItems(plan, { mode: "fill_empty_only" });
+
+    expect(plan.operations.find((item) => item.assignmentId === "assignment-1")?.status).toBe("overwrite");
+    expect(result.items.some((item) => item.assignmentId === "assignment-1")).toBe(false);
+    expect(result.items.find((item) => item.gradeType === "sts")).toMatchObject({ studentId: "student-1", value: 90 });
+  });
+
+  it("overwrite_selected only batches selected overwrite operations", () => {
+    const source = readGradeBackupWorkbook(backupReadResult());
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      grades: [
+        {
+          id: "existing-assignment",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 70,
+          semester_id: "semester-1",
+          academic_year_id: "year-1",
+        },
+        {
+          id: "existing-sts",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: null,
+          grade_type: "sts",
+          value: 80,
+          semester_id: "semester-1",
+          academic_year_id: "year-1",
+        },
+      ],
+    });
+    const selected = plan.operations.find((item) => item.assignmentId === "assignment-1");
+    const result = buildGradeBackupRestoreBatchItems(plan, {
+      mode: "overwrite_selected",
+      selectedOperationIds: selected ? [selected.id] : [],
+    });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({ studentId: "student-1", gradeType: "assignment", assignmentId: "assignment-1", value: 85 }),
+    ]);
+  });
+
+  it("full restore requires confirmation before producing batch items", () => {
+    const source = readGradeBackupWorkbook(backupReadResult());
+    const plan = buildGradeBackupRestorePlan(source, { ...exportContext, grades: [] });
+    const blocked = buildGradeBackupRestoreBatchItems(plan, { mode: "full_confirmed" });
+    const confirmed = buildGradeBackupRestoreBatchItems(plan, { mode: "full_confirmed", confirmationText: "RESTORE NILAI" });
+
+    expect(blocked.items).toHaveLength(0);
+    expect(blocked.blockedReasons[0]).toContain("RESTORE NILAI");
+    expect(confirmed.items.length).toBeGreaterThan(0);
+  });
+
+  it("detects student mismatch as conflict", () => {
+    const source = readGradeBackupWorkbook(backupReadResult());
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      students: exportContext.students.filter((student) => student.id !== "student-1"),
+      grades: [],
+    });
+
+    expect(plan.summary.studentConflicts).toBeGreaterThan(0);
+    expect(plan.operations.find((item) => item.studentId === "student-1")?.status).toBe("invalid");
+  });
+
+  it("detects assignment mismatch as conflict", () => {
+    const source = readGradeBackupWorkbook(backupReadResult());
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      assignments: [],
+      grades: [],
+    });
+
+    expect(plan.summary.structureConflicts).toBeGreaterThan(0);
+    expect(plan.operations.find((item) => item.assignmentId === "assignment-1")?.status).toBe("invalid");
   });
 });
 

@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.7";
+export const APP_VERSION = "2.4.8";
 export const VERSION_DATE = "2026-05-15";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.8": "Restore Backup Nilai ditambahkan dengan preview, validasi konteks, dan konfirmasi agar nilai tidak tertimpa tanpa persetujuan.",
   "2.4.7": "Tampilan Export Nilai dirapikan dan template/export nilai dikunci lebih akurat ke semester serta tahun ajaran aktif.",
   "2.4.6": "SmartImport nilai diperkuat dengan validasi Excel/AI yang lebih ketat, rollback struktur baru saat import gagal, dan akses keyboard pada preview.",
   "2.4.5": "Proteksi login bertingkat ditambahkan dengan request reset waiting time melalui reCAPTCHA dan panel Admin SIPENA.",

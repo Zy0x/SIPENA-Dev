@@ -4,6 +4,7 @@ export * from "./conflictSimplifier";
 export * from "./currentGradesExporter";
 export * from "./executableImportBuilder";
 export * from "./freeExcelAnalyzer";
+export * from "./gradeBackupRestoreReader";
 export * from "./headerParser";
 export * from "./importSelection";
 export * from "./importSession";
