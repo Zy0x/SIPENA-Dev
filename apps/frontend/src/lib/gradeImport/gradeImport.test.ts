@@ -391,8 +391,53 @@ describe("SIPENA current grades and backup exporters", () => {
     expect(workbook.SheetNames).toEqual(["Panduan", "Nilai", "_manifest", "_students", "_structure", "_grades"]);
     expect(hiddenSheets).toEqual(["_manifest", "_students", "_structure", "_grades"]);
     expect(guideSheet.A7?.v).toBe("4. Backup adalah arsip pemeriksaan. File ini bukan restore otomatis 1 klik.");
-    expect(gradeRows[0]).toEqual(["grade_id", "student_id", "subject_id", "assignment_id", "grade_type", "value", "semester_id", "academic_year_id"]);
+    expect(gradeRows[0]).toEqual([
+      "grade_id",
+      "student_id",
+      "subject_id",
+      "assignment_id",
+      "grade_type",
+      "value",
+      "semester_id",
+      "academic_year_id",
+      "created_at",
+      "updated_at",
+    ]);
     expect(gradeRows[1]).toContain("grade-1");
+  });
+
+  it("preserves raw Supabase scope in backup metadata instead of replacing null scope with active context", () => {
+    const workbook = buildFullGradeBackupWorkbook({
+      ...exportContext,
+      grades: [
+        {
+          id: "legacy-grade",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 75,
+          semester_id: null,
+          academic_year_id: null,
+          created_at: "2026-05-01T00:00:00.000Z",
+          updated_at: "2026-05-01T00:00:00.000Z",
+        },
+      ],
+    });
+    const gradeRows = XLSX.utils.sheet_to_json(workbook.Sheets._grades, { header: 1 }) as unknown[][];
+
+    expect(gradeRows[1]).toEqual([
+      "legacy-grade",
+      "student-1",
+      "subject-1",
+      "assignment-1",
+      "assignment",
+      75,
+      "",
+      "",
+      "2026-05-01T00:00:00.000Z",
+      "2026-05-01T00:00:00.000Z",
+    ]);
   });
 
   it("keeps current export autofilter on the header row when there are no students", () => {
@@ -516,6 +561,69 @@ describe("SIPENA grade backup restore reader", () => {
     expect(plan.operations.find((item) => item.assignmentId === "assignment-1")?.status).toBe("overwrite");
     expect(result.items.some((item) => item.assignmentId === "assignment-1")).toBe(false);
     expect(result.items.find((item) => item.gradeType === "sts")).toMatchObject({ studentId: "student-1", value: 90 });
+  });
+
+  it("restores only the page-effective backup row when exact and legacy rows target the same value", () => {
+    const source = readGradeBackupWorkbook(backupReadResult({
+      ...exportContext,
+      grades: [
+        {
+          id: "legacy-assignment",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 60,
+          semester_id: null,
+          academic_year_id: null,
+          created_at: "2026-05-01T00:00:00.000Z",
+          updated_at: "2026-05-01T00:00:00.000Z",
+        },
+        {
+          id: "active-assignment",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 88,
+          semester_id: "semester-1",
+          academic_year_id: "year-1",
+          created_at: "2026-05-02T00:00:00.000Z",
+          updated_at: "2026-05-02T00:00:00.000Z",
+        },
+      ],
+    }));
+    const plan = buildGradeBackupRestorePlan(source, { ...exportContext, grades: [] });
+    const result = buildGradeBackupRestoreBatchItems(plan, { mode: "fill_empty_only" });
+
+    expect(plan.operations.find((item) => item.rowIndex === 2)?.status).toBe("skipped");
+    expect(plan.operations.find((item) => item.rowIndex === 3)?.status).toBe("added");
+    expect(result.items).toEqual([
+      expect.objectContaining({ studentId: "student-1", gradeType: "assignment", assignmentId: "assignment-1", value: 88 }),
+    ]);
+  });
+
+  it("blocks off-context grade rows inside backup metadata", () => {
+    const source = readGradeBackupWorkbook(backupReadResult({
+      ...exportContext,
+      grades: [
+        {
+          id: "other-semester-grade",
+          student_id: "student-1",
+          subject_id: "subject-1",
+          assignment_id: "assignment-1",
+          grade_type: "assignment",
+          value: 77,
+          semester_id: "semester-2",
+          academic_year_id: "year-1",
+        },
+      ],
+    }));
+    const plan = buildGradeBackupRestorePlan(source, { ...exportContext, grades: [] });
+    const operation = plan.operations[0];
+
+    expect(operation.status).toBe("invalid");
+    expect(operation.conflicts.map((item) => item.code)).toContain("RESTORE_ROW_SEMESTER_MISMATCH");
   });
 
   it("overwrite_selected only batches selected overwrite operations", () => {

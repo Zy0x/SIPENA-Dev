@@ -104,6 +104,8 @@ export interface ParsedGradeBackupValue {
   value: number | null;
   semesterId?: string | null;
   academicYearId?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
   rowIndex: number;
 }
 
@@ -309,6 +311,8 @@ function parseGrades(sheet: WorkbookSheetData, errors: WorkbookReadError[]): Par
         value: Number.NaN,
         semesterId: optionalText(readByHeader(row, headers, "semester_id")) || null,
         academicYearId: optionalText(readByHeader(row, headers, "academic_year_id")) || null,
+        createdAt: optionalText(readByHeader(row, headers, "created_at")) || null,
+        updatedAt: optionalText(readByHeader(row, headers, "updated_at")) || null,
         rowIndex,
       } as ParsedGradeBackupValue];
     }
@@ -322,6 +326,8 @@ function parseGrades(sheet: WorkbookSheetData, errors: WorkbookReadError[]): Par
       value: parsedValue.value,
       semesterId: optionalText(readByHeader(row, headers, "semester_id")) || null,
       academicYearId: optionalText(readByHeader(row, headers, "academic_year_id")) || null,
+      createdAt: optionalText(readByHeader(row, headers, "created_at")) || null,
+      updatedAt: optionalText(readByHeader(row, headers, "updated_at")) || null,
       rowIndex,
     }];
   });
@@ -442,6 +448,70 @@ function targetLabel(gradeType: RestorableGradeType, assignmentName?: string) {
   return gradeType.toUpperCase();
 }
 
+function gradeTargetKey(grade: Pick<ParsedGradeBackupValue, "studentId" | "gradeType" | "assignmentId">) {
+  return [
+    grade.studentId,
+    grade.gradeType,
+    grade.gradeType === "assignment" ? grade.assignmentId || "" : "",
+  ].join("|");
+}
+
+function scopedTimestamp(grade: ParsedGradeBackupValue): number {
+  const updated = Date.parse(grade.updatedAt || "");
+  if (Number.isFinite(updated)) return updated;
+  const created = Date.parse(grade.createdAt || "");
+  return Number.isFinite(created) ? created : 0;
+}
+
+function scopePriority(grade: ParsedGradeBackupValue, manifest?: GradeBackupManifest): number {
+  const yearId = manifest?.academic_year_id || null;
+  const semesterId = manifest?.semester_id || null;
+  let score = 0;
+
+  if (yearId) {
+    if (grade.academicYearId === yearId) score += 40;
+    else if (!grade.academicYearId) score += 20;
+    else return -1;
+  } else if (!grade.academicYearId) {
+    score += 40;
+  }
+
+  if (semesterId) {
+    if (grade.semesterId === semesterId) score += 4;
+    else if (!grade.semesterId) score += 2;
+    else return -1;
+  } else if (!grade.semesterId) {
+    score += 4;
+  }
+
+  return score;
+}
+
+function preferredBackupRowIndexes(grades: ParsedGradeBackupValue[], manifest?: GradeBackupManifest): Set<number> {
+  const byTarget = new Map<string, ParsedGradeBackupValue[]>();
+  grades.forEach((grade) => {
+    const key = gradeTargetKey(grade);
+    const entries = byTarget.get(key) || [];
+    entries.push(grade);
+    byTarget.set(key, entries);
+  });
+
+  const selected = new Set<number>();
+  byTarget.forEach((entries) => {
+    const ordered = [...entries].sort((left, right) => {
+      const scoreDelta = scopePriority(right, manifest) - scopePriority(left, manifest);
+      if (scoreDelta !== 0) return scoreDelta;
+      const timeDelta = scopedTimestamp(right) - scopedTimestamp(left);
+      if (timeDelta !== 0) return timeDelta;
+      return right.rowIndex - left.rowIndex;
+    });
+    const best = ordered.find((entry) => scopePriority(entry, manifest) >= 0);
+    if (best) selected.add(best.rowIndex);
+  });
+
+  return selected;
+}
+
 function findCurrentValue(context: GradeBackupRestoreContext, backupGrade: ParsedGradeBackupValue): number | null {
   const studentGrades = context.grades.filter((grade) => {
     if (grade.student_id !== backupGrade.studentId) return false;
@@ -482,6 +552,7 @@ export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, conte
   const currentChapters = new Map(context.chapters.map((chapter) => [chapter.id, chapter]));
   const backupStructure = new Map(source.structure.filter((item) => item.assignmentId).map((item) => [item.assignmentId || "", item]));
   const contextConflicts = buildContextConflicts(source, context);
+  const preferredRows = preferredBackupRowIndexes(source.grades, source.manifest);
 
   const operations = source.grades.map((backupGrade): GradeBackupRestoreOperation => {
     const operationId = `restore:${backupGrade.studentId}:${backupGrade.gradeType}:${backupGrade.assignmentId || "final"}:${backupGrade.rowIndex}`;
@@ -564,10 +635,45 @@ export function buildGradeBackupRestorePlan(source: GradeBackupReadResult, conte
       });
     }
 
+    if (
+      source.manifest?.academic_year_id
+      && backupGrade.academicYearId
+      && backupGrade.academicYearId !== source.manifest.academic_year_id
+    ) {
+      conflicts.push({
+        code: "RESTORE_ROW_ACADEMIC_YEAR_MISMATCH",
+        type: "context",
+        severity: "blocked",
+        message: "Baris nilai backup berasal dari tahun ajaran lain.",
+        operationId,
+      });
+    }
+
+    if (
+      source.manifest?.semester_id
+      && backupGrade.semesterId
+      && backupGrade.semesterId !== source.manifest.semester_id
+    ) {
+      conflicts.push({
+        code: "RESTORE_ROW_SEMESTER_MISMATCH",
+        type: "context",
+        severity: "blocked",
+        message: "Baris nilai backup berasal dari semester lain.",
+        operationId,
+      });
+    }
+
+    const isPreferredBackupRow = preferredRows.has(backupGrade.rowIndex);
+    if (!isPreferredBackupRow) {
+      warnings.push("Baris backup ini dilewati karena ada nilai lain dengan target yang sama dan konteks/waktu lebih sesuai.");
+    }
+
     const currentValue = currentStudent ? findCurrentValue(context, backupGrade) : null;
     let status: GradeBackupRestoreOperationStatus = "skipped";
     if (conflicts.some((item) => item.severity === "blocked")) {
       status = "invalid";
+    } else if (!isPreferredBackupRow) {
+      status = "skipped";
     } else if (backupGrade.value === null) {
       status = currentValue === null ? "unchanged" : "skipped";
     } else if (currentValue === null) {

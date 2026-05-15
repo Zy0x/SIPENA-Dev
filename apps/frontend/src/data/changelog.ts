@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.9",
+    version: "2.4.9",
+    title: "Backup/Restore Nilai: Akurasi Data Diperketat",
+    description: "Backup dan Restore Nilai kini menjaga metadata Supabase lebih presisi agar nilai yang dipulihkan sesuai konteks halaman Input Nilai.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Metadata backup tidak lagi mengganti semester atau tahun ajaran kosong dari Supabase menjadi konteks aktif secara diam-diam.",
+      "Restore memilih satu nilai paling sesuai untuk setiap siswa dan target nilai saat backup berisi row legacy dan row aktif sekaligus.",
+      "Row backup dari semester atau tahun ajaran lain diblokir agar tidak ikut menimpa nilai halaman aktif.",
+      "Timestamp nilai ikut disimpan di metadata backup supaya pemilihan row ganda mengikuti data terbaru.",
+    ],
+  },
+  {
     id: "v2.4.8",
     version: "2.4.8",
     title: "Input Nilai: Restore Backup Nilai",

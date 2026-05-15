@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.8";
+export const APP_VERSION = "2.4.9";
 export const VERSION_DATE = "2026-05-15";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.9": "Backup dan Restore Nilai diperketat agar metadata Supabase tetap presisi, row legacy tidak tertukar konteks, dan restore tidak memproses nilai ganda.",
   "2.4.8": "Restore Backup Nilai ditambahkan dengan preview, validasi konteks, dan konfirmasi agar nilai tidak tertimpa tanpa persetujuan.",
   "2.4.7": "Tampilan Export Nilai dirapikan dan template/export nilai dikunci lebih akurat ke semester serta tahun ajaran aktif.",
   "2.4.6": "SmartImport nilai diperkuat dengan validasi Excel/AI yang lebih ketat, rollback struktur baru saat import gagal, dan akses keyboard pada preview.",

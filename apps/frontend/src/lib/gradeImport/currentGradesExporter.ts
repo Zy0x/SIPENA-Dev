@@ -312,10 +312,14 @@ function createManifestSheet(context: GradeExportContext, columns: ExportColumn[
     ["structure_hash", hashPayload({ chapters: context.chapters, assignments: context.assignments })],
     ["grades_hash", hashPayload(context.grades.map((grade) => ({
       student_id: grade.student_id,
+      subject_id: grade.subject_id || "",
       grade_type: grade.grade_type,
       assignment_id: grade.assignment_id || "",
       value: grade.value,
       semester_id: grade.semester_id || "",
+      academic_year_id: grade.academic_year_id || "",
+      created_at: grade.created_at || "",
+      updated_at: grade.updated_at || "",
     })))],
     ["columns_hash", hashPayload(columns)],
   ];
@@ -392,7 +396,7 @@ function createStructureSheet(context: GradeExportContext) {
 
 function createGradesMetadataSheet(context: GradeExportContext) {
   const rows = [
-    ["grade_id", "student_id", "subject_id", "assignment_id", "grade_type", "value", "semester_id", "academic_year_id"],
+    ["grade_id", "student_id", "subject_id", "assignment_id", "grade_type", "value", "semester_id", "academic_year_id", "created_at", "updated_at"],
     ...context.grades.map((grade) => [
       grade.id || "",
       grade.student_id,
@@ -400,13 +404,15 @@ function createGradesMetadataSheet(context: GradeExportContext) {
       grade.assignment_id || "",
       grade.grade_type,
       grade.value ?? "",
-      grade.semester_id || context.semesterId || "",
-      grade.academic_year_id || context.academicYearId || "",
+      grade.semester_id || "",
+      grade.academic_year_id || "",
+      grade.created_at || "",
+      grade.updated_at || "",
     ]),
   ];
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  setColumnWidths(ws, [40, 40, 40, 40, 16, 12, 40, 40]);
-  styleHeaderRow(ws, 0, 8);
+  setColumnWidths(ws, [40, 40, 40, 40, 16, 12, 40, 40, 28, 28]);
+  styleHeaderRow(ws, 0, 10);
   return ws;
 }
 
