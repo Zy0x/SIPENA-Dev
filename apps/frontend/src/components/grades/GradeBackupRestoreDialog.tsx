@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   buildGradeBackupRestoreBatchItems,
   buildGradeBackupRestorePlan,
@@ -97,9 +96,9 @@ function previewCellClass(status: GradeBackupRestoreOperation["status"]) {
 
 function SummaryMetric({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
-    <div className={cn("rounded-lg border bg-background px-3 py-2", tone)}>
-      <div className="text-lg font-semibold leading-none">{value}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+    <div className={cn("min-w-0 rounded-lg border bg-background px-3 py-2", tone)}>
+      <div className="truncate text-lg font-semibold leading-none">{value}</div>
+      <div className="mt-1 truncate text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }
@@ -198,19 +197,29 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
     return map;
   }, [plan.operations]);
 
+  const statusBadgeText = (status: GradeBackupRestoreOperation["status"]) => {
+    if (status === "overwrite") return "Timpa";
+    if (status === "added") return "Baru";
+    if (status === "invalid") return "Konflik";
+    if (status === "unchanged") return "Sama";
+    return "Skip";
+  };
+
   return (
     <Card>
-      <CardHeader className="space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+      <CardHeader className="space-y-3 pb-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="min-w-0">
             <CardTitle className="text-base">Preview tabel restore</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               Bandingkan nilai backup dengan nilai halaman aktif sebelum memilih mode restore.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap gap-1.5 lg:justify-end">
             {(["added", "overwrite", "unchanged", "skipped", "invalid"] as const).map((status) => (
-              <Badge key={status} variant={statusTone(status)}>{statusLabel(status)}</Badge>
+              <Badge key={status} variant={statusTone(status)} className="px-2 py-0.5 text-[11px]">
+                {statusLabel(status)}
+              </Badge>
             ))}
           </div>
         </div>
@@ -223,72 +232,118 @@ function RestorePreviewTable({ plan }: { plan: GradeBackupRestorePlan }) {
             <AlertDescription>Backup terbaca, tetapi tidak ada baris nilai yang bisa dibuat menjadi preview tabel.</AlertDescription>
           </Alert>
         ) : (
-          <div className="overflow-hidden rounded-xl border">
-            <div className="max-h-[28rem] overflow-auto">
-              <Table className="min-w-[760px]">
-                <TableHeader className="sticky top-0 z-20 bg-background">
-                  <TableRow>
-                    <TableHead className="sticky left-0 z-30 min-w-[14rem] bg-background shadow-[1px_0_0_hsl(var(--border))]">
+          <>
+            <div className="sipena-restore-preview-scroll hidden max-h-[28rem] overflow-auto rounded-xl border md:block">
+              <table className="w-max min-w-full border-separate border-spacing-0 text-xs">
+                <thead className="sticky top-0 z-20 bg-background">
+                  <tr>
+                    <th className="sticky left-0 z-30 w-44 min-w-44 max-w-52 border-b bg-background px-3 py-2 text-left font-semibold text-foreground shadow-[1px_0_0_hsl(var(--border))]">
                       Siswa
-                    </TableHead>
+                    </th>
                     {columns.map((column) => (
-                      <TableHead key={column.key} className="min-w-[11rem]">
-                        <div className="font-semibold text-foreground">{column.label}</div>
-                        <div className="text-xs font-normal text-muted-foreground">{column.sublabel}</div>
-                      </TableHead>
+                      <th key={column.key} className="w-32 min-w-32 border-b bg-background px-2 py-2 text-left align-bottom">
+                        <div className="truncate font-semibold text-foreground" title={column.label}>{column.label}</div>
+                        <div className="truncate text-[11px] font-normal text-muted-foreground" title={column.sublabel}>{column.sublabel}</div>
+                      </th>
                     ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                  </tr>
+                </thead>
+                <tbody>
                   {rows.map((row) => (
-                    <TableRow key={row.studentId}>
-                      <TableCell className="sticky left-0 z-10 min-w-[14rem] bg-background shadow-[1px_0_0_hsl(var(--border))]">
-                        <div className="font-medium text-foreground">{row.name}</div>
-                        <div className="text-xs text-muted-foreground">{row.nisn || row.studentId}</div>
-                      </TableCell>
+                    <tr key={row.studentId} className="border-b">
+                      <td className="sticky left-0 z-10 w-44 min-w-44 max-w-52 border-b bg-background px-3 py-2 shadow-[1px_0_0_hsl(var(--border))]">
+                        <div className="truncate font-medium text-foreground" title={row.name}>{row.name}</div>
+                        <div className="truncate text-[11px] text-muted-foreground" title={row.nisn || row.studentId}>{row.nisn || row.studentId}</div>
+                      </td>
                       {columns.map((column) => {
                         const operation = operationByCell.get(`${row.studentId}|${column.key}`);
                         if (!operation) {
                           return (
-                            <TableCell key={column.key} className="min-w-[11rem] text-muted-foreground">
+                            <td key={column.key} className="w-32 min-w-32 border-b px-2 py-2 text-center text-muted-foreground">
                               -
-                            </TableCell>
+                            </td>
                           );
                         }
                         return (
-                          <TableCell key={column.key} className="min-w-[11rem] p-2 align-top">
-                            <div className={cn("space-y-2 rounded-lg border p-2", previewCellClass(operation.status))}>
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-medium">{statusLabel(operation.status)}</span>
-                                <Badge variant={statusTone(operation.status)} className="shrink-0 px-2 py-0 text-[10px]">
-                                  {operation.status === "overwrite" ? "Timpa" : operation.status === "added" ? "Baru" : operation.status === "invalid" ? "Konflik" : operation.status === "unchanged" ? "Sama" : "Skip"}
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <div className="text-muted-foreground">Saat ini</div>
-                                  <div className="text-sm font-semibold text-foreground">{valueLabel(operation.currentValue)}</div>
-                                </div>
-                                <div>
-                                  <div className="text-muted-foreground">Backup</div>
-                                  <div className="text-sm font-semibold text-foreground">{valueLabel(operation.backupValue)}</div>
-                                </div>
-                              </div>
-                              {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
-                                <div className="text-[11px] leading-4 text-muted-foreground">
-                                  {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
-                                </div>
-                              ) : null}
+                          <td key={column.key} className={cn("w-32 min-w-32 border-b px-2 py-2 align-top", previewCellClass(operation.status))}>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="truncate font-medium" title={statusLabel(operation.status)}>{statusLabel(operation.status)}</span>
+                              <Badge variant={statusTone(operation.status)} className="shrink-0 px-1.5 py-0 text-[10px] leading-4">
+                                {statusBadgeText(operation.status)}
+                              </Badge>
                             </div>
-                          </TableCell>
+                            <div className="mt-1 grid grid-cols-2 gap-1">
+                              <div className="min-w-0">
+                                <div className="truncate text-[10px] text-muted-foreground">Saat ini</div>
+                                <div className="truncate text-sm font-semibold text-foreground">{valueLabel(operation.currentValue)}</div>
+                              </div>
+                              <div className="min-w-0">
+                                <div className="truncate text-[10px] text-muted-foreground">Backup</div>
+                                <div className="truncate text-sm font-semibold text-foreground">{valueLabel(operation.backupValue)}</div>
+                              </div>
+                            </div>
+                            {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
+                              <div className="mt-1 truncate text-[10px] leading-4 text-muted-foreground">
+                                {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
+                              </div>
+                            ) : null}
+                          </td>
                         );
                       })}
-                    </TableRow>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
-          </div>
+            <div className="sipena-restore-preview-mobile space-y-3 md:hidden">
+              {rows.map((row) => {
+                const rowOperations = columns
+                  .map((column) => ({
+                    column,
+                    operation: operationByCell.get(`${row.studentId}|${column.key}`),
+                  }))
+                  .filter((item): item is { column: typeof columns[number]; operation: GradeBackupRestoreOperation } => Boolean(item.operation));
+                return (
+                  <div key={row.studentId} className="rounded-xl border bg-background p-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-foreground" title={row.name}>{row.name}</div>
+                      <div className="truncate text-xs text-muted-foreground" title={row.nisn || row.studentId}>{row.nisn || row.studentId}</div>
+                    </div>
+                    <div className="mt-3 grid gap-2">
+                      {rowOperations.map(({ column, operation }) => (
+                        <div key={column.key} className={cn("rounded-lg border px-3 py-2 text-xs", previewCellClass(operation.status))}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="truncate font-semibold text-foreground" title={column.label}>{column.label}</div>
+                              <div className="truncate text-[11px] text-muted-foreground" title={column.sublabel}>{column.sublabel}</div>
+                            </div>
+                            <Badge variant={statusTone(operation.status)} className="shrink-0 px-2 py-0 text-[10px]">
+                              {statusBadgeText(operation.status)}
+                            </Badge>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <div className="min-w-0 rounded-md bg-background/60 px-2 py-1">
+                              <div className="truncate text-[10px] text-muted-foreground">Saat ini</div>
+                              <div className="truncate text-sm font-semibold text-foreground">{valueLabel(operation.currentValue)}</div>
+                            </div>
+                            <div className="min-w-0 rounded-md bg-background/60 px-2 py-1">
+                              <div className="truncate text-[10px] text-muted-foreground">Backup</div>
+                              <div className="truncate text-sm font-semibold text-foreground">{valueLabel(operation.backupValue)}</div>
+                            </div>
+                          </div>
+                          {operation.conflicts.length > 0 || operation.warnings.length > 0 ? (
+                            <div className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                              {operation.conflicts.length > 0 ? `${operation.conflicts.length} konflik` : `${operation.warnings.length} catatan`}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
@@ -446,7 +501,7 @@ export default function GradeBackupRestoreDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex h-[min(100dvh-0.75rem,46rem)] w-[calc(100vw-0.75rem)] max-w-5xl flex-col overflow-hidden p-0">
+      <DialogContent className="flex h-[min(100dvh-1rem,48rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden p-0">
         <div className="border-b px-4 py-4 sm:px-6">
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-emerald-50 p-2 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">
@@ -463,7 +518,7 @@ export default function GradeBackupRestoreDialog({
 
         <ScrollArea className="flex-1">
           <div className="space-y-4 p-4 sm:p-6">
-            <div className="grid gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
               {[
                 ["upload", "Upload"],
                 ["preview", "Preview"],
@@ -473,13 +528,13 @@ export default function GradeBackupRestoreDialog({
                 <div
                   key={key}
                   className={cn(
-                    "rounded-lg border px-3 py-2 text-xs font-medium",
+                    "min-w-0 rounded-lg border px-3 py-2 text-xs font-medium",
                     step === key || (step === "validate" && key === "upload") || (step === "running" && key === "confirm") || (step === "result" && key === "confirm")
                       ? "border-primary bg-primary/10 text-primary"
                       : "bg-muted/30 text-muted-foreground",
                   )}
                 >
-                  {index + 1}. {label}
+                  <span className="block truncate">{index + 1}. {label}</span>
                 </div>
               ))}
             </div>
@@ -534,7 +589,7 @@ export default function GradeBackupRestoreDialog({
 
             {plan && (step === "preview" || step === "mode" || step === "confirm" || step === "running" || step === "result") ? (
               <>
-                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
                   <SummaryMetric label="Tambah" value={plan.summary.added} />
                   <SummaryMetric label="Timpa" value={plan.summary.overwrite} tone="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20" />
                   <SummaryMetric label="Sama" value={plan.summary.unchanged} />

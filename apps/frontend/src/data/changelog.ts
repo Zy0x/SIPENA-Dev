@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.11",
+    version: "2.4.11",
+    title: "Restore Backup Nilai: Preview Responsif",
+    description: "Preview Restore Backup Nilai dirapikan agar tabel tidak terpotong di desktop dan tetap mudah dibaca di mobile.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-05-15",
+    details: [
+      "Tabel restore dibuat lebih compact dengan satu area scroll yang stabil.",
+      "Sel nilai kini lebih ringkas tanpa card besar yang membuat dialog melebar.",
+      "Mobile memakai daftar ringkas per siswa agar nilai saat ini, backup, dan status tetap jelas tanpa overflow horizontal.",
+    ],
+  },
+  {
     id: "v2.4.10",
     version: "2.4.10",
     title: "Restore Backup Nilai: Preview Tabel",

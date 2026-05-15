@@ -472,7 +472,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("buildGradeBackupRestoreBatchItems");
     expect(restoreDialogSource).toContain("RestorePreviewTable");
     expect(restoreDialogSource).toContain("Preview tabel restore");
-    expect(restoreDialogSource).toContain("<TableHeader");
+    expect(restoreDialogSource).toContain("sipena-restore-preview-scroll");
+    expect(restoreDialogSource).toContain("sipena-restore-preview-mobile");
+    expect(restoreDialogSource).toContain("hidden max-h-[28rem] overflow-auto rounded-xl border md:block");
+    expect(restoreDialogSource).toContain("space-y-3 md:hidden");
+    expect(restoreDialogSource).not.toContain("min-w-[760px]");
+    expect(restoreDialogSource).not.toContain("min-w-[14rem]");
+    expect(restoreDialogSource).not.toContain("min-w-[11rem]");
     expect(restoreDialogSource).toContain("Saat ini");
     expect(restoreDialogSource).toContain("Backup");
     expect(restoreDialogSource).toContain("RESTORE NILAI");
