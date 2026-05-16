@@ -390,7 +390,7 @@ describe("SIPENA current grades and backup exporters", () => {
 
     expect(workbook.SheetNames).toEqual(["Panduan", "Nilai", "_manifest", "_students", "_structure", "_grades"]);
     expect(hiddenSheets).toEqual(["_manifest", "_students", "_structure", "_grades"]);
-    expect(guideSheet.A7?.v).toBe("4. Backup adalah arsip pemeriksaan. File ini bukan restore otomatis 1 klik.");
+    expect(String(guideSheet.A7?.v)).toContain("Mode edit sheet Nilai AKTIF");
     expect(gradeRows[0]).toEqual([
       "grade_id",
       "student_id",
@@ -404,6 +404,18 @@ describe("SIPENA current grades and backup exporters", () => {
       "updated_at",
     ]);
     expect(gradeRows[1]).toContain("grade-1");
+  });
+
+  it("can export full backup with metadata-protected restore mode", () => {
+    const workbook = buildFullGradeBackupWorkbook(exportContext, { protectMetadata: true });
+    const guideSheet = workbook.Sheets.Panduan;
+    const manifestRows = XLSX.utils.sheet_to_json(workbook.Sheets._manifest, { header: 1 }) as unknown[][];
+    const manifest = new Map(manifestRows.slice(1).map((row) => [String(row[0]), String(row[1])]));
+
+    expect(String(guideSheet.A7?.v)).toContain("Mode perlindungan metadata AKTIF");
+    expect(manifest.get("metadata_locked")).toBe("true");
+    expect(manifest.get("restore_value_source")).toBe("metadata");
+    expect(manifest.get("visible_sheet_override")).toBe("disabled");
   });
 
   it("preserves raw Supabase scope in backup metadata instead of replacing null scope with active context", () => {
@@ -494,6 +506,21 @@ describe("SIPENA grade backup restore reader", () => {
       && item.academicYearId === "year-1"
     ))?.value).toBe(88);
     expect(operation).toMatchObject({ backupValue: 88, currentValue: 85, status: "overwrite" });
+  });
+
+  it("keeps metadata values when backup is protected from visible sheet edits", () => {
+    const workbook = buildFullGradeBackupWorkbook(exportContext, { protectMetadata: true });
+    workbook.Sheets.Nilai.D2 = { t: "n", v: 88 };
+    const source = readGradeBackupWorkbook(readWorkbookBuffer(XLSX.write(workbook, { bookType: "xlsx", type: "array" }) as ArrayBuffer, "backup.xlsx"));
+    const plan = buildGradeBackupRestorePlan(source, {
+      ...exportContext,
+      grades: [{ ...exportContext.grades[0], value: 85 }],
+    });
+    const operation = plan.operations.find((item) => item.studentId === "student-1" && item.assignmentId === "assignment-1");
+
+    expect(source.manifest?.metadata_locked).toBe("true");
+    expect(source.grades.find((item) => item.gradeId === "grade-1")?.value).toBe(85);
+    expect(operation).toMatchObject({ backupValue: 85, currentValue: 85, status: "unchanged" });
   });
 
   it("rejects a non-backup workbook", () => {

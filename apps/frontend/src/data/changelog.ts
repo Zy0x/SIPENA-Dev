@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.22",
+    version: "2.4.22",
+    title: "Backup Nilai: Mode Perlindungan Metadata",
+    description: "Backup Lengkap Nilai kini memiliki konfirmasi mode restore agar metadata bisa dikunci atau mengizinkan edit sheet Nilai sebagai override.",
+    type: "feature",
+    is_critical: true,
+    released_at: "2026-05-16",
+    details: [
+      "Menambahkan modal konfirmasi sebelum membuat Backup Lengkap Nilai.",
+      "Opsi Lindungi restore dengan metadata membuat restore memakai _grades walau sheet Nilai diedit.",
+      "Panduan di workbook backup diperjelas agar pengguna memahami perbedaan mode metadata terkunci dan mode edit sheet Nilai.",
+    ],
+  },
+  {
     id: "v2.4.21",
     version: "2.4.21",
     title: "Restore Backup Nilai: Deteksi Edit Excel",

@@ -44,6 +44,10 @@ export interface GradeExportContext {
   generatedAt?: string;
 }
 
+export interface GradeBackupWorkbookOptions {
+  protectMetadata?: boolean;
+}
+
 type SheetVisibility = 0 | 1 | 2;
 
 interface WorkbookWithVisibility extends XLSX.WorkBook {
@@ -243,7 +247,8 @@ function getStudentGradeValue(context: GradeExportContext, studentId: string, co
   return value?.value ?? "";
 }
 
-function createGuideSheet(type: "current" | "backup") {
+function createGuideSheet(type: "current" | "backup", options: GradeBackupWorkbookOptions = {}) {
+  const protectedMode = Boolean(options.protectMetadata);
   const rows = type === "current"
     ? [
         ["SIPENA - Export Nilai Saat Ini"],
@@ -258,10 +263,14 @@ function createGuideSheet(type: "current" | "backup") {
         ["SIPENA - Backup Lengkap Nilai"],
         [""],
         ["Isi workbook"],
-        ["1. Sheet Nilai berisi tampilan nilai aktif."],
-        ["2. Sheet metadata tersembunyi menyimpan struktur, siswa, manifest, dan nilai yang tersedia."],
-        ["3. Backup ini dibuat dari data yang tersedia di browser saat export."],
-        ["4. Backup adalah arsip pemeriksaan. File ini bukan restore otomatis 1 klik."],
+        ["1. Sheet Nilai berisi tampilan nilai aktif agar mudah diperiksa di Excel."],
+        ["2. Sheet metadata tersembunyi (_manifest, _students, _structure, _grades) menyimpan identitas siswa, struktur BAB/tugas, konteks kelas-mapel-semester-tahun, dan nilai mentah dari web."],
+        ["3. Backup ini dibuat dari data yang tersedia di browser saat export. Simpan file ini sebagai arsip sebelum import/restore massal."],
+        [protectedMode
+          ? "4. Mode perlindungan metadata AKTIF: saat restore, SIPENA memakai nilai dari _grades. Perubahan manual di sheet Nilai hanya untuk catatan Excel dan tidak akan menimpa metadata."
+          : "4. Mode edit sheet Nilai AKTIF: metadata tetap melindungi siswa dan struktur, tetapi perubahan nilai manual di sheet Nilai akan dipakai sebagai override saat restore."],
+        ["5. Jangan mengubah student_id, assignment_id, atau sheet metadata kecuali benar-benar memahami risikonya."],
+        ["6. Restore tetap meminta preview, pilihan mode, dan konfirmasi sebelum menyimpan ke web."],
       ];
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -290,12 +299,16 @@ function createGradesSheet(context: GradeExportContext, columns: ExportColumn[])
   return ws;
 }
 
-function createManifestSheet(context: GradeExportContext, columns: ExportColumn[]) {
+function createManifestSheet(context: GradeExportContext, columns: ExportColumn[], options: GradeBackupWorkbookOptions = {}) {
+  const protectedMode = Boolean(options.protectMetadata);
   const rows = [
     ["key", "value"],
     ["app", "SIPENA"],
     ["export_type", "grade_backup"],
     ["export_version", "1.0.0"],
+    ["metadata_locked", protectedMode ? "true" : "false"],
+    ["restore_value_source", protectedMode ? "metadata" : "visible_sheet_override"],
+    ["visible_sheet_override", protectedMode ? "disabled" : "enabled"],
     ["class_id", context.classId || ""],
     ["class_name", context.className],
     ["subject_id", context.subjectId || ""],
@@ -424,12 +437,12 @@ export function buildCurrentGradesExportWorkbook(context: GradeExportContext): X
   return wb;
 }
 
-export function buildFullGradeBackupWorkbook(context: GradeExportContext): XLSX.WorkBook {
+export function buildFullGradeBackupWorkbook(context: GradeExportContext, options: GradeBackupWorkbookOptions = {}): XLSX.WorkBook {
   const wb = XLSX.utils.book_new() as WorkbookWithVisibility;
   const columns = buildExportColumns(context);
-  appendSheet(wb, createGuideSheet("backup"), "Panduan");
+  appendSheet(wb, createGuideSheet("backup", options), "Panduan");
   appendSheet(wb, createGradesSheet(context, columns), "Nilai");
-  appendSheet(wb, createManifestSheet(context, columns), "_manifest", 1);
+  appendSheet(wb, createManifestSheet(context, columns, options), "_manifest", 1);
   appendSheet(wb, createStudentsSheet(context), "_students", 1);
   appendSheet(wb, createStructureSheet(context), "_structure", 1);
   appendSheet(wb, createGradesMetadataSheet(context), "_grades", 1);
@@ -458,6 +471,6 @@ export function downloadCurrentGradesExport(context: GradeExportContext) {
   XLSX.writeFile(buildCurrentGradesExportWorkbook(context), getCurrentGradesExportFileName(context));
 }
 
-export function downloadFullGradeBackup(context: GradeExportContext) {
-  XLSX.writeFile(buildFullGradeBackupWorkbook(context), getFullGradeBackupFileName(context));
+export function downloadFullGradeBackup(context: GradeExportContext, options: GradeBackupWorkbookOptions = {}) {
+  XLSX.writeFile(buildFullGradeBackupWorkbook(context, options), getFullGradeBackupFileName(context));
 }

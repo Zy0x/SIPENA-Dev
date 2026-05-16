@@ -324,6 +324,7 @@ describe("phase 12 grade import regression suite", () => {
     const spreadsheetSource = readFileSync(repoPath("apps/frontend/src/components/grades/SpreadsheetTable.tsx"), "utf8");
     const restoreDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeBackupRestoreDialog.tsx"), "utf8");
     const restoreReaderSource = readFileSync(repoPath("apps/frontend/src/lib/gradeImport/gradeBackupRestoreReader.ts"), "utf8");
+    const backupExporterSource = readFileSync(repoPath("apps/frontend/src/lib/gradeImport/currentGradesExporter.ts"), "utf8");
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
@@ -467,6 +468,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).not.toContain("Import dari Excel Lama");
     expect(gradesPageSource).toContain("Kelola Nilai");
     expect(gradesPageSource).toContain("Backup / Restore");
+    expect(gradesPageSource).toContain("Konfirmasi Backup Lengkap Nilai");
+    expect(gradesPageSource).toContain("Lindungi restore dengan metadata");
+    expect(gradesPageSource).toContain("protectGradeBackupMetadata");
     expect(gradesPageSource).toContain("<GradeBackupRestoreDialog");
     expect(gradesPageSource).toContain("onRestoreBatch={async (items) => saveGradesBatchWithUndo(items)}");
     expect(restoreDialogSource).toContain("readGradeBackupWorkbook");
@@ -474,7 +478,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(restoreDialogSource).toContain("buildGradeBackupRestoreBatchItems");
     expect(restoreReaderSource).toContain("parseVisibleGrades");
     expect(restoreReaderSource).toContain("mergeVisibleGrades");
+    expect(restoreReaderSource).toContain("isMetadataLockedBackup");
     expect(restoreReaderSource).toContain('getSheet(workbook, "Nilai")');
+    expect(backupExporterSource).toContain("metadata_locked");
+    expect(backupExporterSource).toContain("visible_sheet_override");
+    expect(backupExporterSource).toContain("Mode perlindungan metadata AKTIF");
     expect(restoreDialogSource).toContain("uploadRunRef");
     expect(restoreDialogSource).toContain("resetUploadState");
     expect(restoreDialogSource).toContain("event.currentTarget.value = \"\"");

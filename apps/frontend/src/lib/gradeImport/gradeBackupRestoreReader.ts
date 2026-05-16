@@ -260,6 +260,14 @@ function parseManifest(sheet: WorkbookSheetData): GradeBackupManifest | null {
   return Object.keys(manifest).length > 2 ? manifest : null;
 }
 
+function isMetadataLockedBackup(manifest: GradeBackupManifest | null): boolean {
+  if (!manifest) return false;
+  const metadataLocked = (manifest.metadata_locked || "").trim().toLowerCase();
+  const restoreValueSource = (manifest.restore_value_source || "").trim().toLowerCase();
+  const visibleOverride = (manifest.visible_sheet_override || "").trim().toLowerCase();
+  return metadataLocked === "true" || restoreValueSource === "metadata" || visibleOverride === "disabled";
+}
+
 function parseStudents(sheet: WorkbookSheetData): ParsedGradeBackupStudent[] {
   const headers = headerIndex(sheet);
   return sheet.rows.slice(1)
@@ -565,7 +573,9 @@ export function readGradeBackupWorkbook(input: WorkbookReadResult | ArrayBuffer,
   const metadataTargetKeys = new Set(metadataGrades
     .filter((grade) => scopePriority(grade, manifest || undefined) >= 0)
     .map(visibleTargetKey));
-  const visibleGrades = parseVisibleGrades(visibleGradesSheet, students, structure, manifest, metadataTargetKeys, gradeErrors, warnings);
+  const visibleGrades = isMetadataLockedBackup(manifest)
+    ? []
+    : parseVisibleGrades(visibleGradesSheet, students, structure, manifest, metadataTargetKeys, gradeErrors, warnings);
   const grades = mergeVisibleGrades(metadataGrades, visibleGrades);
   validateBackupStudents(students, errors, warnings);
   errors.push(...gradeErrors);

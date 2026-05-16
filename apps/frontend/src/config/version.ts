@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.21";
+export const APP_VERSION = "2.4.22";
 export const VERSION_DATE = "2026-05-16";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.22": "Backup Lengkap Nilai menambahkan konfirmasi mode perlindungan metadata, panduan Excel yang lebih informatif, dan restore kini menghormati backup yang dikunci agar edit sheet Nilai tidak override _grades.",
   "2.4.21": "Restore Backup Nilai kini membaca perubahan nilai pada sheet Nilai yang terlihat di Excel, bukan hanya metadata _grades tersembunyi, sehingga edit manual di workbook terdeteksi saat preview.",
   "2.4.20": "Restore Backup Nilai menghapus cache sesi upload lama saat file baru atau file yang sama dipilih ulang, sehingga preview dan konflik selalu dihitung dari workbook terbaru.",
   "2.4.19": "Restore Backup Nilai memperbaiki posisi aksi footer agar sejajar dengan dropdown mode, mencegah dialog overwrite menutup modal restore utama, dan memperjelas tooltip reset spreadsheet.",

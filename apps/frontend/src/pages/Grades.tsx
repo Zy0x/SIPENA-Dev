@@ -53,6 +53,7 @@ import {
 } from "@/lib/gradeImport";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -318,6 +319,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [showGradeImportExport, setShowGradeImportExport] = useState(false);
   const [gradeImportExportTab, setGradeImportExportTab] = useState<GradeImportExportTab>("import");
   const [showGradeBackupRestore, setShowGradeBackupRestore] = useState(false);
+  const [showGradeBackupOptions, setShowGradeBackupOptions] = useState(false);
+  const [protectGradeBackupMetadata, setProtectGradeBackupMetadata] = useState(false);
   const [isDownloadingOfficialTemplate, setIsDownloadingOfficialTemplate] = useState(false);
   const [isExportingCurrentGrades, setIsExportingCurrentGrades] = useState(false);
   const [isExportingGradeBackup, setIsExportingGradeBackup] = useState(false);
@@ -625,6 +628,17 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     }
   }, [buildGradeExportContext, showError, success]);
 
+  const handleOpenGradeBackupOptions = useCallback(() => {
+    const exportContext = buildGradeExportContext();
+    if (!exportContext) {
+      showError("Backup belum siap", "Pilih kelas dan mata pelajaran terlebih dahulu.");
+      return;
+    }
+
+    setProtectGradeBackupMetadata(false);
+    setShowGradeBackupOptions(true);
+  }, [buildGradeExportContext, showError]);
+
   const handleDownloadGradeBackup = useCallback(() => {
     const exportContext = buildGradeExportContext();
     if (!exportContext) {
@@ -634,7 +648,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
     setIsExportingGradeBackup(true);
     try {
-      downloadFullGradeBackup(exportContext);
+      downloadFullGradeBackup(exportContext, { protectMetadata: protectGradeBackupMetadata });
       const incomplete = !exportContext.classId
         || !exportContext.subjectId
         || !exportContext.academicYearId
@@ -644,15 +658,21 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       if (incomplete) {
         showWarning("Backup dibuat dengan catatan", "Sebagian data belum tersedia untuk export lengkap.");
       } else {
-        success("Backup berhasil dibuat", "Backup Lengkap Nilai SIPENA sudah diunduh.");
+        success(
+          "Backup berhasil dibuat",
+          protectGradeBackupMetadata
+            ? "Backup Lengkap Nilai SIPENA sudah diunduh dengan restore terkunci ke metadata."
+            : "Backup Lengkap Nilai SIPENA sudah diunduh dan edit sheet Nilai dapat dipakai saat restore.",
+        );
       }
+      setShowGradeBackupOptions(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Gagal membuat workbook backup.";
       showError("Gagal membuat backup", message);
     } finally {
       setIsExportingGradeBackup(false);
     }
-  }, [buildGradeExportContext, showError, showWarning, success]);
+  }, [buildGradeExportContext, protectGradeBackupMetadata, showError, showWarning, success]);
 
   const handleRestoreComplete = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["grades"] });
@@ -1157,7 +1177,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">Backup / Restore</DropdownMenuLabel>
           <DropdownMenuItem
-            onClick={handleDownloadGradeBackup}
+            onClick={handleOpenGradeBackupOptions}
             disabled={isExportingGradeBackup || !gradeBackupRestoreContext}
             className="gap-2 min-h-[44px]"
           >
@@ -1521,7 +1541,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           isExportingCurrentGrades={isExportingCurrentGrades}
           isExportingBackup={isExportingGradeBackup}
           onDownloadCurrentGrades={handleDownloadCurrentGrades}
-          onDownloadBackup={handleDownloadGradeBackup}
+          onDownloadBackup={handleOpenGradeBackupOptions}
           onSaveGrade={handleSaveGrade}
           onSaveGradesBatch={async (items) => saveGradesBatchWithUndo(items)}
           onEnsureAssignmentTarget={handleEnsureImportAssignmentTarget}
@@ -1533,6 +1553,57 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onImportComplete={handleRestoreComplete}
           importContext={gradeImportContext}
         />
+      )}
+
+      {!isGuestMode && (
+        <Dialog open={showGradeBackupOptions} onOpenChange={(nextOpen) => {
+          if (isExportingGradeBackup) return;
+          setShowGradeBackupOptions(nextOpen);
+        }}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Backup Lengkap Nilai</DialogTitle>
+              <DialogDescription>
+                Tentukan cara file backup ini dipakai saat restore. Backup tetap menyimpan metadata siswa, struktur, konteks, dan nilai mentah web.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Jika perlindungan metadata aktif, perubahan manual pada sheet <span className="font-semibold">Nilai</span> di Excel tidak akan dipakai saat restore. SIPENA akan memakai nilai dari metadata <span className="font-semibold">_grades</span>.
+                </AlertDescription>
+              </Alert>
+              <label className="flex cursor-pointer gap-3 rounded-xl border bg-muted/20 p-4 transition hover:bg-muted/40">
+                <Checkbox
+                  checked={protectGradeBackupMetadata}
+                  onCheckedChange={(checked) => setProtectGradeBackupMetadata(checked === true)}
+                  className="mt-0.5"
+                />
+                <span className="space-y-1">
+                  <span className="block font-semibold">Lindungi restore dengan metadata</span>
+                  <span className="block text-sm text-muted-foreground">
+                    Aktifkan jika backup ini harus menjadi arsip final yang tidak berubah walau nilai di sheet Nilai diedit. Nonaktifkan jika Anda ingin sheet Nilai bisa diedit lalu dipakai sebagai override saat restore.
+                  </span>
+                </span>
+              </label>
+              <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+                {protectGradeBackupMetadata
+                  ? "Mode aktif: Restore memakai metadata _grades. Edit manual di sheet Nilai hanya menjadi catatan visual di Excel."
+                  : "Mode aktif: Metadata tetap melindungi identitas dan struktur, tetapi nilai yang diedit di sheet Nilai akan dideteksi sebagai nilai restore."}
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setShowGradeBackupOptions(false)} disabled={isExportingGradeBackup}>
+                Batal
+              </Button>
+              <Button type="button" onClick={handleDownloadGradeBackup} disabled={isExportingGradeBackup}>
+                {isExportingGradeBackup ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Download Backup
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {!isGuestMode && selectedSubjectId && selectedClassId && gradeBackupRestoreContext && (
