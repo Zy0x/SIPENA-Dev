@@ -332,6 +332,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("CHAPTER_HEADER_TONES");
     expect(spreadsheetSource).toContain("FINAL_COLUMN_TONES");
     expect(spreadsheetSource).toContain("label: 'Rata-rata'");
+    expect(spreadsheetSource).toContain('column.type === "chapter_avg") return "bg-slate-200/70');
+    expect(spreadsheetSource).toContain("isAverageColumn");
+    expect(spreadsheetSource).toContain("bg-slate-300/55");
     expect(spreadsheetSource).toContain("hoveredRowIndex");
     expect(spreadsheetSource).toContain("setHoveredRowIndex(rowIndex)");
     expect(spreadsheetSource).toContain("getColumnHeaderTone(column)");

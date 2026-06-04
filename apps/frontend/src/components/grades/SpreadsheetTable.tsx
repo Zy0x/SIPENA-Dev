@@ -147,7 +147,7 @@ function getColumnHeaderTone(column: ColumnDef): string {
 }
 
 function getColumnBodyTone(column: ColumnDef): string | null {
-  if (column.type === "chapter_avg") return "bg-slate-100/60 dark:bg-slate-900/30";
+  if (column.type === "chapter_avg") return "bg-slate-200/70 dark:bg-slate-800/60";
   if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
     return FINAL_COLUMN_TONES[column.type].body;
   }
@@ -1016,14 +1016,13 @@ export function SpreadsheetTable({
 
       case 'chapter_avg': {
         const chapterAvg = avg?.chapterDetails[column.chapterId!];
-        const colorClass = chapterAvg !== null ? getGradeColor(chapterAvg, kkm) : '';
         // Format: integer tanpa desimal, desimal dengan 1 angka di belakang koma
         const displayValue = chapterAvg !== null
           ? (Number.isInteger(chapterAvg) ? chapterAvg.toString() : chapterAvg.toFixed(1))
           : '-';
         return (
           <div 
-            className={`flex items-center justify-center w-full font-semibold rounded ${colorClass || 'text-muted-foreground'}`}
+            className="flex h-full w-full items-center justify-center rounded border border-slate-300/70 bg-slate-300/55 font-semibold text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-slate-600/70 dark:bg-slate-700/60 dark:text-slate-100"
             style={{ fontSize: `${12 * zoomFactor}px` }}
           >
             {displayValue}
@@ -1081,12 +1080,15 @@ export function SpreadsheetTable({
     const isEditing = editingCell === cellKey;
     const isEditable = ['assignment', 'sts', 'sas'].includes(column.type);
     const isFrozenCell = frozenColumns.has(colIndex);
+    const isAverageColumn = column.type === 'chapter_avg';
     const isRowHovered = hoveredRowIndex === rowIndex && !isEditing;
     const columnBodyTone = getColumnBodyTone(column);
     const defaultBackground = isFrozenCell
       ? 'bg-primary/5'
       : columnBodyTone || (rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20');
-    const rowHoverBackground = isFrozenCell
+    const rowHoverBackground = isAverageColumn
+      ? 'bg-slate-300/85 border-slate-400/80 ring-1 ring-inset ring-slate-300/80 dark:bg-slate-700/75 dark:border-slate-500/80 dark:ring-slate-600/70'
+      : isFrozenCell
       ? 'bg-sky-100/90 border-sky-300/90 dark:bg-sky-950/50 dark:border-sky-700/80'
       : 'bg-sky-50/90 border-sky-300/80 ring-1 ring-inset ring-sky-200/80 dark:bg-sky-950/35 dark:border-sky-700/70 dark:ring-sky-800/60';
 

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.25",
+    version: "2.4.25",
+    title: "Input Nilai: Kolom Rata-rata Lebih Tegas",
+    description: "Kolom Rata-rata diberi warna cell abu-abu netral agar mudah dibedakan dari kolom nilai input biasa.",
+    type: "improvement",
+    is_critical: true,
+    released_at: "2026-06-04",
+    details: [
+      "Memberi latar abu-abu pada cell Rata-rata sebagai penanda kolom kalkulasi.",
+      "Menghapus warna indikator nilai dari isi cell Rata-rata agar tidak terlihat seperti nilai input manual.",
+      "Menjaga highlight hover baris tetap terlihat tanpa menghilangkan identitas abu-abu kolom Rata-rata.",
+    ],
+  },
+  {
     id: "v2.4.24",
     version: "2.4.24",
     title: "Input Nilai: Tabel Lebih Jelas dan Responsif",
