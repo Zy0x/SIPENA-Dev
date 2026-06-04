@@ -611,4 +611,20 @@ describe("phase 12 grade import regression suite", () => {
     expect(sql).toContain("Nilai % pada item ke-% tidak boleh memiliki assignment_id.");
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.import_grades_batch(jsonb) TO authenticated");
   });
+
+  it("guards duplicate grade repair migration with archive-first cleanup and final unique constraint", () => {
+    const sql = readFileSync(repoPath("supabase/migrations/20260604104807_repair_duplicate_grade_rows.sql"), "utf8");
+
+    expect(sql).toContain("CREATE TABLE IF NOT EXISTS public.grade_duplicate_resolution_audit");
+    expect(sql).toContain("ALTER TABLE public.grade_duplicate_resolution_audit ENABLE ROW LEVEL SECURITY");
+    expect(sql).toContain("grade_duplicate_resolution_audit_select_own");
+    expect(sql).toContain("WITH duplicate_stats AS");
+    expect(sql).toContain("rows_to_remove AS");
+    expect(sql).toContain("INSERT INTO public.grade_duplicate_resolution_audit");
+    expect(sql).toContain("DELETE FROM public.grades");
+    expect(sql.indexOf("INSERT INTO public.grade_duplicate_resolution_audit")).toBeLessThan(sql.indexOf("DELETE FROM public.grades"));
+    expect(sql).toContain("UNIQUE NULLS NOT DISTINCT");
+    expect(sql).toContain("grades_unique_owner_scope");
+    expect(sql).toContain("NOTIFY pgrst, 'reload schema'");
+  });
 });

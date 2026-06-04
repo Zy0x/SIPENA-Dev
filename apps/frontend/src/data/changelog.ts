@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.23",
+    version: "2.4.23",
+    title: "Nilai: Repair Duplikasi Database",
+    description: "Penyimpanan nilai diperbaiki agar data duplikat di database tidak lagi memblokir pergantian nilai pada halaman Input Nilai.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-06-04",
+    details: [
+      "Row nilai duplikat diarsipkan ke tabel audit sebelum dibersihkan sehingga data lama tetap bisa ditelusuri.",
+      "Unique constraint nilai per siswa, mapel, tugas, semester, dan tahun ajaran ditambahkan agar duplikasi tidak muncul ulang.",
+      "Edit nilai langsung kini memakai pipeline RPC atomic yang sama dengan import dan restore.",
+    ],
+  },
+  {
     id: "v2.4.22",
     version: "2.4.22",
     title: "Backup Nilai: Mode Perlindungan Metadata",

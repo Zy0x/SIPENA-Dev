@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/core/repositories/supabase-compat.repository", () => ({
@@ -9,6 +11,12 @@ import {
   mapBulkGradesToRpcItems,
   parseBatchUpsertResult,
 } from "./useGrades";
+
+function repoPath(relativePath: string): string {
+  const direct = resolve(process.cwd(), relativePath);
+  if (existsSync(direct)) return direct;
+  return resolve(process.cwd(), "../..", relativePath);
+}
 
 describe("grade batch import helpers", () => {
   it("returns a migration message when the batch RPC is missing", () => {
@@ -22,6 +30,13 @@ describe("grade batch import helpers", () => {
     expect(gradeRpcErrorMessage({
       code: "P0001",
       message: "Data nilai duplikat ditemukan. Perlu perbaikan database sebelum menyimpan.",
+    })).toContain("Data nilai duplikat");
+  });
+
+  it("maps unique constraint errors to the duplicate repair message", () => {
+    expect(gradeRpcErrorMessage({
+      code: "23505",
+      message: "duplicate key value violates unique constraint \"grades_unique_owner_scope\"",
     })).toContain("Data nilai duplikat");
   });
 
@@ -138,5 +153,18 @@ describe("grade batch import helpers", () => {
 
   it("keeps empty batch input as an empty RPC payload", () => {
     expect(mapBulkGradesToRpcItems([], "active-year", "active-semester")).toEqual([]);
+  });
+
+  it("keeps single-cell saves on the atomic batch RPC path", () => {
+    const source = readFileSync(repoPath("apps/frontend/src/hooks/useGrades.ts"), "utf8");
+    const upsertSection = source.slice(
+      source.indexOf("const upsertGrade = useMutation"),
+      source.indexOf("const upsertGradesBatch = useMutation"),
+    );
+
+    expect(upsertSection).toContain('rpc("import_grades_batch"');
+    expect(upsertSection).toContain("gradeRpcErrorMessage");
+    expect(upsertSection).not.toContain('.from("grades")');
+    expect(upsertSection).not.toContain(".insert({");
   });
 });

@@ -388,96 +388,21 @@ export function useGrades(
         throw new Error(`Nilai ${gradeType.toUpperCase()} tidak boleh memiliki assignment_id.`);
       }
 
-      // Build query for checking existing grade
-      let query = supabase
-        .from("grades")
-        .select("id,value")
-        .eq("user_id", user.id)
-        .eq("student_id", input.student_id)
-        .eq("subject_id", input.subject_id)
-        .eq("grade_type", gradeType);
+      const rpcItems = mapBulkGradesToRpcItems([{
+        ...input,
+        academic_year_id: yearId || undefined,
+        semester_id: semesterId || undefined,
+      }], activeYearId, activeSemesterId);
 
-      // Handle null assignment_id properly
-      if (input.assignment_id) {
-        query = query.eq("assignment_id", input.assignment_id);
-      } else {
-        query = query.is("assignment_id", null);
+      const rpcClient = supabase as unknown as ImportGradesBatchRpcClient;
+      const { data, error } = await rpcClient.rpc("import_grades_batch", { p_items: rpcItems });
+
+      if (error) {
+        console.error("Single grade upsert RPC error:", error);
+        throw new Error(gradeRpcErrorMessage(error));
       }
 
-      if (yearId) {
-        query = query.eq("academic_year_id", yearId);
-      } else {
-        query = query.is("academic_year_id", null);
-      }
-
-      if (semesterId) {
-        query = query.eq("semester_id", semesterId);
-      } else {
-        query = query.is("semester_id", null);
-      }
-
-      const { data: existingRows, error: queryError } = await query.limit(2);
-
-      if (queryError) {
-        console.error("Query error:", queryError);
-        throw new Error(`Gagal memeriksa data nilai: ${queryError.message}`);
-      }
-
-      if ((existingRows?.length || 0) > 1) {
-        throw new Error("Data nilai duplikat ditemukan. Perlu perbaikan database sebelum menyimpan.");
-      }
-
-      const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
-
-      if (existing) {
-        // Update existing
-        const { data, error } = await supabase
-          .from("grades")
-          .update({ 
-            value: input.value, 
-            updated_at: new Date().toISOString() 
-          })
-          .eq("id", existing.id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error("Update error:", error);
-          if (error.code === '23514') {
-            throw new Error(`Nilai gagal disimpan: tipe nilai "${gradeType}" tidak valid di database`);
-          }
-          throw new Error(`Gagal memperbarui nilai: ${error.message}`);
-        }
-        return data;
-      } else {
-        // Create new with academic_year_id and semester_id
-        const { data, error } = await supabase
-          .from("grades")
-          .insert({
-            user_id: user.id,
-            student_id: input.student_id,
-            subject_id: input.subject_id,
-            assignment_id: input.assignment_id || null,
-            grade_type: gradeType,
-            value: input.value,
-            academic_year_id: yearId,
-            semester_id: semesterId,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error("Insert error:", error);
-          if (error.code === '23514') {
-            throw new Error(`Nilai gagal disimpan: tipe nilai "${gradeType}" tidak valid di database`);
-          }
-          if (error.code === '23503') {
-            throw new Error("Gagal menyimpan: siswa atau mata pelajaran tidak ditemukan");
-          }
-          throw new Error(`Gagal menyimpan nilai baru: ${error.message}`);
-        }
-        return data;
-      }
+      return parseBatchUpsertResult(data);
     },
     onSuccess: (_, variables) => {
       // Invalidate specific subject grades for immediate recalculation
