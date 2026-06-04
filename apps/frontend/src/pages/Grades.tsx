@@ -1126,7 +1126,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       onSearchQueryChange={(query) => setSearchQuery(query)}
       placeholder="Cari siswa AI..."
       showSuggestions={true}
-      className="w-48 sm:w-56"
+      className="w-full min-w-[12rem] sm:w-56"
     />
   );
 
@@ -1266,7 +1266,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   return (
     <>
-      <div className="app-page app-page-wide">
+      <div className="app-page app-page-wide sipena-grade-page overflow-x-clip">
         <PageHeader
           icon={<FileSpreadsheet className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />}
           title={isGuestMode ? "Input Nilai Guru Tamu" : "Input Nilai"}
@@ -1438,10 +1438,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
               )}
 
               {students.length > 0 && (
-                <Card className="border border-border shadow-sm" data-tour="grade-table">
-                  <CardHeader className="pb-3 border-b border-border/50">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
+                <Card className="w-full min-w-0 overflow-hidden border border-border shadow-sm" data-tour="grade-table">
+                  <CardHeader className="px-3 pb-3 sm:px-6 border-b border-border/50">
+                    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
                         <CardTitle className="text-sm sm:text-base truncate">
                           {selectedClass?.name} - {selectedSubject?.name}
                         </CardTitle>
@@ -1450,11 +1450,11 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap">{gradeToolbarActions}</div>
+                      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">{gradeToolbarActions}</div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="h-[70dvh] min-h-[420px] overflow-hidden">
+                  <CardContent className="min-w-0 p-0">
+                    <div className="sipena-grade-table-shell h-[70dvh] min-h-[420px] overflow-hidden">
                       <SpreadsheetTable
                         students={filteredStudents}
                         chapters={chapters}

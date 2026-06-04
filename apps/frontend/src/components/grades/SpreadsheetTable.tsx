@@ -86,11 +86,80 @@ const CHAPTER_HEADER_HEIGHT = 32;
 const INDEX_COL_WIDTH = 45;
 const NAME_COL_WIDTH = 160;
 
+const CHAPTER_HEADER_TONES = [
+  {
+    header: "bg-sky-100 text-sky-900 border-sky-200 dark:bg-sky-950/45 dark:text-sky-100 dark:border-sky-800/60",
+    body: "bg-sky-50/30 dark:bg-sky-950/10",
+  },
+  {
+    header: "bg-indigo-100 text-indigo-900 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-100 dark:border-indigo-800/60",
+    body: "bg-indigo-50/30 dark:bg-indigo-950/10",
+  },
+  {
+    header: "bg-cyan-100 text-cyan-900 border-cyan-200 dark:bg-cyan-950/45 dark:text-cyan-100 dark:border-cyan-800/60",
+    body: "bg-cyan-50/30 dark:bg-cyan-950/10",
+  },
+  {
+    header: "bg-violet-100 text-violet-900 border-violet-200 dark:bg-violet-950/45 dark:text-violet-100 dark:border-violet-800/60",
+    body: "bg-violet-50/30 dark:bg-violet-950/10",
+  },
+  {
+    header: "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-950/45 dark:text-blue-100 dark:border-blue-800/60",
+    body: "bg-blue-50/30 dark:bg-blue-950/10",
+  },
+  {
+    header: "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-800/70 dark:text-slate-100 dark:border-slate-700",
+    body: "bg-slate-50/40 dark:bg-slate-900/20",
+  },
+] as const;
+
+const FINAL_COLUMN_TONES = {
+  sts: {
+    header: "bg-indigo-100 text-indigo-900 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-100 dark:border-indigo-800/60",
+    body: "bg-indigo-50/45 dark:bg-indigo-950/15",
+  },
+  sas: {
+    header: "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-950/45 dark:text-purple-100 dark:border-purple-800/60",
+    body: "bg-purple-50/45 dark:bg-purple-950/15",
+  },
+  final: {
+    header: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/70 dark:text-slate-100 dark:border-slate-700",
+    body: "bg-slate-50/45 dark:bg-slate-900/20",
+  },
+  status: {
+    header: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/70 dark:text-slate-100 dark:border-slate-700",
+    body: "bg-slate-50/45 dark:bg-slate-900/20",
+  },
+} as const;
+
+function getChapterTone(index = 0) {
+  return CHAPTER_HEADER_TONES[index % CHAPTER_HEADER_TONES.length];
+}
+
+function getColumnHeaderTone(column: ColumnDef): string {
+  if (column.type === "assignment" || column.type === "chapter_avg") {
+    return getChapterTone(column.chapterIndex || 0).header;
+  }
+  if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
+    return FINAL_COLUMN_TONES[column.type].header;
+  }
+  return "bg-muted text-muted-foreground border-border";
+}
+
+function getColumnBodyTone(column: ColumnDef): string | null {
+  if (column.type === "chapter_avg") return "bg-slate-100/60 dark:bg-slate-900/30";
+  if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
+    return FINAL_COLUMN_TONES[column.type].body;
+  }
+  return null;
+}
+
 interface ColumnDef {
   id: string;
   type: 'index' | 'name' | 'assignment' | 'chapter_avg' | 'sts' | 'sas' | 'final' | 'status';
   label: string;
   chapterId?: string;
+  chapterIndex?: number;
   assignmentId?: string;
   width: number;
 }
@@ -127,6 +196,7 @@ export function SpreadsheetTable({
   const [columnWidths, setColumnWidths] = useState<Record<number, number>>({});
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
   const [showFreezeMenu, setShowFreezeMenu] = useState(false);
   const [freezeMenuType, setFreezeMenuType] = useState<'column' | 'row'>('column');
   // Auto-lock format in fullscreen mode
@@ -209,7 +279,7 @@ export function SpreadsheetTable({
       { id: 'name', type: 'name', label: 'Nama Siswa', width: NAME_COL_WIDTH },
     ];
 
-    chapters.forEach(chapter => {
+    chapters.forEach((chapter, chapterIndex) => {
       const assignments = assignmentsByChapter[chapter.id] || [];
       assignments.forEach(assignment => {
         cols.push({
@@ -217,6 +287,7 @@ export function SpreadsheetTable({
           type: 'assignment',
           label: assignment.name,
           chapterId: chapter.id,
+          chapterIndex,
           assignmentId: assignment.id,
           width: DEFAULT_COL_WIDTH,
         });
@@ -224,9 +295,10 @@ export function SpreadsheetTable({
       cols.push({
         id: `chapter_avg-${chapter.id}`,
         type: 'chapter_avg',
-        label: 'Avg',
+        label: 'Rata-rata',
         chapterId: chapter.id,
-        width: 65,
+        chapterIndex,
+        width: 84,
       });
     });
 
@@ -242,16 +314,17 @@ export function SpreadsheetTable({
 
   // Build chapter headers for grouped display
   const chapterHeaders = useMemo(() => {
-    const headers: { chapterId: string; chapterName: string; startIdx: number; endIdx: number }[] = [];
+    const headers: { chapterId: string; chapterName: string; chapterIndex: number; startIdx: number; endIdx: number }[] = [];
     let currentIdx = 2; // Start after No and Name
 
-    chapters.forEach(chapter => {
+    chapters.forEach((chapter, chapterIndex) => {
       const assignments = assignmentsByChapter[chapter.id] || [];
       const startIdx = currentIdx;
       const endIdx = currentIdx + assignments.length; // Including avg column
       headers.push({
         chapterId: chapter.id,
         chapterName: chapter.name,
+        chapterIndex,
         startIdx,
         endIdx,
       });
@@ -690,7 +763,11 @@ export function SpreadsheetTable({
     }, 150);
   }, [isFullscreen, scrollLockMode, students, columns, editingCell, showHintForCell]);
 
-  const handleCellMouseLeave = useCallback(() => {
+  const handleCellMouseLeave = useCallback((rowIndex?: number) => {
+    if (typeof rowIndex === "number") {
+      setHoveredRowIndex((current) => (current === rowIndex ? null : current));
+    }
+
     if (hintHoverTimerRef.current) {
       clearTimeout(hintHoverTimerRef.current);
       hintHoverTimerRef.current = null;
@@ -1004,6 +1081,14 @@ export function SpreadsheetTable({
     const isEditing = editingCell === cellKey;
     const isEditable = ['assignment', 'sts', 'sas'].includes(column.type);
     const isFrozenCell = frozenColumns.has(colIndex);
+    const isRowHovered = hoveredRowIndex === rowIndex && !isEditing;
+    const columnBodyTone = getColumnBodyTone(column);
+    const defaultBackground = isFrozenCell
+      ? 'bg-primary/5'
+      : columnBodyTone || (rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20');
+    const rowHoverBackground = isFrozenCell
+      ? 'bg-sky-100/90 border-sky-300/90 dark:bg-sky-950/50 dark:border-sky-700/80'
+      : 'bg-sky-50/90 border-sky-300/80 ring-1 ring-inset ring-sky-200/80 dark:bg-sky-950/35 dark:border-sky-700/70 dark:ring-sky-800/60';
 
     // Use correct position function based on frozen state
     const left = isFrozenCol ? getFrozenColLeft(colIndex) : getNonFrozenColLeft(colIndex);
@@ -1020,9 +1105,10 @@ export function SpreadsheetTable({
         onTouchEnd={handleCellTouchEnd}
         onTouchCancel={handleCellTouchEnd}
         onMouseEnter={(e) => {
+          setHoveredRowIndex(rowIndex);
           if (isEditable && !isEditing) handleCellMouseEnter(e, rowIndex, colIndex);
         }}
-        onMouseLeave={handleCellMouseLeave}
+        onMouseLeave={() => handleCellMouseLeave(rowIndex)}
         style={{
           position: 'absolute',
           left: left,
@@ -1036,14 +1122,14 @@ export function SpreadsheetTable({
         }}
         className={`border border-border/40 flex items-center transition-colors ${
           isEditing ? 'bg-primary/10 ring-2 ring-primary z-10' : 
-          isFrozenCell ? 'bg-primary/5' :
-          rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20'
-        } ${isEditable && !isEditing && !scrollLockMode ? 'cursor-pointer hover:bg-muted/40' : ''} ${scrollLockMode ? 'cursor-grab' : ''}`}
+          isRowHovered ? rowHoverBackground :
+          defaultBackground
+        } ${isEditable && !isEditing && !scrollLockMode ? 'cursor-pointer' : ''} ${scrollLockMode ? 'cursor-grab' : ''}`}
       >
         {renderCellContent(student, column, rowIndex, colIndex)}
       </div>
     );
-  }, [students, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
+  }, [students, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
 
   // Render header cell - centered, no lock buttons
   const renderHeaderCell = useCallback((colIndex: number, isFrozen: boolean) => {
@@ -1057,9 +1143,9 @@ export function SpreadsheetTable({
     return (
       <div
         key={`header-${colIndex}`}
-        className={`absolute flex items-center justify-center border border-border/40 font-semibold text-center ${
-          isFrozenCol ? 'bg-primary/15 border-primary/30' : 'bg-muted'
-        }`}
+        className={`absolute flex items-center justify-center border font-semibold text-center ${
+          getColumnHeaderTone(column)
+        } ${isFrozenCol ? 'ring-1 ring-inset ring-primary/35' : ''}`}
         style={{
           left: left,
           top: 0,
@@ -1224,7 +1310,7 @@ export function SpreadsheetTable({
               return (
                 <div
                   key={header.chapterId}
-                  className="absolute top-0 flex items-center justify-center bg-primary/10 border-r border-border font-semibold text-primary text-center"
+                  className={`absolute top-0 flex items-center justify-center border-r font-semibold text-center ${getChapterTone(header.chapterIndex).header}`}
                   style={{
                     left: left,
                     width: width,
@@ -1242,42 +1328,33 @@ export function SpreadsheetTable({
               const lastChapterEnd = chapterHeaders.length > 0 
                 ? chapterHeaders[chapterHeaders.length - 1].endIdx + 1
                 : 2;
-              
-              let left = frozenWidth === 0 ? (getColWidth(0) + getColWidth(1)) * zoomFactor : 0;
-              for (let i = 2; i < lastChapterEnd; i++) {
-                if (!frozenColumns.has(i)) {
-                  left += getColWidth(i) * zoomFactor;
-                }
-              }
 
               const extraCols = columns.slice(lastChapterEnd);
-              let width = 0;
-              extraCols.forEach((_, i) => {
+              return extraCols.map((column, i) => {
                 const colIdx = lastChapterEnd + i;
-                if (!frozenColumns.has(colIdx)) {
-                  width += getColWidth(colIdx) * zoomFactor;
-                }
-              });
+                if (frozenColumns.has(colIdx)) return null;
 
-              return width > 0 ? (
-                <div
-                  className="absolute top-0 flex items-center justify-center bg-muted border-r border-border font-semibold text-muted-foreground text-center"
-                  style={{
-                    left: left,
-                    width: width,
-                    height: CHAPTER_HEADER_HEIGHT * zoomFactor,
-                    fontSize: `${11 * zoomFactor}px`,
-                  }}
-                >
-                  Nilai Akhir
-                </div>
-              ) : null;
+                return (
+                  <div
+                    key={`final-header-${column.id}`}
+                    className={`absolute top-0 flex items-center justify-center border-r font-semibold text-center ${getColumnHeaderTone(column)}`}
+                    style={{
+                      left: getNonFrozenColLeft(colIdx),
+                      width: getColWidth(colIdx) * zoomFactor,
+                      height: CHAPTER_HEADER_HEIGHT * zoomFactor,
+                      fontSize: `${11 * zoomFactor}px`,
+                    }}
+                  >
+                    {column.label}
+                  </div>
+                );
+              });
             })()}
           </div>
         </div>
       </div>
     );
-  }, [chapters.length, chapterHeaders, columns, frozenColumns, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, zoomFactor]);
+  }, [chapters.length, chapterHeaders, columns, frozenColumns, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, zoomFactor]);
 
   return (
     <div 
@@ -1613,7 +1690,7 @@ export function SpreadsheetTable({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="absolute inset-0 overflow-auto"
+          className="sipena-grade-scroll absolute inset-0 overflow-auto"
           style={{
             paddingTop: totalHeaderHeight * zoomFactor,
             paddingLeft: getFrozenWidth(),

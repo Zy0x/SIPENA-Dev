@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.24",
+    version: "2.4.24",
+    title: "Input Nilai: Tabel Lebih Jelas dan Responsif",
+    description: "Tabel Input Nilai dibuat lebih nyaman dibaca lintas device dengan highlight baris, label yang lebih human, dan warna header yang lebih terarah.",
+    type: "improvement",
+    is_critical: true,
+    released_at: "2026-06-04",
+    details: [
+      "Menambahkan highlight seluruh baris siswa saat hover agar posisi nilai mudah dilacak.",
+      "Mengganti label Avg menjadi Rata-rata pada tabel nilai.",
+      "Membedakan warna header BAB, Rata-rata, STS, dan SAS tanpa mengganggu warna indikator nilai.",
+      "Menambahkan aturan PRD, QA/QC, dan UI/UX untuk responsivitas Mobile-S sampai 4K.",
+    ],
+  },
+  {
     id: "v2.4.23",
     version: "2.4.23",
     title: "Nilai: Repair Duplikasi Database",

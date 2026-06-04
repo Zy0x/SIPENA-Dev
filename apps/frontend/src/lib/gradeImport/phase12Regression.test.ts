@@ -327,6 +327,21 @@ describe("phase 12 grade import regression suite", () => {
     const backupExporterSource = readFileSync(repoPath("apps/frontend/src/lib/gradeImport/currentGradesExporter.ts"), "utf8");
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
+    expect(gradesPageSource).toContain("sipena-grade-page");
+    expect(gradesPageSource).toContain("sipena-grade-table-shell");
+    expect(spreadsheetSource).toContain("CHAPTER_HEADER_TONES");
+    expect(spreadsheetSource).toContain("FINAL_COLUMN_TONES");
+    expect(spreadsheetSource).toContain("label: 'Rata-rata'");
+    expect(spreadsheetSource).toContain("hoveredRowIndex");
+    expect(spreadsheetSource).toContain("setHoveredRowIndex(rowIndex)");
+    expect(spreadsheetSource).toContain("getColumnHeaderTone(column)");
+    expect(spreadsheetSource).toContain("getColumnBodyTone(column)");
+    expect(spreadsheetSource).toContain("sipena-grade-scroll");
+    expect(spreadsheetSource).not.toContain("label: 'Avg'");
+    expect(globalStyles).toContain(".sipena-grade-page");
+    expect(globalStyles).toContain(".sipena-grade-table-shell");
+    expect(globalStyles).toContain("@media (max-width: 380px)");
+
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).toContain("Import dibatalkan karena masih ada nilai yang perlu dicek atau konfirmasi timpa.");
     expect(dialogSource).toContain("onRollbackCreatedImportStructure");

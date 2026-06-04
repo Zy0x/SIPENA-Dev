@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.23";
+export const APP_VERSION = "2.4.24";
 export const VERSION_DATE = "2026-06-04";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.24": "Tabel Input Nilai diperjelas dengan highlight baris saat hover, label Rata-rata, warna header BAB/STS/SAS yang lebih terarah, dan pembungkus responsive yang lebih aman di mobile.",
   "2.4.23": "Penyimpanan nilai diperbaiki dengan repair duplikasi database yang mengarsipkan row lama, menambahkan unique constraint, dan menyatukan edit langsung ke pipeline RPC atomic.",
   "2.4.22": "Backup Lengkap Nilai menambahkan konfirmasi mode perlindungan metadata, panduan Excel yang lebih informatif, dan restore kini menghormati backup yang dikunci agar edit sheet Nilai tidak override _grades.",
   "2.4.21": "Restore Backup Nilai kini membaca perubahan nilai pada sheet Nilai yang terlihat di Excel, bukan hanya metadata _grades tersembunyi, sehingga edit manual di workbook terdeteksi saat preview.",

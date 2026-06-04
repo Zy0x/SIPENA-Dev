@@ -3432,6 +3432,37 @@
     @apply max-w-none;
   }
 
+  .sipena-grade-page {
+    contain: inline-size;
+  }
+
+  .sipena-grade-table-shell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  @media (max-width: 640px) {
+    .sipena-grade-page {
+      padding-inline: 0.75rem;
+    }
+
+    .sipena-grade-table-shell {
+      min-height: 360px;
+      height: min(68dvh, calc(100dvh - 11.5rem));
+    }
+  }
+
+  @media (max-width: 380px) {
+    .sipena-grade-page {
+      padding-inline: 0.5rem;
+    }
+
+    .sipena-grade-table-shell {
+      min-height: 340px;
+      height: min(66dvh, calc(100dvh - 11rem));
+    }
+  }
+
   /* Glassmorphism */
   .glass {
     background: var(--gradient-glass);
