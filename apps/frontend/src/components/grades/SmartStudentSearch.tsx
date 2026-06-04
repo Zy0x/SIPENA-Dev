@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, X, Sparkles, User } from "lucide-react";
+import { Search, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fuzzySearchStudents, SearchResult } from "@/lib/fuzzySearch";
@@ -177,9 +177,6 @@ export function SmartStudentSearch({
       <div className="relative">
         <div className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
           <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-          {query && (
-            <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary animate-pulse flex-shrink-0" />
-          )}
         </div>
         <Input
           ref={inputRef}
@@ -190,7 +187,7 @@ export function SmartStudentSearch({
           onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="pl-8 sm:pl-10 pr-8 sm:pr-9 text-xs sm:text-sm h-8 sm:h-9"
+          className="h-10 pl-8 pr-9 text-sm sm:h-9"
           aria-label="Cari siswa"
           aria-expanded={showDropdown}
           aria-haspopup="listbox"
@@ -212,8 +209,7 @@ export function SmartStudentSearch({
 
       {/* Search Results Summary */}
       {query && (
-        <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-1 flex items-center gap-1 px-0.5">
-          <Sparkles className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-primary flex-shrink-0" />
+        <p className="mt-1 px-0.5 text-[9px] text-muted-foreground sm:text-[10px]">
           <span>
             {filteredStudents.length}/{students.length} siswa
             {filteredStudents.length === 0 && " - Tidak ditemukan"}
@@ -225,7 +221,7 @@ export function SmartStudentSearch({
       {showDropdown && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg overflow-hidden animate-fade-in"
+          className="absolute z-50 top-full left-0 right-0 mt-1 overflow-hidden rounded-xl border bg-popover shadow-lg animate-fade-in"
           role="listbox"
         >
           <ScrollArea className="max-h-[35vh] sm:max-h-56">
@@ -236,7 +232,7 @@ export function SmartStudentSearch({
                   data-index={index}
                   type="button"
                   className={cn(
-                    "w-full flex items-center gap-2 px-2 sm:px-3 py-2 text-left hover:bg-accent/50 transition-colors",
+                    "w-full flex items-start gap-2 px-2.5 py-2.5 text-left transition-colors hover:bg-accent/50 sm:px-3",
                     highlightedIndex === index && "bg-accent"
                   )}
                   onClick={() => handleSelectSuggestion(result)}
@@ -249,11 +245,11 @@ export function SmartStudentSearch({
                   </div>
                   
                   {/* Student Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] sm:text-xs font-medium truncate">
+                  <div className="min-w-0 flex-1">
+                    <p className="whitespace-normal break-words text-xs font-medium leading-4">
                       {result.item.name}
                     </p>
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">
+                    <p className="mt-0.5 break-words text-[10px] leading-3 text-muted-foreground">
                       {result.item.nisn}
                     </p>
                   </div>

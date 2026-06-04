@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.26",
+    version: "2.4.26",
+    title: "Input Nilai: Responsif dan Pembulatan Rapor",
+    description: "Tabel Input Nilai dirapikan untuk layar kecil, nama siswa panjang kini terbaca penuh, dan kolom Rapor mendapat pengaturan pembulatan.",
+    type: "feature",
+    is_critical: true,
+    released_at: "2026-06-05",
+    details: [
+      "Nama siswa pada tabel nilai sekarang wrap ke beberapa baris saat kolom mengecil.",
+      "Kolom pencarian siswa dirapikan agar ikon tidak menutup teks yang sedang diketik.",
+      "Toolbar tabel dibuat lebih stabil saat wrap di mobile, tablet, laptop, dan layar besar.",
+      "Kolom Rata-rata tetap memakai warna abu-abu sebagai kolom kalkulasi terpisah dari warna BAB.",
+      "Menambahkan modal Pembulatan Rapor untuk mode default, satu desimal, bulat terdekat, bulat bawah, dan bulat atas.",
+    ],
+  },
+  {
     id: "v2.4.25",
     version: "2.4.25",
     title: "Input Nilai: Kolom Rata-rata Lebih Tegas",

@@ -85,6 +85,41 @@ const HEADING_HEIGHT = 40;
 const CHAPTER_HEADER_HEIGHT = 32;
 const INDEX_COL_WIDTH = 45;
 const NAME_COL_WIDTH = 160;
+const NAME_CELL_VERTICAL_PADDING = 12;
+const NAME_LINE_HEIGHT = 16;
+const NISN_LINE_HEIGHT = 12;
+
+function estimateWrappedLineCount(text: string, width: number): number {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 1;
+
+  const charsPerLine = Math.max(7, Math.floor(Math.max(48, width - 18) / 7.2));
+  let lines = 1;
+  let currentLineLength = 0;
+
+  words.forEach((word) => {
+    const wordLength = word.length;
+    if (currentLineLength === 0) {
+      currentLineLength = wordLength;
+      return;
+    }
+
+    if (currentLineLength + 1 + wordLength <= charsPerLine) {
+      currentLineLength += 1 + wordLength;
+      return;
+    }
+
+    lines += 1;
+    currentLineLength = wordLength;
+
+    while (currentLineLength > charsPerLine) {
+      lines += 1;
+      currentLineLength -= charsPerLine;
+    }
+  });
+
+  return lines;
+}
 
 const CHAPTER_HEADER_TONES = [
   {
@@ -137,7 +172,10 @@ function getChapterTone(index = 0) {
 }
 
 function getColumnHeaderTone(column: ColumnDef): string {
-  if (column.type === "assignment" || column.type === "chapter_avg") {
+  if (column.type === "chapter_avg") {
+    return "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-800/75 dark:text-slate-100 dark:border-slate-700";
+  }
+  if (column.type === "assignment") {
     return getChapterTone(column.chapterIndex || 0).header;
   }
   if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
@@ -340,6 +378,21 @@ export function SpreadsheetTable({
     return columnWidths[colIndex] ?? columns[colIndex]?.width ?? DEFAULT_COL_WIDTH;
   }, [columnWidths, columns]);
 
+  const rowHeights = useMemo(() => {
+    const nameColumnWidth = getColWidth(1);
+    return students.map((student) => {
+      const nameLineCount = estimateWrappedLineCount(student.name, nameColumnWidth);
+      return Math.max(
+        DEFAULT_ROW_HEIGHT,
+        NAME_CELL_VERTICAL_PADDING + nameLineCount * NAME_LINE_HEIGHT + NISN_LINE_HEIGHT,
+      );
+    });
+  }, [getColWidth, students]);
+
+  const getRowHeight = useCallback((rowIndex: number): number => {
+    return rowHeights[rowIndex] ?? DEFAULT_ROW_HEIGHT;
+  }, [rowHeights]);
+
   // Sorted frozen columns for consistent ordering
   const sortedFrozenColumns = useMemo(() => 
     Array.from(frozenColumns).sort((a, b) => a - b).filter(i => i >= 0 && i < columns.length)
@@ -385,48 +438,52 @@ export function SpreadsheetTable({
     let top = 0;
     for (const frozenRow of sortedFrozenRows) {
       if (frozenRow === rowIndex) break;
-      top += DEFAULT_ROW_HEIGHT * zoomFactor;
+      top += getRowHeight(frozenRow) * zoomFactor;
     }
     return top;
-  }, [sortedFrozenRows, zoomFactor]);
+  }, [getRowHeight, sortedFrozenRows, zoomFactor]);
 
   const getNonFrozenRowTop = useCallback((rowIndex: number): number => {
     let top = 0;
     for (const nonFrozenRow of nonFrozenRowIndices) {
       if (nonFrozenRow === rowIndex) break;
-      top += DEFAULT_ROW_HEIGHT * zoomFactor;
+      top += getRowHeight(nonFrozenRow) * zoomFactor;
     }
     return top;
-  }, [nonFrozenRowIndices, zoomFactor]);
+  }, [getRowHeight, nonFrozenRowIndices, zoomFactor]);
 
   const getFrozenWidth = useCallback((): number => {
     return sortedFrozenColumns.reduce((sum, col) => sum + getColWidth(col) * zoomFactor, 0);
   }, [sortedFrozenColumns, getColWidth, zoomFactor]);
 
   const getFrozenHeight = useCallback((): number => {
-    return sortedFrozenRows.length * DEFAULT_ROW_HEIGHT * zoomFactor;
-  }, [sortedFrozenRows.length, zoomFactor]);
+    return sortedFrozenRows.reduce((sum, rowIndex) => sum + getRowHeight(rowIndex) * zoomFactor, 0);
+  }, [getRowHeight, sortedFrozenRows, zoomFactor]);
 
   const getTotalWidth = useCallback((): number => {
     return columns.reduce((sum, _, i) => sum + getColWidth(i) * zoomFactor, 0);
   }, [columns, getColWidth, zoomFactor]);
 
   const getTotalHeight = useCallback((): number => {
-    return students.length * DEFAULT_ROW_HEIGHT * zoomFactor;
-  }, [students.length, zoomFactor]);
+    return rowHeights.reduce((sum, height) => sum + height * zoomFactor, 0);
+  }, [rowHeights, zoomFactor]);
 
   const getNonFrozenWidth = useCallback((): number => {
     return nonFrozenColumns.reduce((sum, i) => sum + getColWidth(i) * zoomFactor, 0);
   }, [nonFrozenColumns, getColWidth, zoomFactor]);
 
   const getNonFrozenHeight = useCallback((): number => {
-    return nonFrozenRowIndices.length * DEFAULT_ROW_HEIGHT * zoomFactor;
-  }, [nonFrozenRowIndices.length, zoomFactor]);
+    return nonFrozenRowIndices.reduce((sum, rowIndex) => sum + getRowHeight(rowIndex) * zoomFactor, 0);
+  }, [getRowHeight, nonFrozenRowIndices, zoomFactor]);
 
   // Simple row top calculation for non-frozen-row mode (current implementation)
   const getRowTop = useCallback((rowIndex: number): number => {
-    return rowIndex * DEFAULT_ROW_HEIGHT * zoomFactor;
-  }, [zoomFactor]);
+    let top = 0;
+    for (let index = 0; index < rowIndex; index += 1) {
+      top += getRowHeight(index) * zoomFactor;
+    }
+    return top;
+  }, [getRowHeight, zoomFactor]);
 
   const totalHeaderHeight = (chapters.length > 0 ? CHAPTER_HEADER_HEIGHT : 0) + HEADING_HEIGHT;
 
@@ -917,22 +974,22 @@ export function SpreadsheetTable({
 
       case 'name':
         return (
-          <div className="flex items-center gap-1 min-w-0 w-full">
+          <div className="flex h-full min-w-0 w-full items-start gap-1">
             {student.is_bookmarked && (
               <Star 
-                className="text-amber-500 fill-amber-500 flex-shrink-0" 
+                className="mt-0.5 flex-shrink-0 fill-amber-500 text-amber-500"
                 style={{ width: `${14 * zoomFactor}px`, height: `${14 * zoomFactor}px` }}
               />
             )}
-            <div className="min-w-0 flex-1 overflow-hidden text-left">
+            <div className="min-w-0 flex-1 text-left">
               <div 
-                className="font-medium truncate"
+                className="whitespace-normal break-words font-medium"
                 style={{ fontSize: `${12 * zoomFactor}px`, lineHeight: `${16 * zoomFactor}px` }}
               >
                 {student.name}
               </div>
               <div 
-                className="text-muted-foreground truncate"
+                className="break-words text-muted-foreground"
                 style={{ fontSize: `${10 * zoomFactor}px`, lineHeight: `${12 * zoomFactor}px` }}
               >
                 {student.nisn}
@@ -1076,7 +1133,7 @@ export function SpreadsheetTable({
 
     const cellKey = `${rowIndex}-${colIndex}`;
     const width = getColWidth(colIndex);
-    const height = DEFAULT_ROW_HEIGHT;
+    const height = getRowHeight(rowIndex);
     const isEditing = editingCell === cellKey;
     const isEditable = ['assignment', 'sts', 'sas'].includes(column.type);
     const isFrozenCell = frozenColumns.has(colIndex);
@@ -1131,7 +1188,7 @@ export function SpreadsheetTable({
         {renderCellContent(student, column, rowIndex, colIndex)}
       </div>
     );
-  }, [students, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
+  }, [students, columns, getColWidth, getRowHeight, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
 
   // Render header cell - centered, no lock buttons
   const renderHeaderCell = useCallback((colIndex: number, isFrozen: boolean) => {
@@ -1371,7 +1428,7 @@ export function SpreadsheetTable({
       }}
     >
       {/* Toolbar - matching template style */}
-      <div className="flex items-start sm:items-center justify-between p-2 sm:p-3 bg-card border-b flex-wrap gap-2 sm:gap-3 flex-shrink-0">
+      <div className="flex flex-col gap-2 border-b bg-card p-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:p-3 flex-shrink-0">
         {/* Mobile close button - top right for fullscreen on mobile */}
         {isFullscreen && (
           <Button 
@@ -1385,7 +1442,7 @@ export function SpreadsheetTable({
           </Button>
         )}
 
-        <div className="flex items-center gap-1 sm:gap-2 flex-wrap min-w-0">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:gap-2">
           {/* Freeze Menu Toggle */}
           <Button
             variant={showFreezeMenu ? "default" : "outline"}
@@ -1493,9 +1550,9 @@ export function SpreadsheetTable({
         </div>
 
         {/* Right side - Zoom & Search */}
-        <div className="flex items-center gap-2 flex-wrap justify-end min-w-0 ml-auto">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:ml-auto">
           {toolbarExtra && (
-            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto">
               {toolbarExtra}
             </div>
           )}
@@ -1598,7 +1655,7 @@ export function SpreadsheetTable({
       )}
 
       {/* Info Bar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border-b text-xs overflow-x-auto">
+      <div className="flex items-center gap-2 overflow-x-auto border-b bg-muted/50 px-3 py-1.5 text-xs">
         <Badge variant="pass" className="gap-1 flex-shrink-0 text-xs">
           <CheckCircle2 className="w-3 h-3" />
           Auto-Save
@@ -1749,15 +1806,15 @@ export function SpreadsheetTable({
       </div>
 
       {/* Footer */}
-      <div className="px-3 py-1.5 bg-muted/50 border-t text-xs text-muted-foreground flex items-center justify-between">
-        <span>
+      <div className="flex items-center justify-between gap-3 border-t bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
+        <span className="min-w-0">
           {scrollLockMode 
             ? 'Mode navigasi aktif • geser bebas tanpa membuka editor nilai'
             : 'Klik sel untuk edit • Enter untuk simpan • Pinch untuk zoom'
           }
         </span>
         {isFullscreen && (
-          <span className="font-medium">
+          <span className="hidden shrink-0 text-right font-medium sm:inline">
             {className} - {subjectName}
           </span>
         )}

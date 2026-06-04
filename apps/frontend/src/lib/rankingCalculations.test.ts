@@ -194,6 +194,7 @@ describe("ranking calculations", () => {
   it("uses the selected subject custom formula when provided", () => {
     const formula: CustomFormula = {
       enabled: true,
+      reportRounding: { mode: "default" },
       components: [
         { id: "grandAvg", name: "Rata-rata BAB", enabled: true, weight: 60 },
         { id: "sts", name: "Nilai STS", enabled: true, weight: 40 },

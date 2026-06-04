@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   Loader2,
   LogOut,
+  Percent,
   Plus,
   RefreshCw,
   School,
@@ -42,7 +43,7 @@ import { fuzzySearchStudents } from "@/lib/fuzzySearch";
 import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 import { useGradeFormulaSettings, type GradeFormulaSetting } from "@/hooks/useGradeFormulaSettings";
 import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
-import { DEFAULT_FORMULA, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
+import { DEFAULT_FORMULA, getReportRoundingLabel, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
 import {
   downloadCurrentGradesExport,
   downloadFullGradeBackup,
@@ -92,6 +93,7 @@ import GradeImportExportDialog, { type GradeImportExportTab } from "@/components
 import {
   FormulaSettings,
 } from "@/components/grades/FormulaSettings";
+import { ReportRoundingSettingsDialog } from "@/components/grades/ReportRoundingSettingsDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 
 export type GradeInputMode = "owner" | "guest";
@@ -321,6 +323,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [showGradeBackupRestore, setShowGradeBackupRestore] = useState(false);
   const [showGradeBackupOptions, setShowGradeBackupOptions] = useState(false);
   const [protectGradeBackupMetadata, setProtectGradeBackupMetadata] = useState(false);
+  const [showReportRoundingSettings, setShowReportRoundingSettings] = useState(false);
   const [isDownloadingOfficialTemplate, setIsDownloadingOfficialTemplate] = useState(false);
   const [isExportingCurrentGrades, setIsExportingCurrentGrades] = useState(false);
   const [isExportingGradeBackup, setIsExportingGradeBackup] = useState(false);
@@ -836,6 +839,20 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     [isGuestMode, saveFormula, showError],
   );
 
+  const handleReportRoundingChange = useCallback(
+    async (nextFormula: CustomFormula) => {
+      if (isGuestMode) return;
+      try {
+        await saveFormula(nextFormula);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Pembulatan rapor gagal disimpan";
+        showError("Gagal menyimpan pembulatan", message);
+        throw err;
+      }
+    },
+    [isGuestMode, saveFormula, showError],
+  );
+
   const invalidateGuestData = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["guest_grade_input", token] });
   }, [queryClient, token]);
@@ -1126,7 +1143,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       onSearchQueryChange={(query) => setSearchQuery(query)}
       placeholder="Cari siswa AI..."
       showSuggestions={true}
-      className="w-full min-w-[12rem] sm:w-56"
+      className="w-full min-w-0 sm:w-64 lg:w-60"
     />
   );
 
@@ -1199,6 +1216,20 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         onFormulaChange={handleFormulaChange}
         hasChapters={hasChaptersWithAssignments}
       />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setShowReportRoundingSettings(true)}
+        disabled={formulaSaving}
+        className="gap-2"
+      >
+        <Percent className="w-4 h-4" />
+        <span>Pembulatan</span>
+        <Badge variant="secondary" className="ml-0.5 text-[10px]">
+          {getReportRoundingLabel(formula.reportRounding.mode)}
+        </Badge>
+      </Button>
       {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
       {searchAction}
     </>
@@ -1615,6 +1646,16 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           canUndoRestore={canUndo}
           onUndoRestore={undo}
           onRestoreComplete={handleRestoreComplete}
+        />
+      )}
+
+      {!isGuestMode && selectedSubjectId && selectedClassId && (
+        <ReportRoundingSettingsDialog
+          open={showReportRoundingSettings}
+          onOpenChange={setShowReportRoundingSettings}
+          formula={formula}
+          onFormulaChange={handleReportRoundingChange}
+          isSaving={formulaSaving}
         />
       )}
 
