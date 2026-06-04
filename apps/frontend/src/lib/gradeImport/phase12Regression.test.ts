@@ -344,6 +344,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("getColumnHeaderTone(column)");
     expect(spreadsheetSource).toContain("getColumnBodyTone(column)");
     expect(spreadsheetSource).toContain("sipena-grade-scroll");
+    expect(spreadsheetSource).toContain("isStandaloneFinalColumn(column)");
+    expect(spreadsheetSource).toContain("height: totalHeaderHeight * zoomFactor");
+    expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");
+    expect(spreadsheetSource).toContain("justify-start gap-2 sm:w-auto sm:ml-auto sm:justify-end");
+    expect(spreadsheetSource).not.toContain("fixed top-2 right-2 z-[10000]");
     expect(spreadsheetSource).toContain("estimateWrappedLineCount");
     expect(spreadsheetSource).toContain("getRowHeight(rowIndex)");
     expect(spreadsheetSource).toContain("whitespace-normal break-words font-medium");

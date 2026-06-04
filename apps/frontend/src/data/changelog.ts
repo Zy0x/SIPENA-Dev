@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.27",
+    version: "2.4.27",
+    title: "Input Nilai: Fullscreen Mobile Lebih Rapi",
+    description: "Tampilan tabel Input Nilai di fullscreen mobile dirapikan agar header final tidak ganda, toolbar lebih hemat ruang, dan scroll landscape lebih stabil.",
+    type: "improvement",
+    is_critical: true,
+    released_at: "2026-06-05",
+    details: [
+      "Header STS, SAS, Rapor, dan Status digabung menjadi satu header dua-baris sehingga tidak tampil ganda.",
+      "Toolbar fullscreen mobile disusun ulang dari kiri agar tidak menyisakan celah kosong besar.",
+      "Area spreadsheet sekarang memakai touch pan horizontal dan vertikal agar scroll mobile landscape lebih responsif.",
+    ],
+  },
+  {
     id: "v2.4.26",
     version: "2.4.26",
     title: "Input Nilai: Responsif dan Pembulatan Rapor",

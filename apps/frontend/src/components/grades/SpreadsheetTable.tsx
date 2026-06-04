@@ -171,6 +171,10 @@ function getChapterTone(index = 0) {
   return CHAPTER_HEADER_TONES[index % CHAPTER_HEADER_TONES.length];
 }
 
+function isStandaloneFinalColumn(column: ColumnDef): column is ColumnDef & { type: keyof typeof FINAL_COLUMN_TONES } {
+  return column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status";
+}
+
 function getColumnHeaderTone(column: ColumnDef): string {
   if (column.type === "chapter_avg") {
     return "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-800/75 dark:text-slate-100 dark:border-slate-700";
@@ -178,7 +182,7 @@ function getColumnHeaderTone(column: ColumnDef): string {
   if (column.type === "assignment") {
     return getChapterTone(column.chapterIndex || 0).header;
   }
-  if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
+  if (isStandaloneFinalColumn(column)) {
     return FINAL_COLUMN_TONES[column.type].header;
   }
   return "bg-muted text-muted-foreground border-border";
@@ -186,7 +190,7 @@ function getColumnHeaderTone(column: ColumnDef): string {
 
 function getColumnBodyTone(column: ColumnDef): string | null {
   if (column.type === "chapter_avg") return "bg-slate-200/70 dark:bg-slate-800/60";
-  if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
+  if (isStandaloneFinalColumn(column)) {
     return FINAL_COLUMN_TONES[column.type].body;
   }
   return null;
@@ -1175,7 +1179,7 @@ export function SpreadsheetTable({
           width: width * zoomFactor,
           height: height * zoomFactor,
           padding: isEditing ? 0 : `${4 * zoomFactor}px`,
-          touchAction: isEditing ? 'none' : 'auto',
+          touchAction: isEditing ? 'none' : 'pan-x pan-y',
           userSelect: isEditing ? 'text' : 'none',
           boxSizing: 'border-box',
         }}
@@ -1198,6 +1202,9 @@ export function SpreadsheetTable({
     const width = getColWidth(colIndex);
     const left = isFrozen ? getFrozenColLeft(colIndex) : getNonFrozenColLeft(colIndex);
     const isFrozenCol = frozenColumns.has(colIndex);
+    const isMergedStandaloneHeader = chapters.length > 0 && !isFrozen && isStandaloneFinalColumn(column);
+
+    if (isMergedStandaloneHeader) return null;
 
     return (
       <div
@@ -1236,7 +1243,7 @@ export function SpreadsheetTable({
         )}
       </div>
     );
-  }, [columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, frozenColumns, zoomFactor, handleResizeStart, formatLocked]);
+  }, [chapters.length, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, frozenColumns, zoomFactor, handleResizeStart, formatLocked]);
 
   // Calculate header positions for when no columns are frozen
   // This ensures BAB headers maintain their position relative to their columns
@@ -1266,7 +1273,7 @@ export function SpreadsheetTable({
 
     return (
       <div
-        className="absolute top-0 left-0 right-0 z-30 bg-primary/5 border-b border-border"
+        className="absolute top-0 left-0 right-0 z-50 bg-primary/5 border-b border-border"
         style={{ height: CHAPTER_HEADER_HEIGHT * zoomFactor }}
       >
         {/* Fixed area header - always shows "Data Siswa" placeholder to maintain alignment */}
@@ -1391,20 +1398,27 @@ export function SpreadsheetTable({
               const extraCols = columns.slice(lastChapterEnd);
               return extraCols.map((column, i) => {
                 const colIdx = lastChapterEnd + i;
-                if (frozenColumns.has(colIdx)) return null;
+                if (frozenColumns.has(colIdx) || !isStandaloneFinalColumn(column)) return null;
 
                 return (
                   <div
                     key={`final-header-${column.id}`}
-                    className={`absolute top-0 flex items-center justify-center border-r font-semibold text-center ${getColumnHeaderTone(column)}`}
+                    className={`absolute top-0 flex items-center justify-center border-r border-b font-semibold text-center ${getColumnHeaderTone(column)}`}
                     style={{
                       left: getNonFrozenColLeft(colIdx),
                       width: getColWidth(colIdx) * zoomFactor,
-                      height: CHAPTER_HEADER_HEIGHT * zoomFactor,
+                      height: totalHeaderHeight * zoomFactor,
                       fontSize: `${11 * zoomFactor}px`,
                     }}
                   >
                     {column.label}
+                    {!formatLocked && (
+                      <div
+                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize touch-none hover:bg-primary/50 active:bg-primary"
+                        onMouseDown={(e) => handleResizeStart(e, colIdx)}
+                        onTouchStart={(e) => handleResizeStart(e, colIdx)}
+                      />
+                    )}
                   </div>
                 );
               });
@@ -1413,7 +1427,7 @@ export function SpreadsheetTable({
         </div>
       </div>
     );
-  }, [chapters.length, chapterHeaders, columns, frozenColumns, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, zoomFactor]);
+  }, [chapters.length, chapterHeaders, columns, frozenColumns, formatLocked, handleResizeStart, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, totalHeaderHeight, zoomFactor]);
 
   return (
     <div 
@@ -1429,19 +1443,6 @@ export function SpreadsheetTable({
     >
       {/* Toolbar - matching template style */}
       <div className="flex flex-col gap-2 border-b bg-card p-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:p-3 flex-shrink-0">
-        {/* Mobile close button - top right for fullscreen on mobile */}
-        {isFullscreen && (
-          <Button 
-            variant="destructive" 
-            size="icon" 
-            onClick={onClose} 
-            className="fixed top-2 right-2 z-[10000] h-10 w-10 sm:hidden shadow-lg"
-            style={{ touchAction: 'manipulation' }}
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        )}
-
         <div className="flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:gap-2">
           {/* Freeze Menu Toggle */}
           <Button
@@ -1547,12 +1548,25 @@ export function SpreadsheetTable({
           >
             <RotateCcw className="w-4 h-4" />
           </Button>
+
+          {isFullscreen && (
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={onClose}
+              aria-label="Tutup fullscreen"
+              className="ml-auto h-10 w-10 shadow-lg sm:hidden"
+              style={{ touchAction: 'manipulation' }}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          )}
         </div>
 
         {/* Right side - Zoom & Search */}
-        <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto sm:ml-auto">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 sm:w-auto sm:ml-auto sm:justify-end">
           {toolbarExtra && (
-            <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2 sm:w-auto">
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end">
               {toolbarExtra}
             </div>
           )}
@@ -1754,8 +1768,8 @@ export function SpreadsheetTable({
             paddingTop: totalHeaderHeight * zoomFactor,
             paddingLeft: getFrozenWidth(),
             WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'auto',
-            touchAction: 'manipulation',
+            overscrollBehavior: 'contain',
+            touchAction: 'pan-x pan-y',
             WebkitTapHighlightColor: 'transparent',
           }}
         >

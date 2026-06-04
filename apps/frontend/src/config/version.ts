@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.26";
+export const APP_VERSION = "2.4.27";
 export const VERSION_DATE = "2026-06-05";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.27": "Tabel Input Nilai merapikan fullscreen mobile dengan header STS/SAS merged, toolbar tanpa celah kosong, dan scroll touch landscape yang lebih stabil.",
   "2.4.26": "Tabel Input Nilai dibuat lebih responsif dengan nama siswa yang wrap penuh, pencarian siswa tanpa ikon yang menutup teks, dan pengaturan pembulatan kolom Rapor.",
   "2.4.25": "Kolom Rata-rata pada tabel Input Nilai diberi warna cell abu-abu netral agar lebih jelas sebagai kolom kalkulasi dan pembatas antar BAB.",
   "2.4.24": "Tabel Input Nilai diperjelas dengan highlight baris saat hover, label Rata-rata, warna header BAB/STS/SAS yang lebih terarah, dan pembungkus responsive yang lebih aman di mobile.",
