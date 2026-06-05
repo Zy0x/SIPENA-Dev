@@ -1,10 +1,9 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 
 import { PaginationControls } from "@/components/rankings/PaginationControls";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -20,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useClasses } from "@/hooks/useClasses";
 import { useEnhancedToast } from "@/contexts/ToastContext";
@@ -32,26 +30,16 @@ import {
   Trophy,
   Medal,
   Award,
-  Download,
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
   Crown,
-  TrendingUp,
-  Star,
   ArrowLeft,
   School,
-  ChevronLeft,
-  ChevronRight,
-  Users,
-  Sparkles,
   Loader2,
-  Play,
-  Pause,
   Calendar,
   Layers,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import { useSignatureSettings } from "@/hooks/useSignatureSettings";
@@ -130,7 +118,7 @@ export default function StudentRankings() {
   useEffect(() => {
     if (!signatureLoading) setIncludeSignature(hasSignature);
   }, [hasSignature, signatureLoading]);
-  const { subjects, overallRankings, getSubjectRanking, isLoading: gradesLoading } = useStudentRankings({
+  const { subjects, overallRankings, isLoading: gradesLoading } = useStudentRankings({
     classId: selectedClassId,
     semesterFilter,
     overallSubjectIds: selectedSubjectIds,
@@ -255,89 +243,6 @@ export default function StudentRankings() {
     { align: "center" as const, items: items.center ?? [] },
     { align: "right" as const, items: items.right ?? [] },
   ].filter((group) => group.items.length > 0)), []);
-
-  const buildSubjectExportConfig = useCallback((
-    subjectId: string,
-    overrides?: {
-      paperSize?: ReportPaperSize;
-      documentStyle?: ReportDocumentStyle;
-      autoFitOnePage?: boolean;
-      includeSignature?: boolean;
-      signatureConfig?: typeof signatureConfig;
-    },
-  ): ExportConfig | null => {
-    const subject = subjects.find((item) => item.id === subjectId);
-    if (!subject || !selectedClass) return null;
-
-    const rankings = getSubjectRanking(subjectId);
-    const columns: ExportColumn[] = [
-      { key: "Peringkat", label: "Peringkat", type: "index" },
-      { key: "Nama", label: "Nama", type: "name" },
-      { key: "NISN", label: "NISN", type: "nisn" },
-      { key: "Nilai Rata-rata", label: "Nilai Rata-Rata", type: "grandAvg" },
-      { key: "Status", label: "Status", type: "status" },
-    ];
-
-    const data = rankings.map((ranking) => ({
-      Peringkat: ranking.rank,
-      Nama: ranking.student.name,
-      NISN: ranking.student.nisn,
-      "Nilai Rata-rata": formatGrade(ranking.overallAverage),
-      Status: ranking.overallAverage >= subject.kkm ? "Lulus" : "Belum Lulus",
-    }));
-
-    return {
-      className: selectedClass.name,
-      subjectName: subject.name,
-      kkm: subject.kkm,
-      periodLabel: rankingPeriodLabel,
-      isCombinedView,
-      columns,
-      headerGroups: [{ label: "Ranking", colSpan: columns.length }],
-      chapterGroups: [],
-      data,
-      dateStr: new Date().toLocaleDateString("id-ID"),
-      studentCount: rankings.length,
-      chapterCount: 0,
-      assignmentCount: 0,
-      includeSignature: overrides?.includeSignature ?? (includeSignature && hasSignature),
-      signature: overrides?.signatureConfig ? buildExportSignature(overrides.signatureConfig) : buildExportSignature(signatureConfig),
-      paperSize: overrides?.paperSize ?? paperSize,
-      documentStyle: overrides?.documentStyle ?? documentStyle,
-      autoFitOnePage: overrides?.autoFitOnePage ?? autoFitOnePage,
-      documentTitle: `RANKING ${subject.name.toUpperCase()}`,
-      continuationTitle: `Lanjutan Ranking ${subject.name}`,
-      metaGroups: buildMetaGroups({
-        left: [
-          { label: "Kelas", value: selectedClass.name },
-          { label: "Mata Pelajaran", value: subject.name },
-        ],
-        center: [
-          { label: "KKM", value: subject.kkm },
-          { label: "Periode", value: rankingPeriodLabel },
-        ],
-        right: [
-          { label: "Tanggal", value: new Date().toLocaleDateString("id-ID") },
-          { label: "Jumlah Siswa", value: rankings.length },
-        ],
-      }),
-      fileBaseName: `Ranking_${selectedClass.name}_${subject.name}`,
-    };
-  }, [
-    autoFitOnePage,
-    buildExportSignature,
-    buildMetaGroups,
-    documentStyle,
-    getSubjectRanking,
-    hasSignature,
-    includeSignature,
-    isCombinedView,
-    paperSize,
-    rankingPeriodLabel,
-    selectedClass,
-    signatureConfig,
-    subjects,
-  ]);
 
   const selectedOverallColumns = useMemo(() => {
     const subjectsToUse = selectedSubjectIds.length > 0 ? new Set(selectedSubjectIds) : null;
@@ -482,54 +387,6 @@ export default function StudentRankings() {
 
   const overallColumnTypographyOptions = useMemo(() => buildColumnTypographyOptions(overallExportConfig), [buildColumnTypographyOptions, overallExportConfig]);
 
-  // Export functions
-  const exportSubjectRanking = async (
-    subjectId: string,
-    {
-      formatId,
-      includeSignature: nextIncludeSignature,
-      signatureConfig: nextSignatureConfig,
-      paperSize: nextPaperSize,
-      documentStyle: nextDocumentStyle,
-      autoFitOnePage: nextAutoFitOnePage,
-      downloadPreviewPng,
-    }: {
-      formatId: string;
-      includeSignature: boolean;
-      signatureConfig: typeof signatureConfig;
-      paperSize: ReportPaperSize;
-      documentStyle?: ReportDocumentStyle;
-      autoFitOnePage?: boolean;
-      downloadPreviewPng: (quality: "hd" | "4k", fileName?: string) => Promise<void>;
-    },
-  ) => {
-    const exportConfig = buildSubjectExportConfig(subjectId, {
-      includeSignature: nextIncludeSignature && hasSignature,
-      signatureConfig: nextSignatureConfig,
-      paperSize: nextPaperSize,
-      documentStyle: nextDocumentStyle ?? documentStyle,
-      autoFitOnePage: nextAutoFitOnePage ?? autoFitOnePage,
-    });
-    if (!exportConfig) return;
-    const baseFileName = exportConfig.fileBaseName?.replace(/\s+/g, "_") || "Ranking";
-    const fileName = formatId === "pdf"
-      ? `${baseFileName}.pdf`
-      : formatId === "excel"
-        ? `${baseFileName}.xlsx`
-        : formatId === "csv"
-          ? `${baseFileName}.csv`
-          : `${baseFileName}.png`;
-    await showLoader(fileName);
-
-    if (formatId === "png-hd" || formatId === "png-4k") {
-      await downloadPreviewPng(formatId === "png-4k" ? "4k" : "hd", fileName);
-    } else {
-      exportReport(formatId as "pdf" | "excel" | "csv", exportConfig);
-    }
-
-    toast({ title: "Ekspor berhasil", description: `File ${RANKING_EXPORT_FORMATS.find((item) => item.id === formatId)?.label || formatId.toUpperCase()} telah diunduh` });
-  };
-
   const exportOverallRanking = async ({
     formatId,
     includeSignature: nextIncludeSignature,
@@ -575,394 +432,6 @@ export default function StudentRankings() {
     toast({ title: "Ekspor berhasil", description: `File ${RANKING_EXPORT_FORMATS.find((item) => item.id === formatId)?.label || formatId.toUpperCase()} telah diunduh` });
   };
 
-  // Enhanced Subject Ranking Carousel Component with improved touch/mouse scroll
-  const SubjectRankingCarousel = ({ subjectId, subject }: { subjectId: string; subject: { id: string; name: string; kkm: number } }) => {
-    const rankings = getSubjectRanking(subjectId);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [isPlaying, setIsPlaying] = useState(true);
-    const [highlightedIndex, setHighlightedIndex] = useState(0);
-    const [isDragging, setIsDragging] = useState(false);
-    const dragStartX = useRef(0);
-    const scrollStartX = useRef(0);
-    const lastMoveX = useRef(0);
-    const lastMoveTime = useRef(0);
-    const velocityRef = useRef(0);
-    const animationFrameRef = useRef<number | null>(null);
-    const isHorizontalSwipe = useRef<boolean | null>(null);
-    
-    // Auto-scroll animation
-    useEffect(() => {
-      if (!isPlaying || rankings.length <= 3 || isDragging) return;
-      
-      const interval = setInterval(() => {
-        setHighlightedIndex(prev => (prev + 1) % rankings.length);
-      }, 2500);
-      
-      return () => clearInterval(interval);
-    }, [isPlaying, rankings.length, isDragging]);
-    
-    // Scroll to highlighted card
-    useEffect(() => {
-      if (!containerRef.current || isDragging) return;
-      
-      const container = containerRef.current;
-      const cardWidth = window.innerWidth < 640 ? 150 : window.innerWidth < 768 ? 170 : 190;
-      const gap = 12;
-      const containerWidth = container.offsetWidth;
-      const scrollPosition = (highlightedIndex * (cardWidth + gap)) - (containerWidth / 2) + (cardWidth / 2);
-      
-      container.scrollTo({
-        left: Math.max(0, scrollPosition),
-        behavior: "smooth"
-      });
-    }, [highlightedIndex, isDragging]);
-
-    // Momentum scrolling
-    const applyMomentum = useCallback(() => {
-      if (!containerRef.current || Math.abs(velocityRef.current) < 0.5) {
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
-        return;
-      }
-      
-      containerRef.current.scrollLeft += velocityRef.current;
-      velocityRef.current *= 0.92; // Friction
-      animationFrameRef.current = requestAnimationFrame(applyMomentum);
-    }, []);
-
-    // Update highlighted index based on scroll position
-    const updateHighlightFromScroll = useCallback(() => {
-      if (!containerRef.current) return;
-      
-      const container = containerRef.current;
-      const cardWidth = window.innerWidth < 640 ? 150 : window.innerWidth < 768 ? 170 : 190;
-      const gap = 12;
-      const containerCenter = container.scrollLeft + container.offsetWidth / 2;
-      const index = Math.round(containerCenter / (cardWidth + gap));
-      const clampedIndex = Math.max(0, Math.min(rankings.length - 1, index));
-      
-      if (clampedIndex !== highlightedIndex) {
-        setHighlightedIndex(clampedIndex);
-      }
-    }, [rankings.length, highlightedIndex]);
-
-    // Touch handlers - improved to prevent page scroll blocking
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      
-      const touch = e.touches[0];
-      dragStartX.current = touch.clientX;
-      scrollStartX.current = containerRef.current?.scrollLeft || 0;
-      lastMoveX.current = touch.clientX;
-      lastMoveTime.current = Date.now();
-      velocityRef.current = 0;
-      isHorizontalSwipe.current = null; // Reset swipe direction detection
-      
-      setIsDragging(true);
-      setIsPlaying(false);
-    }, []);
-
-    const handleTouchMove = useCallback((e: React.TouchEvent) => {
-      if (!isDragging || !containerRef.current) return;
-      
-      const touch = e.touches[0];
-      const deltaX = dragStartX.current - touch.clientX;
-      const deltaY = Math.abs(e.touches[0].clientY - (e.touches[0].clientY || 0));
-      
-      // Determine swipe direction on first significant move
-      if (isHorizontalSwipe.current === null) {
-        if (Math.abs(deltaX) > 10 || deltaY > 10) {
-          isHorizontalSwipe.current = Math.abs(deltaX) > deltaY;
-        }
-      }
-      
-      // Only prevent default and handle horizontal scrolling if it's a horizontal swipe
-      if (isHorizontalSwipe.current === true) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const now = Date.now();
-        const dt = now - lastMoveTime.current;
-        
-        if (dt > 0) {
-          velocityRef.current = (lastMoveX.current - touch.clientX) / dt * 12;
-        }
-        
-        containerRef.current.scrollLeft = scrollStartX.current + deltaX;
-        lastMoveX.current = touch.clientX;
-        lastMoveTime.current = now;
-        
-        // Update highlight during drag
-        updateHighlightFromScroll();
-      }
-    }, [isDragging, updateHighlightFromScroll]);
-
-    const handleTouchEnd = useCallback(() => {
-      if (!isDragging) return;
-      
-      setIsDragging(false);
-      isHorizontalSwipe.current = null;
-      
-      // Apply momentum scrolling only if it was a horizontal swipe
-      if (Math.abs(velocityRef.current) > 1) {
-        applyMomentum();
-      }
-      
-      // Resume auto-play after 4 seconds
-      setTimeout(() => setIsPlaying(true), 4000);
-    }, [isDragging, applyMomentum]);
-
-    // Mouse handlers for desktop
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-      e.preventDefault();
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      
-      setIsDragging(true);
-      setIsPlaying(false);
-      dragStartX.current = e.clientX;
-      scrollStartX.current = containerRef.current?.scrollLeft || 0;
-      lastMoveX.current = e.clientX;
-      lastMoveTime.current = Date.now();
-      velocityRef.current = 0;
-    }, []);
-
-    const handleMouseMove = useCallback((e: React.MouseEvent) => {
-      if (!isDragging || !containerRef.current) return;
-      
-      const deltaX = dragStartX.current - e.clientX;
-      const now = Date.now();
-      const dt = now - lastMoveTime.current;
-      
-      if (dt > 0) {
-        velocityRef.current = (lastMoveX.current - e.clientX) / dt * 12;
-      }
-      
-      containerRef.current.scrollLeft = scrollStartX.current + deltaX;
-      lastMoveX.current = e.clientX;
-      lastMoveTime.current = now;
-      
-      // Update highlight during drag
-      updateHighlightFromScroll();
-    }, [isDragging, updateHighlightFromScroll]);
-
-    const handleMouseUp = useCallback(() => {
-      if (!isDragging) return;
-      setIsDragging(false);
-      
-      // Apply momentum scrolling
-      if (Math.abs(velocityRef.current) > 1) {
-        applyMomentum();
-      }
-      
-      // Resume auto-play after 4 seconds
-      setTimeout(() => setIsPlaying(true), 4000);
-    }, [isDragging, applyMomentum]);
-
-    // Mouse wheel support for desktop
-    const handleWheel = useCallback((e: React.WheelEvent) => {
-      if (!containerRef.current) return;
-      
-      // Only handle horizontal scroll if wheel is primarily horizontal or shift is held
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey) {
-        e.preventDefault();
-        setIsPlaying(false);
-        
-        containerRef.current.scrollBy({
-          left: e.deltaX || e.deltaY,
-          behavior: "auto"
-        });
-        
-        updateHighlightFromScroll();
-        setTimeout(() => setIsPlaying(true), 3000);
-      }
-      // Let vertical scroll pass through to page
-    }, [updateHighlightFromScroll]);
-
-    if (rankings.length === 0) {
-      return (
-        <div className="text-center py-8 text-muted-foreground">
-          <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Belum ada data nilai</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-3">
-        {/* Controls */}
-        <div className="flex items-center justify-between px-2">
-          <p className="text-xs text-muted-foreground">
-            {rankings.length} siswa • Geser untuk melihat
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="gap-1 h-7 text-xs"
-          >
-            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-            {isPlaying ? "Pause" : "Play"}
-          </Button>
-        </div>
-
-        {/* Carousel Container - Fixed touch handling */}
-        <div 
-          ref={containerRef}
-          className={cn(
-            "flex gap-3 overflow-x-auto scrollbar-hide py-6 px-4",
-            "select-none",
-            isDragging ? "cursor-grabbing" : "cursor-grab"
-          )}
-          style={{ 
-            scrollSnapType: isDragging ? "none" : "x mandatory",
-            WebkitOverflowScrolling: "touch",
-            overscrollBehaviorX: "contain",
-          }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onWheel={handleWheel}
-        >
-          {rankings.map((ranking, idx) => {
-            const isTop3 = ranking.rank <= 3;
-            const isHighlighted = idx === highlightedIndex;
-            
-            return (
-              <motion.div
-                key={ranking.student.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: isHighlighted ? 1.05 : 1,
-                  y: isHighlighted ? -8 : 0,
-                }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 350, 
-                  damping: 25 
-                }}
-                onClick={() => {
-                  setHighlightedIndex(idx);
-                  setIsPlaying(false);
-                  setTimeout(() => setIsPlaying(true), 5000);
-                }}
-                className={cn(
-                  "flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] p-4 sm:p-5 rounded-xl border transition-all duration-300 select-none relative",
-                  "scroll-snap-align-center",
-                  isTop3 
-                    ? "bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-orange-500/10 border-amber-500/30"
-                    : "bg-card border-border hover:border-primary/30",
-                  isHighlighted && "ring-2 ring-primary shadow-xl shadow-primary/20 z-10"
-                )}
-                style={{ scrollSnapAlign: "center" }}
-              >
-                {/* Rank Badge */}
-                <div className="flex justify-center mb-3">
-                  {ranking.rank === 1 && (
-                    <motion.div
-                      animate={isHighlighted ? { 
-                        scale: [1, 1.1, 1],
-                        rotate: [0, -5, 5, 0]
-                      } : {}}
-                      transition={{ duration: 0.5, repeat: isHighlighted ? Infinity : 0, repeatDelay: 1 }}
-                      className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg shadow-amber-500/50"
-                    >
-                      <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                    </motion.div>
-                  )}
-                  {ranking.rank === 2 && (
-                    <motion.div
-                      animate={isHighlighted ? { scale: [1, 1.05, 1] } : {}}
-                      transition={{ duration: 0.5, repeat: isHighlighted ? Infinity : 0, repeatDelay: 1 }}
-                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center shadow-lg"
-                    >
-                      <Medal className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    </motion.div>
-                  )}
-                  {ranking.rank === 3 && (
-                    <motion.div
-                      animate={isHighlighted ? { scale: [1, 1.05, 1] } : {}}
-                      transition={{ duration: 0.5, repeat: isHighlighted ? Infinity : 0, repeatDelay: 1 }}
-                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-amber-600 to-amber-700 flex items-center justify-center shadow-lg"
-                    >
-                      <Award className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                    </motion.div>
-                  )}
-                  {ranking.rank > 3 && (
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted flex items-center justify-center text-xs sm:text-sm font-bold">
-                      {ranking.rank}
-                    </div>
-                  )}
-                </div>
-
-                {/* Student Info */}
-                <div className="text-center space-y-1">
-                  <p className="font-semibold text-foreground text-xs sm:text-sm truncate px-1">
-                    {ranking.student.name}
-                  </p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {ranking.student.nisn}
-                  </p>
-                  <div className={cn(
-                    "text-lg sm:text-xl font-bold mt-2",
-                    ranking.overallAverage >= subject.kkm ? "text-grade-pass" : "text-grade-fail"
-                  )}>
-                    {formatGrade(ranking.overallAverage)}
-                  </div>
-                </div>
-
-                {/* Sparkle effect for top 3 */}
-                {isTop3 && isHighlighted && (
-                  <motion.div
-                    animate={{ opacity: [0.3, 0.7, 0.3] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                    className="absolute top-2 right-2"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
-                  </motion.div>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Progress dots */}
-        <div className="flex justify-center gap-1 pt-1">
-          {rankings.slice(0, Math.min(10, rankings.length)).map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => {
-                setHighlightedIndex(idx);
-                setIsPlaying(false);
-                setTimeout(() => setIsPlaying(true), 5000);
-              }}
-              className={cn(
-                "w-1.5 h-1.5 rounded-full transition-all",
-                idx === highlightedIndex 
-                  ? "bg-primary w-4" 
-                  : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-              )}
-            />
-          ))}
-          {rankings.length > 10 && (
-            <span className="text-[10px] text-muted-foreground ml-1">
-              +{rankings.length - 10}
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <>
       <div className="app-page">
@@ -979,7 +448,7 @@ export default function StudentRankings() {
                 Ranking Siswa
               </h1>
               <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground truncate">
-                Peringkat per mapel dan keseluruhan
+                Peringkat keseluruhan berdasarkan mapel yang dipilih
               </p>
             </div>
           </div>
@@ -1037,151 +506,167 @@ export default function StudentRankings() {
         </Card>
 
         {selectedClassId && (
-          <Tabs defaultValue="subject" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2 h-9 sm:h-10">
-              <TabsTrigger value="subject" className="text-xs sm:text-sm gap-1">
-                <Star className="w-3.5 h-3.5" />
-                Per Mapel
-              </TabsTrigger>
-              <TabsTrigger value="overall" className="text-xs sm:text-sm gap-1">
-                <Trophy className="w-3.5 h-3.5" />
-                Keseluruhan
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Per Subject Tab */}
-            <TabsContent value="subject" className="space-y-4">
-              {gradesLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="space-y-4">
+            {gradesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : subjects.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <p>Belum ada mata pelajaran di kelas ini</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+            <Card className="overflow-hidden border-primary/10 bg-gradient-to-br from-primary/5 via-background to-background">
+              <CardHeader className="pb-3">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary" className="gap-1.5 rounded-full">
+                        <Trophy className="h-3.5 w-3.5 text-primary" />
+                        Ranking Keseluruhan
+                      </Badge>
+                      <Badge variant="outline" className="rounded-full">
+                        {selectedSubjectIds.length > 0 ? `${selectedSubjectIds.length}/${subjects.length} mapel` : `Semua ${subjects.length} mapel`}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-base sm:text-lg">Peringkat gabungan satu kelas</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Nilai akhir dihitung dari mapel yang dipilih, lalu diurutkan untuk seluruh siswa kelas {selectedClass?.name}.
+                    </CardDescription>
+                  </div>
+                  <UnifiedExportStudio
+                    title="Studio Ekspor Ranking Keseluruhan"
+                    description="Pilih format ekspor ranking keseluruhan dan kelola signature dari satu panel yang sama."
+                    triggerLabel="Ekspor"
+                    triggerClassName="h-9 gap-2 text-xs shrink-0"
+                    formats={RANKING_EXPORT_FORMATS}
+                    selectedFormat={exportFormat}
+                    onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
+                    onExport={exportOverallRanking}
+                    includeSignature={includeSignature}
+                    onIncludeSignatureChange={setIncludeSignature}
+                    signatureConfig={signatureConfig}
+                    hasSignature={hasSignature}
+                    isLoading={signatureLoading}
+                    isSaving={signatureSaving}
+                    onSaveSignature={saveSignature}
+                    paperSize={paperSize}
+                    onPaperSizeChange={setPaperSize}
+                    documentStyle={documentStyle}
+                    onDocumentStyleChange={setDocumentStyle}
+                    autoFitOnePage={autoFitOnePage}
+                    onAutoFitOnePageChange={setAutoFitOnePage}
+                    showAutoFitPreset
+                    columnOptions={overallColumnOptions}
+                    onColumnOptionChange={handleOverallColumnOptionChange}
+                    columnCount={selectedOverallColumns.length}
+                    columnTypographyOptions={overallColumnTypographyOptions}
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
+                      if (!overallExportConfig) return null;
+                      return (
+                        <ExportPreviewRenderer
+                          previewFormat={previewFormat}
+                          draft={draft}
+                          setDraft={setDraft}
+                          previewDate={previewDate}
+                          liveEditMode={liveEditMode}
+                          highlightTarget={highlightTarget}
+                          onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                          onHighlightTargetSelect={onHighlightTargetSelect}
+                          previewData={{
+                            ...overallExportConfig,
+                            includeSignature: previewIncludeSignature && hasSignature,
+                            signature: buildExportSignature(draft),
+                            paperSize: previewPaperSize,
+                            documentStyle: previewDocumentStyle ?? documentStyle,
+                            autoFitOnePage: previewAutoFit ?? autoFitOnePage,
+                          }}
+                        />
+                      );
+                    }}
+                  />
                 </div>
-              ) : subjects.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center text-muted-foreground">
-                    <p>Belum ada mata pelajaran di kelas ini</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {subjects.map((subject) => (
-                    <Card key={subject.id} className="overflow-hidden">
-                      <CardHeader className="pb-2 sm:pb-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <div className="min-w-0">
-                            <CardTitle className="text-sm sm:text-base truncate">
-                              {subject.name}
-                            </CardTitle>
-                            <CardDescription className="text-[10px] sm:text-xs">
-                              KKM: {subject.kkm}
-                            </CardDescription>
-                          </div>
-                          <UnifiedExportStudio
-                            title={`Studio Ekspor Ranking ${subject.name}`}
-                            description="Pilih format ekspor ranking per mata pelajaran, aktifkan signature bila diperlukan, lalu ekspor dari satu panel."
-                            triggerLabel="Ekspor"
-                            triggerClassName="h-8 text-xs shrink-0"
-                            formats={RANKING_EXPORT_FORMATS}
-                            selectedFormat={exportFormat}
-                            onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
-                            onExport={(args) => exportSubjectRanking(subject.id, args)}
-                            includeSignature={includeSignature}
-                            onIncludeSignatureChange={setIncludeSignature}
-                            signatureConfig={signatureConfig}
-                            hasSignature={hasSignature}
-                            isLoading={signatureLoading}
-                            isSaving={signatureSaving}
-                            onSaveSignature={saveSignature}
-                            paperSize={paperSize}
-                            onPaperSizeChange={setPaperSize}
-                            documentStyle={documentStyle}
-                            onDocumentStyleChange={setDocumentStyle}
-                            autoFitOnePage={autoFitOnePage}
-                            onAutoFitOnePageChange={setAutoFitOnePage}
-                            showAutoFitPreset
-                            columnTypographyOptions={buildColumnTypographyOptions(buildSubjectExportConfig(subject.id))}
-                            renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
-                              const previewConfig = buildSubjectExportConfig(subject.id, {
-                                paperSize: previewPaperSize,
-                                documentStyle: previewDocumentStyle ?? documentStyle,
-                                autoFitOnePage: previewAutoFit ?? autoFitOnePage,
-                                includeSignature: previewIncludeSignature && hasSignature,
-                                signatureConfig: draft,
-                              });
-                              if (!previewConfig) return null;
-                              return (
-                                <ExportPreviewRenderer
-                                  previewFormat={previewFormat}
-                                  draft={draft}
-                                  setDraft={setDraft}
-                                  previewDate={previewDate}
-                                  liveEditMode={liveEditMode}
-                                  highlightTarget={highlightTarget}
-                                  onHighlightTargetHoverChange={onHighlightTargetHoverChange}
-                                  onHighlightTargetSelect={onHighlightTargetSelect}
-                                  previewData={previewConfig}
-                                />
-                              );
-                            }}
-                          />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="px-0 sm:px-2 pb-4">
-                        <SubjectRankingCarousel subjectId={subject.id} subject={subject} />
-                      </CardContent>
-                    </Card>
-                  ))}
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="rounded-lg border bg-background/80 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Siswa</p>
+                    <p className="text-lg font-bold">{overallRankings.length}</p>
+                  </div>
+                  <div className="rounded-lg border bg-background/80 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Mapel Aktif</p>
+                    <p className="text-lg font-bold">{selectedSubjectIds.length || subjects.length}</p>
+                  </div>
+                  <div className="rounded-lg border bg-background/80 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">KKM Kelas</p>
+                    <p className="text-lg font-bold">{classKkm}</p>
+                  </div>
+                  <div className="rounded-lg border bg-background/80 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Periode</p>
+                    <p className="truncate text-sm font-semibold">{rankingPeriodShortLabel}</p>
+                  </div>
                 </div>
-              )}
-            </TabsContent>
-
-            {/* Overall Tab */}
-            <TabsContent value="overall" className="space-y-4">
+              </CardContent>
+            </Card>
               {/* Subject Filter */}
               <Card>
-                <CardHeader className="pb-2 sm:pb-4">
-                  <CardTitle className="text-sm sm:text-base">Filter Mata Pelajaran</CardTitle>
-                  <CardDescription className="text-[10px] sm:text-xs">
-                    Pilih mata pelajaran untuk dihitung dalam ranking
-                  </CardDescription>
+                <CardHeader className="pb-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <CardTitle className="text-sm sm:text-base">Mapel yang Dihitung</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        Kosongkan pilihan untuk memakai semua mapel. Pilih beberapa mapel untuk ranking khusus.
+                      </CardDescription>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                      <Button
+                        type="button"
+                        variant={selectedSubjectIds.length === subjects.length ? "default" : "outline"}
+                        size="sm"
+                        onClick={selectAllSubjects}
+                        className="h-9 text-xs"
+                      >
+                        Semua Mapel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={selectedSubjectIds.length === 0 ? "secondary" : "outline"}
+                        size="sm"
+                        onClick={clearSubjectSelection}
+                        className="h-9 text-xs"
+                      >
+                        Pakai Default
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={selectAllSubjects}
-                      className="text-xs h-7"
-                    >
-                      Pilih Semua
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={clearSubjectSelection}
-                      className="text-xs h-7"
-                    >
-                      Hapus Pilihan
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {subjects.map((subject) => (
-                      <div 
-                        key={subject.id} 
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={subject.id}
-                          checked={selectedSubjectIds.includes(subject.id)}
-                          onCheckedChange={() => toggleSubjectSelection(subject.id)}
-                        />
-                        <label
-                          htmlFor={subject.id}
-                          className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {subjects.map((subject) => {
+                      const selected = selectedSubjectIds.includes(subject.id);
+                      const effectiveSelected = selectedSubjectIds.length === 0 || selected;
+                      return (
+                        <Button
+                          key={subject.id}
+                          type="button"
+                          variant={selected ? "default" : "outline"}
+                          aria-pressed={effectiveSelected}
+                          onClick={() => toggleSubjectSelection(subject.id)}
+                          className={cn(
+                            "h-auto min-h-12 justify-between gap-3 whitespace-normal px-3 py-2 text-left",
+                            effectiveSelected && !selected && "border-primary/40 bg-primary/5 text-primary",
+                          )}
                         >
-                          {subject.name}
-                        </label>
-                      </div>
-                    ))}
+                          <span className="min-w-0 flex-1 break-words text-sm font-semibold">{subject.name}</span>
+                          <Badge variant={effectiveSelected ? "secondary" : "outline"} className="shrink-0 text-[10px]">
+                            KKM {subject.kkm}
+                          </Badge>
+                        </Button>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -1202,57 +687,6 @@ export default function StudentRankings() {
                         {" • "}{overallRankings.length} siswa • KKM Kelas: {classKkm}
                       </CardDescription>
                     </div>
-                    <UnifiedExportStudio
-                      title="Studio Ekspor Ranking Keseluruhan"
-                      description="Pilih format ekspor ranking keseluruhan dan kelola signature dari satu panel yang sama."
-                      triggerLabel="Ekspor"
-                      triggerClassName="h-8 text-xs shrink-0"
-                      formats={RANKING_EXPORT_FORMATS}
-                      selectedFormat={exportFormat}
-                      onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
-                      onExport={exportOverallRanking}
-                      includeSignature={includeSignature}
-                      onIncludeSignatureChange={setIncludeSignature}
-                      signatureConfig={signatureConfig}
-                      hasSignature={hasSignature}
-                      isLoading={signatureLoading}
-                      isSaving={signatureSaving}
-                      onSaveSignature={saveSignature}
-                      paperSize={paperSize}
-                      onPaperSizeChange={setPaperSize}
-                      documentStyle={documentStyle}
-                      onDocumentStyleChange={setDocumentStyle}
-                      autoFitOnePage={autoFitOnePage}
-                      onAutoFitOnePageChange={setAutoFitOnePage}
-                      showAutoFitPreset
-                      columnOptions={overallColumnOptions}
-                      onColumnOptionChange={handleOverallColumnOptionChange}
-                      columnCount={selectedOverallColumns.length}
-                      columnTypographyOptions={overallColumnTypographyOptions}
-                      renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
-                        if (!overallExportConfig) return null;
-                        return (
-                          <ExportPreviewRenderer
-                            previewFormat={previewFormat}
-                            draft={draft}
-                            setDraft={setDraft}
-                            previewDate={previewDate}
-                            liveEditMode={liveEditMode}
-                            highlightTarget={highlightTarget}
-                            onHighlightTargetHoverChange={onHighlightTargetHoverChange}
-                            onHighlightTargetSelect={onHighlightTargetSelect}
-                            previewData={{
-                              ...overallExportConfig,
-                              includeSignature: previewIncludeSignature && hasSignature,
-                              signature: buildExportSignature(draft),
-                              paperSize: previewPaperSize,
-                              documentStyle: previewDocumentStyle ?? documentStyle,
-                              autoFitOnePage: previewAutoFit ?? autoFitOnePage,
-                            }}
-                          />
-                        );
-                      }}
-                    />
                   </div>
                 </CardHeader>
                 <CardContent className="px-0 sm:px-6">
@@ -1287,11 +721,11 @@ export default function StudentRankings() {
                               }
 
                               return paginatedRankings.map((ranking) => (
-                                <TableRow key={ranking.student.id}>
+                                <TableRow key={ranking.student.id} className="hover:bg-primary/5">
                                   <TableCell className="py-2 sm:py-3">
                                     {getRankBadge(ranking.rank)}
                                   </TableCell>
-                                  <TableCell className="font-medium text-xs sm:text-sm py-2 sm:py-3 max-w-[120px] sm:max-w-none truncate">
+                                  <TableCell className="max-w-[160px] whitespace-normal break-words py-2 text-xs font-semibold sm:max-w-none sm:py-3 sm:text-sm">
                                     {ranking.student.name}
                                   </TableCell>
                                   <TableCell className="text-xs sm:text-sm py-2 sm:py-3 hidden sm:table-cell">
@@ -1299,8 +733,10 @@ export default function StudentRankings() {
                                   </TableCell>
                                   <TableCell className="text-right py-2 sm:py-3">
                                     <span className={cn(
-                                      "font-bold text-xs sm:text-sm",
-                                      ranking.overallAverage >= classKkm ? "text-grade-pass" : "text-grade-fail"
+                                      "inline-flex min-w-14 justify-center rounded-full border px-2 py-1 text-xs font-bold sm:text-sm",
+                                      ranking.overallAverage >= classKkm
+                                        ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                                        : "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
                                     )}>
                                       {formatGrade(ranking.overallAverage)}
                                     </span>
@@ -1326,8 +762,9 @@ export default function StudentRankings() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+              </>
+            )}
+          </div>
         )}
       </div>
       {exportOverlay}

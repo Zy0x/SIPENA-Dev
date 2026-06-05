@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.32",
+    version: "2.4.32",
+    title: "Input Nilai dan Ranking Lebih Efisien",
+    description: "Input Nilai dibuat lebih lega di landscape, warna nilai diperjelas, dan Ranking Siswa difokuskan ke ranking keseluruhan.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-05",
+    details: [
+      "Fullscreen landscape Input Nilai dibuat lebih compact agar area tabel lebih luas dan mudah dinavigasi.",
+      "Nilai Rapor kini memakai warna indikator KKM, sementara teks nilai di bawah KKM dibuat lebih tegas.",
+      "Ranking Siswa kini langsung fokus ke Keseluruhan dengan pilihan mapel berbentuk tombol yang lebih ringkas.",
+    ],
+  },
+  {
     id: "v2.4.31",
     version: "2.4.31",
     title: "Input Nilai: Toolbar dan Warna Tabel Lebih Jelas",

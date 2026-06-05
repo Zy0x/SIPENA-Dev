@@ -322,6 +322,8 @@ describe("phase 12 grade import regression suite", () => {
     const fixPanelSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
     const gradesPageSource = readFileSync(repoPath("apps/frontend/src/pages/Grades.tsx"), "utf8");
     const spreadsheetSource = readFileSync(repoPath("apps/frontend/src/components/grades/SpreadsheetTable.tsx"), "utf8");
+    const gradeInputCellSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeInputCell.tsx"), "utf8");
+    const rankingSource = readFileSync(repoPath("apps/frontend/src/pages/StudentRankings.tsx"), "utf8");
     const gradeTableColorSchemeSource = readFileSync(repoPath("apps/frontend/src/lib/gradeTableColorSchemes.ts"), "utf8");
     const gradeTableColorSchemeHookSource = readFileSync(repoPath("apps/frontend/src/hooks/useGradeTableColorScheme.ts"), "utf8");
     const settingsSource = readFileSync(repoPath("apps/frontend/src/pages/Settings.tsx"), "utf8");
@@ -373,6 +375,12 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("getColumnBodyTone(column, activeTableColorScheme)");
     expect(spreadsheetSource).toContain("getGradeTextColor");
     expect(spreadsheetSource).toContain("getGradeTableAverageCellTone(activeTableColorScheme)");
+    expect(spreadsheetSource).toContain("getGradeColor(finalValue, kkm)");
+    expect(spreadsheetSource).toContain("colorClass || getGradeTableAverageCellTone(activeTableColorScheme)");
+    expect(gradeInputCellSource).toContain("text-rose-600");
+    expect(gradeInputCellSource).toContain("bg-rose-100");
+    expect(gradeInputCellSource).toContain("text-amber-600");
+    expect(gradeInputCellSource).toContain("bg-amber-100");
     expect(spreadsheetSource).toContain("bg-fuchsia-100/95");
     expect(spreadsheetSource).toContain("sipena-grade-scroll");
     expect(spreadsheetSource).toContain("overscrollBehaviorY: 'auto'");
@@ -634,6 +642,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen");
     expect(globalStyles).toContain("overscroll-behavior-y: auto");
     expect(globalStyles).toContain("orientation: landscape");
+    expect(globalStyles).toContain("@media (orientation: landscape) and (max-height: 440px)");
+    expect(rankingSource).not.toContain("<Tabs");
+    expect(rankingSource).not.toContain("Per Mapel");
+    expect(rankingSource).toContain("Peringkat gabungan satu kelas");
+    expect(rankingSource).toContain("Mapel yang Dihitung");
+    expect(rankingSource).toContain("aria-pressed={effectiveSelected}");
+    expect(rankingSource).toContain("whitespace-normal break-words");
     expect(globalStyles).toContain("@keyframes sipena-guided-action-pulse");
     expect(globalStyles).toContain("@keyframes sipena-restore-drop-pulse");
     expect(globalStyles).toContain(".sipena-preview-cell-note-badge");

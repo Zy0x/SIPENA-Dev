@@ -11,16 +11,16 @@ import {
 // Updated: Warna berdasarkan KKM (Merah < KKM, Kuning KKM hingga KKM+5, Hijau > KKM+5)
 export function getGradeColor(value: number | null, kkm: number): string {
   if (value === null) return "";
-  if (value > kkm + 5) return "bg-grade-pass/20 text-grade-pass border-grade-pass/30";
-  if (value >= kkm) return "bg-grade-warning/20 text-grade-warning border-grade-warning/30";
-  return "bg-grade-fail/20 text-grade-fail border-grade-fail/30";
+  if (value > kkm + 5) return "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/55 dark:text-emerald-200 dark:border-emerald-800/80";
+  if (value >= kkm) return "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/55 dark:text-amber-200 dark:border-amber-800/80";
+  return "bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/55 dark:text-rose-200 dark:border-rose-800/80";
 }
 
 export function getGradeTextColor(value: number | null, kkm: number): string {
   if (value === null) return "text-muted-foreground";
-  if (value > kkm + 5) return "text-grade-pass";
-  if (value >= kkm) return "text-grade-warning";
-  return "text-grade-fail";
+  if (value > kkm + 5) return "text-emerald-600 dark:text-emerald-300";
+  if (value >= kkm) return "text-amber-600 dark:text-amber-300";
+  return "text-rose-600 dark:text-rose-300";
 }
 
 // Helper to get status label based on KKM

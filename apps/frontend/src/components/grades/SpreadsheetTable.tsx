@@ -27,7 +27,7 @@ import {
   Maximize2,
   ChevronDown,
 } from "lucide-react";
-import { getGradeTextColor } from "./GradeInputCell";
+import { getGradeColor, getGradeTextColor } from "./GradeInputCell";
 import { GradeHintPopup, HintTarget } from "./GradeHintPopup";
 import type { Assignment } from "@/hooks/useAssignments";
 import {
@@ -1034,14 +1034,15 @@ export function SpreadsheetTable({
       }
 
       case 'final': {
-        const colorClass = getGradeTextColor(avg?.final ?? null, kkm);
+        const finalValue = avg?.final ?? null;
+        const colorClass = getGradeColor(finalValue, kkm);
         // Format: integer tanpa desimal, desimal dengan 1 angka di belakang koma
-        const displayValue = avg?.final !== null
-          ? (Number.isInteger(avg.final) ? avg.final.toString() : avg.final.toFixed(1))
+        const displayValue = finalValue !== null
+          ? (Number.isInteger(finalValue) ? finalValue.toString() : finalValue.toFixed(1))
           : '-';
         return (
           <div 
-            className={`flex h-full w-full items-center justify-center rounded border font-bold ${getGradeTableAverageCellTone(activeTableColorScheme)} ${colorClass}`}
+            className={`flex h-full w-full items-center justify-center rounded border font-bold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] ${colorClass || getGradeTableAverageCellTone(activeTableColorScheme)}`}
             style={{ fontSize: `${13 * zoomFactor}px` }}
           >
             {displayValue}
