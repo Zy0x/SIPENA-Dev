@@ -668,4 +668,22 @@ describe("phase 12 grade import regression suite", () => {
     expect(sql).toContain("grades_unique_owner_scope");
     expect(sql).toContain("NOTIFY pgrst, 'reload schema'");
   });
+
+  it("guards web deploys against white blank screens", () => {
+    const packageJson = readFileSync(repoPath("package.json"), "utf8");
+    const deployScript = readFileSync(repoPath("scripts/netlify-deploy.mjs"), "utf8");
+    const blankGuardScript = readFileSync(repoPath("scripts/verify-web-not-blank.mjs"), "utf8");
+
+    expect(packageJson).toContain('"verify:web": "node scripts/verify-web-not-blank.mjs"');
+    expect(packageJson).toContain('"verify:web:dist": "node scripts/verify-web-not-blank.mjs --dist apps/frontend/dist --no-render"');
+    expect(deployScript).toContain('import { verifyRemoteSite } from "./verify-web-not-blank.mjs"');
+    expect(deployScript).toContain("waitForDeployReady");
+    expect(deployScript).toContain("verifyDeployUrl");
+    expect(deployScript).toContain("await verifyRemoteSite");
+    expect(blankGuardScript).toContain("verifyRemoteAssets");
+    expect(blankGuardScript).toContain("verifyHeadlessRender");
+    expect(blankGuardScript).toContain("Asset production berubah menjadi HTML fallback");
+    expect(blankGuardScript).toContain("Render headless masih terlihat blank atau #root kosong");
+    expect(blankGuardScript).toContain("--require-chrome");
+  });
 });

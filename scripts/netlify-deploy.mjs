@@ -3,12 +3,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 import JSZip from "jszip";
+import { verifyRemoteSite } from "./verify-web-not-blank.mjs";
 
 const isPreview = process.argv.includes("--preview");
 const isProd = process.argv.includes("--prod") || !isPreview;
 const forceApi = process.argv.includes("--api") || process.env.NETLIFY_DEPLOY_METHOD === "api";
 const rootEnvPath = resolve(process.cwd(), ".env");
 const publishDir = resolve(process.cwd(), "apps/frontend/dist");
+const deployPollLimitMs = Number.parseInt(process.env.NETLIFY_DEPLOY_POLL_LIMIT_MS || "180000", 10);
+const deployPollIntervalMs = Number.parseInt(process.env.NETLIFY_DEPLOY_POLL_INTERVAL_MS || "5000", 10);
 
 function loadDotEnv(filePath) {
   if (!existsSync(filePath)) return;
@@ -58,6 +61,63 @@ async function addDirectoryToZip(zip, directory) {
 
     const zipPath = relative(publishDir, fullPath).split(sep).join("/");
     zip.file(zipPath, await readFile(fullPath));
+  }
+}
+
+async function readDeploy(deployId) {
+  const response = await fetch(`https://api.netlify.com/api/v1/deploys/${deployId}`, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+    },
+  });
+
+  const responseText = await response.text();
+  let payload;
+  try {
+    payload = JSON.parse(responseText);
+  } catch {
+    payload = { message: responseText };
+  }
+
+  if (!response.ok) {
+    fail(`Gagal membaca status deploy Netlify (${response.status}): ${payload.message ?? response.statusText}`);
+  }
+
+  return payload;
+}
+
+async function waitForDeployReady(deployId) {
+  const deadline = Date.now() + deployPollLimitMs;
+  let latest = await readDeploy(deployId);
+
+  while (!["ready", "error"].includes(latest.state) && Date.now() < deadline) {
+    console.log(`[netlify-deploy] Menunggu deploy siap: ${latest.state}`);
+    await new Promise((resolveWait) => setTimeout(resolveWait, deployPollIntervalMs));
+    latest = await readDeploy(deployId);
+  }
+
+  if (latest.state !== "ready") {
+    fail(`Deploy Netlify tidak siap. Status: ${latest.state}${latest.error_message ? ` - ${latest.error_message}` : ""}`);
+  }
+
+  console.log(`[netlify-deploy] Deploy siap: ${latest.id}`);
+  return latest;
+}
+
+async function verifyDeployUrl(payload) {
+  const deployUrl = payload.deploy_ssl_url ?? payload.ssl_url ?? payload.deploy_url ?? payload.url;
+  const productionUrl = process.env.NETLIFY_SITE_URL || payload.ssl_url || payload.url;
+
+  await verifyRemoteSite(deployUrl || productionUrl, {
+    logPrefix: "[netlify-deploy]",
+    render: true,
+  });
+
+  if (isProd && productionUrl && productionUrl !== deployUrl) {
+    await verifyRemoteSite(productionUrl, {
+      logPrefix: "[netlify-deploy]",
+      render: true,
+    });
   }
 }
 
@@ -112,6 +172,9 @@ async function deployWithApi() {
   if (payload.admin_url) {
     console.log(`[netlify-deploy] Admin     : ${payload.admin_url}`);
   }
+
+  const readyPayload = payload.id ? await waitForDeployReady(payload.id) : payload;
+  await verifyDeployUrl(readyPayload);
 }
 
 if (!siteId) {
@@ -158,6 +221,11 @@ if (!forceApi) {
     });
 
     if (deploy.status === 0) {
+      const verifyTarget = process.env.NETLIFY_SITE_URL || "https://sipenadev.netlify.app";
+      await verifyRemoteSite(verifyTarget, {
+        logPrefix: "[netlify-deploy]",
+        render: true,
+      });
       process.exit(0);
     }
 
@@ -167,6 +235,6 @@ if (!forceApi) {
   }
 }
 
-deployWithApi().catch((error) => {
+await deployWithApi().catch((error) => {
   fail(error instanceof Error ? error.message : String(error));
 });

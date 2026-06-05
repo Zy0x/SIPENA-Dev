@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.28",
+    version: "2.4.28",
+    title: "Rilis: Blank Screen Guard",
+    description: "Rilis frontend kini wajib melewati pemeriksaan asset dan render agar halaman putih kosong tidak ikut naik ke production.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-06-05",
+    details: [
+      "Memperbaiki production blank putih akibat asset JS/CSS hasil deploy tidak tersaji dan jatuh ke fallback HTML.",
+      "Menambahkan guard deploy yang memblokir rilis jika asset JavaScript atau CSS production kembali sebagai HTML.",
+      "Menambahkan smoke render headless agar #root React tidak boleh kosong setelah deploy.",
+    ],
+  },
+  {
     id: "v2.4.27",
     version: "2.4.27",
     title: "Input Nilai: Fullscreen Mobile Lebih Rapi",
