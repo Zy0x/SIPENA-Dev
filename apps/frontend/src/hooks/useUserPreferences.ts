@@ -7,6 +7,7 @@ export interface UserPreferences {
   user_id: string;
   theme_mode: "light" | "dark";
   theme_palette: string;
+  grade_table_color_scheme?: "classic" | "current" | "future" | null;
   has_completed_onboarding: boolean;
   onboarding_completed_at?: string;
 }

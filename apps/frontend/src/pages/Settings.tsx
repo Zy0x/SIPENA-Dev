@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +27,11 @@ import { useEnhancedToast } from "@/contexts/ToastContext";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useNavigate } from "react-router-dom";
 import { useThemes, themes } from "@/hooks/useThemes";
+import { useGradeTableColorScheme } from "@/hooks/useGradeTableColorScheme";
+import {
+  GRADE_TABLE_COLOR_SCHEMES,
+  type GradeTableColorSchemeId,
+} from "@/lib/gradeTableColorSchemes";
 import {
   User,
   Moon,
@@ -42,6 +48,7 @@ import {
   ChevronRight,
   Calendar,
   FileSpreadsheet,
+  Table2,
 } from "lucide-react";
 import BatchImportDialog from "@/components/import/BatchImportDialog";
 import { SignatureSettingsSection } from "@/components/settings/SignatureSettingsSection";
@@ -53,6 +60,11 @@ export default function Settings() {
   
   // Theme hook
   const { currentTheme, isDark, selectTheme, toggleDarkMode: toggleThemeDarkMode, resetToDefault } = useThemes();
+  const {
+    colorScheme: gradeTableColorScheme,
+    isSaving: isSavingGradeTableColorScheme,
+    selectColorScheme: selectGradeTableColorScheme,
+  } = useGradeTableColorScheme();
   
   const [notifications, setNotifications] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -113,6 +125,24 @@ export default function Settings() {
       showError("Gagal menyimpan tema", "Tema sudah direset lokal, tetapi gagal disimpan ke database.");
     }
   }, [resetToDefault, showAutoSaveFeedback, success, showError]);
+
+  const handleSelectGradeTableColorScheme = useCallback(async (schemeId: GradeTableColorSchemeId) => {
+    const scheme = GRADE_TABLE_COLOR_SCHEMES[schemeId];
+    if (!scheme.selectable || schemeId === gradeTableColorScheme) return;
+
+    setSaveStatus("saving");
+    try {
+      await selectGradeTableColorScheme(schemeId);
+      showAutoSaveFeedback();
+    } catch (err) {
+      setSaveStatus("idle");
+      console.error("Failed to save grade table color scheme:", err);
+      showError(
+        "Gagal menyimpan warna tabel",
+        "Pilihan sudah diterapkan di perangkat ini, tetapi belum tersimpan ke akun. Coba lagi setelah sinkronisasi database siap.",
+      );
+    }
+  }, [gradeTableColorScheme, selectGradeTableColorScheme, showAutoSaveFeedback, showError]);
 
   const toggleNotifications = useCallback((value: boolean) => {
     setNotifications(value);
@@ -324,6 +354,70 @@ export default function Settings() {
               <Switch checked={isDark} onCheckedChange={handleToggleDarkMode} />
             </div>
             
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Table2 className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground text-sm">Warna Tabel Nilai</p>
+                  <p className="text-xs text-muted-foreground">
+                    Atur warna header dan kolom pembeda pada halaman Input Nilai
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {Object.values(GRADE_TABLE_COLOR_SCHEMES).map((scheme) => {
+                  const isSelected = gradeTableColorScheme === scheme.id;
+                  const isDisabled = !scheme.selectable || isSavingGradeTableColorScheme;
+
+                  return (
+                    <button
+                      key={scheme.id}
+                      type="button"
+                      disabled={isDisabled}
+                      aria-pressed={isSelected}
+                      onClick={() => handleSelectGradeTableColorScheme(scheme.id)}
+                      className={`relative min-h-[112px] select-none rounded-xl border-2 p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                        isSelected
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/15"
+                          : "border-border bg-background hover:border-primary/45 hover:bg-muted/30"
+                      } ${isDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer active:scale-[0.99]"}`}
+                    >
+                      <div className="mb-3 flex h-6 overflow-hidden rounded-md border border-border/70">
+                        {scheme.previewSwatches.map((color, idx) => (
+                          <span
+                            key={`${scheme.id}-${idx}`}
+                            className="flex-1"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground">{scheme.label}</p>
+                          <p className="text-xs font-medium text-muted-foreground">{scheme.shortLabel}</p>
+                        </div>
+                        {isSelected && (
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary">
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          </span>
+                        )}
+                        {!scheme.selectable && (
+                          <Badge variant="secondary" className="shrink-0 text-[10px]">
+                            Akan datang
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        {scheme.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <Separator />
             
             {/* Color Palette Selector - Accordion */}

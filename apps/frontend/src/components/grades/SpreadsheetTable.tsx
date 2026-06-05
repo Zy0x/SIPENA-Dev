@@ -30,6 +30,16 @@ import {
 import { getGradeColor } from "./GradeInputCell";
 import { GradeHintPopup, HintTarget } from "./GradeHintPopup";
 import type { Assignment } from "@/hooks/useAssignments";
+import {
+  DEFAULT_GRADE_TABLE_COLOR_SCHEME,
+  getGradeTableAverageCellTone,
+  getGradeTableAverageHoverTone,
+  getGradeTableChapterTone,
+  getGradeTableColumnBodyTone,
+  getGradeTableColumnHeaderTone,
+  normalizeGradeTableColorScheme,
+  type GradeTableColorSchemeId,
+} from "@/lib/gradeTableColorSchemes";
 
 // Types
 interface Chapter {
@@ -75,6 +85,7 @@ export interface SpreadsheetTableProps {
   onRedo?: () => void;
   onEnterFullscreen?: () => void;
   toolbarExtra?: React.ReactNode;
+  tableColorScheme?: GradeTableColorSchemeId;
 }
 
 // Constants - matching template
@@ -121,79 +132,20 @@ function estimateWrappedLineCount(text: string, width: number): number {
   return lines;
 }
 
-const CHAPTER_HEADER_TONES = [
-  {
-    header: "bg-sky-100 text-sky-900 border-sky-200 dark:bg-sky-950/45 dark:text-sky-100 dark:border-sky-800/60",
-    body: "bg-sky-50/30 dark:bg-sky-950/10",
-  },
-  {
-    header: "bg-indigo-100 text-indigo-900 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-100 dark:border-indigo-800/60",
-    body: "bg-indigo-50/30 dark:bg-indigo-950/10",
-  },
-  {
-    header: "bg-cyan-100 text-cyan-900 border-cyan-200 dark:bg-cyan-950/45 dark:text-cyan-100 dark:border-cyan-800/60",
-    body: "bg-cyan-50/30 dark:bg-cyan-950/10",
-  },
-  {
-    header: "bg-violet-100 text-violet-900 border-violet-200 dark:bg-violet-950/45 dark:text-violet-100 dark:border-violet-800/60",
-    body: "bg-violet-50/30 dark:bg-violet-950/10",
-  },
-  {
-    header: "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-950/45 dark:text-blue-100 dark:border-blue-800/60",
-    body: "bg-blue-50/30 dark:bg-blue-950/10",
-  },
-  {
-    header: "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-800/70 dark:text-slate-100 dark:border-slate-700",
-    body: "bg-slate-50/40 dark:bg-slate-900/20",
-  },
-] as const;
-
-const FINAL_COLUMN_TONES = {
-  sts: {
-    header: "bg-indigo-100 text-indigo-900 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-100 dark:border-indigo-800/60",
-    body: "bg-indigo-50/45 dark:bg-indigo-950/15",
-  },
-  sas: {
-    header: "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-950/45 dark:text-purple-100 dark:border-purple-800/60",
-    body: "bg-purple-50/45 dark:bg-purple-950/15",
-  },
-  final: {
-    header: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/70 dark:text-slate-100 dark:border-slate-700",
-    body: "bg-slate-50/45 dark:bg-slate-900/20",
-  },
-  status: {
-    header: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/70 dark:text-slate-100 dark:border-slate-700",
-    body: "bg-slate-50/45 dark:bg-slate-900/20",
-  },
-} as const;
-
-function getChapterTone(index = 0) {
-  return CHAPTER_HEADER_TONES[index % CHAPTER_HEADER_TONES.length];
+function getChapterTone(schemeId: GradeTableColorSchemeId, index = 0) {
+  return getGradeTableChapterTone(schemeId, index);
 }
 
-function isStandaloneFinalColumn(column: ColumnDef): column is ColumnDef & { type: keyof typeof FINAL_COLUMN_TONES } {
+function isStandaloneFinalColumn(column: ColumnDef): column is ColumnDef & { type: "sts" | "sas" | "final" | "status" } {
   return column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status";
 }
 
-function getColumnHeaderTone(column: ColumnDef): string {
-  if (column.type === "chapter_avg") {
-    return "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-800/75 dark:text-slate-100 dark:border-slate-700";
-  }
-  if (column.type === "assignment") {
-    return getChapterTone(column.chapterIndex || 0).header;
-  }
-  if (isStandaloneFinalColumn(column)) {
-    return FINAL_COLUMN_TONES[column.type].header;
-  }
-  return "bg-muted text-muted-foreground border-border";
+function getColumnHeaderTone(column: ColumnDef, schemeId: GradeTableColorSchemeId): string {
+  return getGradeTableColumnHeaderTone(schemeId, column);
 }
 
-function getColumnBodyTone(column: ColumnDef): string | null {
-  if (column.type === "chapter_avg") return "bg-slate-200/70 dark:bg-slate-800/60";
-  if (isStandaloneFinalColumn(column)) {
-    return FINAL_COLUMN_TONES[column.type].body;
-  }
-  return null;
+function getColumnBodyTone(column: ColumnDef, schemeId: GradeTableColorSchemeId): string | null {
+  return getGradeTableColumnBodyTone(schemeId, column);
 }
 
 interface ColumnDef {
@@ -227,7 +179,12 @@ export function SpreadsheetTable({
   onRedo,
   onEnterFullscreen,
   toolbarExtra,
+  tableColorScheme = DEFAULT_GRADE_TABLE_COLOR_SCHEME,
 }: SpreadsheetTableProps) {
+  const activeTableColorScheme = useMemo(
+    () => normalizeGradeTableColorScheme(tableColorScheme),
+    [tableColorScheme],
+  );
   // State - based on template
   const [zoomLevel, setZoomLevel] = useState(100);
   const [zoomInput, setZoomInput] = useState('100');
@@ -1083,7 +1040,7 @@ export function SpreadsheetTable({
           : '-';
         return (
           <div 
-            className="flex h-full w-full items-center justify-center rounded border border-slate-300/70 bg-slate-300/55 font-semibold text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-slate-600/70 dark:bg-slate-700/60 dark:text-slate-100"
+            className={`flex h-full w-full items-center justify-center rounded border ${getGradeTableAverageCellTone(activeTableColorScheme)}`}
             style={{ fontSize: `${12 * zoomFactor}px` }}
           >
             {displayValue}
@@ -1127,7 +1084,7 @@ export function SpreadsheetTable({
       default:
         return null;
     }
-  }, [editingCell, editValue, studentAverages, getGradeValue, savingGrades, kkm, zoomFactor, saveEdit, getTextAlign]);
+  }, [activeTableColorScheme, editingCell, editValue, studentAverages, getGradeValue, savingGrades, kkm, zoomFactor, saveEdit, getTextAlign]);
 
   // Render a single cell - matching template style
   const renderCell = useCallback((rowIndex: number, colIndex: number, isFrozenCol: boolean) => {
@@ -1143,12 +1100,12 @@ export function SpreadsheetTable({
     const isFrozenCell = frozenColumns.has(colIndex);
     const isAverageColumn = column.type === 'chapter_avg';
     const isRowHovered = hoveredRowIndex === rowIndex && !isEditing;
-    const columnBodyTone = getColumnBodyTone(column);
+    const columnBodyTone = getColumnBodyTone(column, activeTableColorScheme);
     const defaultBackground = isFrozenCell
       ? 'bg-primary/5'
       : columnBodyTone || (rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20');
     const rowHoverBackground = isAverageColumn
-      ? 'bg-slate-300/85 border-slate-400/80 ring-1 ring-inset ring-slate-300/80 dark:bg-slate-700/75 dark:border-slate-500/80 dark:ring-slate-600/70'
+      ? getGradeTableAverageHoverTone(activeTableColorScheme)
       : isFrozenCell
       ? 'bg-sky-100/90 border-sky-300/90 dark:bg-sky-950/50 dark:border-sky-700/80'
       : 'bg-sky-50/90 border-sky-300/80 ring-1 ring-inset ring-sky-200/80 dark:bg-sky-950/35 dark:border-sky-700/70 dark:ring-sky-800/60';
@@ -1192,7 +1149,7 @@ export function SpreadsheetTable({
         {renderCellContent(student, column, rowIndex, colIndex)}
       </div>
     );
-  }, [students, columns, getColWidth, getRowHeight, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
+  }, [activeTableColorScheme, students, columns, getColWidth, getRowHeight, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
 
   // Render header cell - centered, no lock buttons
   const renderHeaderCell = useCallback((colIndex: number, isFrozen: boolean) => {
@@ -1210,7 +1167,7 @@ export function SpreadsheetTable({
       <div
         key={`header-${colIndex}`}
         className={`absolute flex items-center justify-center border font-semibold text-center ${
-          getColumnHeaderTone(column)
+          getColumnHeaderTone(column, activeTableColorScheme)
         } ${isFrozenCol ? 'ring-1 ring-inset ring-primary/35' : ''}`}
         style={{
           left: left,
@@ -1243,7 +1200,7 @@ export function SpreadsheetTable({
         )}
       </div>
     );
-  }, [chapters.length, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, frozenColumns, zoomFactor, handleResizeStart, formatLocked]);
+  }, [activeTableColorScheme, chapters.length, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, frozenColumns, zoomFactor, handleResizeStart, formatLocked]);
 
   // Calculate header positions for when no columns are frozen
   // This ensures BAB headers maintain their position relative to their columns
@@ -1376,7 +1333,7 @@ export function SpreadsheetTable({
               return (
                 <div
                   key={header.chapterId}
-                  className={`absolute top-0 flex items-center justify-center border-r font-semibold text-center ${getChapterTone(header.chapterIndex).header}`}
+                  className={`absolute top-0 flex items-center justify-center border-r font-semibold text-center ${getChapterTone(activeTableColorScheme, header.chapterIndex).header}`}
                   style={{
                     left: left,
                     width: width,
@@ -1403,7 +1360,7 @@ export function SpreadsheetTable({
                 return (
                   <div
                     key={`final-header-${column.id}`}
-                    className={`absolute top-0 flex items-center justify-center border-r border-b font-semibold text-center ${getColumnHeaderTone(column)}`}
+                    className={`absolute top-0 flex items-center justify-center border-r border-b font-semibold text-center ${getColumnHeaderTone(column, activeTableColorScheme)}`}
                     style={{
                       left: getNonFrozenColLeft(colIdx),
                       width: getColWidth(colIdx) * zoomFactor,
@@ -1427,7 +1384,7 @@ export function SpreadsheetTable({
         </div>
       </div>
     );
-  }, [chapters.length, chapterHeaders, columns, frozenColumns, formatLocked, handleResizeStart, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, totalHeaderHeight, zoomFactor]);
+  }, [activeTableColorScheme, chapters.length, chapterHeaders, columns, frozenColumns, formatLocked, handleResizeStart, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, totalHeaderHeight, zoomFactor]);
 
   return (
     <div 

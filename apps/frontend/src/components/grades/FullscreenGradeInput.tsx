@@ -1,6 +1,7 @@
 import { SpreadsheetTable } from "./SpreadsheetTable";
 import { FormulaSettings, CustomFormula } from "./FormulaSettings";
 import type { Assignment } from "@/hooks/useAssignments";
+import type { GradeTableColorSchemeId } from "@/lib/gradeTableColorSchemes";
 
 interface Chapter {
   id: string;
@@ -46,6 +47,7 @@ interface FullscreenGradeInputProps {
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
+  tableColorScheme?: GradeTableColorSchemeId;
 }
 
 export function FullscreenGradeInput({
@@ -69,6 +71,7 @@ export function FullscreenGradeInput({
   canRedo = false,
   onUndo,
   onRedo,
+  tableColorScheme,
 }: FullscreenGradeInputProps) {
   if (!isOpen) return null;
 
@@ -92,6 +95,7 @@ export function FullscreenGradeInput({
       canRedo={canRedo}
       onUndo={onUndo}
       onRedo={onRedo}
+      tableColorScheme={tableColorScheme}
     />
   );
 }

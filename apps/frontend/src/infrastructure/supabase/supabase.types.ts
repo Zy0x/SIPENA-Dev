@@ -756,6 +756,7 @@ export type Database = {
         Row: {
           created_at: string
           email_verified: boolean | null
+          grade_table_color_scheme: string | null
           has_completed_onboarding: boolean | null
           id: string
           onboarding_completed_at: string | null
@@ -771,6 +772,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email_verified?: boolean | null
+          grade_table_color_scheme?: string | null
           has_completed_onboarding?: boolean | null
           id?: string
           onboarding_completed_at?: string | null
@@ -786,6 +788,7 @@ export type Database = {
         Update: {
           created_at?: string
           email_verified?: boolean | null
+          grade_table_color_scheme?: string | null
           has_completed_onboarding?: boolean | null
           id?: string
           onboarding_completed_at?: string | null

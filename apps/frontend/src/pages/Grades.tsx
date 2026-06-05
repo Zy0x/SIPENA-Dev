@@ -39,6 +39,7 @@ import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { useGradeTableColorScheme } from "@/hooks/useGradeTableColorScheme";
 import { fuzzySearchStudents } from "@/lib/fuzzySearch";
 import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 import { useGradeFormulaSettings, type GradeFormulaSetting } from "@/hooks/useGradeFormulaSettings";
@@ -301,6 +302,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const { user } = useAuth();
   const { success, error: showError, warning: showWarning } = useEnhancedToast();
   const { shouldShowTours } = useUserPreferences();
+  const { colorScheme: gradeTableColorScheme } = useGradeTableColorScheme();
 
   const token = searchParams.get("token") || "";
   const [guestSession, setGuestSession] = useState<GuestSession | null>(() =>
@@ -1507,6 +1509,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                         onRedo={isGuestMode ? undefined : redo}
                         onEnterFullscreen={() => setIsFullscreen(true)}
                         toolbarExtra={null}
+                        tableColorScheme={gradeTableColorScheme}
                       />
                     </div>
                   </CardContent>
@@ -1544,6 +1547,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onUndo={isGuestMode ? undefined : undo}
           onRedo={isGuestMode ? undefined : redo}
           toolbarExtra={gradeToolbarActions}
+          tableColorScheme={gradeTableColorScheme}
         />
       )}
 

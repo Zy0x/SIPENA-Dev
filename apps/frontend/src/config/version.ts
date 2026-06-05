@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.28";
+export const APP_VERSION = "2.4.29";
 export const VERSION_DATE = "2026-06-05";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.29": "Pengaturan Warna Tabel Nilai ditambahkan dengan Setting A sebagai default, Setting B untuk tampilan warna saat ini, dan Setting C sebagai slot warna akan datang.",
   "2.4.28": "Deploy frontend diperkuat dengan blank-screen guard yang memverifikasi asset JS/CSS production dan render React sebelum rilis dianggap aman.",
   "2.4.27": "Tabel Input Nilai merapikan fullscreen mobile dengan header STS/SAS merged, toolbar tanpa celah kosong, dan scroll touch landscape yang lebih stabil.",
   "2.4.26": "Tabel Input Nilai dibuat lebih responsif dengan nama siswa yang wrap penuh, pencarian siswa tanpa ikon yang menutup teks, dan pengaturan pembulatan kolom Rapor.",

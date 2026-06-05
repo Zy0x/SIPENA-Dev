@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.29",
+    version: "2.4.29",
+    title: "Pengaturan: Warna Tabel Nilai",
+    description: "Pengguna kini bisa memilih preferensi warna tabel Input Nilai dari halaman Pengaturan tanpa mengubah palet tema aplikasi.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-05",
+    details: [
+      "Menambahkan pilihan Warna Tabel Nilai dengan Setting A sebagai default tampilan awal SIPENA.",
+      "Menyediakan Setting B untuk kembali ke tampilan warna tabel Input Nilai saat ini.",
+      "Menampilkan Setting C sebagai slot warna akan datang yang belum bisa dipilih.",
+      "Preferensi disimpan per akun dengan fallback lokal agar aplikasi tetap aman jika sinkronisasi database belum siap.",
+    ],
+  },
+  {
     id: "v2.4.28",
     version: "2.4.28",
     title: "Rilis: Blank Screen Guard",
