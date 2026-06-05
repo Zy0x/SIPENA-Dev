@@ -25,6 +25,7 @@ export interface GradeTableColorSchemeConfig {
   selectable: boolean;
   previewSwatches: readonly string[];
   chapterHeaderTones: readonly GradeTableTone[];
+  assignmentHeaderTone: string | null;
   finalColumnTones: Record<GradeTableColumnToneKey, GradeTableTone>;
   averageHeaderTone: string;
   averageBodyTone: string;
@@ -35,6 +36,21 @@ export interface GradeTableColorSchemeConfig {
 const CLASSIC_CHAPTER_HEADER_TONE: GradeTableTone = {
   header: "bg-primary/10 text-primary border-primary/20 dark:bg-primary/15 dark:text-primary-foreground dark:border-primary/30",
   body: null,
+};
+
+const FINAL_STS_TONE: GradeTableTone = {
+  header: "bg-indigo-100 text-indigo-900 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-100 dark:border-indigo-800/60",
+  body: "bg-indigo-50/55 dark:bg-indigo-950/15",
+};
+
+const FINAL_SAS_TONE: GradeTableTone = {
+  header: "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-950/45 dark:text-purple-100 dark:border-purple-800/60",
+  body: "bg-purple-50/55 dark:bg-purple-950/15",
+};
+
+const FINAL_RAPOR_TONE: GradeTableTone = {
+  header: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/70 dark:text-slate-100 dark:border-slate-700",
+  body: "bg-slate-50/55 dark:bg-slate-900/20",
 };
 
 const CURRENT_CHAPTER_HEADER_TONES = [
@@ -65,18 +81,9 @@ const CURRENT_CHAPTER_HEADER_TONES = [
 ] as const;
 
 const CLASSIC_FINAL_COLUMN_TONES: Record<GradeTableColumnToneKey, GradeTableTone> = {
-  sts: {
-    header: "bg-primary/10 text-primary border-primary/20 dark:bg-primary/15 dark:text-primary-foreground dark:border-primary/30",
-    body: null,
-  },
-  sas: {
-    header: "bg-primary/10 text-primary border-primary/20 dark:bg-primary/15 dark:text-primary-foreground dark:border-primary/30",
-    body: null,
-  },
-  final: {
-    header: "bg-muted text-muted-foreground border-border",
-    body: null,
-  },
+  sts: FINAL_STS_TONE,
+  sas: FINAL_SAS_TONE,
+  final: FINAL_RAPOR_TONE,
   status: {
     header: "bg-muted text-muted-foreground border-border",
     body: null,
@@ -84,18 +91,9 @@ const CLASSIC_FINAL_COLUMN_TONES: Record<GradeTableColumnToneKey, GradeTableTone
 };
 
 const CURRENT_FINAL_COLUMN_TONES: Record<GradeTableColumnToneKey, GradeTableTone> = {
-  sts: {
-    header: "bg-indigo-100 text-indigo-900 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-100 dark:border-indigo-800/60",
-    body: "bg-indigo-50/45 dark:bg-indigo-950/15",
-  },
-  sas: {
-    header: "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-950/45 dark:text-purple-100 dark:border-purple-800/60",
-    body: "bg-purple-50/45 dark:bg-purple-950/15",
-  },
-  final: {
-    header: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/70 dark:text-slate-100 dark:border-slate-700",
-    body: "bg-slate-50/45 dark:bg-slate-900/20",
-  },
+  sts: FINAL_STS_TONE,
+  sas: FINAL_SAS_TONE,
+  final: FINAL_RAPOR_TONE,
   status: {
     header: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/70 dark:text-slate-100 dark:border-slate-700",
     body: "bg-slate-50/45 dark:bg-slate-900/20",
@@ -111,15 +109,16 @@ export const GRADE_TABLE_COLOR_SCHEMES: Record<GradeTableColorSchemeId, GradeTab
     id: "classic",
     label: "Setting A",
     shortLabel: "Awal SIPENA",
-    description: "Warna tabel klasik SIPENA dengan header utama yang lebih netral.",
+    description: "Tampilan ringan seperti SIPENA awal: header BAB biru, tugas tetap bersih.",
     selectable: true,
     previewSwatches: ["#dbeafe", "#3b82f6", "#f1f5f9", "#e2e8f0"],
     chapterHeaderTones: [CLASSIC_CHAPTER_HEADER_TONE],
+    assignmentHeaderTone: "bg-background text-foreground border-border dark:bg-slate-950 dark:text-slate-100 dark:border-slate-800",
     finalColumnTones: CLASSIC_FINAL_COLUMN_TONES,
-    averageHeaderTone: "bg-muted text-muted-foreground border-border",
+    averageHeaderTone: "bg-primary/10 text-primary border-primary/20 dark:bg-primary/15 dark:text-primary-foreground dark:border-primary/30",
     averageBodyTone: "bg-primary/5 dark:bg-primary/10",
     averageCellTone:
-      "border-primary/20 bg-primary/10 font-semibold text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-primary/30 dark:bg-primary/15 dark:text-primary-foreground",
+      "border-primary/20 bg-primary/10 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-primary/30 dark:bg-primary/15",
     averageHoverTone:
       "bg-primary/15 border-primary/35 ring-1 ring-inset ring-primary/20 dark:bg-primary/20 dark:border-primary/40 dark:ring-primary/30",
   },
@@ -127,15 +126,16 @@ export const GRADE_TABLE_COLOR_SCHEMES: Record<GradeTableColorSchemeId, GradeTab
     id: "current",
     label: "Setting B",
     shortLabel: "Warna Sekarang",
-    description: "Warna BAB, STS, SAS, dan Rata-rata seperti tampilan Input Nilai saat ini.",
+    description: "Header BAB berwarna per bagian, Rata-rata, STS, dan SAS lebih tegas.",
     selectable: true,
     previewSwatches: ["#e0f2fe", "#e0e7ff", "#f3e8ff", "#cbd5e1"],
     chapterHeaderTones: CURRENT_CHAPTER_HEADER_TONES,
+    assignmentHeaderTone: null,
     finalColumnTones: CURRENT_FINAL_COLUMN_TONES,
     averageHeaderTone: "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-800/75 dark:text-slate-100 dark:border-slate-700",
     averageBodyTone: "bg-slate-200/70 dark:bg-slate-800/60",
     averageCellTone:
-      "border-slate-300/70 bg-slate-300/55 font-semibold text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-slate-600/70 dark:bg-slate-700/60 dark:text-slate-100",
+      "border-slate-300/70 bg-slate-300/55 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-slate-600/70 dark:bg-slate-700/60",
     averageHoverTone:
       "bg-slate-300/85 border-slate-400/80 ring-1 ring-inset ring-slate-300/80 dark:bg-slate-700/75 dark:border-slate-500/80 dark:ring-slate-600/70",
   },
@@ -143,15 +143,16 @@ export const GRADE_TABLE_COLOR_SCHEMES: Record<GradeTableColorSchemeId, GradeTab
     id: "future",
     label: "Setting C",
     shortLabel: "Akan Datang",
-    description: "Slot warna tabel berikutnya. Belum aktif sampai palette final ditentukan.",
+    description: "Slot opsi berikutnya. Belum aktif sampai warna final ditentukan.",
     selectable: false,
     previewSwatches: ["#f8fafc", "#94a3b8", "#64748b", "#334155"],
     chapterHeaderTones: CURRENT_CHAPTER_HEADER_TONES,
+    assignmentHeaderTone: null,
     finalColumnTones: CURRENT_FINAL_COLUMN_TONES,
     averageHeaderTone: "bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-800/75 dark:text-slate-100 dark:border-slate-700",
     averageBodyTone: "bg-slate-200/70 dark:bg-slate-800/60",
     averageCellTone:
-      "border-slate-300/70 bg-slate-300/55 font-semibold text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-slate-600/70 dark:bg-slate-700/60 dark:text-slate-100",
+      "border-slate-300/70 bg-slate-300/55 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-slate-600/70 dark:bg-slate-700/60",
     averageHoverTone:
       "bg-slate-300/85 border-slate-400/80 ring-1 ring-inset ring-slate-300/80 dark:bg-slate-700/75 dark:border-slate-500/80 dark:ring-slate-600/70",
   },
@@ -216,7 +217,9 @@ export function getGradeTableColumnHeaderTone(
   const scheme = getGradeTableColorSchemeConfig(value);
 
   if (column.type === "chapter_avg") return scheme.averageHeaderTone;
-  if (column.type === "assignment") return getGradeTableChapterTone(value, column.chapterIndex || 0).header;
+  if (column.type === "assignment") {
+    return scheme.assignmentHeaderTone || getGradeTableChapterTone(value, column.chapterIndex || 0).header;
+  }
   if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
     return scheme.finalColumnTones[column.type].header;
   }

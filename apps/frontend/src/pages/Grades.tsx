@@ -44,7 +44,13 @@ import { fuzzySearchStudents } from "@/lib/fuzzySearch";
 import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 import { useGradeFormulaSettings, type GradeFormulaSetting } from "@/hooks/useGradeFormulaSettings";
 import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
-import { DEFAULT_FORMULA, getReportRoundingLabel, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
+import {
+  DEFAULT_FORMULA,
+  getReportRoundingLabel,
+  getReportRoundingTargetLabel,
+  normalizeFormula,
+  type CustomFormula,
+} from "@/lib/gradeFormula";
 import {
   downloadCurrentGradesExport,
   downloadFullGradeBackup,
@@ -1229,7 +1235,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         <Percent className="w-4 h-4" />
         <span>Pembulatan</span>
         <Badge variant="secondary" className="ml-0.5 text-[10px]">
-          {getReportRoundingLabel(formula.reportRounding.mode)}
+          {getReportRoundingLabel(formula.reportRounding.mode)} - {getReportRoundingTargetLabel(formula.reportRounding.target)}
         </Badge>
       </Button>
       {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
@@ -1471,8 +1477,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
               )}
 
               {students.length > 0 && (
-                <Card className="w-full min-w-0 overflow-hidden border border-border shadow-sm" data-tour="grade-table">
-                  <CardHeader className="px-3 pb-3 sm:px-6 border-b border-border/50">
+                <Card className="w-full min-w-0 overflow-visible border border-border shadow-sm" data-tour="grade-table">
+                  <CardHeader className="relative z-30 bg-card px-3 pb-3 sm:px-6 border-b border-border/50">
                     <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
                         <CardTitle className="text-sm sm:text-base truncate">
@@ -1486,7 +1492,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                       <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">{gradeToolbarActions}</div>
                     </div>
                   </CardHeader>
-                  <CardContent className="min-w-0 p-0">
+                  <CardContent className="relative z-0 min-w-0 overflow-hidden p-0">
                     <div className="sipena-grade-table-shell h-[70dvh] min-h-[420px] overflow-hidden">
                       <SpreadsheetTable
                         students={filteredStudents}

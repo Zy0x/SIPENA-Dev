@@ -27,7 +27,7 @@ import {
   Maximize2,
   ChevronDown,
 } from "lucide-react";
-import { getGradeColor } from "./GradeInputCell";
+import { getGradeTextColor } from "./GradeInputCell";
 import { GradeHintPopup, HintTarget } from "./GradeHintPopup";
 import type { Assignment } from "@/hooks/useAssignments";
 import {
@@ -196,6 +196,7 @@ export function SpreadsheetTable({
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
+  const [hoveredColumnIndex, setHoveredColumnIndex] = useState<number | null>(null);
   const [showFreezeMenu, setShowFreezeMenu] = useState(false);
   const [freezeMenuType, setFreezeMenuType] = useState<'column' | 'row'>('column');
   // Auto-lock format in fullscreen mode
@@ -1017,14 +1018,14 @@ export function SpreadsheetTable({
           );
         }
 
-        const colorClass = value !== null ? getGradeColor(value, kkm) : '';
+        const colorClass = getGradeTextColor(value, kkm);
         // Format: integer tanpa desimal, desimal sesuai input user
         const displayValue = value !== null
           ? (Number.isInteger(value) ? value.toString() : value.toString())
           : '-';
         return (
           <div 
-            className={`w-full h-full flex items-center justify-center font-medium rounded transition-colors cursor-pointer ${colorClass} ${isSaving ? 'opacity-50' : ''}`}
+            className={`w-full h-full flex items-center justify-center rounded font-semibold transition-colors cursor-pointer ${colorClass} ${isSaving ? 'opacity-50' : ''}`}
             style={{ fontSize: `${13 * zoomFactor}px` }}
           >
             {displayValue}
@@ -1038,9 +1039,10 @@ export function SpreadsheetTable({
         const displayValue = chapterAvg !== null
           ? (Number.isInteger(chapterAvg) ? chapterAvg.toString() : chapterAvg.toFixed(1))
           : '-';
+        const colorClass = getGradeTextColor(chapterAvg ?? null, kkm);
         return (
           <div 
-            className={`flex h-full w-full items-center justify-center rounded border ${getGradeTableAverageCellTone(activeTableColorScheme)}`}
+            className={`flex h-full w-full items-center justify-center rounded border ${getGradeTableAverageCellTone(activeTableColorScheme)} ${colorClass}`}
             style={{ fontSize: `${12 * zoomFactor}px` }}
           >
             {displayValue}
@@ -1049,14 +1051,14 @@ export function SpreadsheetTable({
       }
 
       case 'final': {
-        const colorClass = avg?.final !== null ? getGradeColor(avg.final, kkm) : '';
+        const colorClass = getGradeTextColor(avg?.final ?? null, kkm);
         // Format: integer tanpa desimal, desimal dengan 1 angka di belakang koma
         const displayValue = avg?.final !== null
           ? (Number.isInteger(avg.final) ? avg.final.toString() : avg.final.toFixed(1))
           : '-';
         return (
           <div 
-            className={`flex items-center justify-center w-full font-bold rounded ${colorClass || 'text-muted-foreground'}`}
+            className={`flex items-center justify-center w-full font-bold rounded ${colorClass}`}
             style={{ fontSize: `${13 * zoomFactor}px` }}
           >
             {displayValue}
@@ -1100,6 +1102,8 @@ export function SpreadsheetTable({
     const isFrozenCell = frozenColumns.has(colIndex);
     const isAverageColumn = column.type === 'chapter_avg';
     const isRowHovered = hoveredRowIndex === rowIndex && !isEditing;
+    const isColumnHovered = hoveredColumnIndex === colIndex && !isEditing;
+    const isCrossHovered = isRowHovered && isColumnHovered;
     const columnBodyTone = getColumnBodyTone(column, activeTableColorScheme);
     const defaultBackground = isFrozenCell
       ? 'bg-primary/5'
@@ -1109,6 +1113,14 @@ export function SpreadsheetTable({
       : isFrozenCell
       ? 'bg-sky-100/90 border-sky-300/90 dark:bg-sky-950/50 dark:border-sky-700/80'
       : 'bg-sky-50/90 border-sky-300/80 ring-1 ring-inset ring-sky-200/80 dark:bg-sky-950/35 dark:border-sky-700/70 dark:ring-sky-800/60';
+    const columnHoverBackground = isAverageColumn
+      ? getGradeTableAverageHoverTone(activeTableColorScheme)
+      : isFrozenCell
+      ? 'bg-cyan-100/80 border-cyan-300/80 dark:bg-cyan-950/45 dark:border-cyan-700/70'
+      : 'bg-cyan-50/80 border-cyan-300/70 ring-1 ring-inset ring-cyan-200/70 dark:bg-cyan-950/30 dark:border-cyan-700/60 dark:ring-cyan-800/50';
+    const crossHoverBackground = isAverageColumn
+      ? getGradeTableAverageHoverTone(activeTableColorScheme)
+      : 'bg-blue-100/95 border-blue-400/90 ring-2 ring-inset ring-blue-300/80 dark:bg-blue-950/55 dark:border-blue-700 dark:ring-blue-800';
 
     // Use correct position function based on frozen state
     const left = isFrozenCol ? getFrozenColLeft(colIndex) : getNonFrozenColLeft(colIndex);
@@ -1126,6 +1138,7 @@ export function SpreadsheetTable({
         onTouchCancel={handleCellTouchEnd}
         onMouseEnter={(e) => {
           setHoveredRowIndex(rowIndex);
+          setHoveredColumnIndex(colIndex);
           if (isEditable && !isEditing) handleCellMouseEnter(e, rowIndex, colIndex);
         }}
         onMouseLeave={() => handleCellMouseLeave(rowIndex)}
@@ -1142,14 +1155,16 @@ export function SpreadsheetTable({
         }}
         className={`border border-border/40 flex items-center transition-colors ${
           isEditing ? 'bg-primary/10 ring-2 ring-primary z-10' : 
+          isCrossHovered ? crossHoverBackground :
           isRowHovered ? rowHoverBackground :
+          isColumnHovered ? columnHoverBackground :
           defaultBackground
         } ${isEditable && !isEditing && !scrollLockMode ? 'cursor-pointer' : ''} ${scrollLockMode ? 'cursor-grab' : ''}`}
       >
         {renderCellContent(student, column, rowIndex, colIndex)}
       </div>
     );
-  }, [activeTableColorScheme, students, columns, getColWidth, getRowHeight, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
+  }, [activeTableColorScheme, students, columns, getColWidth, getRowHeight, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, hoveredColumnIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
 
   // Render header cell - centered, no lock buttons
   const renderHeaderCell = useCallback((colIndex: number, isFrozen: boolean) => {
@@ -1159,6 +1174,7 @@ export function SpreadsheetTable({
     const width = getColWidth(colIndex);
     const left = isFrozen ? getFrozenColLeft(colIndex) : getNonFrozenColLeft(colIndex);
     const isFrozenCol = frozenColumns.has(colIndex);
+    const isColumnHovered = hoveredColumnIndex === colIndex;
     const isMergedStandaloneHeader = chapters.length > 0 && !isFrozen && isStandaloneFinalColumn(column);
 
     if (isMergedStandaloneHeader) return null;
@@ -1168,7 +1184,9 @@ export function SpreadsheetTable({
         key={`header-${colIndex}`}
         className={`absolute flex items-center justify-center border font-semibold text-center ${
           getColumnHeaderTone(column, activeTableColorScheme)
-        } ${isFrozenCol ? 'ring-1 ring-inset ring-primary/35' : ''}`}
+        } ${isFrozenCol ? 'ring-1 ring-inset ring-primary/35' : ''} ${
+          isColumnHovered ? 'ring-2 ring-inset ring-primary/45 brightness-[0.98]' : ''
+        }`}
         style={{
           left: left,
           top: 0,
@@ -1200,7 +1218,7 @@ export function SpreadsheetTable({
         )}
       </div>
     );
-  }, [activeTableColorScheme, chapters.length, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, frozenColumns, zoomFactor, handleResizeStart, formatLocked]);
+  }, [activeTableColorScheme, chapters.length, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, frozenColumns, hoveredColumnIndex, zoomFactor, handleResizeStart, formatLocked]);
 
   // Calculate header positions for when no columns are frozen
   // This ensures BAB headers maintain their position relative to their columns
@@ -1280,11 +1298,11 @@ export function SpreadsheetTable({
 
         {/* Chapter headers - scrollable area */}
         <div 
-          className="absolute top-0 overflow-hidden"
+          className="pointer-events-none absolute top-0 overflow-hidden"
           style={{ 
             left: frozenWidth, 
             right: 0,
-            height: CHAPTER_HEADER_HEIGHT * zoomFactor 
+            height: totalHeaderHeight * zoomFactor
           }}
         >
           <div 
@@ -1329,11 +1347,14 @@ export function SpreadsheetTable({
               }
 
               if (width <= 0) return null;
+              const isChapterHovered = hoveredColumnIndex !== null && hoveredColumnIndex >= header.startIdx && hoveredColumnIndex <= header.endIdx;
 
               return (
                 <div
                   key={header.chapterId}
-                  className={`absolute top-0 flex items-center justify-center border-r font-semibold text-center ${getChapterTone(activeTableColorScheme, header.chapterIndex).header}`}
+                  className={`absolute top-0 flex items-center justify-center border-r font-semibold text-center ${getChapterTone(activeTableColorScheme, header.chapterIndex).header} ${
+                    isChapterHovered ? 'ring-2 ring-inset ring-primary/40 brightness-[0.98]' : ''
+                  }`}
                   style={{
                     left: left,
                     width: width,
@@ -1356,11 +1377,14 @@ export function SpreadsheetTable({
               return extraCols.map((column, i) => {
                 const colIdx = lastChapterEnd + i;
                 if (frozenColumns.has(colIdx) || !isStandaloneFinalColumn(column)) return null;
+                const isColumnHovered = hoveredColumnIndex === colIdx;
 
                 return (
                   <div
                     key={`final-header-${column.id}`}
-                    className={`absolute top-0 flex items-center justify-center border-r border-b font-semibold text-center ${getColumnHeaderTone(column, activeTableColorScheme)}`}
+                    className={`pointer-events-auto absolute top-0 flex items-center justify-center border-r border-b font-semibold text-center ${getColumnHeaderTone(column, activeTableColorScheme)} ${
+                      isColumnHovered ? 'ring-2 ring-inset ring-primary/45 brightness-[0.98]' : ''
+                    }`}
                     style={{
                       left: getNonFrozenColLeft(colIdx),
                       width: getColWidth(colIdx) * zoomFactor,
@@ -1384,7 +1408,7 @@ export function SpreadsheetTable({
         </div>
       </div>
     );
-  }, [activeTableColorScheme, chapters.length, chapterHeaders, columns, frozenColumns, formatLocked, handleResizeStart, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, totalHeaderHeight, zoomFactor]);
+  }, [activeTableColorScheme, chapters.length, chapterHeaders, columns, frozenColumns, formatLocked, handleResizeStart, hoveredColumnIndex, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, totalHeaderHeight, zoomFactor]);
 
   return (
     <div 
@@ -1670,6 +1694,10 @@ export function SpreadsheetTable({
       {/* Spreadsheet Container - FIXED: proper touch scrolling for fullscreen */}
       <div
         className="flex-1 relative overflow-hidden"
+        onMouseLeave={() => {
+          setHoveredRowIndex(null);
+          setHoveredColumnIndex(null);
+        }}
         style={{
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',

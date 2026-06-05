@@ -1,4 +1,4 @@
-import { calculateReportGrade, DEFAULT_FORMULA, type CustomFormula } from "@/lib/gradeFormula";
+import { applyReportGradeRounding, calculateReportGrade, DEFAULT_FORMULA, type CustomFormula } from "@/lib/gradeFormula";
 import { getScopedGradeValue } from "@/lib/gradeValueSelection";
 
 export interface ReportGradeRecord {
@@ -125,7 +125,11 @@ export function calculateStudentSubjectReport({
       assignmentSum += value ?? 0;
     });
 
-    const chapterAverage = assignmentSum / chapterAssignments.length;
+    const chapterAverage = applyReportGradeRounding(
+      assignmentSum / chapterAssignments.length,
+      formula.reportRounding,
+      "chapter_average",
+    );
     chapterDetails[chapter.id] = chapterAverage;
     chapterSum += chapterAverage;
     chapterCount += 1;

@@ -12,8 +12,11 @@ export type ReportRoundingMode =
   | "ceil_integer"
   | "one_decimal";
 
+export type ReportRoundingTarget = "report" | "chapter_average" | "all";
+
 export interface ReportRoundingSetting {
   mode: ReportRoundingMode;
+  target?: ReportRoundingTarget;
 }
 
 export interface CustomFormula {
@@ -24,7 +27,7 @@ export interface CustomFormula {
 
 export const DEFAULT_FORMULA: CustomFormula = {
   enabled: false,
-  reportRounding: { mode: "default" },
+  reportRounding: { mode: "default", target: "report" },
   components: [
     { id: "grandAvg", name: "Rata-rata BAB", enabled: true, weight: 50 },
     { id: "sts", name: "Nilai STS", enabled: true, weight: 25 },
@@ -40,6 +43,7 @@ const REPORT_ROUNDING_MODES = new Set<ReportRoundingMode>([
   "ceil_integer",
   "one_decimal",
 ]);
+const REPORT_ROUNDING_TARGETS = new Set<ReportRoundingTarget>(["report", "chapter_average", "all"]);
 
 export function normalizeReportRounding(raw: unknown): ReportRoundingSetting {
   if (!raw || typeof raw !== "object") {
@@ -49,6 +53,9 @@ export function normalizeReportRounding(raw: unknown): ReportRoundingSetting {
   const input = raw as Partial<ReportRoundingSetting>;
   return {
     mode: input.mode && REPORT_ROUNDING_MODES.has(input.mode) ? input.mode : DEFAULT_FORMULA.reportRounding.mode,
+    target: input.target && REPORT_ROUNDING_TARGETS.has(input.target)
+      ? input.target
+      : DEFAULT_FORMULA.reportRounding.target,
   };
 }
 
@@ -106,8 +113,34 @@ export function normalizeFormula(raw: unknown): CustomFormula {
   };
 }
 
-export function applyReportGradeRounding(value: number, rounding: ReportRoundingSetting = DEFAULT_FORMULA.reportRounding): number {
+export function getReportRoundingTargetLabel(target: ReportRoundingTarget = "report"): string {
+  switch (target) {
+    case "chapter_average":
+      return "Rata-rata BAB";
+    case "all":
+      return "Semuanya";
+    case "report":
+    default:
+      return "Rapor";
+  }
+}
+
+export function shouldApplyReportRounding(
+  rounding: ReportRoundingSetting = DEFAULT_FORMULA.reportRounding,
+  target: Exclude<ReportRoundingTarget, "all"> = "report",
+): boolean {
   const normalized = normalizeReportRounding(rounding);
+  return normalized.target === "all" || normalized.target === target;
+}
+
+export function applyReportGradeRounding(
+  value: number,
+  rounding: ReportRoundingSetting = DEFAULT_FORMULA.reportRounding,
+  target: Exclude<ReportRoundingTarget, "all"> = "report",
+): number {
+  const normalized = normalizeReportRounding(rounding);
+  if (!shouldApplyReportRounding(normalized, target)) return value;
+
   switch (normalized.mode) {
     case "nearest_integer":
       return Math.round(value);
@@ -152,14 +185,14 @@ export function calculateReportGrade(
       }
     }, 0);
 
-    return applyReportGradeRounding(weightedGrade, normalizedFormula.reportRounding);
+    return applyReportGradeRounding(weightedGrade, normalizedFormula.reportRounding, "report");
   }
 
   const stsSasAvg = (sts + sas) / 2;
 
   if (!hasChapters) {
-    return applyReportGradeRounding(stsSasAvg, normalizedFormula.reportRounding);
+    return applyReportGradeRounding(stsSasAvg, normalizedFormula.reportRounding, "report");
   }
 
-  return applyReportGradeRounding((grandAvg + stsSasAvg) / 2, normalizedFormula.reportRounding);
+  return applyReportGradeRounding((grandAvg + stsSasAvg) / 2, normalizedFormula.reportRounding, "report");
 }

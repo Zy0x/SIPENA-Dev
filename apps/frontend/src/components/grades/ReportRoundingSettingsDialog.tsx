@@ -13,7 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { getReportRoundingLabel, type CustomFormula, type ReportRoundingMode } from "@/lib/gradeFormula";
+import {
+  getReportRoundingLabel,
+  getReportRoundingTargetLabel,
+  type CustomFormula,
+  type ReportRoundingMode,
+  type ReportRoundingTarget,
+} from "@/lib/gradeFormula";
 
 const ROUNDING_OPTIONS: Array<{
   mode: ReportRoundingMode;
@@ -24,13 +30,13 @@ const ROUNDING_OPTIONS: Array<{
   {
     mode: "default",
     title: "Default",
-    description: "Pertahankan nilai hitung asli. Tampilan tetap mengikuti format Rapor saat ini.",
+    description: "Pertahankan nilai hitung asli. Tampilan tetap mengikuti format nilai saat ini.",
     example: "86.25 -> 86.3",
   },
   {
     mode: "one_decimal",
     title: "Satu desimal",
-    description: "Simpan hasil Rapor dengan satu angka di belakang koma.",
+    description: "Tampilkan hasil pilihan dengan satu angka di belakang koma.",
     example: "86.25 -> 86.3",
   },
   {
@@ -53,6 +59,28 @@ const ROUNDING_OPTIONS: Array<{
   },
 ];
 
+const ROUNDING_TARGET_OPTIONS: Array<{
+  target: ReportRoundingTarget;
+  title: string;
+  description: string;
+}> = [
+  {
+    target: "report",
+    title: "Rapor",
+    description: "Hanya kolom Rapor yang mengikuti mode pembulatan.",
+  },
+  {
+    target: "chapter_average",
+    title: "Rata-rata BAB",
+    description: "Hanya kolom Rata-rata pada setiap BAB yang dibulatkan.",
+  },
+  {
+    target: "all",
+    title: "Semuanya",
+    description: "Terapkan ke Rapor dan seluruh Rata-rata BAB.",
+  },
+];
+
 interface ReportRoundingSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -69,11 +97,16 @@ export function ReportRoundingSettingsDialog({
   isSaving = false,
 }: ReportRoundingSettingsDialogProps) {
   const currentMode = formula.reportRounding?.mode || "default";
+  const currentTarget = formula.reportRounding?.target || "report";
   const [draftMode, setDraftMode] = useState<ReportRoundingMode>(currentMode);
+  const [draftTarget, setDraftTarget] = useState<ReportRoundingTarget>(currentTarget);
 
   useEffect(() => {
-    if (open) setDraftMode(currentMode);
-  }, [currentMode, open]);
+    if (open) {
+      setDraftMode(currentMode);
+      setDraftTarget(currentTarget);
+    }
+  }, [currentMode, currentTarget, open]);
 
   const selectedOption = useMemo(
     () => ROUNDING_OPTIONS.find((option) => option.mode === draftMode) || ROUNDING_OPTIONS[0],
@@ -83,7 +116,7 @@ export function ReportRoundingSettingsDialog({
   const handleSave = async () => {
     await onFormulaChange({
       ...formula,
-      reportRounding: { mode: draftMode },
+      reportRounding: { mode: draftMode, target: draftTarget },
     });
     onOpenChange(false);
   };
@@ -94,10 +127,10 @@ export function ReportRoundingSettingsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
-            Pembulatan Nilai Rapor
+            Pembulatan Nilai
           </DialogTitle>
           <DialogDescription>
-            Atur cara kolom Rapor menangani nilai desimal setelah rumus nilai dihitung.
+            Atur cara nilai hasil kalkulasi menangani desimal.
           </DialogDescription>
         </DialogHeader>
 
@@ -105,40 +138,71 @@ export function ReportRoundingSettingsDialog({
           <Alert className="border-blue-200 bg-blue-50/70 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/25 dark:text-blue-100">
             <CheckCircle2 className="h-4 w-4" />
             <AlertDescription>
-              Pengaturan ini hanya mengubah hasil kalkulasi Rapor. Nilai tugas, STS, SAS, dan data mentah tetap tidak diubah.
+              Pengaturan ini hanya mengubah tampilan hasil kalkulasi. Nilai tugas, STS, SAS, dan data mentah tetap tidak diubah.
             </AlertDescription>
           </Alert>
 
-          <RadioGroup value={draftMode} onValueChange={(value) => setDraftMode(value as ReportRoundingMode)}>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {ROUNDING_OPTIONS.map((option) => (
-                <label
-                  key={option.mode}
-                  className="flex cursor-pointer gap-3 rounded-xl border bg-background p-3 transition hover:bg-muted/40 data-[checked=true]:border-primary data-[checked=true]:bg-primary/5"
-                  data-checked={draftMode === option.mode}
-                >
-                  <RadioGroupItem value={option.mode} className="mt-1" />
-                  <span className="min-w-0 flex-1 space-y-1">
-                    <span className="flex items-center gap-2">
-                      <span className="font-semibold">{option.title}</span>
-                      {option.mode === currentMode && (
-                        <Badge variant="secondary" className="text-[10px]">
-                          Aktif
-                        </Badge>
-                      )}
-                    </span>
-                    <span className="block text-sm text-muted-foreground">{option.description}</span>
-                    <span className="block rounded-lg bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
-                      {option.example}
-                    </span>
-                  </span>
-                </label>
-              ))}
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-semibold">Terapkan ke</p>
+              <p className="text-xs text-muted-foreground">Pilih area nilai yang mengikuti mode pembulatan.</p>
             </div>
-          </RadioGroup>
+            <RadioGroup value={draftTarget} onValueChange={(value) => setDraftTarget(value as ReportRoundingTarget)}>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {ROUNDING_TARGET_OPTIONS.map((option) => (
+                  <label
+                    key={option.target}
+                    className="flex cursor-pointer gap-3 rounded-xl border bg-background p-3 transition hover:bg-muted/40 data-[checked=true]:border-primary data-[checked=true]:bg-primary/5"
+                    data-checked={draftTarget === option.target}
+                  >
+                    <RadioGroupItem value={option.target} className="mt-1" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold">{option.title}</span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">{option.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-semibold">Mode pembulatan</p>
+              <p className="text-xs text-muted-foreground">Pilih cara angka desimal diubah.</p>
+            </div>
+            <RadioGroup value={draftMode} onValueChange={(value) => setDraftMode(value as ReportRoundingMode)}>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {ROUNDING_OPTIONS.map((option) => (
+                  <label
+                    key={option.mode}
+                    className="flex cursor-pointer gap-3 rounded-xl border bg-background p-3 transition hover:bg-muted/40 data-[checked=true]:border-primary data-[checked=true]:bg-primary/5"
+                    data-checked={draftMode === option.mode}
+                  >
+                    <RadioGroupItem value={option.mode} className="mt-1" />
+                    <span className="min-w-0 flex-1 space-y-1">
+                      <span className="flex items-center gap-2">
+                        <span className="font-semibold">{option.title}</span>
+                        {option.mode === currentMode && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Aktif
+                          </Badge>
+                        )}
+                      </span>
+                      <span className="block text-sm text-muted-foreground">{option.description}</span>
+                      <span className="block rounded-lg bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
+                        {option.example}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </RadioGroup>
+          </div>
 
           <div className="rounded-xl border bg-muted/40 p-3 text-sm">
-            Mode dipilih: <span className="font-semibold">{selectedOption.title}</span>
+            Pilihan: <span className="font-semibold">{selectedOption.title}</span> untuk{" "}
+            <span className="font-semibold">{getReportRoundingTargetLabel(draftTarget)}</span>
           </div>
         </div>
 

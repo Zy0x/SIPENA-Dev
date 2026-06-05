@@ -16,6 +16,13 @@ export function getGradeColor(value: number | null, kkm: number): string {
   return "bg-grade-fail/20 text-grade-fail border-grade-fail/30";
 }
 
+export function getGradeTextColor(value: number | null, kkm: number): string {
+  if (value === null) return "text-muted-foreground";
+  if (value > kkm + 5) return "text-grade-pass";
+  if (value >= kkm) return "text-grade-warning";
+  return "text-grade-fail";
+}
+
 // Helper to get status label based on KKM
 export function getGradeStatus(value: number | null, kkm: number): "pass" | "warning" | "fail" | null {
   if (value === null) return null;

@@ -30,8 +30,13 @@ import { useThemes, themes } from "@/hooks/useThemes";
 import { useGradeTableColorScheme } from "@/hooks/useGradeTableColorScheme";
 import {
   GRADE_TABLE_COLOR_SCHEMES,
+  getGradeTableAverageCellTone,
+  getGradeTableChapterTone,
+  getGradeTableColumnBodyTone,
+  getGradeTableColumnHeaderTone,
   type GradeTableColorSchemeId,
 } from "@/lib/gradeTableColorSchemes";
+import { cn } from "@/lib/utils";
 import {
   User,
   Moon,
@@ -52,6 +57,70 @@ import {
 } from "lucide-react";
 import BatchImportDialog from "@/components/import/BatchImportDialog";
 import { SignatureSettingsSection } from "@/components/settings/SignatureSettingsSection";
+
+function GradeTableSchemePreview({ schemeId }: { schemeId: GradeTableColorSchemeId }) {
+  if (schemeId === "future") {
+    return (
+      <div className="mb-3 overflow-hidden rounded-lg border border-dashed border-border bg-muted/30 text-[10px] opacity-80">
+        <div className="grid grid-cols-4">
+          <div className="bg-slate-100 px-2 py-2 dark:bg-slate-900" />
+          <div className="bg-slate-200 px-2 py-2 dark:bg-slate-800" />
+          <div className="bg-slate-300 px-2 py-2 dark:bg-slate-700" />
+          <div className="bg-slate-400 px-2 py-2 dark:bg-slate-600" />
+        </div>
+        <div className="px-2 py-4 text-center font-semibold text-muted-foreground">Akan datang</div>
+      </div>
+    );
+  }
+
+  const chapterTone = getGradeTableChapterTone(schemeId, 0).header;
+  const taskHeaderTone = getGradeTableColumnHeaderTone(schemeId, { type: "assignment", chapterIndex: 0 });
+  const averageHeaderTone = getGradeTableColumnHeaderTone(schemeId, { type: "chapter_avg", chapterIndex: 0 });
+  const stsHeaderTone = getGradeTableColumnHeaderTone(schemeId, { type: "sts" });
+  const sasHeaderTone = getGradeTableColumnHeaderTone(schemeId, { type: "sas" });
+  const stsBodyTone = getGradeTableColumnBodyTone(schemeId, { type: "sts" });
+  const sasBodyTone = getGradeTableColumnBodyTone(schemeId, { type: "sas" });
+  const averageCellTone = getGradeTableAverageCellTone(schemeId);
+
+  return (
+    <div className="mb-3 overflow-hidden rounded-lg border border-border/80 bg-background text-[10px] shadow-sm">
+      <div className="grid grid-cols-5">
+        <div className="col-span-3 border-r border-border bg-muted/60 px-2 py-1.5 text-center font-semibold text-muted-foreground">
+          Data Siswa
+        </div>
+        <div className={cn("col-span-2 px-2 py-1.5 text-center font-semibold", chapterTone)}>
+          BAB 1
+        </div>
+      </div>
+      <div className="grid grid-cols-5 border-t border-border">
+        <div className="border-r border-border px-2 py-1.5 font-semibold text-muted-foreground">No</div>
+        <div className="col-span-2 border-r border-border px-2 py-1.5 font-semibold text-muted-foreground">Nama</div>
+        <div className={cn("border-r border-border px-2 py-1.5 text-center font-semibold", taskHeaderTone)}>
+          Tugas
+        </div>
+        <div className={cn("px-2 py-1.5 text-center font-semibold", averageHeaderTone)}>
+          Rata
+        </div>
+      </div>
+      <div className="grid grid-cols-5 border-t border-border">
+        <div className="border-r border-border px-2 py-2 text-center text-muted-foreground">1</div>
+        <div className="col-span-2 border-r border-border px-2 py-2 font-medium text-foreground">Adriana</div>
+        <div className="border-r border-border bg-background px-2 py-2 text-center font-semibold text-grade-pass">80</div>
+        <div className={cn("px-2 py-2 text-center font-semibold text-grade-warning", averageCellTone)}>73.3</div>
+      </div>
+      <div className="grid grid-cols-2 border-t border-border">
+        <div className={cn("border-r border-border px-2 py-1.5 text-center font-semibold", stsHeaderTone)}>STS</div>
+        <div className={cn("px-2 py-1.5 text-center font-semibold", sasHeaderTone)}>SAS</div>
+        <div className={cn("border-r border-border px-2 py-2 text-center font-semibold text-grade-warning", stsBodyTone || "bg-background")}>
+          75
+        </div>
+        <div className={cn("px-2 py-2 text-center font-semibold text-grade-pass", sasBodyTone || "bg-background")}>
+          90
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Settings() {
   const { user } = useAuth();
@@ -384,15 +453,7 @@ export default function Settings() {
                           : "border-border bg-background hover:border-primary/45 hover:bg-muted/30"
                       } ${isDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer active:scale-[0.99]"}`}
                     >
-                      <div className="mb-3 flex h-6 overflow-hidden rounded-md border border-border/70">
-                        {scheme.previewSwatches.map((color, idx) => (
-                          <span
-                            key={`${scheme.id}-${idx}`}
-                            className="flex-1"
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
+                      <GradeTableSchemePreview schemeId={scheme.id} />
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground">{scheme.label}</p>
@@ -428,9 +489,9 @@ export default function Settings() {
                     <div className="flex items-center gap-2">
                       <Palette className="w-4 h-4 text-primary" />
                       <div className="text-left">
-                        <p className="font-medium text-foreground text-sm">Palet Warna</p>
+                        <p className="font-medium text-foreground text-sm">Palet Tema SIPENA</p>
                         <p className="text-xs text-muted-foreground font-normal">
-                          {themes[currentTheme]?.name || 'Default'}
+                          Tema aplikasi: {themes[currentTheme]?.name || 'Default'}
                         </p>
                       </div>
                     </div>

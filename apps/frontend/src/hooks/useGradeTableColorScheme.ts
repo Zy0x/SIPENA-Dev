@@ -78,7 +78,8 @@ export function useGradeTableColorScheme() {
         return;
       }
 
-      syncScheme((data as UserGradeTableColorPreferenceRow | null)?.grade_table_color_scheme);
+      const databaseScheme = (data as UserGradeTableColorPreferenceRow | null)?.grade_table_color_scheme;
+      syncScheme(isSelectableGradeTableColorScheme(databaseScheme) ? databaseScheme : readStoredGradeTableColorScheme());
       setIsLoading(false);
     };
 
@@ -99,15 +100,33 @@ export function useGradeTableColorScheme() {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const timestamp = new Date().toISOString();
+      const { data: updatedRow, error: updateError } = await supabase
         .from("user_preferences")
-        .upsert({
-          user_id: user.id,
+        .update({
           grade_table_color_scheme: normalized,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
+          updated_at: timestamp,
+        })
+        .eq("user_id", user.id)
+        .select("user_id")
+        .maybeSingle();
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      if (!updatedRow) {
+        const { error: insertError } = await supabase
+          .from("user_preferences")
+          .insert({
+            user_id: user.id,
+            theme_mode: "light",
+            theme_palette: "default",
+            has_completed_onboarding: false,
+            grade_table_color_scheme: normalized,
+            updated_at: timestamp,
+          });
+
+        if (insertError) throw insertError;
+      }
       return normalized;
     } finally {
       setIsSaving(false);

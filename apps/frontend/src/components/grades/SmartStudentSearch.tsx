@@ -221,7 +221,7 @@ export function SmartStudentSearch({
       {showDropdown && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 top-full left-0 right-0 mt-1 overflow-hidden rounded-xl border bg-popover shadow-lg animate-fade-in"
+          className="absolute left-0 right-0 top-full z-[100] mt-1 overflow-hidden rounded-xl border bg-popover shadow-xl animate-fade-in"
           role="listbox"
         >
           <ScrollArea className="max-h-[35vh] sm:max-h-56">

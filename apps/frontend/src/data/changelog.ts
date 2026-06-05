@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.30",
+    version: "2.4.30",
+    title: "Input Nilai: Warna Tabel dan Pembulatan",
+    description: "Tampilan tabel nilai dirapikan agar header, warna, hover, dan pengaturan pembulatan lebih jelas di berbagai ukuran layar.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-05",
+    details: [
+      "Memperbaiki header STS, SAS, Rapor, dan Status agar tidak terpotong oleh layer header tabel.",
+      "Menyesuaikan Theme A dan Theme B: kolom tugas tetap bersih, sedangkan Rata-rata, STS, dan SAS menjadi pembeda kolom dengan warna teks indikator KKM.",
+      "Menambahkan highlight baris dan kolom saat hover agar posisi nilai yang sedang dibaca lebih tepat.",
+      "Membuat preview Warna Tabel Nilai di Pengaturan berupa contoh tabel nyata, bukan swatch warna statis.",
+      "Memperkuat penyimpanan preferensi warna tabel dan menambahkan target pembulatan untuk Rapor, Rata-rata BAB, atau semuanya.",
+    ],
+  },
+  {
     id: "v2.4.29",
     version: "2.4.29",
     title: "Pengaturan: Warna Tabel Nilai",

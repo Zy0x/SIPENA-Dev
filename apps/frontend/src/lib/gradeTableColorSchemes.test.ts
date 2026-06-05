@@ -4,6 +4,7 @@ import {
   DEFAULT_GRADE_TABLE_COLOR_SCHEME,
   GRADE_TABLE_COLOR_SCHEMES,
   getGradeTableAverageCellTone,
+  getGradeTableColumnBodyTone,
   getGradeTableColumnHeaderTone,
   isSelectableGradeTableColorScheme,
   normalizeGradeTableColorScheme,
@@ -30,13 +31,18 @@ describe("grade table color schemes", () => {
     expect(getGradeTableColumnHeaderTone("current", { type: "assignment", chapterIndex: 0 })).toContain("bg-sky-100");
     expect(getGradeTableColumnHeaderTone("current", { type: "sts" })).toContain("bg-indigo-100");
     expect(getGradeTableColumnHeaderTone("current", { type: "sas" })).toContain("bg-purple-100");
+    expect(getGradeTableColumnBodyTone("current", { type: "assignment" })).toBeNull();
+    expect(getGradeTableColumnBodyTone("current", { type: "sts" })).toContain("bg-indigo-50");
     expect(getGradeTableAverageCellTone("current")).toContain("bg-slate-300/55");
   });
 
   it("keeps classic scheme close to the original SIPENA table tone", () => {
-    expect(getGradeTableColumnHeaderTone("classic", { type: "assignment", chapterIndex: 4 })).toContain("bg-primary/10");
-    expect(getGradeTableColumnHeaderTone("classic", { type: "sts" })).toContain("bg-primary/10");
-    expect(getGradeTableColumnHeaderTone("classic", { type: "final" })).toContain("bg-muted");
+    expect(getGradeTableColumnHeaderTone("classic", { type: "assignment", chapterIndex: 4 })).toContain("bg-background");
+    expect(getGradeTableColumnHeaderTone("classic", { type: "sts" })).toContain("bg-indigo-100");
+    expect(getGradeTableColumnHeaderTone("classic", { type: "sas" })).toContain("bg-purple-100");
+    expect(getGradeTableColumnHeaderTone("classic", { type: "final" })).toContain("bg-slate-100");
+    expect(getGradeTableColumnBodyTone("classic", { type: "assignment" })).toBeNull();
+    expect(getGradeTableColumnBodyTone("classic", { type: "sas" })).toContain("bg-purple-50");
     expect(getGradeTableAverageCellTone("classic")).toContain("bg-primary/10");
   });
 
