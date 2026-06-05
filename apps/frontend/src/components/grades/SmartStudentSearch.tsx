@@ -52,6 +52,7 @@ export function SmartStudentSearch({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const selectAllOnNextFocusRef = useRef(true);
 
   const searchResults = useMemo(() => {
     // Saat siswa sudah dipilih, sembunyikan dropdown — tidak perlu hitung.
@@ -103,9 +104,23 @@ export function SmartStudentSearch({
     }
   }, [highlightedIndex]);
 
+  const handleInputFocus = useCallback(() => {
+    setIsFocused(true);
+    if (query && selectAllOnNextFocusRef.current) {
+      requestAnimationFrame(() => inputRef.current?.select());
+      selectAllOnNextFocusRef.current = false;
+    }
+  }, [query]);
+
+  const handleInputBlur = useCallback(() => {
+    setTimeout(() => setIsFocused(false), 200);
+    selectAllOnNextFocusRef.current = true;
+  }, []);
+
   const handleClear = useCallback(() => {
     setQuery("");
     setSelectedStudent(null);
+    selectAllOnNextFocusRef.current = false;
     inputRef.current?.focus();
     onFilter(students);
     onSearchQueryChange?.("");
@@ -173,7 +188,7 @@ export function SmartStudentSearch({
   const showDropdown = isFocused && query.length > 0 && showSuggestions && searchResults.length > 0 && !selectedStudent;
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
+    <div ref={containerRef} data-grade-student-search className={cn("relative w-full", className)}>
       <div className="relative">
         <div className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
           <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
@@ -183,8 +198,8 @@ export function SmartStudentSearch({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="h-10 pl-8 pr-9 text-sm sm:h-9"

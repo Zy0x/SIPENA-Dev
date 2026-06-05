@@ -331,6 +331,7 @@ describe("phase 12 grade import regression suite", () => {
     const restoreDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeBackupRestoreDialog.tsx"), "utf8");
     const restoreReaderSource = readFileSync(repoPath("apps/frontend/src/lib/gradeImport/gradeBackupRestoreReader.ts"), "utf8");
     const backupExporterSource = readFileSync(repoPath("apps/frontend/src/lib/gradeImport/currentGradesExporter.ts"), "utf8");
+    const dialogPrimitiveSource = readFileSync(repoPath("apps/frontend/src/components/ui/dialog.tsx"), "utf8");
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
     expect(gradesPageSource).toContain("sipena-grade-page");
@@ -346,6 +347,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradeTableColorSchemeSource).toContain('id: "future"');
     expect(gradeTableColorSchemeSource).toContain("selectable: false");
     expect(gradeTableColorSchemeSource).toContain("bg-slate-300/55");
+    expect(gradeTableColorSchemeSource).toContain('column.type === "chapter_avg" || column.type === "final"');
+    expect(gradeTableColorSchemeSource).toContain("bg-indigo-100/45");
+    expect(gradeTableColorSchemeSource).toContain("bg-purple-100/45");
     expect(gradeTableColorSchemeHookSource).toContain("isRecoverablePreferenceError");
     expect(gradeTableColorSchemeHookSource).toContain("grade_table_color_scheme");
     expect(gradeTableColorSchemeHookSource).toContain(".update({");
@@ -353,6 +357,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(settingsSource).toContain("Warna Tabel Nilai");
     expect(settingsSource).toContain("GradeTableSchemePreview");
     expect(settingsSource).toContain("Palet Tema SIPENA");
+    expect(settingsSource).toContain("Rapor");
     expect(settingsSource).toContain("Akan datang");
     expect(settingsSource).toContain("disabled={isDisabled}");
     expect(gradesPageSource).toContain("overflow-visible border border-border shadow-sm");
@@ -367,11 +372,16 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("getColumnHeaderTone(column, activeTableColorScheme)");
     expect(spreadsheetSource).toContain("getColumnBodyTone(column, activeTableColorScheme)");
     expect(spreadsheetSource).toContain("getGradeTextColor");
+    expect(spreadsheetSource).toContain("getGradeTableAverageCellTone(activeTableColorScheme)");
+    expect(spreadsheetSource).toContain("bg-fuchsia-100/95");
     expect(spreadsheetSource).toContain("sipena-grade-scroll");
+    expect(spreadsheetSource).toContain("overscrollBehaviorY: 'auto'");
     expect(spreadsheetSource).toContain("isStandaloneFinalColumn(column)");
     expect(spreadsheetSource).toContain("height: totalHeaderHeight * zoomFactor");
     expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");
-    expect(spreadsheetSource).toContain("justify-start gap-2 sm:w-auto sm:ml-auto sm:justify-end");
+    expect(spreadsheetSource).toContain("sipena-grade-toolbar");
+    expect(spreadsheetSource).toContain("sipena-grade-toolbar-extra");
+    expect(spreadsheetSource).toContain("Prediksi nilai tetap tersedia lewat long-press");
     expect(spreadsheetSource).not.toContain("fixed top-2 right-2 z-[10000]");
     expect(spreadsheetSource).toContain("estimateWrappedLineCount");
     expect(spreadsheetSource).toContain("getRowHeight(rowIndex)");
@@ -379,6 +389,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).not.toContain("label: 'Avg'");
     expect(searchSource).toContain("h-10 pl-8 pr-9");
     expect(searchSource).toContain("whitespace-normal break-words");
+    expect(searchSource).toContain("selectAllOnNextFocusRef");
+    expect(searchSource).toContain("inputRef.current?.select()");
+    expect(searchSource).toContain("data-grade-student-search");
     expect(searchSource).not.toContain("Sparkles");
     expect(gradesPageSource).toContain("ReportRoundingSettingsDialog");
     expect(gradesPageSource).toContain("showReportRoundingSettings");
@@ -617,6 +630,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-restore-footer-mode-controls .sipena-restore-mode-trigger");
     expect(globalStyles).toContain(".sipena-restore-overwrite-backdrop");
     expect(globalStyles).toContain(".sipena-danger-icon-button");
+    expect(dialogPrimitiveSource).toContain("sipena-danger-icon-button");
+    expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen");
+    expect(globalStyles).toContain("overscroll-behavior-y: auto");
+    expect(globalStyles).toContain("orientation: landscape");
     expect(globalStyles).toContain("@keyframes sipena-guided-action-pulse");
     expect(globalStyles).toContain("@keyframes sipena-restore-drop-pulse");
     expect(globalStyles).toContain(".sipena-preview-cell-note-badge");

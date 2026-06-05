@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 export {
   DEFAULT_FORMULA,
   calculateReportGrade,
@@ -22,8 +23,9 @@ interface FormulaSettingsProps {
   formula: CustomFormula;
   onFormulaChange: (formula: CustomFormula) => void;
   hasChapters: boolean;
+  triggerClassName?: string;
 }
-export function FormulaSettings({ formula, onFormulaChange, hasChapters }: FormulaSettingsProps) {
+export function FormulaSettings({ formula, onFormulaChange, hasChapters, triggerClassName }: FormulaSettingsProps) {
   const totalWeight = formula.components
     .filter(c => c.enabled)
     .reduce((sum, c) => sum + c.weight, 0);
@@ -65,7 +67,7 @@ export function FormulaSettings({ formula, onFormulaChange, hasChapters }: Formu
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className={cn("gap-2", triggerClassName)}>
           <Calculator className="w-4 h-4" />
           Rumus
           {formula.enabled && (

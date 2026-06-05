@@ -50,7 +50,7 @@ export function GradeHintPopup({
       const possibleForChapter = requiredForChapter <= 100;
 
       results.push({
-        target: "Rata-rata BAB ≥ KKM",
+        target: "Rata-rata BAB >= KKM",
         required: Math.max(0, requiredForChapter),
         possible: possibleForChapter && requiredForChapter >= 0,
       });
@@ -63,14 +63,14 @@ export function GradeHintPopup({
       if (hasChapters) {
         const required = 4 * kkm - 2 * (chapterAvg ?? 0) - otherExam;
         results.push({
-          target: "Nilai Rapor ≥ KKM",
+          target: "Nilai Rapor >= KKM",
           required: Math.max(0, required),
           possible: required <= 100,
         });
       } else {
         const required = 2 * kkm - otherExam;
         results.push({
-          target: "Nilai Rapor ≥ KKM",
+          target: "Nilai Rapor >= KKM",
           required: Math.max(0, required),
           possible: required <= 100,
         });
@@ -203,8 +203,9 @@ export function GradeHintPopup({
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-8 w-8 shrink-0 hover:bg-destructive/10" 
+          className="sipena-danger-icon-button h-8 w-8 shrink-0"
           onClick={onClose}
+          aria-label="Tutup prediksi nilai"
         >
           <X className="w-4 h-4" />
         </Button>
@@ -255,8 +256,8 @@ export function GradeHintPopup({
                   >
                     {hint.possible 
                       ? hint.required <= 0 
-                        ? "✓ Sudah tercapai" 
-                        : `≥ ${hint.required.toFixed(0)}`
+                        ? "Sudah tercapai"
+                        : `>= ${hint.required.toFixed(0)}`
                       : "Tidak mungkin tercapai"
                     }
                   </span>

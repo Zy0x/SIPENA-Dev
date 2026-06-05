@@ -1159,7 +1159,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px] select-none" aria-label="Kelola file nilai">
+          <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 min-w-[44px] select-none gap-1.5 text-xs" aria-label="Kelola file nilai">
             <Upload className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Kelola Nilai</span>
             <ChevronDown className="w-3 h-3 opacity-60" />
@@ -1223,6 +1223,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         formula={formula}
         onFormulaChange={handleFormulaChange}
         hasChapters={hasChaptersWithAssignments}
+        triggerClassName="sipena-grade-action-button h-9"
       />
       <Button
         type="button"
@@ -1230,7 +1231,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         size="sm"
         onClick={() => setShowReportRoundingSettings(true)}
         disabled={formulaSaving}
-        className="gap-2"
+        className="sipena-grade-action-button h-9 gap-2"
       >
         <Percent className="w-4 h-4" />
         <span>Pembulatan</span>
@@ -1245,11 +1246,11 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const guestToolbarActions = (
     <>
-      <Button variant="outline" size="sm" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
+      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
         <RefreshCw className={`w-4 h-4 mr-2 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
         <span className="hidden sm:inline">Muat Ulang</span>
       </Button>
-      <Button variant="outline" size="sm" onClick={() => setShowGuestKkmDialog(true)}>
+      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9" onClick={() => setShowGuestKkmDialog(true)}>
         <Settings className="w-4 h-4 mr-2" />
         KKM: {kkm}
       </Button>

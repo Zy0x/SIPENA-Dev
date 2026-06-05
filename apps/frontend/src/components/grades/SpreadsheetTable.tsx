@@ -33,7 +33,6 @@ import type { Assignment } from "@/hooks/useAssignments";
 import {
   DEFAULT_GRADE_TABLE_COLOR_SCHEME,
   getGradeTableAverageCellTone,
-  getGradeTableAverageHoverTone,
   getGradeTableChapterTone,
   getGradeTableColumnBodyTone,
   getGradeTableColumnHeaderTone,
@@ -750,37 +749,20 @@ export function SpreadsheetTable({
     }, 500); // 500ms long press
   }, [students, columns, showHintForCell]);
 
-  // Hover handler for desktop fullscreen hint
+  // Prediksi nilai tetap tersedia lewat long-press, tetapi tidak muncul otomatis saat hover
+  // agar tidak menutup sel saat guru sedang input cepat di fullscreen.
   const hintHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const closeHintPopup = useCallback(() => {
     setHintPopup(null);
   }, []);
   
-  const handleCellMouseEnter = useCallback((
-    e: React.MouseEvent,
-    rowIndex: number,
-    colIndex: number
-  ) => {
-    // Only show hint on hover in fullscreen mode on desktop
-    if (!isFullscreen || scrollLockMode) return;
-    
-    const student = students[rowIndex];
-    const column = columns[colIndex];
-    if (!student || !column || !['assignment', 'sts', 'sas'].includes(column.type)) return;
-    if (editingCell === `${rowIndex}-${colIndex}`) return; // Don't show when editing
-
-    // Clear existing timer
+  const handleCellMouseEnter = useCallback((_e?: React.MouseEvent, _rowIndex?: number, _colIndex?: number) => {
     if (hintHoverTimerRef.current) {
       clearTimeout(hintHoverTimerRef.current);
+      hintHoverTimerRef.current = null;
     }
-
-    // Delay before showing hint (150ms for hover)
-    hintHoverTimerRef.current = setTimeout(() => {
-      const position = { x: e.clientX + 10, y: e.clientY + 10 };
-      showHintForCell(position, rowIndex, colIndex);
-    }, 150);
-  }, [isFullscreen, scrollLockMode, students, columns, editingCell, showHintForCell]);
+  }, []);
 
   const handleCellMouseLeave = useCallback((rowIndex?: number) => {
     if (typeof rowIndex === "number") {
@@ -813,13 +795,14 @@ export function SpreadsheetTable({
     const column = columns[colIdx];
     
     if (student && column && ['assignment', 'sts', 'sas'].includes(column.type)) {
+      closeHintPopup();
       setEditingCell(cellKey);
       const gradeType = column.type === 'assignment' ? 'assignment' : column.type;
       const value = getGradeValue(student.id, gradeType, column.assignmentId);
       setEditValue(value?.toString() || '');
       setPendingSaveValue(null);
     }
-  }, [students, columns, getGradeValue]);
+  }, [students, columns, getGradeValue, closeHintPopup]);
 
   // Debounced real-time calculation - saves while user is still editing
   const debouncedSave = useCallback((studentId: string, gradeType: string, value: number | null, assignmentId?: string) => {
@@ -1058,7 +1041,7 @@ export function SpreadsheetTable({
           : '-';
         return (
           <div 
-            className={`flex items-center justify-center w-full font-bold rounded ${colorClass}`}
+            className={`flex h-full w-full items-center justify-center rounded border font-bold ${getGradeTableAverageCellTone(activeTableColorScheme)} ${colorClass}`}
             style={{ fontSize: `${13 * zoomFactor}px` }}
           >
             {displayValue}
@@ -1109,18 +1092,18 @@ export function SpreadsheetTable({
       ? 'bg-primary/5'
       : columnBodyTone || (rowIndex % 2 === 0 ? 'bg-background' : 'bg-muted/20');
     const rowHoverBackground = isAverageColumn
-      ? getGradeTableAverageHoverTone(activeTableColorScheme)
+      ? 'bg-fuchsia-50/95 border-fuchsia-300/90 ring-1 ring-inset ring-fuchsia-200/80 dark:bg-fuchsia-950/45 dark:border-fuchsia-700/80 dark:ring-fuchsia-800/70'
       : isFrozenCell
-      ? 'bg-sky-100/90 border-sky-300/90 dark:bg-sky-950/50 dark:border-sky-700/80'
-      : 'bg-sky-50/90 border-sky-300/80 ring-1 ring-inset ring-sky-200/80 dark:bg-sky-950/35 dark:border-sky-700/70 dark:ring-sky-800/60';
+      ? 'bg-fuchsia-100/80 border-fuchsia-300/90 dark:bg-fuchsia-950/45 dark:border-fuchsia-700/80'
+      : 'bg-fuchsia-50/90 border-fuchsia-300/80 ring-1 ring-inset ring-fuchsia-200/80 dark:bg-fuchsia-950/35 dark:border-fuchsia-700/70 dark:ring-fuchsia-800/60';
     const columnHoverBackground = isAverageColumn
-      ? getGradeTableAverageHoverTone(activeTableColorScheme)
+      ? 'bg-fuchsia-50/95 border-fuchsia-300/90 ring-1 ring-inset ring-fuchsia-200/80 dark:bg-fuchsia-950/45 dark:border-fuchsia-700/80 dark:ring-fuchsia-800/70'
       : isFrozenCell
-      ? 'bg-cyan-100/80 border-cyan-300/80 dark:bg-cyan-950/45 dark:border-cyan-700/70'
-      : 'bg-cyan-50/80 border-cyan-300/70 ring-1 ring-inset ring-cyan-200/70 dark:bg-cyan-950/30 dark:border-cyan-700/60 dark:ring-cyan-800/50';
+      ? 'bg-fuchsia-100/75 border-fuchsia-300/80 dark:bg-fuchsia-950/40 dark:border-fuchsia-700/70'
+      : 'bg-fuchsia-50/75 border-fuchsia-300/70 ring-1 ring-inset ring-fuchsia-200/70 dark:bg-fuchsia-950/30 dark:border-fuchsia-700/60 dark:ring-fuchsia-800/50';
     const crossHoverBackground = isAverageColumn
-      ? getGradeTableAverageHoverTone(activeTableColorScheme)
-      : 'bg-blue-100/95 border-blue-400/90 ring-2 ring-inset ring-blue-300/80 dark:bg-blue-950/55 dark:border-blue-700 dark:ring-blue-800';
+      ? 'bg-fuchsia-100/95 border-fuchsia-400/90 ring-2 ring-inset ring-fuchsia-300/80 dark:bg-fuchsia-950/55 dark:border-fuchsia-700 dark:ring-fuchsia-800'
+      : 'bg-fuchsia-100/95 border-fuchsia-400/90 ring-2 ring-inset ring-fuchsia-300/80 dark:bg-fuchsia-950/55 dark:border-fuchsia-700 dark:ring-fuchsia-800';
 
     // Use correct position function based on frozen state
     const left = isFrozenCol ? getFrozenColLeft(colIndex) : getNonFrozenColLeft(colIndex);
@@ -1423,8 +1406,8 @@ export function SpreadsheetTable({
       }}
     >
       {/* Toolbar - matching template style */}
-      <div className="flex flex-col gap-2 border-b bg-card p-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:p-3 flex-shrink-0">
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:gap-2">
+      <div className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3`}>
+        <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
           {/* Freeze Menu Toggle */}
           <Button
             variant={showFreezeMenu ? "default" : "outline"}
@@ -1545,9 +1528,9 @@ export function SpreadsheetTable({
         </div>
 
         {/* Right side - Zoom & Search */}
-        <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 sm:w-auto sm:ml-auto sm:justify-end">
+        <div className="sipena-grade-toolbar-view flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
           {toolbarExtra && (
-            <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end">
+            <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
               {toolbarExtra}
             </div>
           )}
@@ -1606,7 +1589,7 @@ export function SpreadsheetTable({
 
           {/* Desktop close button for fullscreen */}
           {isFullscreen && (
-            <Button variant="outline" size="sm" onClick={onClose} className="h-9 hidden sm:flex">
+            <Button variant="destructive" size="sm" onClick={onClose} className="hidden h-9 sm:flex">
               <X className="w-4 h-4 mr-1" />
               Tutup
             </Button>
@@ -1638,7 +1621,7 @@ export function SpreadsheetTable({
             Kolom yang di-freeze akan tetap terlihat saat menggulir tabel.
           </p>
           <Button
-            variant="outline"
+            variant="destructive"
             size="sm"
             className="w-full mt-3"
             onClick={() => setShowFreezeMenu(false)}
@@ -1753,7 +1736,8 @@ export function SpreadsheetTable({
             paddingTop: totalHeaderHeight * zoomFactor,
             paddingLeft: getFrozenWidth(),
             WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'contain',
+            overscrollBehaviorX: 'contain',
+            overscrollBehaviorY: 'auto',
             touchAction: 'pan-x pan-y',
             WebkitTapHighlightColor: 'transparent',
           }}

@@ -3441,6 +3441,54 @@
     min-width: 0;
   }
 
+  .sipena-grade-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: start;
+  }
+
+  .sipena-grade-toolbar-format,
+  .sipena-grade-toolbar-view,
+  .sipena-grade-toolbar-extra {
+    min-width: 0;
+  }
+
+  .sipena-grade-toolbar-view {
+    width: 100%;
+  }
+
+  .sipena-grade-toolbar-extra {
+    flex: 1 1 16rem;
+  }
+
+  .sipena-grade-toolbar [data-grade-student-search] {
+    flex: 1 1 15rem;
+    max-width: 28rem;
+  }
+
+  .sipena-grade-action-button {
+    flex: 0 0 auto;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .sipena-grade-scroll {
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+  }
+
+  @media (min-width: 1024px) {
+    .sipena-grade-toolbar {
+      grid-template-columns: max-content minmax(0, 1fr);
+      align-items: center;
+    }
+
+    .sipena-grade-toolbar-view {
+      justify-content: flex-end;
+    }
+  }
+
   @media (max-width: 640px) {
     .sipena-grade-page {
       padding-inline: 0.75rem;
@@ -3449,6 +3497,21 @@
     .sipena-grade-table-shell {
       min-height: 360px;
       height: min(68dvh, calc(100dvh - 11.5rem));
+    }
+
+    .sipena-grade-toolbar [data-grade-student-search] {
+      flex-basis: 100%;
+      max-width: none;
+    }
+
+    .sipena-grade-action-button {
+      flex: 1 1 calc(50% - 0.25rem);
+      min-width: 0;
+    }
+
+    .sipena-grade-toolbar-view > .rounded-lg {
+      flex: 1 1 8rem;
+      justify-content: center;
     }
   }
 
@@ -3460,6 +3523,45 @@
     .sipena-grade-table-shell {
       min-height: 340px;
       height: min(66dvh, calc(100dvh - 11rem));
+    }
+  }
+
+  @media (orientation: landscape) and (max-height: 560px) {
+    .sipena-grade-toolbar--fullscreen {
+      grid-template-columns: max-content minmax(0, 1fr);
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view {
+      grid-column: 2;
+      grid-row: 1;
+      justify-content: flex-end;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-extra {
+      flex: 1 1 24rem;
+      justify-content: flex-end;
+    }
+
+    .sipena-grade-toolbar--fullscreen [data-grade-student-search] {
+      flex: 1 1 18rem;
+      max-width: 26rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-action-button {
+      flex: 0 1 auto;
+    }
+
+    .sipena-grade-toolbar--fullscreen button,
+    .sipena-grade-toolbar--fullscreen input {
+      min-height: 2.5rem;
     }
   }
 

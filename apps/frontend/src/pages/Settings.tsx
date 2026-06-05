@@ -78,6 +78,7 @@ function GradeTableSchemePreview({ schemeId }: { schemeId: GradeTableColorScheme
   const averageHeaderTone = getGradeTableColumnHeaderTone(schemeId, { type: "chapter_avg", chapterIndex: 0 });
   const stsHeaderTone = getGradeTableColumnHeaderTone(schemeId, { type: "sts" });
   const sasHeaderTone = getGradeTableColumnHeaderTone(schemeId, { type: "sas" });
+  const reportHeaderTone = getGradeTableColumnHeaderTone(schemeId, { type: "final" });
   const stsBodyTone = getGradeTableColumnBodyTone(schemeId, { type: "sts" });
   const sasBodyTone = getGradeTableColumnBodyTone(schemeId, { type: "sas" });
   const averageCellTone = getGradeTableAverageCellTone(schemeId);
@@ -108,15 +109,17 @@ function GradeTableSchemePreview({ schemeId }: { schemeId: GradeTableColorScheme
         <div className="border-r border-border bg-background px-2 py-2 text-center font-semibold text-grade-pass">80</div>
         <div className={cn("px-2 py-2 text-center font-semibold text-grade-warning", averageCellTone)}>73.3</div>
       </div>
-      <div className="grid grid-cols-2 border-t border-border">
+      <div className="grid grid-cols-3 border-t border-border">
         <div className={cn("border-r border-border px-2 py-1.5 text-center font-semibold", stsHeaderTone)}>STS</div>
-        <div className={cn("px-2 py-1.5 text-center font-semibold", sasHeaderTone)}>SAS</div>
+        <div className={cn("border-r border-border px-2 py-1.5 text-center font-semibold", sasHeaderTone)}>SAS</div>
+        <div className={cn("px-2 py-1.5 text-center font-semibold", reportHeaderTone)}>Rapor</div>
         <div className={cn("border-r border-border px-2 py-2 text-center font-semibold text-grade-warning", stsBodyTone || "bg-background")}>
           75
         </div>
-        <div className={cn("px-2 py-2 text-center font-semibold text-grade-pass", sasBodyTone || "bg-background")}>
+        <div className={cn("border-r border-border px-2 py-2 text-center font-semibold text-grade-pass", sasBodyTone || "bg-background")}>
           90
         </div>
+        <div className={cn("px-2 py-2 text-center font-semibold text-grade-pass", averageCellTone)}>82.5</div>
       </div>
     </div>
   );

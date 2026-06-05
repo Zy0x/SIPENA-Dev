@@ -34,18 +34,18 @@ export interface GradeTableColorSchemeConfig {
 }
 
 const CLASSIC_CHAPTER_HEADER_TONE: GradeTableTone = {
-  header: "bg-primary/10 text-primary border-primary/20 dark:bg-primary/15 dark:text-primary-foreground dark:border-primary/30",
+  header: "bg-primary/10 text-primary border-primary/20 dark:bg-blue-950/45 dark:text-blue-100 dark:border-blue-800/60",
   body: null,
 };
 
 const FINAL_STS_TONE: GradeTableTone = {
-  header: "bg-indigo-100 text-indigo-900 border-indigo-200 dark:bg-indigo-950/45 dark:text-indigo-100 dark:border-indigo-800/60",
-  body: "bg-indigo-50/55 dark:bg-indigo-950/15",
+  header: "bg-indigo-100 text-indigo-950 border-indigo-200 dark:bg-indigo-900/65 dark:text-indigo-50 dark:border-indigo-700/70",
+  body: "bg-indigo-100/45 dark:bg-indigo-950/35",
 };
 
 const FINAL_SAS_TONE: GradeTableTone = {
-  header: "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-950/45 dark:text-purple-100 dark:border-purple-800/60",
-  body: "bg-purple-50/55 dark:bg-purple-950/15",
+  header: "bg-purple-100 text-purple-950 border-purple-200 dark:bg-purple-900/65 dark:text-purple-50 dark:border-purple-700/70",
+  body: "bg-purple-100/45 dark:bg-purple-950/35",
 };
 
 const FINAL_RAPOR_TONE: GradeTableTone = {
@@ -115,7 +115,7 @@ export const GRADE_TABLE_COLOR_SCHEMES: Record<GradeTableColorSchemeId, GradeTab
     chapterHeaderTones: [CLASSIC_CHAPTER_HEADER_TONE],
     assignmentHeaderTone: "bg-background text-foreground border-border dark:bg-slate-950 dark:text-slate-100 dark:border-slate-800",
     finalColumnTones: CLASSIC_FINAL_COLUMN_TONES,
-    averageHeaderTone: "bg-primary/10 text-primary border-primary/20 dark:bg-primary/15 dark:text-primary-foreground dark:border-primary/30",
+    averageHeaderTone: "bg-primary/10 text-primary border-primary/20 dark:bg-blue-950/45 dark:text-blue-100 dark:border-blue-800/60",
     averageBodyTone: "bg-primary/5 dark:bg-primary/10",
     averageCellTone:
       "border-primary/20 bg-primary/10 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:border-primary/30 dark:bg-primary/15",
@@ -216,11 +216,11 @@ export function getGradeTableColumnHeaderTone(
 ): string {
   const scheme = getGradeTableColorSchemeConfig(value);
 
-  if (column.type === "chapter_avg") return scheme.averageHeaderTone;
+  if (column.type === "chapter_avg" || column.type === "final") return scheme.averageHeaderTone;
   if (column.type === "assignment") {
     return scheme.assignmentHeaderTone || getGradeTableChapterTone(value, column.chapterIndex || 0).header;
   }
-  if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
+  if (column.type === "sts" || column.type === "sas" || column.type === "status") {
     return scheme.finalColumnTones[column.type].header;
   }
 
@@ -233,8 +233,8 @@ export function getGradeTableColumnBodyTone(
 ): string | null {
   const scheme = getGradeTableColorSchemeConfig(value);
 
-  if (column.type === "chapter_avg") return scheme.averageBodyTone;
-  if (column.type === "sts" || column.type === "sas" || column.type === "final" || column.type === "status") {
+  if (column.type === "chapter_avg" || column.type === "final") return scheme.averageBodyTone;
+  if (column.type === "sts" || column.type === "sas" || column.type === "status") {
     return scheme.finalColumnTones[column.type].body;
   }
 

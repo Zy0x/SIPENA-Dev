@@ -32,7 +32,9 @@ describe("grade table color schemes", () => {
     expect(getGradeTableColumnHeaderTone("current", { type: "sts" })).toContain("bg-indigo-100");
     expect(getGradeTableColumnHeaderTone("current", { type: "sas" })).toContain("bg-purple-100");
     expect(getGradeTableColumnBodyTone("current", { type: "assignment" })).toBeNull();
-    expect(getGradeTableColumnBodyTone("current", { type: "sts" })).toContain("bg-indigo-50");
+    expect(getGradeTableColumnBodyTone("current", { type: "sts" })).toContain("bg-indigo-100/45");
+    expect(getGradeTableColumnHeaderTone("current", { type: "final" })).toBe(GRADE_TABLE_COLOR_SCHEMES.current.averageHeaderTone);
+    expect(getGradeTableColumnBodyTone("current", { type: "final" })).toBe(GRADE_TABLE_COLOR_SCHEMES.current.averageBodyTone);
     expect(getGradeTableAverageCellTone("current")).toContain("bg-slate-300/55");
   });
 
@@ -40,9 +42,10 @@ describe("grade table color schemes", () => {
     expect(getGradeTableColumnHeaderTone("classic", { type: "assignment", chapterIndex: 4 })).toContain("bg-background");
     expect(getGradeTableColumnHeaderTone("classic", { type: "sts" })).toContain("bg-indigo-100");
     expect(getGradeTableColumnHeaderTone("classic", { type: "sas" })).toContain("bg-purple-100");
-    expect(getGradeTableColumnHeaderTone("classic", { type: "final" })).toContain("bg-slate-100");
+    expect(getGradeTableColumnHeaderTone("classic", { type: "final" })).toBe(GRADE_TABLE_COLOR_SCHEMES.classic.averageHeaderTone);
     expect(getGradeTableColumnBodyTone("classic", { type: "assignment" })).toBeNull();
-    expect(getGradeTableColumnBodyTone("classic", { type: "sas" })).toContain("bg-purple-50");
+    expect(getGradeTableColumnBodyTone("classic", { type: "sas" })).toContain("bg-purple-100/45");
+    expect(getGradeTableColumnBodyTone("classic", { type: "final" })).toBe(GRADE_TABLE_COLOR_SCHEMES.classic.averageBodyTone);
     expect(getGradeTableAverageCellTone("classic")).toContain("bg-primary/10");
   });
 

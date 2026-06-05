@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.31",
+    version: "2.4.31",
+    title: "Input Nilai: Toolbar dan Warna Tabel Lebih Jelas",
+    description: "Tampilan Input Nilai dibuat lebih rapi di mobile, fullscreen, dan mode gelap.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-05",
+    details: [
+      "Kolom Rapor kini memakai warna yang sama dengan Rata-rata, sedangkan STS dan SAS punya warna kolom yang lebih mudah dibedakan.",
+      "Highlight baris dan kolom diganti agar posisi sel lebih terlihat tanpa mengganggu warna indikator KKM.",
+      "Toolbar Input Nilai dibuat adaptif seperti grid sehingga lebih hemat ruang pada portrait kecil dan landscape.",
+      "Pencarian siswa lebih cepat: klik pertama memilih semua teks, klik berikutnya menaruh kursor di titik yang ditekan.",
+      "Popup prediksi nilai tidak lagi muncul otomatis saat hover fullscreen agar tidak menutupi proses input.",
+    ],
+  },
+  {
     id: "v2.4.30",
     version: "2.4.30",
     title: "Input Nilai: Warna Tabel dan Pembulatan",
