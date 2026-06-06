@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.37",
+    version: "2.4.37",
+    title: "Interaksi Tombol Lebih Bersih",
+    description: "Teks pada tombol, dropdown, tab, dan menu interaktif tidak lagi mudah terblok saat diklik atau diseret.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-06",
+    details: [
+      "Tombol utama dan tombol ikon dibuat non-selectable.",
+      "Trigger dropdown, select kelas/mapel, tab, dan item menu dibuat tidak bisa memblok teks.",
+      "Input dan textarea tetap bisa dipilih/diedit normal.",
+    ],
+  },
+  {
     id: "v2.4.36",
     version: "2.4.36",
     title: "Warna Kurang dan Cukup Lebih Terpisah",

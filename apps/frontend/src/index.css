@@ -164,6 +164,52 @@
   }
 }
 
+@layer base {
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  [role="button"],
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  [role="option"],
+  [role="tab"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="radio"],
+  [data-radix-collection-item],
+  [cmdk-item] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  button *,
+  [role="button"] *,
+  [role="menuitem"] *,
+  [role="menuitemcheckbox"] *,
+  [role="menuitemradio"] *,
+  [role="option"] *,
+  [role="tab"] *,
+  [role="switch"] *,
+  [role="checkbox"] *,
+  [role="radio"] *,
+  [data-radix-collection-item] *,
+  [cmdk-item] * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"],
+  [role="textbox"],
+  [cmdk-input] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
 .sipena-grade-import-dialog button,
 .sipena-grade-import-dialog [role="tab"],
 .sipena-grade-restore-dialog button {
