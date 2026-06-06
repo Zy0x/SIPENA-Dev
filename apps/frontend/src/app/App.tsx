@@ -17,6 +17,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ExternalAuthOnboarding } from "@/components/onboarding/ExternalAuthOnboarding";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { ThemePreferenceSync } from "@/components/theme/ThemePreferenceSync";
+import { ViewportTelemetryReporter } from "@/hooks/useViewportTelemetry";
 
 // Pages
 import Index from "../pages/Index";
@@ -82,6 +83,7 @@ const App = () => {
               )}
               
               <BrowserRouter>
+                <ViewportTelemetryReporter />
                 <KeyboardShortcutsProvider>
                   <ErrorBoundary fallbackTitle="Aplikasi mengalami error">
                   <Routes>

@@ -122,6 +122,93 @@ export type Database = {
         }
         Relationships: []
       }
+      viewport_observations: {
+        Row: {
+          device_pixel_ratio: number | null
+          display_mode: string
+          has_display_cutout: boolean
+          id: string
+          metadata: Json
+          observed_at: string
+          orientation: string
+          route_path: string
+          safe_area_bottom: number
+          safe_area_left: number
+          safe_area_right: number
+          safe_area_top: number
+          screen_avail_height: number | null
+          screen_avail_width: number | null
+          screen_height: number | null
+          screen_width: number | null
+          touch_points: number
+          user_id: string
+          viewport_height: number
+          viewport_key: string
+          viewport_profile: string
+          viewport_width: number
+          visual_viewport_height: number | null
+          visual_viewport_offset_left: number | null
+          visual_viewport_offset_top: number | null
+          visual_viewport_width: number | null
+        }
+        Insert: {
+          device_pixel_ratio?: number | null
+          display_mode?: string
+          has_display_cutout?: boolean
+          id?: string
+          metadata?: Json
+          observed_at?: string
+          orientation?: string
+          route_path?: string
+          safe_area_bottom?: number
+          safe_area_left?: number
+          safe_area_right?: number
+          safe_area_top?: number
+          screen_avail_height?: number | null
+          screen_avail_width?: number | null
+          screen_height?: number | null
+          screen_width?: number | null
+          touch_points?: number
+          user_id: string
+          viewport_height: number
+          viewport_key: string
+          viewport_profile: string
+          viewport_width: number
+          visual_viewport_height?: number | null
+          visual_viewport_offset_left?: number | null
+          visual_viewport_offset_top?: number | null
+          visual_viewport_width?: number | null
+        }
+        Update: {
+          device_pixel_ratio?: number | null
+          display_mode?: string
+          has_display_cutout?: boolean
+          id?: string
+          metadata?: Json
+          observed_at?: string
+          orientation?: string
+          route_path?: string
+          safe_area_bottom?: number
+          safe_area_left?: number
+          safe_area_right?: number
+          safe_area_top?: number
+          screen_avail_height?: number | null
+          screen_avail_width?: number | null
+          screen_height?: number | null
+          screen_width?: number | null
+          touch_points?: number
+          user_id?: string
+          viewport_height?: number
+          viewport_key?: string
+          viewport_profile?: string
+          viewport_width?: number
+          visual_viewport_height?: number | null
+          visual_viewport_offset_left?: number | null
+          visual_viewport_offset_top?: number | null
+          visual_viewport_width?: number | null
+        }
+        Relationships: []
+      }
       assignments: {
         Row: {
           chapter_id: string

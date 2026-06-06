@@ -15,6 +15,7 @@ import {
   simplifyImportConflicts,
   type ImportPlanContext,
 } from "./index";
+import { captureViewportTelemetrySnapshot, getViewportProfile } from "../viewportTelemetry";
 
 const students = [
   { id: "student-1", name: "Siti Aminah", nisn: "0012345678" },
@@ -49,6 +50,18 @@ function workbookResult(sheets: Record<string, unknown[][]>) {
 }
 
 describe("phase 12 grade import regression suite", () => {
+  it("classifies viewport profiles for responsive grade input tracking", () => {
+    expect(getViewportProfile(392, 778)).toBe("mobile-regular");
+    expect(getViewportProfile(866, 415)).toBe("mobile-landscape");
+    expect(getViewportProfile(1366, 768)).toBe("desktop");
+
+    const snapshot = captureViewportTelemetrySnapshot("/grades");
+    expect(snapshot.route_path).toBe("/grades");
+    expect(snapshot.viewport_key).toContain(snapshot.viewport_profile);
+    expect(snapshot.safe_area_top).toBeGreaterThanOrEqual(0);
+    expect(snapshot.has_display_cutout).toBeTypeOf("boolean");
+  });
+
   it("keeps workbook coordinates with title rows, blank rows, footers, and zero values", () => {
     const analysis = analyzeFreeExcelWorkbook(workbookResult({
       Nilai: [
@@ -328,7 +341,12 @@ describe("phase 12 grade import regression suite", () => {
     const gradeTableColorSchemeSource = readFileSync(repoPath("apps/frontend/src/lib/gradeTableColorSchemes.ts"), "utf8");
     const gradeTableColorSchemeHookSource = readFileSync(repoPath("apps/frontend/src/hooks/useGradeTableColorScheme.ts"), "utf8");
     const settingsSource = readFileSync(repoPath("apps/frontend/src/pages/Settings.tsx"), "utf8");
+    const appSource = readFileSync(repoPath("apps/frontend/src/app/App.tsx"), "utf8");
     const searchSource = readFileSync(repoPath("apps/frontend/src/components/grades/SmartStudentSearch.tsx"), "utf8");
+    const viewportTelemetrySource = readFileSync(repoPath("apps/frontend/src/lib/viewportTelemetry.ts"), "utf8");
+    const viewportTelemetryHookSource = readFileSync(repoPath("apps/frontend/src/hooks/useViewportTelemetry.ts"), "utf8");
+    const viewportMigrationSource = readFileSync(repoPath("supabase/migrations/20260607182000_add_viewport_observations.sql"), "utf8");
+    const supabaseTypesSource = readFileSync(repoPath("apps/frontend/src/infrastructure/supabase/supabase.types.ts"), "utf8");
     const formulaSource = readFileSync(repoPath("apps/frontend/src/lib/gradeFormula.ts"), "utf8");
     const roundingDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/ReportRoundingSettingsDialog.tsx"), "utf8");
     const restoreDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeBackupRestoreDialog.tsx"), "utf8");
@@ -339,6 +357,8 @@ describe("phase 12 grade import regression suite", () => {
 
     expect(gradesPageSource).toContain("sipena-grade-page");
     expect(gradesPageSource).toContain("sipena-grade-table-shell");
+    expect(gradesPageSource).toContain("sipena-grade-mode-tabs");
+    expect(gradesPageSource).toContain("sipena-grade-mode-tab");
     expect(spreadsheetSource).not.toContain("CHAPTER_HEADER_TONES");
     expect(spreadsheetSource).not.toContain("FINAL_COLUMN_TONES");
     expect(spreadsheetSource).toContain("tableColorScheme");
@@ -413,9 +433,12 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).toContain("fullscreenchange");
     expect(gradesPageSource).toContain("openBrowserFullscreen");
     expect(spreadsheetSource).toContain("onEnterBrowserFullscreen");
-    expect(spreadsheetSource).toContain("Fullscreen Tabel");
-    expect(spreadsheetSource).toContain("Fullscreen Browser");
+    expect(spreadsheetSource).toContain("Mode Layar Penuh Panel");
+    expect(spreadsheetSource).toContain("Mode Layar Penuh Native");
     expect(spreadsheetSource).toContain("fullscreenMode === \"browser\"");
+    expect(spreadsheetSource).toContain("sipena-grade-browser-fullscreen");
+    expect(spreadsheetSource).toContain("applyViewportCssVariables");
+    expect(spreadsheetSource).toContain("captureViewportTelemetrySnapshot");
     expect(spreadsheetSource).toContain("sipena-freeze-menu");
     expect(spreadsheetSource).toContain("freezeMenuRef");
     expect(spreadsheetSource).toContain("freezeMenuTriggerRef");
@@ -455,6 +478,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(roundingDialogSource).toContain("Simpan Pembulatan");
     expect(globalStyles).toContain(".sipena-grade-page");
     expect(globalStyles).toContain(".sipena-grade-table-shell");
+    expect(globalStyles).toContain(".sipena-grade-mode-tabs");
+    expect(globalStyles).toContain(".sipena-grade-mode-tab");
+    expect(globalStyles).toContain(".sipena-grade-browser-fullscreen");
+    expect(globalStyles).toContain("env(safe-area-inset-top)");
+    expect(globalStyles).toContain("--sipena-safe-right");
     expect(globalStyles).toContain(".sipena-grade-card-header");
     expect(globalStyles).toContain(".sipena-grade-card-actions");
     expect(globalStyles).toContain("@media (min-width: 768px) and (max-height: 560px)");
@@ -478,6 +506,21 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-protection-menu .sipena-protection-item[data-highlighted] svg");
     expect(globalStyles).toContain("color: hsl(var(--muted-foreground)) !important");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
+    expect(globalStyles).toContain(".sipena-grade-fullscreen-trigger");
+    expect(appSource).toContain("ViewportTelemetryReporter");
+    expect(viewportTelemetrySource).toContain("visual_viewport_width");
+    expect(viewportTelemetrySource).toContain("has_display_cutout");
+    expect(viewportTelemetrySource).toContain("safe-area-inset-top");
+    expect(viewportTelemetrySource).toContain("applyViewportCssVariables");
+    expect(viewportTelemetryHookSource).toContain('.from("viewport_observations")');
+    expect(viewportTelemetryHookSource).toContain("VIEWPORT_TELEMETRY_MIN_INTERVAL_MS");
+    expect(viewportTelemetryHookSource).toContain(".then(() => undefined, () => undefined)");
+    expect(viewportMigrationSource).toContain("create table if not exists public.viewport_observations");
+    expect(viewportMigrationSource).toContain("'mobile-landscape'");
+    expect(viewportMigrationSource).toContain("enable row level security");
+    expect(viewportMigrationSource).toContain("to authenticated");
+    expect(viewportMigrationSource).toContain("grant select, insert on public.viewport_observations to authenticated");
+    expect(supabaseTypesSource).toContain("viewport_observations");
     expect(chapterStructureSource).toContain("h-9 min-w-0 flex-1 sm:max-w-xl");
     expect(chapterStructureSource).toContain("h-8 min-w-0 flex-1 sm:max-w-lg");
     expect(chapterStructureSource).not.toContain("className=\"h-8 w-40\"");

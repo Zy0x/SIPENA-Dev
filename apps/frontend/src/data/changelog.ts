@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.45",
+    version: "2.4.45",
+    title: "Fullscreen dan Viewport Input Nilai Lebih Adaptif",
+    description: "Input Nilai kini lebih siap untuk viewport mobile khusus dan mode layar penuh native.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-07",
+    details: [
+      "Pilihan fullscreen memakai nama teknis yang membedakan mode panel dan mode native browser.",
+      "Mode layar penuh native membaca ukuran visual viewport dan safe-area agar tombol tidak masuk area cutout mobile.",
+      "Toolbar tabel pada mobile portrait dibuat satu baris compact agar area input nilai lebih tinggi.",
+      "Telemetry viewport teknis ditambahkan secara senyap untuk membantu QA responsif berikutnya.",
+    ],
+  },
+  {
     id: "v2.4.44",
     version: "2.4.44",
     title: "Toolbar Input Nilai Lebih Compact",

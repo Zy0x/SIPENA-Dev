@@ -390,7 +390,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     const target = document.documentElement;
     if (!target.requestFullscreen) {
       setFullscreenMode("app");
-      showWarning("Fullscreen browser tidak tersedia", "Mode fullscreen tabel tetap dibuka di dalam tab browser.");
+      showWarning("Layar penuh native tidak tersedia", "Mode layar penuh panel tetap dibuka di dalam tab browser.");
       return;
     }
 
@@ -398,7 +398,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       await target.requestFullscreen({ navigationUI: "hide" });
     } catch {
       setFullscreenMode("app");
-      showWarning("Fullscreen browser diblokir", "Browser tidak mengizinkan layar penuh. Mode fullscreen tabel tetap aktif.");
+      showWarning("Layar penuh native diblokir", "Browser tidak mengizinkan layar penuh perangkat. Mode layar penuh panel tetap aktif.");
     }
   }, [showWarning]);
 
@@ -1487,13 +1487,13 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         )}
 
         {subjectId && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in-up delay-200">
-            <TabsList className="grid w-full max-w-sm grid-cols-2">
-              <TabsTrigger value="structure" className="gap-2" data-tour="structure-tab">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="sipena-grade-tabs animate-fade-in-up delay-200">
+            <TabsList aria-label="Mode halaman input nilai" className="sipena-grade-mode-tabs grid w-full max-w-sm grid-cols-2">
+              <TabsTrigger value="structure" className="sipena-grade-mode-tab gap-2" data-tour="structure-tab">
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Struktur</span> BAB
               </TabsTrigger>
-              <TabsTrigger value="input" className="gap-2" data-tour="input-tab">
+              <TabsTrigger value="input" className="sipena-grade-mode-tab gap-2" data-tour="input-tab">
                 <FileSpreadsheet className="w-4 h-4" />
                 Input Nilai
               </TabsTrigger>

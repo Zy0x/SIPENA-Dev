@@ -39,6 +39,11 @@ import {
   normalizeGradeTableColorScheme,
   type GradeTableColorSchemeId,
 } from "@/lib/gradeTableColorSchemes";
+import {
+  applyViewportCssVariables,
+  captureViewportTelemetrySnapshot,
+  clearViewportCssVariables,
+} from "@/lib/viewportTelemetry";
 
 // Types
 interface Chapter {
@@ -504,6 +509,31 @@ export function SpreadsheetTable({
       body.style.overscrollBehavior = previousBodyOverscrollBehavior;
     };
   }, [isFullscreen]);
+
+  useEffect(() => {
+    if (!isFullscreen || fullscreenMode !== "browser" || typeof document === "undefined") return;
+
+    const target = document.documentElement;
+    const updateViewportMetrics = () => {
+      applyViewportCssVariables(captureViewportTelemetrySnapshot(window.location.pathname || "/"), target);
+    };
+
+    updateViewportMetrics();
+
+    const visualViewport = window.visualViewport;
+    window.addEventListener("resize", updateViewportMetrics);
+    window.addEventListener("orientationchange", updateViewportMetrics);
+    visualViewport?.addEventListener("resize", updateViewportMetrics);
+    visualViewport?.addEventListener("scroll", updateViewportMetrics);
+
+    return () => {
+      window.removeEventListener("resize", updateViewportMetrics);
+      window.removeEventListener("orientationchange", updateViewportMetrics);
+      visualViewport?.removeEventListener("resize", updateViewportMetrics);
+      visualViewport?.removeEventListener("scroll", updateViewportMetrics);
+      clearViewportCssVariables(target);
+    };
+  }, [fullscreenMode, isFullscreen]);
 
   // Focus edit input when editing
   useEffect(() => {
@@ -1507,7 +1537,7 @@ export function SpreadsheetTable({
   return (
     <div 
       ref={containerRef}
-      className={`flex flex-col bg-background select-none ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full'}`}
+      className={`flex flex-col bg-background select-none ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full'} ${fullscreenMode === "browser" ? "sipena-grade-browser-fullscreen" : ""}`}
       style={{
         ...(isFullscreen && {
           width: '100vw',
@@ -1705,15 +1735,15 @@ export function SpreadsheetTable({
                   <DropdownMenuItem onClick={onEnterFullscreen} className="sipena-fullscreen-menu-item min-h-[48px] items-start gap-2 py-2.5">
                     <Maximize2 className="mt-0.5 h-4 w-4" />
                     <div className="min-w-0">
-                      <p className="font-medium">Fullscreen Tabel</p>
+                      <p className="font-medium">Mode Layar Penuh Panel</p>
                       <p className="text-xs text-muted-foreground">Membuka Input Nilai penuh di dalam tab browser.</p>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onEnterBrowserFullscreen} className="sipena-fullscreen-menu-item min-h-[48px] items-start gap-2 py-2.5">
                     <Maximize2 className="mt-0.5 h-4 w-4" />
                     <div className="min-w-0">
-                      <p className="font-medium">Fullscreen Browser</p>
-                      <p className="text-xs text-muted-foreground">Meminta browser memakai seluruh layar perangkat.</p>
+                      <p className="font-medium">Mode Layar Penuh Native</p>
+                      <p className="text-xs text-muted-foreground">Meminta browser memakai seluruh layar perangkat dan safe-area.</p>
                     </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

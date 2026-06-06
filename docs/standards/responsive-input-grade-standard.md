@@ -29,7 +29,9 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Tombol aksi utama harus berada dalam grid/flex responsif yang tidak menyebabkan tombol close, zoom, dropdown, atau pencarian terpotong.
 - Header kartu nilai dan toolbar tabel harus punya mode compact saat viewport tinggi pendek; jangan biarkan judul, search count, atau row kosong membuat area tabel turun terlalu jauh.
 - Pada fullscreen landscape pendek, toolbar harus memprioritaskan satu baris compact. Label panjang boleh disembunyikan, tetapi icon dan tombol aksi wajib tetap dapat ditekan.
-- Fullscreen Input Nilai harus membedakan mode `Fullscreen Tabel` di dalam tab browser dan `Fullscreen Browser` yang memakai Fullscreen API. Jika browser menolak Fullscreen API, UI wajib fallback ke fullscreen tabel dengan pesan non-teknis.
+- Fullscreen Input Nilai harus membedakan mode `Mode Layar Penuh Panel` di dalam tab browser dan `Mode Layar Penuh Native` yang memakai Fullscreen API. Jika browser menolak Fullscreen API, UI wajib fallback ke mode panel dengan pesan non-teknis.
+- Mode Layar Penuh Native wajib membaca `visualViewport`, orientasi, DPR, dan `safe-area-inset-*` agar tombol kanan/kiri tidak masuk area notch, punch-hole, navigation bar, atau cutout mobile.
+- Pada mobile portrait sekitar `392x778`, toolbar tabel harus mengutamakan satu baris compact dengan scroll horizontal terkontrol. Pencarian siswa tetap terlihat dalam satu layar, sementara ruang vertikal harus diprioritaskan untuk tabel.
 - Tombol tutup fullscreen wajib keluar dari overlay Input Nilai dan, bila aktif, juga keluar dari fullscreen browser.
 - Tombol close/tutup harus selalu terlihat, memakai warna destructive/merah, dan tidak boleh terdorong keluar viewport.
 - Count pencarian siswa tidak boleh menambah tinggi toolbar secara tiba-tiba. Jika ruang sempit, count dipindah ke info bar atau disembunyikan.
@@ -62,6 +64,13 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Field edit nama BAB dan Tugas harus fleksibel (`min-width: 0` dan `flex: 1`) sehingga nama panjang bisa diedit tanpa kolom input kecil.
 - Teks bantuan seperti `Klik = edit` hanya tampil jika membantu dan tidak mengurangi ruang input utama.
 - Tombol, select, dropdown, badge, dan tab harus `select-none` agar label tidak mudah terblok saat user drag atau scroll.
+
+## Telemetry Viewport Senyap
+
+- Aplikasi boleh menyimpan telemetry teknis viewport secara senyap untuk kebutuhan QA developer: route, ukuran viewport, ukuran visual viewport, orientasi, DPR, touch points, display mode, dan safe-area/cutout.
+- Telemetry viewport tidak boleh menyimpan data siswa, nilai, nama kelas, nama mapel, teks pencarian, atau isi input pengguna.
+- Jika tabel telemetry belum tersedia di database, UI wajib tetap berjalan tanpa toast, banner, atau error visible.
+- Data telemetry harus dibatasi RLS per akun dan hanya memakai role `authenticated`; developer membaca agregat melalui Supabase dashboard/service role untuk perencanaan responsif berikutnya.
 
 ## Warna dan Kontras
 
