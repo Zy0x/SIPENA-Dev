@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.41",
+    version: "2.4.41",
+    title: "Struktur dan Header Nilai Lebih Jelas",
+    description: "Input Nilai memperbaiki area edit BAB/tugas, layer menu Freeze, dan pemisah visual header tabel agar data nilai lebih mudah dibaca.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-06",
+    details: [
+      "Kolom edit nama BAB dan Tugas kini melebar mengikuti ruang baris.",
+      "Menu Pilih Kolom Freeze dinaikkan di atas sticky header agar tombolnya tidak tertutup.",
+      "Header terakhir tabel mendapat shadow bawah sebagai pembatas dari baris nilai.",
+    ],
+  },
+  {
     id: "v2.4.40",
     version: "2.4.40",
     title: "Standar Responsif Input Nilai",

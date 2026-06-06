@@ -322,6 +322,7 @@ describe("phase 12 grade import regression suite", () => {
     const fixPanelSource = readFileSync(repoPath("apps/frontend/src/components/grades/import-export/PreviewFixPanel.tsx"), "utf8");
     const gradesPageSource = readFileSync(repoPath("apps/frontend/src/pages/Grades.tsx"), "utf8");
     const spreadsheetSource = readFileSync(repoPath("apps/frontend/src/components/grades/SpreadsheetTable.tsx"), "utf8");
+    const chapterStructureSource = readFileSync(repoPath("apps/frontend/src/components/grades/ChapterStructure.tsx"), "utf8");
     const gradeInputCellSource = readFileSync(repoPath("apps/frontend/src/components/grades/GradeInputCell.tsx"), "utf8");
     const rankingSource = readFileSync(repoPath("apps/frontend/src/pages/StudentRankings.tsx"), "utf8");
     const gradeTableColorSchemeSource = readFileSync(repoPath("apps/frontend/src/lib/gradeTableColorSchemes.ts"), "utf8");
@@ -408,7 +409,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("sipena-grade-close-text");
     expect(spreadsheetSource).toContain("sipena-grade-zoom-control");
     expect(spreadsheetSource).toContain("sipena-freeze-menu");
+    expect(spreadsheetSource).toContain("z-[120]");
     expect(spreadsheetSource).toContain("sipena-protection-menu");
+    expect(spreadsheetSource).toContain("sipena-grade-header-shadow");
     expect(spreadsheetSource).toContain("sipena-grade-action-text");
     expect(spreadsheetSource).toContain("Prediksi nilai tetap tersedia lewat long-press");
     expect(spreadsheetSource).not.toContain("fixed top-2 right-2 z-[10000]");
@@ -446,10 +449,16 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-grade-close-button");
     expect(globalStyles).toContain(".sipena-grade-close-text");
     expect(globalStyles).toContain(".sipena-grade-zoom-control");
+    expect(globalStyles).toContain(".sipena-grade-header-shadow");
     expect(globalStyles).toContain(".sipena-grade-rounding-badge");
     expect(globalStyles).toContain(".sipena-freeze-menu");
+    expect(globalStyles).toContain("z-index: 120");
     expect(globalStyles).toContain(".sipena-protection-menu");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
+    expect(chapterStructureSource).toContain("h-9 min-w-0 flex-1 sm:max-w-xl");
+    expect(chapterStructureSource).toContain("h-8 min-w-0 flex-1 sm:max-w-lg");
+    expect(chapterStructureSource).not.toContain("className=\"h-8 w-40\"");
+    expect(chapterStructureSource).not.toContain("className=\"h-7 w-32\"");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).toContain("Import dibatalkan karena masih ada nilai yang perlu dicek atau konfirmasi timpa.");

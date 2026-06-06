@@ -36,6 +36,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 
 - Semua dropdown/popover harus punya `max-height` berbasis `100dvh` dan `overflow-y: auto`.
 - Dropdown tidak boleh menutup tombol sumbernya sampai user tidak bisa menutup atau memilih opsi.
+- Dropdown/popover yang muncul di atas spreadsheet harus punya layer lebih tinggi dari sticky header tabel. Jangan memakai z-index yang sama dengan header jika elemen muncul lebih awal di DOM.
 - Isi dropdown harus kontras di light/dark mode. State hover/active tidak boleh membuat teks deskripsi menyatu dengan background.
 - Modal dan popover yang berisi tabel harus punya satu scroll container utama yang jelas.
 
@@ -47,11 +48,13 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - `overscroll-behavior` wajib digunakan untuk mencegah scroll chaining liar pada touch device.
 - Scrollbar vertikal tidak boleh tertutup header. Area scroll tabel harus dimulai di bawah seluruh header sticky.
 - Header, frozen column, dan cell hover harus tetap sinkron saat zoom dan saat kolom di-resize.
+- Header terakhir spreadsheet wajib punya pemisah visual yang jelas, minimal border plus shadow bawah ringan, agar tidak menyatu dengan baris nilai pertama.
 
 ## Teks dan Spasi
 
 - Nama siswa panjang harus wrap, bukan truncate, kecuali pada konteks yang benar-benar memiliki tooltip/akses detail lain.
 - Placeholder dan teks input tidak boleh tertutup icon.
+- Field edit nama BAB dan Tugas harus fleksibel (`min-width: 0` dan `flex: 1`) sehingga nama panjang bisa diedit tanpa kolom input kecil.
 - Teks bantuan seperti `Klik = edit` hanya tampil jika membantu dan tidak mengurangi ruang input utama.
 - Tombol, select, dropdown, badge, dan tab harus `select-none` agar label tidak mudah terblok saat user drag atau scroll.
 

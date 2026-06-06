@@ -3524,6 +3524,15 @@
     overscroll-behavior-y: contain;
   }
 
+  .sipena-grade-header-shadow {
+    height: 0.625rem;
+    background: linear-gradient(to bottom, hsl(var(--foreground) / 0.16), transparent);
+  }
+
+  .dark .sipena-grade-header-shadow {
+    background: linear-gradient(to bottom, hsl(var(--background) / 0.9), transparent);
+  }
+
   .sipena-grade-zoom-control {
     flex: 0 0 auto;
     min-width: 9.25rem;
@@ -3563,6 +3572,7 @@
   }
 
   .sipena-freeze-menu {
+    z-index: 120;
     max-width: calc(100vw - 1rem);
     overscroll-behavior: contain;
   }

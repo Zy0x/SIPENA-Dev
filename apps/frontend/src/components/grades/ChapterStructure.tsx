@@ -151,19 +151,19 @@ export function ChapterStructure({
               >
                 <div className="border rounded-lg overflow-hidden">
                   <CollapsibleTrigger asChild>
-                    <div className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted/80 cursor-pointer transition-colors">
-                      <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center justify-between gap-2 p-3 bg-muted/50 hover:bg-muted/80 cursor-pointer transition-colors">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                         {expandedChapters.has(chapter.id) ? (
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
                         )}
                         {editingChapter === chapter.id ? (
-                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2" onClick={(e) => e.stopPropagation()}>
                             <Input
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
-                              className="h-8 w-40"
+                              className="h-9 min-w-0 flex-1 sm:max-w-xl"
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") handleSaveChapter(chapter.id);
@@ -173,7 +173,7 @@ export function ChapterStructure({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className="h-9 w-9 shrink-0"
                               onClick={() => handleSaveChapter(chapter.id)}
                             >
                               <Check className="w-4 h-4 text-grade-pass" />
@@ -181,20 +181,20 @@ export function ChapterStructure({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className="h-9 w-9 shrink-0"
                               onClick={() => setEditingChapter(null)}
                             >
                               <X className="w-4 h-4 text-destructive" />
                             </Button>
                           </div>
                         ) : (
-                          <span className="font-medium">{chapter.name}</span>
+                          <span className="min-w-0 break-words font-medium">{chapter.name}</span>
                         )}
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="shrink-0 text-xs">
                           {assignments[chapter.id]?.length || 0} tugas
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex shrink-0 items-center gap-1 sm:gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -242,16 +242,16 @@ export function ChapterStructure({
                       {(assignments[chapter.id] || []).map((assignment) => (
                         <div
                           key={assignment.id}
-                          className="flex items-center justify-between p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
+                          className="flex min-w-0 items-center justify-between gap-2 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
                         >
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-muted-foreground" />
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
                             {editingAssignment === assignment.id ? (
-                              <div className="flex items-center gap-2">
+                              <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
                                 <Input
                                   value={editValue}
                                   onChange={(e) => setEditValue(e.target.value)}
-                                  className="h-7 w-32"
+                                  className="h-8 min-w-0 flex-1 sm:max-w-lg"
                                   autoFocus
                                   onKeyDown={(e) => {
                                     if (e.key === "Enter") handleSaveAssignment(assignment.id);
@@ -261,7 +261,7 @@ export function ChapterStructure({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-8 w-8 shrink-0"
                                   onClick={() => handleSaveAssignment(assignment.id)}
                                 >
                                   <Check className="w-3 h-3 text-grade-pass" />
@@ -269,18 +269,18 @@ export function ChapterStructure({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-8 w-8 shrink-0"
                                   onClick={() => setEditingAssignment(null)}
                                 >
                                   <X className="w-3 h-3 text-destructive" />
                                 </Button>
                               </div>
                             ) : (
-                              <span className="text-sm">{assignment.name}</span>
+                              <span className="min-w-0 break-words text-sm">{assignment.name}</span>
                             )}
                           </div>
                           {editingAssignment !== assignment.id && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex shrink-0 items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"

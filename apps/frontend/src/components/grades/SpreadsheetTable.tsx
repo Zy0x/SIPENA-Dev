@@ -1677,7 +1677,7 @@ export function SpreadsheetTable({
 
       {/* Freeze Menu Dropdown - column freeze only */}
       {showFreezeMenu && !formatLocked && (
-        <div className="sipena-freeze-menu absolute top-14 sm:top-16 left-2 sm:left-3 z-50 bg-card rounded-lg shadow-xl border p-3 sm:p-4 max-h-96 overflow-y-auto w-72 sm:w-80">
+        <div className="sipena-freeze-menu absolute top-14 sm:top-16 left-2 sm:left-3 z-[120] bg-card rounded-lg shadow-xl border p-3 sm:p-4 max-h-96 overflow-y-auto w-72 sm:w-80">
           <div className="font-semibold mb-3 text-sm">Pilih Kolom Freeze</div>
           <div className="sipena-freeze-menu-grid grid grid-cols-3 sm:grid-cols-4 gap-2">
             {columns.slice(0, Math.min(16, columns.length)).map((col, i) => (
@@ -1808,6 +1808,14 @@ export function SpreadsheetTable({
             {nonFrozenColumns.map(colIndex => renderHeaderCell(colIndex, false))}
           </div>
         </div>
+
+        <div
+          aria-hidden="true"
+          className="sipena-grade-header-shadow pointer-events-none absolute inset-x-0 z-[35]"
+          style={{
+            top: Math.max(0, totalHeaderHeight * zoomFactor - 1),
+          }}
+        />
 
         {/* Main Scrollable Area - FIXED: proper scroll for touch devices in fullscreen */}
         <div
