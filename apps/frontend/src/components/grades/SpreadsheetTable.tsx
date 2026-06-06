@@ -224,6 +224,8 @@ export function SpreadsheetTable({
   // Refs - based on template
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const freezeMenuRef = useRef<HTMLDivElement>(null);
+  const freezeMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
   const overlayPanRef = useRef<{ x: number; y: number } | null>(null);
   const pinchRef = useRef({
@@ -234,6 +236,33 @@ export function SpreadsheetTable({
   const editInputRef = useRef<HTMLInputElement | null>(null);
 
   const zoomFactor = zoomLevel / 100;
+
+  useEffect(() => {
+    if (!showFreezeMenu) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+
+      if (freezeMenuRef.current?.contains(target) || freezeMenuTriggerRef.current?.contains(target)) {
+        return;
+      }
+
+      setShowFreezeMenu(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowFreezeMenu(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showFreezeMenu]);
 
   const protectionModeLabel = useMemo(() => {
     if (formatLocked && scrollLockMode) return 'Proteksi';
@@ -1488,6 +1517,7 @@ export function SpreadsheetTable({
         <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
           {/* Freeze Menu Toggle */}
           <Button
+            ref={freezeMenuTriggerRef}
             variant={showFreezeMenu ? "default" : "outline"}
             size="sm"
             onClick={() => !formatLocked && setShowFreezeMenu(!showFreezeMenu)}
@@ -1677,7 +1707,7 @@ export function SpreadsheetTable({
 
       {/* Freeze Menu Dropdown - column freeze only */}
       {showFreezeMenu && !formatLocked && (
-        <div className="sipena-freeze-menu absolute top-14 sm:top-16 left-2 sm:left-3 z-[120] bg-card rounded-lg shadow-xl border p-3 sm:p-4 max-h-96 overflow-y-auto w-72 sm:w-80">
+        <div ref={freezeMenuRef} className="sipena-freeze-menu absolute top-14 sm:top-16 left-2 sm:left-3 z-[120] bg-card rounded-lg shadow-xl border p-3 sm:p-4 max-h-96 overflow-y-auto w-72 sm:w-80">
           <div className="font-semibold mb-3 text-sm">Pilih Kolom Freeze</div>
           <div className="sipena-freeze-menu-grid grid grid-cols-3 sm:grid-cols-4 gap-2">
             {columns.slice(0, Math.min(16, columns.length)).map((col, i) => (

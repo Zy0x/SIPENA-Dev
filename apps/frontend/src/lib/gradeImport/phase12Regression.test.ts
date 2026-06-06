@@ -409,6 +409,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("sipena-grade-close-text");
     expect(spreadsheetSource).toContain("sipena-grade-zoom-control");
     expect(spreadsheetSource).toContain("sipena-freeze-menu");
+    expect(spreadsheetSource).toContain("freezeMenuRef");
+    expect(spreadsheetSource).toContain("freezeMenuTriggerRef");
+    expect(spreadsheetSource).toContain('document.addEventListener("pointerdown", handlePointerDown, true)');
+    expect(spreadsheetSource).toContain('event.key === "Escape"');
+    expect(spreadsheetSource).toContain("setShowFreezeMenu(false)");
     expect(spreadsheetSource).toContain("z-[120]");
     expect(spreadsheetSource).toContain("sipena-protection-menu");
     expect(spreadsheetSource).toContain("sipena-grade-header-shadow");
@@ -454,6 +459,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-freeze-menu");
     expect(globalStyles).toContain("z-index: 120");
     expect(globalStyles).toContain(".sipena-protection-menu");
+    expect(globalStyles).toContain(".sipena-protection-menu .sipena-protection-item[data-highlighted]");
+    expect(globalStyles).toContain("background: hsl(var(--primary) / 0.1) !important");
+    expect(globalStyles).toContain(".sipena-protection-menu .sipena-protection-item[data-highlighted] svg");
+    expect(globalStyles).toContain("color: hsl(var(--muted-foreground)) !important");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
     expect(chapterStructureSource).toContain("h-9 min-w-0 flex-1 sm:max-w-xl");
     expect(chapterStructureSource).toContain("h-8 min-w-0 flex-1 sm:max-w-lg");

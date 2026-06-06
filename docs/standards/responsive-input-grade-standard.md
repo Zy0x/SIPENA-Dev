@@ -37,7 +37,9 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Semua dropdown/popover harus punya `max-height` berbasis `100dvh` dan `overflow-y: auto`.
 - Dropdown tidak boleh menutup tombol sumbernya sampai user tidak bisa menutup atau memilih opsi.
 - Dropdown/popover yang muncul di atas spreadsheet harus punya layer lebih tinggi dari sticky header tabel. Jangan memakai z-index yang sama dengan header jika elemen muncul lebih awal di DOM.
+- Popover custom yang tidak memakai primitive Radix wajib tertutup saat klik/tap di luar area dan saat tombol `Escape` ditekan.
 - Isi dropdown harus kontras di light/dark mode. State hover/active tidak boleh membuat teks deskripsi menyatu dengan background.
+- State hover/active item menu tidak boleh memakai background penuh yang membuat judul, ikon, atau deskripsi sulit dibaca. Pakai tint ringan dari token semantic dan cek light/dark mode.
 - Modal dan popover yang berisi tabel harus punya satu scroll container utama yang jelas.
 
 ## Tabel dan Scroll

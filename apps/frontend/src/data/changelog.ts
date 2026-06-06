@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.42",
+    version: "2.4.42",
+    title: "Menu Input Nilai Lebih Rapi",
+    description: "Menu Freeze dan Proteksi di Input Nilai dibuat lebih mudah ditutup dan lebih nyaman dibaca saat hover.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-06",
+    details: [
+      "Menu Pilih Kolom Freeze kini tertutup otomatis saat klik di luar area atau menekan Escape.",
+      "Hover menu Proteksi memakai latar lebih ringan agar judul dan deskripsi tetap jelas.",
+      "Standar responsif Input Nilai diperbarui untuk dropdown/popover custom.",
+    ],
+  },
+  {
     id: "v2.4.41",
     version: "2.4.41",
     title: "Struktur dan Header Nilai Lebih Jelas",
