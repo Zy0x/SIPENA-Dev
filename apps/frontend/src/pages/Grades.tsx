@@ -1235,7 +1235,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       >
         <Percent className="w-4 h-4" />
         <span className="sipena-grade-action-text">Pembulatan</span>
-        <Badge variant="secondary" className="ml-0.5 text-[10px]">
+        <Badge variant="secondary" className="sipena-grade-rounding-badge ml-0.5 text-[10px]">
           {getReportRoundingLabel(formula.reportRounding.mode)} - {getReportRoundingTargetLabel(formula.reportRounding.target)}
         </Badge>
       </Button>

@@ -1524,30 +1524,30 @@ export function SpreadsheetTable({
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
-                <DropdownMenuItem onClick={() => applyProtectionMode('full')} className="flex items-start gap-2 py-2.5">
+              <DropdownMenuContent align="start" sideOffset={6} className="sipena-protection-menu w-72 max-w-[calc(100vw-1rem)]">
+                <DropdownMenuItem onClick={() => applyProtectionMode('full')} className="sipena-protection-item flex items-start gap-2 py-2.5">
                   <Shield className="w-4 h-4 mt-0.5" />
                   <div className="min-w-0">
                     <p className="font-medium">Proteksi Penuh</p>
-                    <p className="text-xs text-muted-foreground">Kunci tata letak sekaligus aktifkan mode navigasi.</p>
+                    <p className="sipena-protection-item-description text-xs text-muted-foreground">Kunci tata letak sekaligus aktifkan mode navigasi.</p>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => applyProtectionMode('layout')} className="flex items-start gap-2 py-2.5">
+                <DropdownMenuItem onClick={() => applyProtectionMode('layout')} className="sipena-protection-item flex items-start gap-2 py-2.5">
                   <Lock className="w-4 h-4 mt-0.5" />
                   <div className="min-w-0">
                     <p className="font-medium">Kunci Tata Letak</p>
-                    <p className="text-xs text-muted-foreground">Bekukan format spreadsheet tanpa mengaktifkan mode navigasi.</p>
+                    <p className="sipena-protection-item-description text-xs text-muted-foreground">Bekukan format spreadsheet tanpa mengaktifkan mode navigasi.</p>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => applyProtectionMode('navigate')} className="flex items-start gap-2 py-2.5">
+                <DropdownMenuItem onClick={() => applyProtectionMode('navigate')} className="sipena-protection-item flex items-start gap-2 py-2.5">
                   <Hand className="w-4 h-4 mt-0.5" />
                   <div className="min-w-0">
                     <p className="font-medium">Mode Navigasi</p>
-                    <p className="text-xs text-muted-foreground">Nonaktifkan edit sel agar gulir spreadsheet lebih leluasa.</p>
+                    <p className="sipena-protection-item-description text-xs text-muted-foreground">Nonaktifkan edit sel agar gulir spreadsheet lebih leluasa.</p>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => applyProtectionMode('off')} className="py-2.5">
+                <DropdownMenuItem onClick={() => applyProtectionMode('off')} className="sipena-protection-item py-2.5">
                   Buka Semua Proteksi
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -1597,7 +1597,7 @@ export function SpreadsheetTable({
               size="icon"
               onClick={onClose}
               aria-label="Tutup fullscreen"
-              className="ml-auto h-10 w-10 shadow-lg sm:hidden"
+              className="sipena-grade-close-button ml-auto h-10 w-10 shadow-lg sm:hidden"
               style={{ touchAction: 'manipulation' }}
             >
               <X className="w-5 h-5" />
@@ -1614,7 +1614,7 @@ export function SpreadsheetTable({
           )}
 
           {/* Zoom Controls - matching template */}
-          <div className={`flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
+          <div className={`sipena-grade-zoom-control flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -1667,9 +1667,9 @@ export function SpreadsheetTable({
 
           {/* Desktop close button for fullscreen */}
           {isFullscreen && (
-            <Button variant="destructive" size="sm" onClick={onClose} className="hidden h-9 sm:flex">
-              <X className="w-4 h-4 mr-1" />
-              Tutup
+            <Button variant="destructive" size="sm" onClick={onClose} className="sipena-grade-close-button hidden h-9 sm:flex">
+              <X className="sipena-grade-close-icon w-4 h-4 mr-1" />
+              <span className="sipena-grade-close-text">Tutup</span>
             </Button>
           )}
         </div>
@@ -1677,14 +1677,14 @@ export function SpreadsheetTable({
 
       {/* Freeze Menu Dropdown - column freeze only */}
       {showFreezeMenu && !formatLocked && (
-        <div className="absolute top-14 sm:top-16 left-2 sm:left-3 z-50 bg-card rounded-lg shadow-xl border p-3 sm:p-4 max-h-96 overflow-y-auto w-72 sm:w-80">
+        <div className="sipena-freeze-menu absolute top-14 sm:top-16 left-2 sm:left-3 z-50 bg-card rounded-lg shadow-xl border p-3 sm:p-4 max-h-96 overflow-y-auto w-72 sm:w-80">
           <div className="font-semibold mb-3 text-sm">Pilih Kolom Freeze</div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          <div className="sipena-freeze-menu-grid grid grid-cols-3 sm:grid-cols-4 gap-2">
             {columns.slice(0, Math.min(16, columns.length)).map((col, i) => (
               <button
                 key={i}
                 onClick={() => toggleFreezeColumn(i)}
-                className={`px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
+                className={`sipena-freeze-menu-option px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
                   frozenColumns.has(i)
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -1712,10 +1712,12 @@ export function SpreadsheetTable({
 
       {/* Info Bar */}
       <div className="flex items-center gap-2 overflow-x-auto border-b bg-muted/50 px-3 py-1.5 text-xs">
-        <Badge variant="pass" className="gap-1 flex-shrink-0 text-xs">
-          <CheckCircle2 className="w-3 h-3" />
-          Auto-Save
-        </Badge>
+        {isFullscreen && (
+          <Badge variant="pass" className="gap-1 flex-shrink-0 text-xs">
+            <CheckCircle2 className="w-3 h-3" />
+            Auto-Save
+          </Badge>
+        )}
         {formatLocked && scrollLockMode && (
           <Badge variant="warning" className="gap-1 flex-shrink-0 text-xs">
             <Shield className="w-3 h-3" />
@@ -1743,6 +1745,7 @@ export function SpreadsheetTable({
         <span className="text-muted-foreground flex-shrink-0">
           {students.length} siswa • {chapters.length} BAB • KKM: {kkm}
         </span>
+        {isFullscreen && (
         <span className="text-muted-foreground hidden sm:inline">
           {scrollLockMode
             ? 'Navigasi aktif • Geser spreadsheet dengan aman tanpa membuka edit sel'
@@ -1750,6 +1753,7 @@ export function SpreadsheetTable({
               ? 'Tata letak terkunci • Gunakan dropdown Proteksi untuk ubah mode'
               : 'Klik = edit | Enter = simpan & pindah bawah | Ctrl+Z = undo'}
         </span>
+        )}
       </div>
 
       {/* Spreadsheet Container - FIXED: proper touch scrolling for fullscreen */}
@@ -1819,7 +1823,7 @@ export function SpreadsheetTable({
             paddingLeft: getFrozenWidth(),
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorX: 'contain',
-            overscrollBehaviorY: 'auto',
+            overscrollBehaviorY: 'contain',
             touchAction: 'pan-x pan-y',
             WebkitTapHighlightColor: 'transparent',
           }}

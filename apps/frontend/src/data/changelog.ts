@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.40",
+    version: "2.4.40",
+    title: "Standar Responsif Input Nilai",
+    description: "Input Nilai dirapikan lagi untuk viewport pendek dan touch device, sekaligus ditambah standar responsif agar regresi UI lebih mudah dicegah.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-06",
+    details: [
+      "Toolbar fullscreen landscape menjaga tombol tutup, zoom, pencarian, dan dropdown tetap terlihat.",
+      "Dropdown Freeze dan Proteksi kini punya batas tinggi dan kontras hover yang lebih aman.",
+      "Scroll touch tabel lebih fokus ke tabel dan info bar normal desktop dibuat lebih ringkas.",
+      "Menambahkan standar responsif Input Nilai sebagai acuan pengembangan berikutnya.",
+    ],
+  },
+  {
     id: "v2.4.39",
     version: "2.4.39",
     title: "Fullscreen Nilai Lebih Padat",

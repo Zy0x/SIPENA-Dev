@@ -3521,7 +3521,50 @@
 
   .sipena-grade-scroll {
     overscroll-behavior-x: contain;
-    overscroll-behavior-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  .sipena-grade-zoom-control {
+    flex: 0 0 auto;
+    min-width: 9.25rem;
+    justify-content: center;
+  }
+
+  .sipena-grade-close-button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .sipena-grade-rounding-badge {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sipena-protection-menu {
+    max-height: min(22rem, calc(100dvh - 4rem));
+    overflow-y: auto;
+  }
+
+  .sipena-protection-item {
+    color: hsl(var(--foreground));
+  }
+
+  .sipena-protection-item:focus,
+  .sipena-protection-item[data-highlighted] {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+  }
+
+  .sipena-protection-item:focus .sipena-protection-item-description,
+  .sipena-protection-item[data-highlighted] .sipena-protection-item-description {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .sipena-freeze-menu {
+    max-width: calc(100vw - 1rem);
+    overscroll-behavior: contain;
   }
 
   @media (min-width: 1024px) {
@@ -3612,9 +3655,29 @@
     }
 
     .sipena-grade-toolbar--fullscreen [data-grade-student-search] {
-      flex: 0 1 clamp(11rem, 24vw, 16rem);
-      width: clamp(11rem, 24vw, 16rem);
-      max-width: 16rem;
+      flex: 0 1 clamp(9rem, 20vw, 13rem);
+      width: clamp(9rem, 20vw, 13rem);
+      max-width: 13rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen [data-student-search-count] {
+      display: none;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control {
+      min-width: 7.5rem;
+      padding-inline: 0.125rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-rounding-badge {
+      max-width: 7rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
+      position: sticky;
+      right: 0;
+      z-index: 5;
+      box-shadow: 0 0 0 0.375rem hsl(var(--card));
     }
 
     .sipena-grade-toolbar--fullscreen .sipena-grade-action-text {
@@ -3635,6 +3698,27 @@
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view > .rounded-lg {
       min-height: 2.25rem;
       flex: 0 0 auto;
+    }
+
+    .sipena-freeze-menu {
+      top: 3.75rem;
+      width: min(22rem, calc(100vw - 1rem));
+      max-height: calc(100dvh - 4.25rem);
+      padding: 0.75rem;
+    }
+
+    .sipena-freeze-menu-grid {
+      gap: 0.5rem;
+    }
+
+    .sipena-freeze-menu-option {
+      min-height: 2.25rem !important;
+      padding-block: 0.45rem;
+    }
+
+    .sipena-protection-menu {
+      width: min(20rem, calc(100vw - 1rem));
+      max-height: calc(100dvh - 3.5rem);
     }
   }
 
@@ -3662,6 +3746,51 @@
 
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view > .rounded-lg {
       min-height: 2rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control {
+      min-width: 6.75rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control input {
+      width: 2rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen [data-grade-student-search] {
+      flex-basis: clamp(8rem, 17vw, 11rem);
+      width: clamp(8rem, 17vw, 11rem);
+      max-width: 11rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-rounding-badge {
+      max-width: 5.75rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
+      width: 2.5rem;
+      min-width: 2.5rem;
+      padding-inline: 0;
+      justify-content: center;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-close-icon {
+      margin-right: 0;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-close-text {
+      display: none;
+    }
+
+    .sipena-freeze-menu {
+      top: 3.25rem;
+      width: min(21rem, calc(100vw - 0.75rem));
+      max-height: calc(100dvh - 3.5rem);
+      padding: 0.625rem;
+    }
+
+    .sipena-freeze-menu-option {
+      min-height: 2rem !important;
+      font-size: 0.6875rem;
     }
   }
 

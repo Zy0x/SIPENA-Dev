@@ -391,7 +391,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("sipena-grade-scroll");
     expect(spreadsheetSource).toContain("absolute inset-x-0 bottom-0 overflow-auto");
     expect(spreadsheetSource).toContain("top: totalHeaderHeight * zoomFactor");
-    expect(spreadsheetSource).toContain("overscrollBehaviorY: 'auto'");
+    expect(spreadsheetSource).toContain("overscrollBehaviorY: 'contain'");
     expect(spreadsheetSource).toContain("previousBodyOverflow");
     expect(spreadsheetSource).toContain('body.style.overflow = "hidden"');
     expect(spreadsheetSource).toContain("originatedInScrollContainer");
@@ -404,6 +404,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar-extra");
+    expect(spreadsheetSource).toContain("sipena-grade-close-button");
+    expect(spreadsheetSource).toContain("sipena-grade-close-text");
+    expect(spreadsheetSource).toContain("sipena-grade-zoom-control");
+    expect(spreadsheetSource).toContain("sipena-freeze-menu");
+    expect(spreadsheetSource).toContain("sipena-protection-menu");
     expect(spreadsheetSource).toContain("sipena-grade-action-text");
     expect(spreadsheetSource).toContain("Prediksi nilai tetap tersedia lewat long-press");
     expect(spreadsheetSource).not.toContain("fixed top-2 right-2 z-[10000]");
@@ -416,8 +421,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(searchSource).toContain("selectAllOnNextFocusRef");
     expect(searchSource).toContain("inputRef.current?.select()");
     expect(searchSource).toContain("data-grade-student-search");
+    expect(searchSource).toContain("data-student-search-count");
     expect(searchSource).not.toContain("Sparkles");
     expect(gradesPageSource).toContain("ReportRoundingSettingsDialog");
+    expect(gradesPageSource).toContain("sipena-grade-rounding-badge");
     expect(gradesPageSource).toContain("showReportRoundingSettings");
     expect(gradesPageSource).toContain("getReportRoundingLabel(formula.reportRounding.mode)");
     expect(gradesPageSource).toContain("getReportRoundingTargetLabel(formula.reportRounding.target)");
@@ -436,6 +443,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("flex-wrap: nowrap");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen .sipena-grade-action-text");
     expect(globalStyles).toContain("scrollbar-width: none");
+    expect(globalStyles).toContain(".sipena-grade-close-button");
+    expect(globalStyles).toContain(".sipena-grade-close-text");
+    expect(globalStyles).toContain(".sipena-grade-zoom-control");
+    expect(globalStyles).toContain(".sipena-grade-rounding-badge");
+    expect(globalStyles).toContain(".sipena-freeze-menu");
+    expect(globalStyles).toContain(".sipena-protection-menu");
+    expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).toContain("Import dibatalkan karena masih ada nilai yang perlu dicek atau konfirmasi timpa.");
@@ -659,7 +673,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-danger-icon-button");
     expect(dialogPrimitiveSource).toContain("sipena-danger-icon-button");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen");
-    expect(globalStyles).toContain("overscroll-behavior-y: auto");
+    expect(globalStyles).toContain("overscroll-behavior-y: contain");
     expect(globalStyles).toContain("orientation: landscape");
     expect(globalStyles).toContain("@media (orientation: landscape) and (max-height: 440px)");
     expect(rankingSource).not.toContain("<Tabs");

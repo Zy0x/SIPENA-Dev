@@ -224,7 +224,7 @@ export function SmartStudentSearch({
 
       {/* Search Results Summary */}
       {query && (
-        <p className="mt-1 px-0.5 text-[9px] text-muted-foreground sm:text-[10px]">
+        <p data-student-search-count className="mt-1 px-0.5 text-[9px] leading-none text-muted-foreground sm:text-[10px]">
           <span>
             {filteredStudents.length}/{students.length} siswa
             {filteredStudents.length === 0 && " - Tidak ditemukan"}
