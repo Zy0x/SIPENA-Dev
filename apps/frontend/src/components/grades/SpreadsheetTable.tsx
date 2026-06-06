@@ -1243,7 +1243,7 @@ export function SpreadsheetTable({
     return (
       <div
         key={`header-${colIndex}`}
-        className={`absolute flex items-center justify-center border font-semibold text-center ${
+        className={`absolute flex items-center justify-center border font-bold text-center ${
           getColumnHeaderTone(column, activeTableColorScheme)
         } ${isFrozenCol ? 'ring-1 ring-inset ring-primary/35' : ''} ${
           isColumnHovered ? 'ring-2 ring-inset ring-primary/45 brightness-[0.98]' : ''
@@ -1322,7 +1322,7 @@ export function SpreadsheetTable({
             }}
           >
             {(sortedFrozenColumns.includes(0) || sortedFrozenColumns.includes(1)) && (
-              <span style={{ fontSize: `${11 * zoomFactor}px` }} className="font-semibold text-muted-foreground text-center">
+              <span style={{ fontSize: `${11 * zoomFactor}px` }} className="font-bold text-muted-foreground text-center">
                 Data Siswa
               </span>
             )}
@@ -1343,7 +1343,7 @@ export function SpreadsheetTable({
             >
               {/* Data Siswa header for No and Nama columns */}
               <div
-                className="absolute top-0 flex items-center justify-center bg-muted border-r border-border font-semibold text-muted-foreground text-center"
+                className="absolute top-0 flex items-center justify-center bg-muted border-r border-border font-bold text-muted-foreground text-center"
                 style={{
                   left: 0,
                   width: (getColWidth(0) + getColWidth(1)) * zoomFactor,
@@ -1373,7 +1373,7 @@ export function SpreadsheetTable({
             {/* When no frozen columns, show Data Siswa header first */}
             {frozenWidth === 0 && (
               <div
-                className="absolute top-0 flex items-center justify-center bg-muted border-r border-border font-semibold text-muted-foreground text-center"
+                className="absolute top-0 flex items-center justify-center bg-muted border-r border-border font-bold text-muted-foreground text-center"
                 style={{
                   left: 0,
                   width: (getColWidth(0) + getColWidth(1)) * zoomFactor,
@@ -1413,7 +1413,7 @@ export function SpreadsheetTable({
               return (
                 <div
                   key={header.chapterId}
-                  className={`absolute top-0 flex items-center justify-center border-r font-semibold text-center ${getChapterTone(activeTableColorScheme, header.chapterIndex).header} ${
+                  className={`absolute top-0 flex items-center justify-center border-r font-bold text-center ${getChapterTone(activeTableColorScheme, header.chapterIndex).header} ${
                     isChapterHovered ? 'ring-2 ring-inset ring-primary/40 brightness-[0.98]' : ''
                   }`}
                   style={{
@@ -1443,7 +1443,7 @@ export function SpreadsheetTable({
                 return (
                   <div
                     key={`final-header-${column.id}`}
-                    className={`pointer-events-auto absolute top-0 flex items-center justify-center border-r border-b font-semibold text-center ${getColumnHeaderTone(column, activeTableColorScheme)} ${
+                    className={`pointer-events-auto absolute top-0 flex items-center justify-center border-r border-b font-bold text-center ${getColumnHeaderTone(column, activeTableColorScheme)} ${
                       isColumnHovered ? 'ring-2 ring-inset ring-primary/45 brightness-[0.98]' : ''
                     }`}
                     style={{
@@ -1496,7 +1496,7 @@ export function SpreadsheetTable({
             style={{ minWidth: 40, touchAction: 'manipulation' }}
           >
             <Columns3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Bekukan</span>
+            <span className="sipena-grade-action-text hidden sm:inline">Bekukan</span>
           </Button>
 
           {/* Protection split button */}
@@ -1510,7 +1510,7 @@ export function SpreadsheetTable({
               style={{ minWidth: 40, touchAction: 'manipulation' }}
             >
               {scrollLockMode ? <Hand className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-              <span className="hidden sm:inline">{protectionModeLabel}</span>
+              <span className="sipena-grade-action-text hidden sm:inline">{protectionModeLabel}</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1813,9 +1813,9 @@ export function SpreadsheetTable({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="sipena-grade-scroll absolute inset-0 overflow-auto"
+          className="sipena-grade-scroll absolute inset-x-0 bottom-0 overflow-auto"
           style={{
-            paddingTop: totalHeaderHeight * zoomFactor,
+            top: totalHeaderHeight * zoomFactor,
             paddingLeft: getFrozenWidth(),
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorX: 'contain',

@@ -1161,7 +1161,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 min-w-[44px] select-none gap-1.5 text-xs" aria-label="Kelola file nilai">
             <Upload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Kelola Nilai</span>
+            <span className="sipena-grade-action-text hidden sm:inline">Kelola Nilai</span>
             <ChevronDown className="w-3 h-3 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
@@ -1234,7 +1234,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         className="sipena-grade-action-button h-9 gap-2"
       >
         <Percent className="w-4 h-4" />
-        <span>Pembulatan</span>
+        <span className="sipena-grade-action-text">Pembulatan</span>
         <Badge variant="secondary" className="ml-0.5 text-[10px]">
           {getReportRoundingLabel(formula.reportRounding.mode)} - {getReportRoundingTargetLabel(formula.reportRounding.target)}
         </Badge>

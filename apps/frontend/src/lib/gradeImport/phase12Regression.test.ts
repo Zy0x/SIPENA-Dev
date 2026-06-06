@@ -373,6 +373,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("setHoveredColumnIndex(colIndex)");
     expect(spreadsheetSource).toContain("getColumnHeaderTone(column, activeTableColorScheme)");
     expect(spreadsheetSource).toContain("getColumnBodyTone(column, activeTableColorScheme)");
+    expect(spreadsheetSource).toContain("font-bold text-center");
     expect(spreadsheetSource).toContain("getGradeTextColor");
     expect(spreadsheetSource).toContain("getGradeTableAverageCellTone(activeTableColorScheme)");
     expect(spreadsheetSource).toContain("getGradeColor(finalValue, kkm)");
@@ -382,12 +383,14 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradeInputCellSource).toContain("underline");
     expect(gradeInputCellSource).toContain("decoration-red-500");
     expect(gradeInputCellSource).toContain("bg-red-50");
-    expect(gradeInputCellSource).toContain("text-amber-500");
+    expect(gradeInputCellSource).toContain("text-amber-700");
     expect(gradeInputCellSource).toContain("font-extrabold");
-    expect(gradeInputCellSource).toContain("decoration-amber-400");
-    expect(gradeInputCellSource).toContain("bg-amber-50");
+    expect(gradeInputCellSource).not.toContain("decoration-amber-400");
+    expect(gradeInputCellSource).toContain("bg-amber-100");
     expect(spreadsheetSource).toContain("bg-fuchsia-100/95");
     expect(spreadsheetSource).toContain("sipena-grade-scroll");
+    expect(spreadsheetSource).toContain("absolute inset-x-0 bottom-0 overflow-auto");
+    expect(spreadsheetSource).toContain("top: totalHeaderHeight * zoomFactor");
     expect(spreadsheetSource).toContain("overscrollBehaviorY: 'auto'");
     expect(spreadsheetSource).toContain("previousBodyOverflow");
     expect(spreadsheetSource).toContain('body.style.overflow = "hidden"');
@@ -401,6 +404,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar-extra");
+    expect(spreadsheetSource).toContain("sipena-grade-action-text");
     expect(spreadsheetSource).toContain("Prediksi nilai tetap tersedia lewat long-press");
     expect(spreadsheetSource).not.toContain("fixed top-2 right-2 z-[10000]");
     expect(spreadsheetSource).toContain("estimateWrappedLineCount");
@@ -429,6 +433,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-grade-page");
     expect(globalStyles).toContain(".sipena-grade-table-shell");
     expect(globalStyles).toContain("@media (max-width: 380px)");
+    expect(globalStyles).toContain("flex-wrap: nowrap");
+    expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen .sipena-grade-action-text");
+    expect(globalStyles).toContain("scrollbar-width: none");
 
     expect(dialogSource).toContain('setUpdateMode("fill_empty_only")');
     expect(dialogSource).toContain("Import dibatalkan karena masih ada nilai yang perlu dicek atau konfirmasi timpa.");

@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.38";
+export const APP_VERSION = "2.4.39";
 export const VERSION_DATE = "2026-06-06";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.39": "Input Nilai memperjelas header, memadatkan toolbar fullscreen landscape, dan memperbaiki warna Cukup tanpa garis bawah.",
   "2.4.38": "Fullscreen Input Nilai memperbaiki scroll vertikal agar tetap bekerja pada tabel dan tidak berpindah ke halaman belakang.",
   "2.4.37": "Tombol, dropdown, tab, select, dan menu interaktif dibuat tidak bisa memblok teks agar interaksi terasa lebih bersih.",
   "2.4.36": "Nilai Kurang dan Cukup kini sama-sama memakai garis bawah dengan warna merah dan amber yang lebih cerah agar lebih mudah dibedakan.",

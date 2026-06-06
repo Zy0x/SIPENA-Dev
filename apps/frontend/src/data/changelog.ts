@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.39",
+    version: "2.4.39",
+    title: "Fullscreen Nilai Lebih Padat",
+    description: "Mode fullscreen Input Nilai dibuat lebih lega untuk pengisian nilai, dengan toolbar landscape satu baris dan header yang lebih jelas.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-06",
+    details: [
+      "Scrollbar vertikal tabel dimulai di bawah header agar tidak tertutup.",
+      "Nilai Cukup dibuat lebih pekat tanpa garis bawah.",
+      "Header tabel dibuat lebih tebal dan toolbar fullscreen landscape dipadatkan.",
+    ],
+  },
+  {
     id: "v2.4.38",
     version: "2.4.38",
     title: "Scroll Fullscreen Input Nilai",
