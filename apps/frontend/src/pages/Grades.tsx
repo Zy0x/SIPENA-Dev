@@ -1533,10 +1533,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
               {students.length > 0 && (
                 <Card className="w-full min-w-0 overflow-visible border border-border shadow-sm" data-tour="grade-table">
-                  <CardHeader className="relative z-30 bg-card px-3 pb-3 sm:px-6 border-b border-border/50">
-                    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-                        <CardTitle className="text-sm sm:text-base truncate">
+                  <CardHeader className="sipena-grade-card-header relative z-30 bg-card px-3 pb-3 sm:px-6 border-b border-border/50">
+                    <div className="sipena-grade-card-header-grid flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="sipena-grade-card-heading flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                        <CardTitle className="sipena-grade-card-title text-sm sm:text-base truncate">
                           {selectedClass?.name} - {selectedSubject?.name}
                         </CardTitle>
                         <Badge variant="pass" className="gap-1 text-xs">
@@ -1544,7 +1544,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">{gradeToolbarActions}</div>
+                      <div className="sipena-grade-card-actions flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">{gradeToolbarActions}</div>
                     </div>
                   </CardHeader>
                   <CardContent className="relative z-0 min-w-0 overflow-hidden p-0">

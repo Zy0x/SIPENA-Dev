@@ -17,7 +17,7 @@ Standar ini berlaku untuk:
 Setiap perubahan UI Input Nilai wajib aman di viewport berikut:
 
 - Mobile portrait: `320x642`, `375x642`, `392x778`, `415x866`, `425x642`
-- Mobile landscape pendek: `850x296`, `866x415`, `946x335`, `946x348`
+- Mobile landscape pendek: `850x296`, `866x415`, `894x399`, `946x335`, `946x348`
 - Tablet: `768x642`, `768x1024`
 - Laptop: `1366x768`, `1440x900`
 - Desktop lebar: `1920x1080`, `2560x1440`, `3840x2160`
@@ -27,6 +27,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 ## Toolbar Input Nilai
 
 - Tombol aksi utama harus berada dalam grid/flex responsif yang tidak menyebabkan tombol close, zoom, dropdown, atau pencarian terpotong.
+- Header kartu nilai dan toolbar tabel harus punya mode compact saat viewport tinggi pendek; jangan biarkan judul, search count, atau row kosong membuat area tabel turun terlalu jauh.
 - Pada fullscreen landscape pendek, toolbar harus memprioritaskan satu baris compact. Label panjang boleh disembunyikan, tetapi icon dan tombol aksi wajib tetap dapat ditekan.
 - Fullscreen Input Nilai harus membedakan mode `Fullscreen Tabel` di dalam tab browser dan `Fullscreen Browser` yang memakai Fullscreen API. Jika browser menolak Fullscreen API, UI wajib fallback ke fullscreen tabel dengan pesan non-teknis.
 - Tombol tutup fullscreen wajib keluar dari overlay Input Nilai dan, bila aktif, juga keluar dari fullscreen browser.

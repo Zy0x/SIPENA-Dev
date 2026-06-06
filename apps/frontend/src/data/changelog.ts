@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.44",
+    version: "2.4.44",
+    title: "Toolbar Input Nilai Lebih Compact",
+    description: "Area atas tabel Input Nilai dibuat lebih responsif pada viewport landscape pendek.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-07",
+    details: [
+      "Header kartu nilai dan toolbar tabel kini memadat lebih awal pada lebar tablet/landscape.",
+      "Hitungan pencarian disembunyikan pada ruang pendek agar input pencarian tidak menambah tinggi toolbar.",
+      "Area tabel mendapat lebih banyak ruang tanpa mengubah flow pengisian nilai.",
+    ],
+  },
+  {
     id: "v2.4.43",
     version: "2.4.43",
     title: "Pilihan Fullscreen Input Nilai",

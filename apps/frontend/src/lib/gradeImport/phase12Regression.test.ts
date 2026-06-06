@@ -455,6 +455,12 @@ describe("phase 12 grade import regression suite", () => {
     expect(roundingDialogSource).toContain("Simpan Pembulatan");
     expect(globalStyles).toContain(".sipena-grade-page");
     expect(globalStyles).toContain(".sipena-grade-table-shell");
+    expect(globalStyles).toContain(".sipena-grade-card-header");
+    expect(globalStyles).toContain(".sipena-grade-card-actions");
+    expect(globalStyles).toContain("@media (min-width: 768px) and (max-height: 560px)");
+    expect(globalStyles).toContain("@media (min-width: 768px) and (max-height: 430px)");
+    expect(globalStyles).toContain(".sipena-grade-card-actions [data-student-search-count]");
+    expect(globalStyles).toContain(".sipena-grade-card-actions .sipena-grade-action-text");
     expect(globalStyles).toContain("@media (max-width: 380px)");
     expect(globalStyles).toContain("flex-wrap: nowrap");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen .sipena-grade-action-text");

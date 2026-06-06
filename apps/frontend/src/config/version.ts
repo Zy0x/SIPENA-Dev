@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.43";
+export const APP_VERSION = "2.4.44";
 export const VERSION_DATE = "2026-06-07";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.44": "Input Nilai memadatkan header dan toolbar tabel pada viewport landscape pendek agar area tabel lebih luas dan tombol tidak menyisakan ruang kosong.",
   "2.4.43": "Input Nilai menambahkan pilihan Fullscreen Tabel dan Fullscreen Browser agar mode layar penuh lebih jelas.",
   "2.4.42": "Input Nilai menutup menu Freeze saat klik luar area atau Escape dan memperbaiki kontras hover menu Proteksi.",
   "2.4.41": "Input Nilai memperlebar edit BAB/tugas, memperbaiki layer menu Freeze, dan menambahkan shadow pemisah header tabel.",
