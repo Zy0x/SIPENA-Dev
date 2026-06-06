@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.35";
+export const APP_VERSION = "2.4.36";
 export const VERSION_DATE = "2026-06-06";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.36": "Nilai Kurang dan Cukup kini sama-sama memakai garis bawah dengan warna merah dan amber yang lebih cerah agar lebih mudah dibedakan.",
   "2.4.35": "Nilai di bawah KKM kini memakai penanda merah yang lebih kuat dengan garis bawah agar berbeda jelas dari nilai Cukup.",
   "2.4.34": "Warna merah untuk nilai di bawah KKM dibuat lebih tegas dengan teks lebih tebal dan kontras Rapor yang lebih kuat.",
   "2.4.33": "Warna indikator KKM pada tabel Input Nilai diperjelas agar nilai Kurang dan Cukup lebih mudah dibedakan.",

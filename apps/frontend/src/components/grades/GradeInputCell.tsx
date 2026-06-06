@@ -12,15 +12,15 @@ import {
 export function getGradeColor(value: number | null, kkm: number): string {
   if (value === null) return "";
   if (value > kkm + 5) return "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/55 dark:text-emerald-200 dark:border-emerald-800/80";
-  if (value >= kkm) return "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/60 dark:text-yellow-200 dark:border-yellow-700/80";
-  return "bg-red-100 text-red-950 border-red-500 ring-2 ring-red-300/90 dark:bg-red-950/80 dark:text-red-50 dark:border-red-400 dark:ring-red-400/50";
+  if (value >= kkm) return "bg-amber-50 text-amber-600 border-amber-300 ring-1 ring-amber-200/80 underline decoration-amber-400 decoration-2 underline-offset-4 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-500/80 dark:ring-amber-400/40";
+  return "bg-red-50 text-red-600 border-red-400 ring-2 ring-red-300/90 underline decoration-red-500 decoration-2 underline-offset-4 dark:bg-red-950/80 dark:text-red-200 dark:border-red-400 dark:ring-red-400/50";
 }
 
 export function getGradeTextColor(value: number | null, kkm: number): string {
   if (value === null) return "text-muted-foreground";
   if (value > kkm + 5) return "text-emerald-600 dark:text-emerald-300";
-  if (value >= kkm) return "text-yellow-700 dark:text-yellow-300";
-  return "text-red-800 dark:text-red-200 font-black underline decoration-red-600 decoration-2 underline-offset-4";
+  if (value >= kkm) return "text-amber-500 dark:text-amber-300 font-extrabold underline decoration-amber-400 decoration-2 underline-offset-4";
+  return "text-red-600 dark:text-red-300 font-black underline decoration-red-500 decoration-2 underline-offset-4";
 }
 
 // Helper to get status label based on KKM

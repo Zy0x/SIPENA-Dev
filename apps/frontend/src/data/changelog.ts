@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.36",
+    version: "2.4.36",
+    title: "Warna Kurang dan Cukup Lebih Terpisah",
+    description: "Indikator nilai Kurang dan Cukup dibuat lebih cerah dan sama-sama memakai garis bawah.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-06",
+    details: [
+      "Nilai Kurang memakai merah cerah dengan garis bawah merah.",
+      "Nilai Cukup memakai amber cerah dengan garis bawah amber.",
+      "Pembeda berlaku konsisten untuk Tugas, Rata-rata, STS/SAS, dan Rapor.",
+    ],
+  },
+  {
     id: "v2.4.35",
     version: "2.4.35",
     title: "Pembeda Nilai Kurang Lebih Jelas",
