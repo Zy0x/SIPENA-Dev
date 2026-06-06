@@ -225,6 +225,7 @@ export function SpreadsheetTable({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
+  const overlayPanRef = useRef<{ x: number; y: number } | null>(null);
   const pinchRef = useRef({
     active: false,
     startDistance: 0,
@@ -448,6 +449,29 @@ export function SpreadsheetTable({
 
   const totalHeaderHeight = (chapters.length > 0 ? CHAPTER_HEADER_HEIGHT : 0) + HEADING_HEIGHT;
 
+  useEffect(() => {
+    if (!isFullscreen || typeof document === "undefined") return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlOverscrollBehavior = html.style.overscrollBehavior;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "contain";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "contain";
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscrollBehavior;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+    };
+  }, [isFullscreen]);
+
   // Focus edit input when editing
   useEffect(() => {
     if (editingCell && editInputRef.current) {
@@ -493,7 +517,35 @@ export function SpreadsheetTable({
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     const el = scrollContainerRef.current;
-    if (!el || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    if (!el) return;
+
+    const originatedInScrollContainer = e.target instanceof Node && el.contains(e.target);
+    const isVerticalWheel = Math.abs(e.deltaY) > Math.abs(e.deltaX);
+
+    if (!originatedInScrollContainer) {
+      const tolerance = 1;
+      const atTop = el.scrollTop <= tolerance;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
+      const shouldReleaseToPage = !isFullscreen && isVerticalWheel && (
+        (e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)
+      );
+
+      if (shouldReleaseToPage) {
+        const pageScroller = document.querySelector<HTMLElement>("[data-app-scroll-container]");
+        if (pageScroller && pageScroller.scrollHeight > pageScroller.clientHeight) {
+          pageScroller.scrollBy({ top: e.deltaY, behavior: "auto" });
+        } else {
+          window.scrollBy({ top: e.deltaY, behavior: "auto" });
+        }
+      } else {
+        el.scrollBy({ left: e.deltaX, top: e.deltaY, behavior: "auto" });
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    if (!isVerticalWheel || isFullscreen) return;
 
     const tolerance = 1;
     const atTop = el.scrollTop <= tolerance;
@@ -509,7 +561,8 @@ export function SpreadsheetTable({
       window.scrollBy({ top: e.deltaY, behavior: "auto" });
     }
     e.preventDefault();
-  }, []);
+    e.stopPropagation();
+  }, [isFullscreen]);
 
   // Toggle freeze column - blocked when format is locked
   const toggleFreezeColumn = useCallback((colIndex: number) => {
@@ -647,6 +700,17 @@ export function SpreadsheetTable({
   }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const el = scrollContainerRef.current;
+    if (e.touches.length === 1 && el && e.target instanceof Node && !el.contains(e.target)) {
+      overlayPanRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+      return;
+    }
+
+    overlayPanRef.current = null;
+
     // Hanya set state untuk pinch-zoom (2 jari). Jangan preventDefault di awal.
     if (e.touches.length === 2 && !formatLocked) {
       const distance = getDistance(e.touches[0], e.touches[1]);
@@ -659,6 +723,18 @@ export function SpreadsheetTable({
   }, [zoomLevel, getDistance, formatLocked]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const el = scrollContainerRef.current;
+    if (e.touches.length === 1 && el && overlayPanRef.current) {
+      const touch = e.touches[0];
+      const deltaX = overlayPanRef.current.x - touch.clientX;
+      const deltaY = overlayPanRef.current.y - touch.clientY;
+      overlayPanRef.current = { x: touch.clientX, y: touch.clientY };
+      el.scrollBy({ left: deltaX, top: deltaY, behavior: "auto" });
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     // Prevent hanya saat pinch-zoom aktif (2 jari) agar 1 jari tetap scroll native.
     if (e.touches.length === 2 && pinchRef.current.active && !formatLocked) {
       e.preventDefault();
@@ -676,6 +752,7 @@ export function SpreadsheetTable({
   }, [getDistance, formatLocked]);
 
   const handleTouchEnd = useCallback((_e: React.TouchEvent) => {
+    overlayPanRef.current = null;
     // Reset pinch state
     pinchRef.current.active = false;
     // Clear long press timer
@@ -1678,6 +1755,10 @@ export function SpreadsheetTable({
       {/* Spreadsheet Container - FIXED: proper touch scrolling for fullscreen */}
       <div
         className="flex-1 relative overflow-hidden"
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onMouseLeave={() => {
           setHoveredRowIndex(null);
           setHoveredColumnIndex(null);

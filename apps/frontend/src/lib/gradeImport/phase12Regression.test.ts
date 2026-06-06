@@ -389,6 +389,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("bg-fuchsia-100/95");
     expect(spreadsheetSource).toContain("sipena-grade-scroll");
     expect(spreadsheetSource).toContain("overscrollBehaviorY: 'auto'");
+    expect(spreadsheetSource).toContain("previousBodyOverflow");
+    expect(spreadsheetSource).toContain('body.style.overflow = "hidden"');
+    expect(spreadsheetSource).toContain("originatedInScrollContainer");
+    expect(spreadsheetSource).toContain("if (!isVerticalWheel || isFullscreen) return;");
+    expect(spreadsheetSource).toContain("overlayPanRef");
+    expect(spreadsheetSource).toContain("onWheel={handleWheel}");
+    expect(spreadsheetSource).toContain("onTouchStart={handleTouchStart}");
     expect(spreadsheetSource).toContain("isStandaloneFinalColumn(column)");
     expect(spreadsheetSource).toContain("height: totalHeaderHeight * zoomFactor");
     expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");

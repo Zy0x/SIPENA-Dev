@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.38",
+    version: "2.4.38",
+    title: "Scroll Fullscreen Input Nilai",
+    description: "Scroll vertikal pada mode fullscreen Input Nilai dibuat kembali fokus ke tabel, bukan halaman di belakangnya.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-06",
+    details: [
+      "Halaman belakang dikunci saat tabel nilai berada di mode fullscreen.",
+      "Wheel dan touch pada area kolom freeze ikut menggulirkan tabel.",
+      "Scroll halaman tetap dilepas normal saat tabel tidak berada di mode fullscreen.",
+    ],
+  },
+  {
     id: "v2.4.37",
     version: "2.4.37",
     title: "Interaksi Tombol Lebih Bersih",
