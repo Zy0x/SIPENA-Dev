@@ -13,14 +13,14 @@ export function getGradeColor(value: number | null, kkm: number): string {
   if (value === null) return "";
   if (value > kkm + 5) return "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/55 dark:text-emerald-200 dark:border-emerald-800/80";
   if (value >= kkm) return "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/60 dark:text-yellow-200 dark:border-yellow-700/80";
-  return "bg-red-100 text-red-700 border-red-300 dark:bg-red-950/60 dark:text-red-200 dark:border-red-700/80";
+  return "bg-red-100 text-red-800 border-red-400 ring-1 ring-red-300/80 dark:bg-red-950/70 dark:text-red-100 dark:border-red-500/80 dark:ring-red-500/40";
 }
 
 export function getGradeTextColor(value: number | null, kkm: number): string {
   if (value === null) return "text-muted-foreground";
   if (value > kkm + 5) return "text-emerald-600 dark:text-emerald-300";
   if (value >= kkm) return "text-yellow-700 dark:text-yellow-300";
-  return "text-red-600 dark:text-red-300";
+  return "text-red-700 dark:text-red-300 font-extrabold";
 }
 
 // Helper to get status label based on KKM
