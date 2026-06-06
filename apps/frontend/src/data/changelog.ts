@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.43",
+    version: "2.4.43",
+    title: "Pilihan Fullscreen Input Nilai",
+    description: "Input Nilai kini membedakan fullscreen tabel di dalam browser dan fullscreen browser yang memakai seluruh layar perangkat.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-07",
+    details: [
+      "Tombol Fullscreen memiliki dua pilihan: Fullscreen Tabel dan Fullscreen Browser.",
+      "Fullscreen Browser memakai API layar penuh browser dengan fallback aman ke fullscreen tabel.",
+      "Tombol Tutup keluar dari mode layar penuh browser dan overlay Input Nilai sekaligus.",
+    ],
+  },
+  {
     id: "v2.4.42",
     version: "2.4.42",
     title: "Menu Input Nilai Lebih Rapi",

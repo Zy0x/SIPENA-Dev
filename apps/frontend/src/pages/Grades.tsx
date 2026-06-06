@@ -326,6 +326,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [lockedStudentId, setLockedStudentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("input");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenMode, setFullscreenMode] = useState<"app" | "browser" | null>(null);
   const [showGradeImportExport, setShowGradeImportExport] = useState(false);
   const [gradeImportExportTab, setGradeImportExportTab] = useState<GradeImportExportTab>("import");
   const [showGradeBackupRestore, setShowGradeBackupRestore] = useState(false);
@@ -360,6 +361,59 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     setGuestSession(session);
     setGuestSessionChecked(true);
   }, [isGuestMode, token, navigate]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const handleFullscreenChange = () => {
+      if (fullscreenMode === "browser" && !document.fullscreenElement) {
+        setIsFullscreen(false);
+        setFullscreenMode(null);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [fullscreenMode]);
+
+  const openAppFullscreen = useCallback(() => {
+    setFullscreenMode("app");
+    setIsFullscreen(true);
+  }, []);
+
+  const openBrowserFullscreen = useCallback(async () => {
+    setFullscreenMode("browser");
+    setIsFullscreen(true);
+
+    if (typeof document === "undefined") return;
+
+    const target = document.documentElement;
+    if (!target.requestFullscreen) {
+      setFullscreenMode("app");
+      showWarning("Fullscreen browser tidak tersedia", "Mode fullscreen tabel tetap dibuka di dalam tab browser.");
+      return;
+    }
+
+    try {
+      await target.requestFullscreen({ navigationUI: "hide" });
+    } catch {
+      setFullscreenMode("app");
+      showWarning("Fullscreen browser diblokir", "Browser tidak mengizinkan layar penuh. Mode fullscreen tabel tetap aktif.");
+    }
+  }, [showWarning]);
+
+  const closeGradeFullscreen = useCallback(async () => {
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // Keep closing the app overlay even if the browser rejects exitFullscreen.
+      }
+    }
+
+    setIsFullscreen(false);
+    setFullscreenMode(null);
+  }, []);
 
   const guestQuery = useQuery({
     queryKey: ["guest_grade_input", token, guestSession?.sharedLinkId],
@@ -1514,7 +1568,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                         canRedo={isGuestMode ? false : canRedo}
                         onUndo={isGuestMode ? undefined : undo}
                         onRedo={isGuestMode ? undefined : redo}
-                        onEnterFullscreen={() => setIsFullscreen(true)}
+                        onEnterFullscreen={openAppFullscreen}
+                        onEnterBrowserFullscreen={openBrowserFullscreen}
                         toolbarExtra={null}
                         tableColorScheme={gradeTableColorScheme}
                       />
@@ -1546,7 +1601,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           isFullscreen={true}
-          onClose={() => setIsFullscreen(false)}
+          fullscreenMode={fullscreenMode}
+          onClose={closeGradeFullscreen}
           className={selectedClass?.name || ""}
           subjectName={selectedSubject?.name || ""}
           canUndo={isGuestMode ? false : canUndo}

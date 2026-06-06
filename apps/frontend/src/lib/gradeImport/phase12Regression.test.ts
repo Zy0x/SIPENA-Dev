@@ -408,6 +408,14 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("sipena-grade-close-button");
     expect(spreadsheetSource).toContain("sipena-grade-close-text");
     expect(spreadsheetSource).toContain("sipena-grade-zoom-control");
+    expect(gradesPageSource).toContain("requestFullscreen");
+    expect(gradesPageSource).toContain("exitFullscreen");
+    expect(gradesPageSource).toContain("fullscreenchange");
+    expect(gradesPageSource).toContain("openBrowserFullscreen");
+    expect(spreadsheetSource).toContain("onEnterBrowserFullscreen");
+    expect(spreadsheetSource).toContain("Fullscreen Tabel");
+    expect(spreadsheetSource).toContain("Fullscreen Browser");
+    expect(spreadsheetSource).toContain("fullscreenMode === \"browser\"");
     expect(spreadsheetSource).toContain("sipena-freeze-menu");
     expect(spreadsheetSource).toContain("freezeMenuRef");
     expect(spreadsheetSource).toContain("freezeMenuTriggerRef");

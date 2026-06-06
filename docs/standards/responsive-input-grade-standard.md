@@ -28,6 +28,8 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 
 - Tombol aksi utama harus berada dalam grid/flex responsif yang tidak menyebabkan tombol close, zoom, dropdown, atau pencarian terpotong.
 - Pada fullscreen landscape pendek, toolbar harus memprioritaskan satu baris compact. Label panjang boleh disembunyikan, tetapi icon dan tombol aksi wajib tetap dapat ditekan.
+- Fullscreen Input Nilai harus membedakan mode `Fullscreen Tabel` di dalam tab browser dan `Fullscreen Browser` yang memakai Fullscreen API. Jika browser menolak Fullscreen API, UI wajib fallback ke fullscreen tabel dengan pesan non-teknis.
+- Tombol tutup fullscreen wajib keluar dari overlay Input Nilai dan, bila aktif, juga keluar dari fullscreen browser.
 - Tombol close/tutup harus selalu terlihat, memakai warna destructive/merah, dan tidak boleh terdorong keluar viewport.
 - Count pencarian siswa tidak boleh menambah tinggi toolbar secara tiba-tiba. Jika ruang sempit, count dipindah ke info bar atau disembunyikan.
 - Info bar harus ringkas. Hindari teks instruksi panjang di mode normal desktop jika informasi yang sama sudah terlihat di toolbar.

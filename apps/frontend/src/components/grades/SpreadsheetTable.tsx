@@ -83,8 +83,10 @@ export interface SpreadsheetTableProps {
   onUndo?: () => void;
   onRedo?: () => void;
   onEnterFullscreen?: () => void;
+  onEnterBrowserFullscreen?: () => void;
   toolbarExtra?: React.ReactNode;
   tableColorScheme?: GradeTableColorSchemeId;
+  fullscreenMode?: "app" | "browser" | null;
 }
 
 // Constants - matching template
@@ -177,8 +179,10 @@ export function SpreadsheetTable({
   onUndo,
   onRedo,
   onEnterFullscreen,
+  onEnterBrowserFullscreen,
   toolbarExtra,
   tableColorScheme = DEFAULT_GRADE_TABLE_COLOR_SCHEME,
+  fullscreenMode = null,
 }: SpreadsheetTableProps) {
   const activeTableColorScheme = useMemo(
     () => normalizeGradeTableColorScheme(tableColorScheme),
@@ -1683,16 +1687,49 @@ export function SpreadsheetTable({
 
           {/* Fullscreen button for non-fullscreen mode */}
           {!isFullscreen && onEnterFullscreen && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onEnterFullscreen} 
-              className="h-9 gap-1 px-2.5 sm:px-3"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <Maximize2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Fullscreen</span>
-            </Button>
+            onEnterBrowserFullscreen ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="sipena-grade-fullscreen-trigger h-9 gap-1 px-2.5 sm:px-3"
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Fullscreen</span>
+                    <ChevronDown className="w-3 h-3 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="sipena-fullscreen-menu w-64 max-w-[calc(100vw-1rem)]">
+                  <DropdownMenuItem onClick={onEnterFullscreen} className="sipena-fullscreen-menu-item min-h-[48px] items-start gap-2 py-2.5">
+                    <Maximize2 className="mt-0.5 h-4 w-4" />
+                    <div className="min-w-0">
+                      <p className="font-medium">Fullscreen Tabel</p>
+                      <p className="text-xs text-muted-foreground">Membuka Input Nilai penuh di dalam tab browser.</p>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onEnterBrowserFullscreen} className="sipena-fullscreen-menu-item min-h-[48px] items-start gap-2 py-2.5">
+                    <Maximize2 className="mt-0.5 h-4 w-4" />
+                    <div className="min-w-0">
+                      <p className="font-medium">Fullscreen Browser</p>
+                      <p className="text-xs text-muted-foreground">Meminta browser memakai seluruh layar perangkat.</p>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEnterFullscreen}
+                className="h-9 gap-1 px-2.5 sm:px-3"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <Maximize2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Fullscreen</span>
+              </Button>
+            )
           )}
 
           {/* Desktop close button for fullscreen */}
@@ -1776,7 +1813,8 @@ export function SpreadsheetTable({
           {students.length} siswa • {chapters.length} BAB • KKM: {kkm}
         </span>
         {isFullscreen && (
-        <span className="text-muted-foreground hidden sm:inline">
+          <span className="text-muted-foreground hidden sm:inline">
+          {fullscreenMode === "browser" ? "Fullscreen browser aktif • " : ""}
           {scrollLockMode
             ? 'Navigasi aktif • Geser spreadsheet dengan aman tanpa membuka edit sel'
             : formatLocked
