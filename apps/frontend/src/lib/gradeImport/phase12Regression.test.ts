@@ -377,10 +377,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("getGradeTableAverageCellTone(activeTableColorScheme)");
     expect(spreadsheetSource).toContain("getGradeColor(finalValue, kkm)");
     expect(spreadsheetSource).toContain("colorClass || getGradeTableAverageCellTone(activeTableColorScheme)");
-    expect(gradeInputCellSource).toContain("text-rose-600");
-    expect(gradeInputCellSource).toContain("bg-rose-100");
-    expect(gradeInputCellSource).toContain("text-amber-600");
-    expect(gradeInputCellSource).toContain("bg-amber-100");
+    expect(gradeInputCellSource).toContain("text-red-600");
+    expect(gradeInputCellSource).toContain("bg-red-100");
+    expect(gradeInputCellSource).toContain("text-yellow-700");
+    expect(gradeInputCellSource).toContain("bg-yellow-100");
     expect(spreadsheetSource).toContain("bg-fuchsia-100/95");
     expect(spreadsheetSource).toContain("sipena-grade-scroll");
     expect(spreadsheetSource).toContain("overscrollBehaviorY: 'auto'");

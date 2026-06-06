@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.33",
+    version: "2.4.33",
+    title: "Warna KKM Lebih Mudah Dibedakan",
+    description: "Warna nilai Kurang dan Cukup pada tabel Input Nilai dibuat lebih kontras.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-06",
+    details: [
+      "Nilai Kurang memakai merah yang lebih tegas.",
+      "Nilai Cukup memakai kuning yang lebih jelas dan tidak terlalu dekat dengan merah.",
+      "Warna Rapor dan rata-rata tetap mengikuti indikator KKM yang sama.",
+    ],
+  },
+  {
     id: "v2.4.32",
     version: "2.4.32",
     title: "Input Nilai dan Ranking Lebih Efisien",
