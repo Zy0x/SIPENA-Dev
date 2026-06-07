@@ -3530,6 +3530,36 @@
     align-items: start;
   }
 
+  .sipena-grade-toolbar,
+  .sipena-grade-toolbar--fullscreen {
+    scrollbar-gutter: stable both-edges;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.42) hsl(var(--muted) / 0.58);
+  }
+
+  .sipena-grade-toolbar::-webkit-scrollbar,
+  .sipena-grade-toolbar--fullscreen::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .sipena-grade-toolbar::-webkit-scrollbar-track,
+  .sipena-grade-toolbar--fullscreen::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: hsl(var(--muted) / 0.58);
+  }
+
+  .sipena-grade-toolbar::-webkit-scrollbar-thumb,
+  .sipena-grade-toolbar--fullscreen::-webkit-scrollbar-thumb {
+    border: 1px solid hsl(var(--background) / 0.86);
+    border-radius: 999px;
+    background: hsl(var(--muted-foreground) / 0.42);
+  }
+
+  .sipena-grade-toolbar::-webkit-scrollbar-thumb:hover,
+  .sipena-grade-toolbar--fullscreen::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.64);
+  }
+
   .sipena-grade-toolbar-format,
   .sipena-grade-toolbar-view,
   .sipena-grade-toolbar-extra {
@@ -3815,11 +3845,7 @@
       padding: 0.375rem 0.5rem;
       overflow-x: auto;
       overflow-y: hidden;
-      scrollbar-width: none;
-    }
-
-    .sipena-grade-toolbar::-webkit-scrollbar {
-      display: none;
+      scrollbar-width: thin;
     }
 
     .sipena-grade-toolbar-format,
@@ -3906,11 +3932,7 @@
       padding: 0.375rem 0.5rem;
       overflow-x: auto;
       overflow-y: hidden;
-      scrollbar-width: none;
-    }
-
-    .sipena-grade-toolbar--fullscreen::-webkit-scrollbar {
-      display: none;
+      scrollbar-width: thin;
     }
 
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format {

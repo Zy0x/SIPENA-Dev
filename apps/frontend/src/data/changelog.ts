@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.47",
+    version: "2.4.47",
+    title: "Scrollbar Toolbar Input Nilai",
+    description: "Toolbar Input Nilai kini menampilkan scrollbar horizontal tipis saat tombol meluap.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-07",
+    details: [
+      "Scrollbar horizontal kecil ditampilkan pada toolbar mobile dan fullscreen landscape.",
+      "Scrollbar memakai warna token tema agar tetap halus di light dan dark mode.",
+      "Layout sidebar, tab, tinggi tabel, dan safe-area fullscreen native tidak diubah.",
+    ],
+  },
+  {
     id: "v2.4.46",
     version: "2.4.46",
     title: "Tabel Input Nilai Lebih Jelas",

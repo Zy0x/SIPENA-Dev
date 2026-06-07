@@ -499,6 +499,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("flex-wrap: nowrap");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen .sipena-grade-action-text");
     expect(globalStyles).toContain("scrollbar-width: none");
+    expect(globalStyles).toContain(".sipena-grade-toolbar::-webkit-scrollbar");
+    expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen::-webkit-scrollbar");
+    expect(globalStyles).toContain("scrollbar-gutter: stable both-edges");
+    expect(globalStyles).toContain("height: 6px");
+    expect(globalStyles).toContain("scrollbar-color: hsl(var(--muted-foreground) / 0.42) hsl(var(--muted) / 0.58)");
     expect(globalStyles).toContain(".sipena-grade-close-button");
     expect(globalStyles).toContain(".sipena-grade-close-text");
     expect(globalStyles).toContain(".sipena-grade-zoom-control");
