@@ -1793,6 +1793,9 @@ export function SpreadsheetTable({
             </Button>
           )}
         </div>
+        <div className="sipena-grade-toolbar-scroll-hint" aria-hidden="true">
+          <span>Geser</span>
+        </div>
       </div>
 
       {/* Freeze Menu Dropdown - column freeze only */}

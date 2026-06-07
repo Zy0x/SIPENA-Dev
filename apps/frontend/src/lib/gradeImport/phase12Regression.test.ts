@@ -342,6 +342,7 @@ describe("phase 12 grade import regression suite", () => {
     const gradeTableColorSchemeHookSource = readFileSync(repoPath("apps/frontend/src/hooks/useGradeTableColorScheme.ts"), "utf8");
     const settingsSource = readFileSync(repoPath("apps/frontend/src/pages/Settings.tsx"), "utf8");
     const appSource = readFileSync(repoPath("apps/frontend/src/app/App.tsx"), "utf8");
+    const appLayoutSource = readFileSync(repoPath("apps/frontend/src/components/AppLayout.tsx"), "utf8");
     const searchSource = readFileSync(repoPath("apps/frontend/src/components/grades/SmartStudentSearch.tsx"), "utf8");
     const viewportTelemetrySource = readFileSync(repoPath("apps/frontend/src/lib/viewportTelemetry.ts"), "utf8");
     const viewportTelemetryHookSource = readFileSync(repoPath("apps/frontend/src/hooks/useViewportTelemetry.ts"), "utf8");
@@ -431,6 +432,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar-extra");
+    expect(spreadsheetSource).toContain("sipena-grade-toolbar-scroll-hint");
     expect(spreadsheetSource).toContain("sipena-grade-close-button");
     expect(spreadsheetSource).toContain("sipena-grade-close-text");
     expect(spreadsheetSource).toContain("sipena-grade-zoom-control");
@@ -498,6 +500,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("@media (max-width: 380px)");
     expect(globalStyles).toContain("flex-wrap: nowrap");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen .sipena-grade-action-text");
+    expect(globalStyles).toContain(".sipena-grade-toolbar-scroll-hint");
+    expect(globalStyles).toContain("[data-sipena-sidebar=\"main\"]");
+    expect(globalStyles).toContain("max-width: 1023.98px");
+    expect(globalStyles).toContain("padding-top: max(2.75rem");
+    expect(globalStyles).toContain("min-height: 640px");
     expect(globalStyles).toContain("scrollbar-width: none");
     expect(globalStyles).toContain(".sipena-grade-close-button");
     expect(globalStyles).toContain(".sipena-grade-close-text");
@@ -506,7 +513,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-grade-scroll::-webkit-scrollbar");
     expect(globalStyles).toContain("width: 14px");
     expect(globalStyles).toContain("height: 14px");
-    expect(globalStyles).toContain("min-height: 540px");
+    expect(globalStyles).toContain("min-height: 640px");
     expect(globalStyles).toContain(".sipena-grade-rounding-badge");
     expect(globalStyles).toContain(".sipena-freeze-menu");
     expect(globalStyles).toContain("z-index: 120");
@@ -518,6 +525,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
     expect(globalStyles).toContain(".sipena-grade-fullscreen-trigger");
     expect(appSource).toContain("ViewportTelemetryReporter");
+    expect(appLayoutSource).toContain('data-sipena-sidebar="main"');
+    expect(appLayoutSource).toContain('data-mobile-state={sidebarOpen ? "open" : "closed"}');
+    expect(appLayoutSource).toContain('data-sipena-sidebar-spacer="true"');
     expect(viewportTelemetrySource).toContain("visual_viewport_width");
     expect(viewportTelemetrySource).toContain("has_display_cutout");
     expect(viewportTelemetrySource).toContain("safe-area-inset-top");
@@ -539,6 +549,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(viewportSyncSource).not.toContain('"user_id"');
     expect(responsiveStandardSource).toContain("npm run viewport:sync -- --days 30");
     expect(responsiveStandardSource).toContain(".codex/viewport-observations/latest.json");
+    expect(responsiveStandardSource).toContain("Shell, Sidebar, dan Tab");
+    expect(responsiveStandardSource).toContain("indikator visual");
+    expect(responsiveStandardSource).toContain("punch-hole/dot display");
     expect(chapterStructureSource).toContain("h-9 min-w-0 flex-1 sm:max-w-xl");
     expect(chapterStructureSource).toContain("h-8 min-w-0 flex-1 sm:max-w-lg");
     expect(chapterStructureSource).not.toContain("className=\"h-8 w-40\"");

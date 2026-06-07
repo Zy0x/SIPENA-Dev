@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.46";
+export const APP_VERSION = "2.4.47";
 export const VERSION_DATE = "2026-06-07";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.47": "Input Nilai memperbaiki sidebar pada custom viewport, memperjelas tab, menambahkan indikator geser toolbar, menaikkan tinggi tabel mobile, dan memberi fallback punch-hole fullscreen native.",
   "2.4.46": "Input Nilai memperjelas warna nilai Cukup, menambahkan tooltip header tabel, memperbesar scrollbar desktop, dan menyiapkan sync agregat viewport lokal.",
   "2.4.45": "Input Nilai memperjelas nama fullscreen teknis, membaca safe-area native mobile, membuat toolbar tabel portrait lebih compact, dan menambahkan telemetry viewport senyap.",
   "2.4.44": "Input Nilai memadatkan header dan toolbar tabel pada viewport landscape pendek agar area tabel lebih luas dan tombol tidak menyisakan ruang kosong.",
