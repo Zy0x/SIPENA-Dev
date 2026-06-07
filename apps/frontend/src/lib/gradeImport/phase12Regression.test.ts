@@ -357,6 +357,8 @@ describe("phase 12 grade import regression suite", () => {
     const restoreReaderSource = readFileSync(repoPath("apps/frontend/src/lib/gradeImport/gradeBackupRestoreReader.ts"), "utf8");
     const backupExporterSource = readFileSync(repoPath("apps/frontend/src/lib/gradeImport/currentGradesExporter.ts"), "utf8");
     const dialogPrimitiveSource = readFileSync(repoPath("apps/frontend/src/components/ui/dialog.tsx"), "utf8");
+    const pwaManagerSource = readFileSync(repoPath("apps/frontend/src/components/PWAManager.tsx"), "utf8");
+    const usePwaSource = readFileSync(repoPath("apps/frontend/src/hooks/usePWA.ts"), "utf8");
     const globalStyles = readFileSync(repoPath("apps/frontend/src/index.css"), "utf8");
 
     expect(gradesPageSource).toContain("sipena-grade-page");
@@ -419,12 +421,16 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("getGradeHeaderTooltip");
     expect(spreadsheetSource).toContain("data-grade-header-tooltip");
     expect(spreadsheetSource).toContain("title={getGradeHeaderTooltip(column.label)}");
-    expect(spreadsheetSource).toContain("overscrollBehaviorY: 'contain'");
+    expect(spreadsheetSource).toContain("overscrollBehaviorY: isFullscreen ? 'contain' : 'auto'");
     expect(spreadsheetSource).toContain("previousBodyOverflow");
     expect(spreadsheetSource).toContain('body.style.overflow = "hidden"');
     expect(spreadsheetSource).toContain("originatedInScrollContainer");
     expect(spreadsheetSource).toContain("if (!isVerticalWheel || isFullscreen) return;");
+    expect(spreadsheetSource).toContain("shouldReleaseToPage");
+    expect(spreadsheetSource).toContain("scrollPageBy(deltaY)");
     expect(spreadsheetSource).toContain("overlayPanRef");
+    expect(spreadsheetSource).toContain("toolbarDragRef");
+    expect(spreadsheetSource).toContain("handleToolbarClickCapture");
     expect(spreadsheetSource).toContain("onWheel={handleWheel}");
     expect(spreadsheetSource).toContain("onTouchStart={handleTouchStart}");
     expect(spreadsheetSource).toContain("isStandaloneFinalColumn(column)");
@@ -444,6 +450,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).toContain("sipenaGradeFullscreen");
     expect(gradesPageSource).toContain("popstate");
     expect(gradesPageSource).toContain("skipHistoryBack");
+    expect(gradesPageSource).toContain("gradeOverlayOpenRef");
+    expect(gradesPageSource).toContain('setFullscreenMode("app")');
     expect(gradesPageSource).toContain("openBrowserFullscreen");
     expect(spreadsheetSource).toContain("onEnterBrowserFullscreen");
     expect(spreadsheetSource).toContain("Mode Layar Penuh Panel");
@@ -462,9 +470,10 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("sipena-protection-menu");
     expect(spreadsheetSource).toContain("sipena-grade-header-shadow");
     expect(spreadsheetSource).toContain("sipena-grade-action-text");
-    expect(spreadsheetSource).toContain("Prediksi nilai fullscreen mobile ditahan");
-    expect(spreadsheetSource).toContain("if (isFullscreen) return;");
-    expect(spreadsheetSource).toContain("hintPopup && !isFullscreen");
+    expect(spreadsheetSource).toContain("GRADE_HINT_POPUP_ENABLED = false");
+    expect(spreadsheetSource).toContain("Prediksi nilai ditahan sementara");
+    expect(spreadsheetSource).toContain("!GRADE_HINT_POPUP_ENABLED || isFullscreen");
+    expect(spreadsheetSource).toContain("GRADE_HINT_POPUP_ENABLED && hintPopup && !isFullscreen");
     expect(spreadsheetSource).not.toContain("fixed top-2 right-2 z-[10000]");
     expect(spreadsheetSource).toContain("estimateWrappedLineCount");
     expect(spreadsheetSource).toContain("getRowHeight(rowIndex)");
@@ -531,6 +540,14 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("background: hsl(var(--primary) / 0.1) !important");
     expect(globalStyles).toContain(".sipena-protection-menu .sipena-protection-item[data-highlighted] svg");
     expect(globalStyles).toContain("color: hsl(var(--muted-foreground)) !important");
+    expect(globalStyles).toContain(".sipena-protection-split--active");
+    expect(globalStyles).toContain("touch-action: pan-x");
+    expect(pwaManagerSource).toContain("UPDATE_AUTO_APPLY_SECONDS = 10");
+    expect(pwaManagerSource).toContain("Tunggu");
+    expect(pwaManagerSource).toContain("UPDATE_HARD_RELOAD_MS");
+    expect(pwaManagerSource).toContain("UPDATE_RESOLVED_RELOAD_MS");
+    expect(usePwaSource).toContain("PWA_UPDATE_FALLBACK_RELOAD_MS");
+    expect(usePwaSource).toContain("withTimeout(updateServiceWorker(true)");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
     expect(globalStyles).toContain(".sipena-grade-fullscreen-trigger");
     expect(globalStyles).toContain(".sipena-grade-fullscreen-chevron");
@@ -787,7 +804,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-danger-icon-button");
     expect(dialogPrimitiveSource).toContain("sipena-danger-icon-button");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen");
-    expect(globalStyles).toContain("overscroll-behavior-y: contain");
+    expect(globalStyles).toContain(".sipena-grade-scroll");
+    expect(globalStyles).toContain("overscroll-behavior-y: auto");
     expect(globalStyles).toContain("orientation: landscape");
     expect(globalStyles).toContain("@media (orientation: landscape) and (max-height: 440px)");
     expect(rankingSource).not.toContain("<Tabs");

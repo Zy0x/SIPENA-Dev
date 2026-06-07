@@ -328,6 +328,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenMode, setFullscreenMode] = useState<"app" | "browser" | null>(null);
   const gradeFullscreenHistoryRef = useRef(false);
+  const gradeOverlayOpenRef = useRef(false);
   const [showGradeImportExport, setShowGradeImportExport] = useState(false);
   const [gradeImportExportTab, setGradeImportExportTab] = useState<GradeImportExportTab>("import");
   const [showGradeBackupRestore, setShowGradeBackupRestore] = useState(false);
@@ -340,6 +341,17 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [showOCRGrades, setShowOCRGrades] = useState(false);
   const [showGuestKkmDialog, setShowGuestKkmDialog] = useState(false);
   const [guestKkm, setGuestKkm] = useState(75);
+
+  const gradeOverlayOpen = showGradeImportExport ||
+    showGradeBackupOptions ||
+    showGradeBackupRestore ||
+    showReportRoundingSettings ||
+    showOCRGrades ||
+    showGuestKkmDialog;
+
+  useEffect(() => {
+    gradeOverlayOpenRef.current = gradeOverlayOpen;
+  }, [gradeOverlayOpen]);
 
   useEffect(() => {
     if (!isGuestMode) {
@@ -434,6 +446,11 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
     const handleFullscreenChange = () => {
       if (fullscreenMode === "browser" && !document.fullscreenElement) {
+        if (gradeOverlayOpenRef.current) {
+          setFullscreenMode("app");
+          setIsFullscreen(true);
+          return;
+        }
         void closeGradeFullscreen();
       }
     };

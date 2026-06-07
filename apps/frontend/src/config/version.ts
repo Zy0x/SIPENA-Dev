@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.48";
+export const APP_VERSION = "2.4.49";
 export const VERSION_DATE = "2026-06-07";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.49": "Input Nilai memperbaiki scroll chaining mobile, modal fullscreen, hint prediksi sementara, toolbar touch, visual proteksi, dan update PWA otomatis anti-stuck.",
   "2.4.48": "Input Nilai memperbaiki toolbar aksi, scroll touch kolom frozen, back gesture fullscreen, tab mode, dan menahan tooltip prediksi di fullscreen mobile.",
   "2.4.47": "Toolbar Input Nilai kini menampilkan scrollbar horizontal tipis saat tombol meluap agar area yang bisa digeser lebih mudah dikenali.",
   "2.4.46": "Input Nilai memperjelas warna nilai Cukup, menambahkan tooltip header tabel, memperbesar scrollbar desktop, dan menyiapkan sync agregat viewport lokal.",

@@ -44,6 +44,23 @@ function getNotifPermission(): NotificationPermission {
 }
 
 const SW_UPDATE_TIMEOUT_MS = 8000;
+const PWA_UPDATE_FALLBACK_RELOAD_MS = 12000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error("PWA_UPDATE_TIMEOUT")), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 function waitForWaitingServiceWorker(
   registration: ServiceWorkerRegistration,
@@ -328,7 +345,7 @@ export function usePWA() {
     const updateServiceWorker = (window as any).__sipenaPwaUpdate;
     if (typeof updateServiceWorker === "function") {
       try {
-        await updateServiceWorker(true);
+        await withTimeout(updateServiceWorker(true), PWA_UPDATE_FALLBACK_RELOAD_MS);
         return;
       } catch (error) {
         console.warn("[PWA] virtual update failed, using fallback:", error);

@@ -33,6 +33,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Mode Layar Penuh Native wajib membaca `visualViewport`, orientasi, DPR, dan `safe-area-inset-*` agar tombol kanan/kiri tidak masuk area notch, punch-hole, navigation bar, atau cutout mobile.
 - Pada mobile portrait sekitar `392x778`, toolbar tabel harus mengutamakan satu baris compact dengan scroll horizontal terkontrol. Pencarian siswa tetap terlihat dalam satu layar, sementara ruang vertikal harus diprioritaskan untuk tabel.
 - Toolbar yang memakai scroll horizontal wajib menampilkan scrollbar horizontal tipis berbasis token tema agar user tahu area tersebut dapat digeser.
+- Toolbar horizontal wajib membedakan gesture drag dan tap. Jika user menggeser toolbar melewati threshold kecil, klik/tap tombol di bawah jari harus dibatalkan agar tidak memicu aksi tidak sengaja.
 - Aksi `Kelola Nilai`, `Rumus`, dan `Pembulatan` harus bisa duduk dalam satu baris fleksibel jika ruang cukup; pencarian siswa boleh memakai baris penuh agar input tetap nyaman.
 - Tombol tutup fullscreen wajib keluar dari overlay Input Nilai dan, bila aktif, juga keluar dari fullscreen browser.
 - Tombol close/tutup harus selalu terlihat, memakai warna destructive/merah, dan tidak boleh terdorong keluar viewport.
@@ -48,11 +49,13 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Isi dropdown harus kontras di light/dark mode. State hover/active tidak boleh membuat teks deskripsi menyatu dengan background.
 - State hover/active item menu tidak boleh memakai background penuh yang membuat judul, ikon, atau deskripsi sulit dibaca. Pakai tint ringan dari token semantic dan cek light/dark mode.
 - Modal dan popover yang berisi tabel harus punya satu scroll container utama yang jelas.
+- Modal, dialog, dropdown, dan popover yang dibuka dari mode fullscreen tidak boleh menutup mode fullscreen akibat event `fullscreenchange`. Jika browser memaksa keluar dari Fullscreen API saat overlay terbuka, UI wajib fallback ke mode fullscreen panel dan tetap berada di halaman Input Nilai.
 
 ## Tabel dan Scroll
 
 - Kontainer tabel harus menguasai scroll saat pointer/touch berada di atas tabel.
 - Di luar fullscreen, scroll halaman hanya boleh mengambil alih setelah tabel benar-benar berada di batas atas/bawah dan interaksi memang dimaksudkan keluar dari tabel.
+- Scroll chaining harus dua arah: saat tabel sudah mentok atas/bawah, gesture berikutnya boleh meneruskan scroll ke body; saat body kembali ke area tabel, gesture di atas tabel harus kembali menguasai scroll tabel.
 - Touch scroll pada kolom frozen seperti `No` dan `Nama Siswa` wajib diarahkan ke scroll container tabel, bukan langsung ke body halaman.
 - Di fullscreen, body belakang harus terkunci agar scroll tidak berpindah ke halaman di belakang.
 - Back gesture/browser back saat fullscreen aktif harus menutup fullscreen terlebih dahulu, bukan langsung menavigasi ke halaman sebelumnya.
@@ -86,6 +89,13 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Warna hover baris dan kolom harus terlihat di light/dark mode tanpa merusak warna status nilai.
 - Kolom kalkulasi seperti Rata-rata dan Rapor boleh memakai background pembeda, tetapi teks nilai tetap mengikuti indikator KKM.
 - STS dan SAS wajib punya warna kolom/header yang konsisten dan tidak menyatu dengan warna Rata-rata.
+
+## PWA Update
+
+- Banner update PWA tidak boleh berhenti permanen di status loading. Setiap proses apply update wajib punya timeout/fallback reload yang aman.
+- Saat update tersedia, beri jeda otomatis 10 detik agar pengguna sempat menyimpan pekerjaan. Selama jeda itu, tampilkan aksi `Update sekarang` dan `Tunggu`.
+- Tombol `Tunggu` menunda update sementara tanpa memunculkan error teknis. Setelah masa tunggu habis, banner boleh muncul kembali lewat siklus pengecekan update berikutnya.
+- Jika service worker gagal menyelesaikan `skipWaiting` atau reload otomatis, aplikasi wajib melakukan reload halaman sebagai fallback terakhir.
 
 ## QA Wajib Sebelum Commit
 

@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.49",
+    version: "2.4.49",
+    title: "Input Nilai dan PWA Lebih Stabil",
+    description: "Scroll touch tabel, dialog fullscreen, toolbar, dan update PWA diperbaiki agar tidak mengganggu proses input nilai.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-06-07",
+    details: [
+      "Scroll tabel di mobile kini lanjut ke body saat tabel sudah mentok, tetapi tetap menguasai gesture saat masih bisa digulir.",
+      "Update PWA otomatis berjalan setelah 10 detik, memiliki tombol Tunggu, dan punya fallback reload agar tidak stuck di status memperbarui.",
+      "Dialog/dropdown saat fullscreen Input Nilai tidak lagi menutup fullscreen secara tidak sengaja.",
+      "Hint prediksi nilai ditahan sementara, toolbar touch dibuat lebih aman dari salah tap, dan visual Proteksi/header final dirapikan.",
+    ],
+  },
+  {
     id: "v2.4.48",
     version: "2.4.48",
     title: "Input Nilai: Toolbar dan Fullscreen Lebih Stabil",

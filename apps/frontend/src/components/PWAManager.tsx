@@ -19,6 +19,10 @@ const VERSION_URL = "/version.json";
 // Poll every 45s in background; also triggered on focus/visibility/pageshow/online
 const POLL_INTERVAL_MS = 45_000;
 const RESUME_RECHECK_DELAY_MS = 1800;
+const UPDATE_AUTO_APPLY_SECONDS = 10;
+const UPDATE_WAIT_MS = 2 * 60_000;
+const UPDATE_HARD_RELOAD_MS = 12_000;
+const UPDATE_RESOLVED_RELOAD_MS = 700;
 
 async function fetchCurrentVersion(): Promise<string | null> {
   try {
@@ -201,12 +205,14 @@ function InstallBanner({ onInstall, onDismiss, isIOS, isDesktop, hasNativePrompt
 // ─── Update Banner ────────────────────────────────────────────────────────────
 function UpdateBanner({
   onUpdate,
-  onDismiss,
+  onWait,
   isUpdating,
+  countdown,
 }: {
   onUpdate: () => void;
-  onDismiss: () => void;
+  onWait: () => void;
   isUpdating: boolean;
+  countdown: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -230,7 +236,9 @@ function UpdateBanner({
             {isUpdating ? 'Memperbarui aplikasi...' : 'Pembaruan tersedia'}
           </p>
           <p className="text-[10px] text-muted-foreground">
-            {isUpdating ? 'Mohon tunggu, versi terbaru sedang diterapkan' : 'Versi terbaru SIPENA siap digunakan'}
+            {isUpdating
+              ? 'Mohon tunggu, versi terbaru sedang diterapkan'
+              : `Otomatis diterapkan dalam ${Math.max(0, countdown)} detik. Simpan pekerjaan dulu jika perlu.`}
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -244,15 +252,15 @@ function UpdateBanner({
             }`}
             style={{ pointerEvents: 'auto' }}
           >
-            {isUpdating ? 'Memperbarui...' : 'Update'}
+            {isUpdating ? 'Memperbarui...' : 'Update sekarang'}
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+            onClick={(e) => { e.stopPropagation(); onWait(); }}
             disabled={isUpdating}
-            className={`p-1 rounded-lg ${isUpdating ? 'opacity-40 cursor-not-allowed' : 'hover:bg-muted'}`}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold ${isUpdating ? 'opacity-40 cursor-not-allowed' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
             style={{ pointerEvents: 'auto' }}
           >
-            <X className="w-3.5 h-3.5 text-muted-foreground" />
+            Tunggu
           </button>
         </div>
       </div>
@@ -274,15 +282,61 @@ function OfflineIndicator() {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function PWAManager() {
   const pwa = usePWA();
+  const { applyUpdate } = pwa;
   const [showIOSGuide,    setShowIOSGuide]    = useState(false);
   const [showDesktopInfo, setShowDesktopInfo] = useState(false);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updateCountdown, setUpdateCountdown] = useState(UPDATE_AUTO_APPLY_SECONDS);
   const dismissedRef = useRef(false);
+  const waitUntilRef = useRef(0);
 
   const triggerUpdate = useCallback(() => {
-    if (!dismissedRef.current) setShowUpdateBanner(true);
+    if (dismissedRef.current || Date.now() < waitUntilRef.current) return;
+    setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
+    setShowUpdateBanner(true);
   }, []);
+
+  const handleUpdate = useCallback(async () => {
+    if (isUpdating) return;
+    dismissedRef.current = true;
+    setShowUpdateBanner(true);
+    setIsUpdating(true);
+
+    const hardReloadTimer = window.setTimeout(() => {
+      window.location.reload();
+    }, UPDATE_HARD_RELOAD_MS);
+
+    try {
+      await applyUpdate();
+      window.setTimeout(() => {
+        window.location.reload();
+      }, UPDATE_RESOLVED_RELOAD_MS);
+    } catch (error) {
+      console.warn('[PWA] applyUpdate failed, forcing reload:', error);
+      window.location.reload();
+    } finally {
+      window.clearTimeout(hardReloadTimer);
+    }
+  }, [applyUpdate, isUpdating]);
+
+  useEffect(() => {
+    if (!showUpdateBanner || isUpdating) return;
+    setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
+
+    const interval = window.setInterval(() => {
+      setUpdateCountdown((current) => {
+        if (current <= 1) {
+          window.clearInterval(interval);
+          void handleUpdate();
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [handleUpdate, isUpdating, showUpdateBanner]);
 
   // Primary: react to usePWA hook's needsUpdate state (SW updatefound event)
   useEffect(() => {
@@ -380,25 +434,11 @@ export default function PWAManager() {
     };
   }, [triggerUpdate]);
 
-  const handleUpdate = useCallback(async () => {
+  const handleWaitUpdate = useCallback(() => {
     if (isUpdating) return;
-    dismissedRef.current = true;
-    setShowUpdateBanner(true);
-    setIsUpdating(true);
-    try {
-      await pwa.applyUpdate();
-    } catch (error) {
-      console.warn('[PWA] applyUpdate failed:', error);
-      dismissedRef.current = false;
-      setIsUpdating(false);
-      setShowUpdateBanner(true);
-    }
-  }, [isUpdating, pwa]);
-
-  const handleDismissUpdate = useCallback(() => {
-    if (isUpdating) return;
-    dismissedRef.current = true;
+    waitUntilRef.current = Date.now() + UPDATE_WAIT_MS;
     setShowUpdateBanner(false);
+    setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
   }, [isUpdating]);
 
   const handleInstall = useCallback(() => {
@@ -428,8 +468,9 @@ export default function PWAManager() {
       {showUpdateBanner && (
         <UpdateBanner
           onUpdate={handleUpdate}
-          onDismiss={handleDismissUpdate}
+          onWait={handleWaitUpdate}
           isUpdating={isUpdating}
+          countdown={updateCountdown}
         />
       )}
 

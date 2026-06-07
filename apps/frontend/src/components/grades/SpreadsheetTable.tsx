@@ -105,6 +105,7 @@ const NAME_COL_WIDTH = 160;
 const NAME_CELL_VERTICAL_PADDING = 12;
 const NAME_LINE_HEIGHT = 16;
 const NISN_LINE_HEIGHT = 12;
+const GRADE_HINT_POPUP_ENABLED = false;
 
 function estimateWrappedLineCount(text: string, width: number): number {
   const words = text.trim().split(/\s+/).filter(Boolean);
@@ -241,6 +242,12 @@ export function SpreadsheetTable({
   const freezeMenuRef = useRef<HTMLDivElement>(null);
   const freezeMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const frozenTouchLayerRef = useRef<HTMLDivElement>(null);
+  const toolbarDragRef = useRef<{ x: number; y: number; moved: boolean; resetTimer: ReturnType<typeof setTimeout> | null }>({
+    x: 0,
+    y: 0,
+    moved: false,
+    resetTimer: null,
+  });
   const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
   const overlayPanRef = useRef<{ x: number; y: number } | null>(null);
   const pinchRef = useRef({
@@ -584,6 +591,15 @@ export function SpreadsheetTable({
     setScrollTop(target.scrollTop);
   }, []);
 
+  const scrollPageBy = useCallback((deltaY: number) => {
+    const pageScroller = document.querySelector<HTMLElement>("[data-app-scroll-container]");
+    if (pageScroller && pageScroller.scrollHeight > pageScroller.clientHeight) {
+      pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
+    } else {
+      window.scrollBy({ top: deltaY, behavior: "auto" });
+    }
+  }, []);
+
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -600,12 +616,7 @@ export function SpreadsheetTable({
       );
 
       if (shouldReleaseToPage) {
-        const pageScroller = document.querySelector<HTMLElement>("[data-app-scroll-container]");
-        if (pageScroller && pageScroller.scrollHeight > pageScroller.clientHeight) {
-          pageScroller.scrollBy({ top: e.deltaY, behavior: "auto" });
-        } else {
-          window.scrollBy({ top: e.deltaY, behavior: "auto" });
-        }
+        scrollPageBy(e.deltaY);
       } else {
         el.scrollBy({ left: e.deltaX, top: e.deltaY, behavior: "auto" });
       }
@@ -623,15 +634,10 @@ export function SpreadsheetTable({
 
     if (!shouldReleaseToPage) return;
 
-    const pageScroller = document.querySelector<HTMLElement>("[data-app-scroll-container]");
-    if (pageScroller && pageScroller.scrollHeight > pageScroller.clientHeight) {
-      pageScroller.scrollBy({ top: e.deltaY, behavior: "auto" });
-    } else {
-      window.scrollBy({ top: e.deltaY, behavior: "auto" });
-    }
+    scrollPageBy(e.deltaY);
     e.preventDefault();
     e.stopPropagation();
-  }, [isFullscreen]);
+  }, [isFullscreen, scrollPageBy]);
 
   // Toggle freeze column - blocked when format is locked
   const toggleFreezeColumn = useCallback((colIndex: number) => {
@@ -804,7 +810,22 @@ export function SpreadsheetTable({
       const touch = e.touches[0];
       const deltaX = overlayPanRef.current.x - touch.clientX;
       const deltaY = overlayPanRef.current.y - touch.clientY;
+      const isMostlyVertical = Math.abs(deltaY) > Math.abs(deltaX);
+      const tolerance = 1;
+      const atTop = el.scrollTop <= tolerance;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
+      const shouldReleaseToPage = !isFullscreen && isMostlyVertical && (
+        (deltaY < 0 && atTop) || (deltaY > 0 && atBottom)
+      );
       overlayPanRef.current = { x: touch.clientX, y: touch.clientY };
+
+      if (shouldReleaseToPage) {
+        scrollPageBy(deltaY);
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
       el.scrollBy({ left: deltaX, top: deltaY, behavior: "auto" });
       e.preventDefault();
       e.stopPropagation();
@@ -825,7 +846,7 @@ export function SpreadsheetTable({
       setZoomLevel(newZoom);
       setZoomInput(newZoom.toString());
     }
-  }, [getDistance, formatLocked]);
+  }, [getDistance, formatLocked, isFullscreen, scrollPageBy]);
 
   const handleTouchEnd = useCallback((_e: React.TouchEvent) => {
     overlayPanRef.current = null;
@@ -844,6 +865,8 @@ export function SpreadsheetTable({
     rowIndex: number,
     colIndex: number
   ) => {
+    if (!GRADE_HINT_POPUP_ENABLED) return;
+
     const student = students[rowIndex];
     const column = columns[colIndex];
     
@@ -884,7 +907,7 @@ export function SpreadsheetTable({
     rowIndex: number,
     colIndex: number
   ) => {
-    if (isFullscreen) return;
+    if (!GRADE_HINT_POPUP_ENABLED || isFullscreen) return;
 
     const student = students[rowIndex];
     const column = columns[colIndex];
@@ -904,7 +927,7 @@ export function SpreadsheetTable({
     }, 500); // 500ms long press
   }, [isFullscreen, students, columns, showHintForCell]);
 
-  // Prediksi nilai fullscreen mobile ditahan agar tidak menutup sel saat guru input cepat.
+  // Prediksi nilai ditahan sementara agar tidak menutup sel saat guru input cepat.
   const hintHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const closeHintPopup = useCallback(() => {
@@ -912,6 +935,8 @@ export function SpreadsheetTable({
   }, []);
   
   const handleCellMouseEnter = useCallback((_e?: React.MouseEvent, _rowIndex?: number, _colIndex?: number) => {
+    if (!GRADE_HINT_POPUP_ENABLED) return;
+
     if (hintHoverTimerRef.current) {
       clearTimeout(hintHoverTimerRef.current);
       hintHoverTimerRef.current = null;
@@ -934,6 +959,49 @@ export function SpreadsheetTable({
       }
     }, 100);
   }, [closeHintPopup]);
+
+  const resetToolbarDragState = useCallback(() => {
+    if (toolbarDragRef.current.resetTimer) {
+      clearTimeout(toolbarDragRef.current.resetTimer);
+    }
+    toolbarDragRef.current.resetTimer = setTimeout(() => {
+      toolbarDragRef.current.moved = false;
+      toolbarDragRef.current.resetTimer = null;
+    }, 180);
+  }, []);
+
+  const handleToolbarTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    toolbarDragRef.current.x = touch.clientX;
+    toolbarDragRef.current.y = touch.clientY;
+    toolbarDragRef.current.moved = false;
+    if (toolbarDragRef.current.resetTimer) {
+      clearTimeout(toolbarDragRef.current.resetTimer);
+      toolbarDragRef.current.resetTimer = null;
+    }
+  }, []);
+
+  const handleToolbarTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - toolbarDragRef.current.x);
+    const deltaY = Math.abs(touch.clientY - toolbarDragRef.current.y);
+    if (deltaX > 8 && deltaX > deltaY) {
+      toolbarDragRef.current.moved = true;
+    }
+  }, []);
+
+  const handleToolbarTouchEnd = useCallback(() => {
+    resetToolbarDragState();
+  }, [resetToolbarDragState]);
+
+  const handleToolbarClickCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!toolbarDragRef.current.moved) return;
+    e.preventDefault();
+    e.stopPropagation();
+    resetToolbarDragState();
+  }, [resetToolbarDragState]);
 
   const handleCellTouchEnd = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -1390,7 +1458,7 @@ export function SpreadsheetTable({
 
     return (
       <div
-        className="absolute top-0 left-0 right-0 z-50 bg-primary/5 border-b border-border"
+        className="absolute top-0 left-0 right-0 z-50 bg-primary/5"
         style={{ height: CHAPTER_HEADER_HEIGHT * zoomFactor }}
       >
         {/* Fixed area header - always shows "Data Siswa" placeholder to maintain alignment */}
@@ -1580,7 +1648,14 @@ export function SpreadsheetTable({
       }}
     >
       {/* Toolbar - matching template style */}
-      <div className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3`}>
+      <div
+        className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3`}
+        onTouchStart={handleToolbarTouchStart}
+        onTouchMove={handleToolbarTouchMove}
+        onTouchEnd={handleToolbarTouchEnd}
+        onTouchCancel={handleToolbarTouchEnd}
+        onClickCapture={handleToolbarClickCapture}
+      >
         <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
           {/* Freeze Menu Toggle */}
           <Button
@@ -1597,7 +1672,7 @@ export function SpreadsheetTable({
           </Button>
 
           {/* Protection split button */}
-          <div className="flex items-stretch rounded-lg border border-input bg-background overflow-hidden">
+          <div className={`sipena-protection-split flex items-stretch rounded-lg border border-input bg-background overflow-hidden ${formatLocked || scrollLockMode ? 'sipena-protection-split--active' : ''}`}>
             <Button
               variant={formatLocked || scrollLockMode ? "default" : "ghost"}
               size="sm"
@@ -1962,7 +2037,7 @@ export function SpreadsheetTable({
             paddingLeft: getFrozenWidth(),
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorX: 'contain',
-            overscrollBehaviorY: 'contain',
+            overscrollBehaviorY: isFullscreen ? 'contain' : 'auto',
             touchAction: 'pan-x pan-y',
             WebkitTapHighlightColor: 'transparent',
           }}
@@ -2031,7 +2106,7 @@ export function SpreadsheetTable({
       </div>
 
       {/* Grade Hint Popup for mobile long-press */}
-      {hintPopup && !isFullscreen && (
+      {GRADE_HINT_POPUP_ENABLED && hintPopup && !isFullscreen && (
         <GradeHintPopup
           isOpen={hintPopup.isOpen}
           onClose={closeHintPopup}

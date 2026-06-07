@@ -3553,6 +3553,13 @@
     scrollbar-gutter: stable both-edges;
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.42) hsl(var(--muted) / 0.58);
+    scroll-behavior: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    touch-action: pan-x;
+    will-change: scroll-position;
+    contain: paint;
   }
 
   .sipena-grade-toolbar::-webkit-scrollbar,
@@ -3617,7 +3624,7 @@
 
   .sipena-grade-scroll {
     overscroll-behavior-x: contain;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -3713,6 +3720,23 @@
   .sipena-protection-menu .sipena-protection-item:focus .sipena-protection-item-description,
   .sipena-protection-menu .sipena-protection-item[data-highlighted] .sipena-protection-item-description {
     color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .sipena-protection-split--active {
+    border-color: hsl(var(--primary) / 0.45);
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .sipena-protection-split--active button,
+  .sipena-protection-split--active svg {
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  .sipena-protection-split--active button:hover,
+  .sipena-protection-split--active button:focus-visible {
+    background: hsl(var(--primary) / 0.92) !important;
+    color: hsl(var(--primary-foreground)) !important;
   }
 
   .sipena-freeze-menu {
