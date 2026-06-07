@@ -349,6 +349,7 @@ describe("phase 12 grade import regression suite", () => {
     const viewportSyncSource = readFileSync(repoPath("scripts/sync-viewport-observations.mjs"), "utf8");
     const packageSource = readFileSync(repoPath("package.json"), "utf8");
     const responsiveStandardSource = readFileSync(repoPath("docs/standards/responsive-input-grade-standard.md"), "utf8");
+    const agentsSource = readFileSync(repoPath("AGENTS.md"), "utf8");
     const supabaseTypesSource = readFileSync(repoPath("apps/frontend/src/infrastructure/supabase/supabase.types.ts"), "utf8");
     const formulaSource = readFileSync(repoPath("apps/frontend/src/lib/gradeFormula.ts"), "utf8");
     const roundingDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/ReportRoundingSettingsDialog.tsx"), "utf8");
@@ -429,6 +430,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("isStandaloneFinalColumn(column)");
     expect(spreadsheetSource).toContain("height: totalHeaderHeight * zoomFactor");
     expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");
+    expect(spreadsheetSource).toContain("frozenTouchLayerRef");
+    expect(spreadsheetSource).toContain("originatedInFrozenLayer");
+    expect(spreadsheetSource).toContain("const tableTouchAction");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar-extra");
     expect(spreadsheetSource).toContain("sipena-grade-close-button");
@@ -437,6 +441,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).toContain("requestFullscreen");
     expect(gradesPageSource).toContain("exitFullscreen");
     expect(gradesPageSource).toContain("fullscreenchange");
+    expect(gradesPageSource).toContain("sipenaGradeFullscreen");
+    expect(gradesPageSource).toContain("popstate");
+    expect(gradesPageSource).toContain("skipHistoryBack");
     expect(gradesPageSource).toContain("openBrowserFullscreen");
     expect(spreadsheetSource).toContain("onEnterBrowserFullscreen");
     expect(spreadsheetSource).toContain("Mode Layar Penuh Panel");
@@ -455,7 +462,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("sipena-protection-menu");
     expect(spreadsheetSource).toContain("sipena-grade-header-shadow");
     expect(spreadsheetSource).toContain("sipena-grade-action-text");
-    expect(spreadsheetSource).toContain("Prediksi nilai tetap tersedia lewat long-press");
+    expect(spreadsheetSource).toContain("Prediksi nilai fullscreen mobile ditahan");
+    expect(spreadsheetSource).toContain("if (isFullscreen) return;");
+    expect(spreadsheetSource).toContain("hintPopup && !isFullscreen");
     expect(spreadsheetSource).not.toContain("fixed top-2 right-2 z-[10000]");
     expect(spreadsheetSource).toContain("estimateWrappedLineCount");
     expect(spreadsheetSource).toContain("getRowHeight(rowIndex)");
@@ -471,6 +480,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).toContain("ReportRoundingSettingsDialog");
     expect(gradesPageSource).toContain("sipena-grade-rounding-badge");
     expect(gradesPageSource).toContain("showReportRoundingSettings");
+    expect(gradesPageSource).toContain("toolbarExtra={gradeToolbarActions}");
     expect(gradesPageSource).toContain("getReportRoundingLabel(formula.reportRounding.mode)");
     expect(gradesPageSource).toContain("getReportRoundingTargetLabel(formula.reportRounding.target)");
     expect(formulaSource).toContain("ReportRoundingMode");
@@ -486,6 +496,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-grade-table-shell");
     expect(globalStyles).toContain(".sipena-grade-mode-tabs");
     expect(globalStyles).toContain(".sipena-grade-mode-tab");
+    expect(globalStyles).toContain(".sipena-grade-mode-tab[data-state=\"active\"]");
     expect(globalStyles).toContain(".sipena-grade-browser-fullscreen");
     expect(globalStyles).toContain("env(safe-area-inset-top)");
     expect(globalStyles).toContain("--sipena-safe-right");
@@ -522,6 +533,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("color: hsl(var(--muted-foreground)) !important");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
     expect(globalStyles).toContain(".sipena-grade-fullscreen-trigger");
+    expect(globalStyles).toContain(".sipena-grade-fullscreen-chevron");
+    expect(globalStyles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
     expect(appSource).toContain("ViewportTelemetryReporter");
     expect(viewportTelemetrySource).toContain("visual_viewport_width");
     expect(viewportTelemetrySource).toContain("has_display_cutout");
@@ -543,6 +556,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(viewportSyncSource).toContain("mobile_focus_viewports");
     expect(viewportSyncSource).not.toContain('"user_id"');
     expect(responsiveStandardSource).toContain("npm run viewport:sync -- --days 30");
+    expect(responsiveStandardSource).toContain("Touch scroll pada kolom frozen");
+    expect(agentsSource).toContain("npm run viewport:sync -- --days 30");
+    expect(agentsSource).toContain(".codex/viewport-observations/latest.json");
     expect(responsiveStandardSource).toContain(".codex/viewport-observations/latest.json");
     expect(chapterStructureSource).toContain("h-9 min-w-0 flex-1 sm:max-w-xl");
     expect(chapterStructureSource).toContain("h-8 min-w-0 flex-1 sm:max-w-lg");

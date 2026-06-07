@@ -240,6 +240,7 @@ export function SpreadsheetTable({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const freezeMenuRef = useRef<HTMLDivElement>(null);
   const freezeMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const frozenTouchLayerRef = useRef<HTMLDivElement>(null);
   const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
   const overlayPanRef = useRef<{ x: number; y: number } | null>(null);
   const pinchRef = useRef({
@@ -769,7 +770,14 @@ export function SpreadsheetTable({
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const el = scrollContainerRef.current;
-    if (e.touches.length === 1 && el && e.target instanceof Node && !el.contains(e.target)) {
+    const frozenLayer = frozenTouchLayerRef.current;
+    const originatedInFrozenLayer = !!(
+      frozenLayer &&
+      e.target instanceof Node &&
+      frozenLayer.contains(e.target)
+    );
+
+    if (e.touches.length === 1 && el && e.target instanceof Node && (!el.contains(e.target) || originatedInFrozenLayer)) {
       overlayPanRef.current = {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
@@ -876,6 +884,8 @@ export function SpreadsheetTable({
     rowIndex: number,
     colIndex: number
   ) => {
+    if (isFullscreen) return;
+
     const student = students[rowIndex];
     const column = columns[colIndex];
     
@@ -892,10 +902,9 @@ export function SpreadsheetTable({
     longPressTimerRef.current = setTimeout(() => {
       showHintForCell(position, rowIndex, colIndex);
     }, 500); // 500ms long press
-  }, [students, columns, showHintForCell]);
+  }, [isFullscreen, students, columns, showHintForCell]);
 
-  // Prediksi nilai tetap tersedia lewat long-press, tetapi tidak muncul otomatis saat hover
-  // agar tidak menutup sel saat guru sedang input cepat di fullscreen.
+  // Prediksi nilai fullscreen mobile ditahan agar tidak menutup sel saat guru input cepat.
   const hintHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const closeHintPopup = useCallback(() => {
@@ -1233,6 +1242,7 @@ export function SpreadsheetTable({
     const isRowHovered = hoveredRowIndex === rowIndex && !isEditing;
     const isColumnHovered = hoveredColumnIndex === colIndex && !isEditing;
     const isCrossHovered = isRowHovered && isColumnHovered;
+    const tableTouchAction = isEditing ? 'none' : isFrozenCol ? 'none' : 'pan-x pan-y';
     const columnBodyTone = getColumnBodyTone(column, activeTableColorScheme);
     const defaultBackground = isFrozenCell
       ? 'bg-primary/5'
@@ -1278,7 +1288,7 @@ export function SpreadsheetTable({
           width: width * zoomFactor,
           height: height * zoomFactor,
           padding: isEditing ? 0 : `${4 * zoomFactor}px`,
-          touchAction: isEditing ? 'none' : 'pan-x pan-y',
+          touchAction: tableTouchAction,
           userSelect: isEditing ? 'text' : 'none',
           boxSizing: 'border-box',
         }}
@@ -1750,8 +1760,8 @@ export function SpreadsheetTable({
                     style={{ touchAction: 'manipulation' }}
                   >
                     <Maximize2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Fullscreen</span>
-                    <ChevronDown className="w-3 h-3 opacity-60" />
+                    <span className="sipena-grade-fullscreen-label hidden sm:inline">Fullscreen</span>
+                    <ChevronDown className="sipena-grade-fullscreen-chevron w-3 h-3 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="sipena-fullscreen-menu w-64 max-w-[calc(100vw-1rem)]">
@@ -1975,6 +1985,7 @@ export function SpreadsheetTable({
         {/* Frozen Columns Overlay */}
         {frozenColumns.size > 0 && (
           <div
+            ref={frozenTouchLayerRef}
             className="absolute z-20 bg-background"
             style={{
               left: 0,
@@ -1985,6 +1996,7 @@ export function SpreadsheetTable({
               borderRight: '2px solid hsl(var(--primary))',
               boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
               pointerEvents: 'auto',
+              touchAction: 'none',
             }}
           >
             <div
@@ -2019,7 +2031,7 @@ export function SpreadsheetTable({
       </div>
 
       {/* Grade Hint Popup for mobile long-press */}
-      {hintPopup && (
+      {hintPopup && !isFullscreen && (
         <GradeHintPopup
           isOpen={hintPopup.isOpen}
           onClose={closeHintPopup}

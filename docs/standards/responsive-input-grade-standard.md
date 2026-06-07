@@ -33,6 +33,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Mode Layar Penuh Native wajib membaca `visualViewport`, orientasi, DPR, dan `safe-area-inset-*` agar tombol kanan/kiri tidak masuk area notch, punch-hole, navigation bar, atau cutout mobile.
 - Pada mobile portrait sekitar `392x778`, toolbar tabel harus mengutamakan satu baris compact dengan scroll horizontal terkontrol. Pencarian siswa tetap terlihat dalam satu layar, sementara ruang vertikal harus diprioritaskan untuk tabel.
 - Toolbar yang memakai scroll horizontal wajib menampilkan scrollbar horizontal tipis berbasis token tema agar user tahu area tersebut dapat digeser.
+- Aksi `Kelola Nilai`, `Rumus`, dan `Pembulatan` harus bisa duduk dalam satu baris fleksibel jika ruang cukup; pencarian siswa boleh memakai baris penuh agar input tetap nyaman.
 - Tombol tutup fullscreen wajib keluar dari overlay Input Nilai dan, bila aktif, juga keluar dari fullscreen browser.
 - Tombol close/tutup harus selalu terlihat, memakai warna destructive/merah, dan tidak boleh terdorong keluar viewport.
 - Count pencarian siswa tidak boleh menambah tinggi toolbar secara tiba-tiba. Jika ruang sempit, count dipindah ke info bar atau disembunyikan.
@@ -52,7 +53,9 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 
 - Kontainer tabel harus menguasai scroll saat pointer/touch berada di atas tabel.
 - Di luar fullscreen, scroll halaman hanya boleh mengambil alih setelah tabel benar-benar berada di batas atas/bawah dan interaksi memang dimaksudkan keluar dari tabel.
+- Touch scroll pada kolom frozen seperti `No` dan `Nama Siswa` wajib diarahkan ke scroll container tabel, bukan langsung ke body halaman.
 - Di fullscreen, body belakang harus terkunci agar scroll tidak berpindah ke halaman di belakang.
+- Back gesture/browser back saat fullscreen aktif harus menutup fullscreen terlebih dahulu, bukan langsung menavigasi ke halaman sebelumnya.
 - `overscroll-behavior` wajib digunakan untuk mencegah scroll chaining liar pada touch device.
 - Scrollbar vertikal tidak boleh tertutup header. Area scroll tabel harus dimulai di bawah seluruh header sticky.
 - Header, frozen column, dan cell hover harus tetap sinkron saat zoom dan saat kolom di-resize.
@@ -65,6 +68,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Field edit nama BAB dan Tugas harus fleksibel (`min-width: 0` dan `flex: 1`) sehingga nama panjang bisa diedit tanpa kolom input kecil.
 - Teks bantuan seperti `Klik = edit` hanya tampil jika membantu dan tidak mengurangi ruang input utama.
 - Tombol, select, dropdown, badge, dan tab harus `select-none` agar label tidak mudah terblok saat user drag atau scroll.
+- Tooltip prediksi nilai tidak boleh muncul di fullscreen mobile sampai ada desain yang tidak menutup cell input.
 
 ## Telemetry Viewport Senyap
 

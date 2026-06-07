@@ -327,6 +327,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [activeTab, setActiveTab] = useState("input");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenMode, setFullscreenMode] = useState<"app" | "browser" | null>(null);
+  const gradeFullscreenHistoryRef = useRef(false);
   const [showGradeImportExport, setShowGradeImportExport] = useState(false);
   const [gradeImportExportTab, setGradeImportExportTab] = useState<GradeImportExportTab>("import");
   const [showGradeBackupRestore, setShowGradeBackupRestore] = useState(false);
@@ -362,20 +363,6 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     setGuestSessionChecked(true);
   }, [isGuestMode, token, navigate]);
 
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-
-    const handleFullscreenChange = () => {
-      if (fullscreenMode === "browser" && !document.fullscreenElement) {
-        setIsFullscreen(false);
-        setFullscreenMode(null);
-      }
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, [fullscreenMode]);
-
   const openAppFullscreen = useCallback(() => {
     setFullscreenMode("app");
     setIsFullscreen(true);
@@ -402,7 +389,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     }
   }, [showWarning]);
 
-  const closeGradeFullscreen = useCallback(async () => {
+  const closeGradeFullscreen = useCallback(async (options?: { skipHistoryBack?: boolean }) => {
     if (typeof document !== "undefined" && document.fullscreenElement) {
       try {
         await document.exitFullscreen();
@@ -413,7 +400,47 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
     setIsFullscreen(false);
     setFullscreenMode(null);
+
+    if (
+      !options?.skipHistoryBack &&
+      gradeFullscreenHistoryRef.current &&
+      typeof window !== "undefined"
+    ) {
+      gradeFullscreenHistoryRef.current = false;
+      window.history.back();
+    }
   }, []);
+
+  useEffect(() => {
+    if (!isFullscreen || typeof window === "undefined") return;
+
+    if (!gradeFullscreenHistoryRef.current) {
+      window.history.pushState({ sipenaGradeFullscreen: true }, "", window.location.href);
+      gradeFullscreenHistoryRef.current = true;
+    }
+
+    const handlePopState = () => {
+      if (!gradeFullscreenHistoryRef.current) return;
+      gradeFullscreenHistoryRef.current = false;
+      void closeGradeFullscreen({ skipHistoryBack: true });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [closeGradeFullscreen, isFullscreen]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const handleFullscreenChange = () => {
+      if (fullscreenMode === "browser" && !document.fullscreenElement) {
+        void closeGradeFullscreen();
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [closeGradeFullscreen, fullscreenMode]);
 
   const guestQuery = useQuery({
     queryKey: ["guest_grade_input", token, guestSession?.sharedLinkId],

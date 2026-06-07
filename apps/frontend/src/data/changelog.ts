@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.48",
+    version: "2.4.48",
+    title: "Input Nilai: Toolbar dan Fullscreen Lebih Stabil",
+    description: "Toolbar Input Nilai dirapikan lagi, scroll touch kolom frozen diperbaiki, dan fullscreen lebih aman untuk mobile.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-07",
+    details: [
+      "Tombol Kelola Nilai, Rumus, dan Pembulatan dibuat lebih fleksibel dalam satu baris pada viewport sempit.",
+      "Scroll pada kolom No/Nama Siswa kini diarahkan ke tabel, bukan body halaman.",
+      "Back gesture saat fullscreen aktif menutup fullscreen terlebih dahulu.",
+      "Tooltip prediksi nilai ditahan di fullscreen mobile agar tidak mengganggu input cepat.",
+      "AGENTS.md kini mewajibkan data viewport observations sebagai acuan QA responsif bila tersedia.",
+    ],
+  },
+  {
     id: "v2.4.47",
     version: "2.4.47",
     title: "Scrollbar Toolbar Input Nilai",
