@@ -12,14 +12,14 @@ import {
 export function getGradeColor(value: number | null, kkm: number): string {
   if (value === null) return "";
   if (value > kkm + 5) return "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/55 dark:text-emerald-200 dark:border-emerald-800/80";
-  if (value >= kkm) return "bg-amber-100 text-amber-700 border-amber-400 ring-1 ring-amber-300/80 dark:bg-amber-950/70 dark:text-amber-100 dark:border-amber-400/80 dark:ring-amber-300/40";
+  if (value >= kkm) return "bg-yellow-100 text-yellow-600 border-yellow-400 ring-1 ring-yellow-300/85 dark:bg-yellow-950/70 dark:text-yellow-200 dark:border-yellow-400/80 dark:ring-yellow-300/40";
   return "bg-red-50 text-red-600 border-red-400 ring-2 ring-red-300/90 underline decoration-red-500 decoration-2 underline-offset-4 dark:bg-red-950/80 dark:text-red-200 dark:border-red-400 dark:ring-red-400/50";
 }
 
 export function getGradeTextColor(value: number | null, kkm: number): string {
   if (value === null) return "text-muted-foreground";
   if (value > kkm + 5) return "text-emerald-600 dark:text-emerald-300";
-  if (value >= kkm) return "text-amber-700 dark:text-amber-200 font-extrabold";
+  if (value >= kkm) return "text-yellow-600 dark:text-yellow-200 font-extrabold";
   return "text-red-600 dark:text-red-300 font-black underline decoration-red-500 decoration-2 underline-offset-4";
 }
 

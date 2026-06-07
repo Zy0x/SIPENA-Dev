@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.46",
+    version: "2.4.46",
+    title: "Tabel Input Nilai Lebih Jelas",
+    description: "Tabel Input Nilai diperjelas untuk warna nilai, header yang terpotong, scrollbar, dan acuan viewport pengembangan.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-07",
+    details: [
+      "Nilai Cukup memakai warna kuning yang lebih berbeda dari nilai di bawah KKM.",
+      "Header BAB, tugas, STS, SAS, Rapor, dan Status menampilkan tooltip nama lengkap saat di-hover.",
+      "Scrollbar tabel desktop dibuat lebih mudah digeser dan area tabel mobile tinggi diperluas.",
+      "Developer dapat menarik agregat viewport server ke lokal lewat script khusus tanpa menyimpan data siswa atau nilai.",
+    ],
+  },
+  {
     id: "v2.4.45",
     version: "2.4.45",
     title: "Fullscreen dan Viewport Input Nilai Lebih Adaptif",

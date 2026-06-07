@@ -34,5 +34,6 @@ dist-ssr
 # Local tool state and scratch files. Keep these off GitHub.
 .codex/
 .lovable/
+supabase/.temp/
 tes
 apps/frontend/public/fonts/tes

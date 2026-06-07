@@ -154,6 +154,11 @@ function getColumnBodyTone(column: ColumnDef, schemeId: GradeTableColorSchemeId)
   return getGradeTableColumnBodyTone(schemeId, column);
 }
 
+function getGradeHeaderTooltip(label: string, fallback = "Header tabel nilai"): string {
+  const cleanLabel = label.trim();
+  return cleanLabel ? cleanLabel : fallback;
+}
+
 interface ColumnDef {
   id: string;
   type: 'index' | 'name' | 'assignment' | 'chapter_avg' | 'sts' | 'sas' | 'final' | 'status';
@@ -1306,6 +1311,9 @@ export function SpreadsheetTable({
     return (
       <div
         key={`header-${colIndex}`}
+        data-grade-header-tooltip={getGradeHeaderTooltip(column.label)}
+        title={getGradeHeaderTooltip(column.label)}
+        aria-label={getGradeHeaderTooltip(column.label)}
         className={`absolute flex items-center justify-center border font-bold text-center ${
           getColumnHeaderTone(column, activeTableColorScheme)
         } ${isFrozenCol ? 'ring-1 ring-inset ring-primary/35' : ''} ${
@@ -1379,6 +1387,9 @@ export function SpreadsheetTable({
         {frozenWidth > 0 ? (
           <div 
             className="absolute top-0 left-0 bg-muted border-r border-border flex items-center justify-center"
+            data-grade-header-tooltip="Data Siswa"
+            title="Data Siswa"
+            aria-label="Data Siswa"
             style={{ 
               width: frozenWidth, 
               height: CHAPTER_HEADER_HEIGHT * zoomFactor 
@@ -1407,6 +1418,9 @@ export function SpreadsheetTable({
               {/* Data Siswa header for No and Nama columns */}
               <div
                 className="absolute top-0 flex items-center justify-center bg-muted border-r border-border font-bold text-muted-foreground text-center"
+                data-grade-header-tooltip="Data Siswa"
+                title="Data Siswa"
+                aria-label="Data Siswa"
                 style={{
                   left: 0,
                   width: (getColWidth(0) + getColWidth(1)) * zoomFactor,
@@ -1437,6 +1451,9 @@ export function SpreadsheetTable({
             {frozenWidth === 0 && (
               <div
                 className="absolute top-0 flex items-center justify-center bg-muted border-r border-border font-bold text-muted-foreground text-center"
+                data-grade-header-tooltip="Data Siswa"
+                title="Data Siswa"
+                aria-label="Data Siswa"
                 style={{
                   left: 0,
                   width: (getColWidth(0) + getColWidth(1)) * zoomFactor,
@@ -1476,6 +1493,9 @@ export function SpreadsheetTable({
               return (
                 <div
                   key={header.chapterId}
+                  data-grade-header-tooltip={getGradeHeaderTooltip(header.chapterName, "Header BAB")}
+                  title={getGradeHeaderTooltip(header.chapterName, "Header BAB")}
+                  aria-label={getGradeHeaderTooltip(header.chapterName, "Header BAB")}
                   className={`absolute top-0 flex items-center justify-center border-r font-bold text-center ${getChapterTone(activeTableColorScheme, header.chapterIndex).header} ${
                     isChapterHovered ? 'ring-2 ring-inset ring-primary/40 brightness-[0.98]' : ''
                   }`}
@@ -1506,6 +1526,9 @@ export function SpreadsheetTable({
                 return (
                   <div
                     key={`final-header-${column.id}`}
+                    data-grade-header-tooltip={getGradeHeaderTooltip(column.label)}
+                    title={getGradeHeaderTooltip(column.label)}
+                    aria-label={getGradeHeaderTooltip(column.label)}
                     className={`pointer-events-auto absolute top-0 flex items-center justify-center border-r border-b font-bold text-center ${getColumnHeaderTone(column, activeTableColorScheme)} ${
                       isColumnHovered ? 'ring-2 ring-inset ring-primary/45 brightness-[0.98]' : ''
                     }`}

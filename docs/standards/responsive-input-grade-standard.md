@@ -71,6 +71,9 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Telemetry viewport tidak boleh menyimpan data siswa, nilai, nama kelas, nama mapel, teks pencarian, atau isi input pengguna.
 - Jika tabel telemetry belum tersedia di database, UI wajib tetap berjalan tanpa toast, banner, atau error visible.
 - Data telemetry harus dibatasi RLS per akun dan hanya memakai role `authenticated`; developer membaca agregat melalui Supabase dashboard/service role untuk perencanaan responsif berikutnya.
+- Untuk menarik acuan viewport server ke lokal, jalankan `npm run viewport:sync -- --days 30`. Script membaca `viewport_observations` memakai service role dari `.env`, memilih kolom teknis tanpa `user_id`, lalu menulis agregat ke `.codex/viewport-observations/latest.json`.
+- File `.codex/viewport-observations/latest.json` tidak boleh di-commit. Gunakan isinya sebagai checklist tambahan sebelum mengubah Input Nilai: `top_viewports`, `mobile_focus_viewports`, `safe_area_max`, dan distribusi `viewport_profile`.
+- Jika data server belum tersedia, developer wajib tetap memakai viewport target di dokumen ini dan menambah hasil repro baru ke bagian standar/QA sebelum commit.
 
 ## Warna dan Kontras
 

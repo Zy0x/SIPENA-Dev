@@ -3572,6 +3572,39 @@
     overscroll-behavior-y: contain;
   }
 
+  @media (hover: hover) and (pointer: fine) {
+    .sipena-grade-scroll {
+      scrollbar-width: auto;
+      scrollbar-color: hsl(var(--muted-foreground) / 0.48) hsl(var(--muted) / 0.68);
+    }
+
+    .sipena-grade-scroll::-webkit-scrollbar {
+      width: 14px;
+      height: 14px;
+    }
+
+    .sipena-grade-scroll::-webkit-scrollbar-track {
+      background: hsl(var(--muted) / 0.68);
+      border-radius: 999px;
+    }
+
+    .sipena-grade-scroll::-webkit-scrollbar-thumb {
+      min-height: 3.5rem;
+      min-width: 3.5rem;
+      border: 3px solid hsl(var(--background));
+      border-radius: 999px;
+      background: hsl(var(--muted-foreground) / 0.48);
+    }
+
+    .sipena-grade-scroll::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--primary) / 0.74);
+    }
+
+    .sipena-grade-scroll::-webkit-scrollbar-corner {
+      background: hsl(var(--muted) / 0.68);
+    }
+  }
+
   .sipena-grade-header-shadow {
     height: 0.625rem;
     background: linear-gradient(to bottom, hsl(var(--foreground) / 0.16), transparent);
@@ -3769,8 +3802,8 @@
     }
 
     .sipena-grade-table-shell {
-      min-height: 410px;
-      height: min(78dvh, calc(100dvh - 8.75rem));
+      min-height: 440px;
+      height: min(82dvh, calc(100dvh - 7.25rem));
     }
 
     .sipena-grade-toolbar {
@@ -3851,15 +3884,15 @@
     }
 
     .sipena-grade-table-shell {
-      min-height: 390px;
-      height: min(76dvh, calc(100dvh - 8.5rem));
+      min-height: 410px;
+      height: min(80dvh, calc(100dvh - 7.75rem));
     }
   }
 
   @media (min-width: 390px) and (max-width: 640px) and (min-height: 720px) {
     .sipena-grade-table-shell {
-      min-height: 460px;
-      height: min(82dvh, calc(100dvh - 7.5rem));
+      min-height: 540px;
+      height: min(86dvh, calc(100dvh - 5.75rem));
     }
   }
 
