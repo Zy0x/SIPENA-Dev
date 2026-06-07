@@ -89,6 +89,9 @@
       window.addEventListener('beforeinstallprompt', function(e) {
         e.preventDefault();
         window.deferredPrompt = e;
+        window.__pwa_deferred_prompt = e;
+        window.__pwa_prompt_available = true;
+        window.dispatchEvent(new Event('pwa_prompt_ready'));
       });
       // NOTE: Service worker registration is now handled exclusively by
       // vite-plugin-pwa (registerSW in src/app/main.tsx). The previous manual

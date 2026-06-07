@@ -43,6 +43,10 @@ function getNotifPermission(): NotificationPermission {
   return Notification.permission;
 }
 
+function readDeferredPrompt(): BeforeInstallPromptEvent | null {
+  return (window as any).__pwa_deferred_prompt || (window as any).deferredPrompt || null;
+}
+
 const SW_UPDATE_TIMEOUT_MS = 8000;
 const PWA_UPDATE_FALLBACK_RELOAD_MS = 12000;
 
@@ -132,7 +136,7 @@ async function activateWaitingServiceWorker(waitingWorker: ServiceWorker): Promi
 
 export function usePWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
-    () => (window as any).__pwa_deferred_prompt || null
+    () => readDeferredPrompt()
   );
   const [showBanner,    setShowBanner]    = useState(false);
   const [isInstalled,   setIsInstalled]   = useState(isStandaloneMode());
@@ -184,7 +188,7 @@ export function usePWA() {
       return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }
 
-    const existingPrompt = (window as any).__pwa_deferred_prompt as BeforeInstallPromptEvent | null;
+    const existingPrompt = readDeferredPrompt();
     if (existingPrompt) {
       setDeferredPrompt(existingPrompt);
       tryShowBanner(0);
@@ -194,13 +198,14 @@ export function usePWA() {
       e.preventDefault();
       const evt = e as BeforeInstallPromptEvent;
       (window as any).__pwa_deferred_prompt = evt;
+      (window as any).deferredPrompt = evt;
       (window as any).__pwa_prompt_available = true;
       setDeferredPrompt(evt);
       tryShowBanner(0);
     };
 
     const handlePromptReady = () => {
-      const evt = (window as any).__pwa_deferred_prompt;
+      const evt = readDeferredPrompt();
       if (evt && !bannerShownRef.current) {
         setDeferredPrompt(evt);
         tryShowBanner(0);
@@ -308,6 +313,7 @@ export function usePWA() {
     }
     setDeferredPrompt(null);
     (window as any).__pwa_deferred_prompt = null;
+    (window as any).deferredPrompt = null;
     bannerShownRef.current = false;
   }, [deferredPrompt]);
 

@@ -11,6 +11,7 @@ const envSchema = z.object({
   VITE_API_BASE_URL: z.string().default("http://localhost:3000/api"),
   VITE_SUPABASE_URL: z.string().optional(),
   VITE_SUPABASE_PUBLISHABLE_KEY: z.string().optional(),
+  VITE_VAPID_PUBLIC_KEY: z.string().optional(),
   VITE_FEATURE_PWA_INSTALL: z.coerce.boolean().default(true),
   VITE_FEATURE_OFFLINE_MODE: z.coerce.boolean().default(true),
   VITE_FEATURE_REALTIME: z.coerce.boolean().default(true),

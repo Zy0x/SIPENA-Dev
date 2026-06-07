@@ -41,7 +41,6 @@ import {
   User,
   Moon,
   Sun,
-  Bell,
   CheckCircle,
   Loader2,
   Trash2,
@@ -57,6 +56,7 @@ import {
 } from "lucide-react";
 import BatchImportDialog from "@/components/import/BatchImportDialog";
 import { SignatureSettingsSection } from "@/components/settings/SignatureSettingsSection";
+import { PwaNotificationSettingsSection } from "@/components/settings/PwaNotificationSettingsSection";
 
 function GradeTableSchemePreview({ schemeId }: { schemeId: GradeTableColorSchemeId }) {
   if (schemeId === "future") {
@@ -138,7 +138,6 @@ export default function Settings() {
     selectColorScheme: selectGradeTableColorScheme,
   } = useGradeTableColorScheme();
   
-  const [notifications, setNotifications] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   
   // Delete account state
@@ -147,14 +146,6 @@ export default function Settings() {
   const [showFinalDeleteDialog, setShowFinalDeleteDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Load notifications preference on mount
-  useState(() => {
-    const savedNotifications = localStorage.getItem("notifications");
-    if (savedNotifications !== null) {
-      setNotifications(savedNotifications === "true");
-    }
-  });
 
   const showAutoSaveFeedback = useCallback(() => {
     setSaveStatus("saved");
@@ -215,12 +206,6 @@ export default function Settings() {
       );
     }
   }, [gradeTableColorScheme, selectGradeTableColorScheme, showAutoSaveFeedback, showError]);
-
-  const toggleNotifications = useCallback((value: boolean) => {
-    setNotifications(value);
-    localStorage.setItem("notifications", value.toString());
-    showAutoSaveFeedback();
-  }, [showAutoSaveFeedback]);
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "HAPUS AKUN") return;
@@ -571,28 +556,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Notifications */}
-        <Card className="animate-fade-in-up delay-150 border border-border shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-grade-warning/10 flex items-center justify-center">
-                <Bell className="w-5 h-5 text-grade-warning" />
-              </div>
-              <CardTitle className="text-lg">Notifikasi</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground text-sm">Notifikasi Push</p>
-                <p className="text-xs text-muted-foreground">
-                  Terima pemberitahuan pembaruan
-                </p>
-              </div>
-              <Switch checked={notifications} onCheckedChange={toggleNotifications} />
-            </div>
-          </CardContent>
-        </Card>
+        <PwaNotificationSettingsSection />
 
         {/* Signature Settings */}
         <SignatureSettingsSection />
