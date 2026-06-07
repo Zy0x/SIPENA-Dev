@@ -3459,6 +3459,23 @@
     box-shadow: inherit !important;
     transform: none !important;
   }
+
+  .sipena-grade-toolbar button,
+  .sipena-grade-toolbar--fullscreen button {
+    touch-action: pan-x !important;
+  }
+
+  .sipena-grade-toolbar input,
+  .sipena-grade-toolbar--fullscreen input,
+  .sipena-grade-toolbar [role="combobox"],
+  .sipena-grade-toolbar--fullscreen [role="combobox"] {
+    touch-action: manipulation !important;
+  }
+
+  .sipena-grade-scroll {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @layer components {
@@ -3625,6 +3642,15 @@
   .sipena-grade-scroll {
     overscroll-behavior-x: contain;
     overscroll-behavior-y: auto;
+    scroll-behavior: auto;
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+  }
+
+  .sipena-grade-frozen-layer {
+    contain: strict;
+    backface-visibility: hidden;
+    will-change: transform;
   }
 
   @media (hover: hover) and (pointer: fine) {

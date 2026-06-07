@@ -221,31 +221,32 @@ function UpdateBanner({
   return (
     <div
       ref={ref}
-      className="fixed top-4 left-4 right-4 z-[999990] max-w-sm mx-auto"
+      className="fixed left-3 right-3 top-4 z-[999990] mx-auto w-auto max-w-xl sm:left-4 sm:right-4"
       style={{ pointerEvents: 'auto' }}
     >
       <div
-        className="bg-card border border-border rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3"
+        className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-xl sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-5"
         style={{ pointerEvents: 'auto' }}
+        aria-live="polite"
       >
-        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isUpdating ? 'bg-primary/15' : 'bg-blue-500/15'}`}>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isUpdating ? 'bg-primary/15' : 'bg-blue-500/15'}`}>
           <RefreshCw className={`w-4 h-4 ${isUpdating ? 'text-primary animate-spin' : 'text-blue-500'}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-foreground">
+          <p className="text-sm font-semibold leading-tight text-foreground">
             {isUpdating ? 'Memperbarui aplikasi...' : 'Pembaruan tersedia'}
           </p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
             {isUpdating
               ? 'Mohon tunggu, versi terbaru sedang diterapkan'
               : `Otomatis diterapkan dalam ${Math.max(0, countdown)} detik. Simpan pekerjaan dulu jika perlu.`}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="col-span-2 flex min-w-0 items-center justify-end gap-2 sm:col-span-1 sm:shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onUpdate(); }}
             disabled={isUpdating}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`min-h-9 min-w-0 flex-1 rounded-xl px-3 py-2 text-xs font-bold transition-all sm:flex-none sm:whitespace-nowrap ${
               isUpdating
                 ? 'bg-primary/80 text-primary-foreground cursor-wait'
                 : 'bg-primary text-primary-foreground hover:opacity-90'
@@ -257,7 +258,7 @@ function UpdateBanner({
           <button
             onClick={(e) => { e.stopPropagation(); onWait(); }}
             disabled={isUpdating}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold ${isUpdating ? 'opacity-40 cursor-not-allowed' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
+            className={`min-h-9 rounded-xl px-3 py-2 text-xs font-semibold sm:whitespace-nowrap ${isUpdating ? 'opacity-40 cursor-not-allowed' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
             style={{ pointerEvents: 'auto' }}
           >
             Tunggu
@@ -290,9 +291,20 @@ export default function PWAManager() {
   const [updateCountdown, setUpdateCountdown] = useState(UPDATE_AUTO_APPLY_SECONDS);
   const dismissedRef = useRef(false);
   const waitUntilRef = useRef(0);
+  const updateBannerVisibleRef = useRef(false);
+  const isUpdatingRef = useRef(false);
+
+  useEffect(() => {
+    updateBannerVisibleRef.current = showUpdateBanner;
+  }, [showUpdateBanner]);
+
+  useEffect(() => {
+    isUpdatingRef.current = isUpdating;
+  }, [isUpdating]);
 
   const triggerUpdate = useCallback(() => {
     if (dismissedRef.current || Date.now() < waitUntilRef.current) return;
+    if (updateBannerVisibleRef.current || isUpdatingRef.current) return;
     setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
     setShowUpdateBanner(true);
   }, []);
@@ -301,7 +313,9 @@ export default function PWAManager() {
     if (isUpdating) return;
     dismissedRef.current = true;
     setShowUpdateBanner(true);
+    updateBannerVisibleRef.current = true;
     setIsUpdating(true);
+    isUpdatingRef.current = true;
 
     const hardReloadTimer = window.setTimeout(() => {
       window.location.reload();
@@ -438,6 +452,7 @@ export default function PWAManager() {
     if (isUpdating) return;
     waitUntilRef.current = Date.now() + UPDATE_WAIT_MS;
     setShowUpdateBanner(false);
+    updateBannerVisibleRef.current = false;
     setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
   }, [isUpdating]);
 

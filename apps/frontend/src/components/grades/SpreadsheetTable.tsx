@@ -242,14 +242,24 @@ export function SpreadsheetTable({
   const freezeMenuRef = useRef<HTMLDivElement>(null);
   const freezeMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const frozenTouchLayerRef = useRef<HTMLDivElement>(null);
-  const toolbarDragRef = useRef<{ x: number; y: number; moved: boolean; resetTimer: ReturnType<typeof setTimeout> | null }>({
+  const toolbarDragRef = useRef<{
+    x: number;
+    y: number;
+    moved: boolean;
+    suppressClickUntil: number;
+    resetTimer: ReturnType<typeof setTimeout> | null;
+  }>({
     x: 0,
     y: 0,
     moved: false,
+    suppressClickUntil: 0,
     resetTimer: null,
   });
   const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
-  const overlayPanRef = useRef<{ x: number; y: number } | null>(null);
+  const overlayPanRef = useRef<{ x: number; y: number; time: number; velocityX: number; velocityY: number } | null>(null);
+  const overlayMomentumRef = useRef<number | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
+  const pendingScrollRef = useRef({ left: 0, top: 0 });
   const pinchRef = useRef({
     active: false,
     startDistance: 0,
@@ -587,9 +597,35 @@ export function SpreadsheetTable({
   // Scroll handler
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
-    setScrollLeft(target.scrollLeft);
-    setScrollTop(target.scrollTop);
+    pendingScrollRef.current = {
+      left: target.scrollLeft,
+      top: target.scrollTop,
+    };
+
+    if (scrollRafRef.current !== null) return;
+
+    scrollRafRef.current = window.requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      setScrollLeft(pendingScrollRef.current.left);
+      setScrollTop(pendingScrollRef.current.top);
+    });
   }, []);
+
+  useEffect(() => () => {
+    if (scrollRafRef.current !== null) {
+      window.cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
+    }
+  }, []);
+
+  const cancelOverlayMomentum = useCallback(() => {
+    if (overlayMomentumRef.current !== null) {
+      window.cancelAnimationFrame(overlayMomentumRef.current);
+      overlayMomentumRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => cancelOverlayMomentum(), [cancelOverlayMomentum]);
 
   const scrollPageBy = useCallback((deltaY: number) => {
     const pageScroller = document.querySelector<HTMLElement>("[data-app-scroll-container]");
@@ -784,9 +820,14 @@ export function SpreadsheetTable({
     );
 
     if (e.touches.length === 1 && el && e.target instanceof Node && (!el.contains(e.target) || originatedInFrozenLayer)) {
+      cancelOverlayMomentum();
+      const now = performance.now();
       overlayPanRef.current = {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
+        time: now,
+        velocityX: 0,
+        velocityY: 0,
       };
       return;
     }
@@ -802,14 +843,17 @@ export function SpreadsheetTable({
         startZoom: zoomLevel,
       };
     }
-  }, [zoomLevel, getDistance, formatLocked]);
+  }, [cancelOverlayMomentum, zoomLevel, getDistance, formatLocked]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     const el = scrollContainerRef.current;
     if (e.touches.length === 1 && el && overlayPanRef.current) {
       const touch = e.touches[0];
-      const deltaX = overlayPanRef.current.x - touch.clientX;
-      const deltaY = overlayPanRef.current.y - touch.clientY;
+      const previous = overlayPanRef.current;
+      const deltaX = previous.x - touch.clientX;
+      const deltaY = previous.y - touch.clientY;
+      const now = performance.now();
+      const dt = Math.max(8, now - previous.time);
       const isMostlyVertical = Math.abs(deltaY) > Math.abs(deltaX);
       const tolerance = 1;
       const atTop = el.scrollTop <= tolerance;
@@ -817,7 +861,13 @@ export function SpreadsheetTable({
       const shouldReleaseToPage = !isFullscreen && isMostlyVertical && (
         (deltaY < 0 && atTop) || (deltaY > 0 && atBottom)
       );
-      overlayPanRef.current = { x: touch.clientX, y: touch.clientY };
+      overlayPanRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: now,
+        velocityX: deltaX / dt,
+        velocityY: deltaY / dt,
+      };
 
       if (shouldReleaseToPage) {
         scrollPageBy(deltaY);
@@ -826,7 +876,8 @@ export function SpreadsheetTable({
         return;
       }
 
-      el.scrollBy({ left: deltaX, top: deltaY, behavior: "auto" });
+      el.scrollLeft += deltaX;
+      el.scrollTop += deltaY;
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -849,7 +900,43 @@ export function SpreadsheetTable({
   }, [getDistance, formatLocked, isFullscreen, scrollPageBy]);
 
   const handleTouchEnd = useCallback((_e: React.TouchEvent) => {
+    const overlayPan = overlayPanRef.current;
     overlayPanRef.current = null;
+
+    const el = scrollContainerRef.current;
+    if (el && overlayPan) {
+      let velocityX = overlayPan.velocityX;
+      let velocityY = overlayPan.velocityY;
+
+      if (Math.hypot(velocityX, velocityY) > 0.035) {
+        cancelOverlayMomentum();
+
+        const step = () => {
+          velocityX *= 0.92;
+          velocityY *= 0.92;
+
+          if (Math.hypot(velocityX, velocityY) < 0.012) {
+            overlayMomentumRef.current = null;
+            return;
+          }
+
+          const beforeLeft = el.scrollLeft;
+          const beforeTop = el.scrollTop;
+          el.scrollLeft += velocityX * 16;
+          el.scrollTop += velocityY * 16;
+
+          const hitHorizontalEdge = Math.abs(el.scrollLeft - beforeLeft) < 0.5 && Math.abs(velocityX) > 0.02;
+          const hitVerticalEdge = Math.abs(el.scrollTop - beforeTop) < 0.5 && Math.abs(velocityY) > 0.02;
+          if (hitHorizontalEdge) velocityX = 0;
+          if (hitVerticalEdge) velocityY = 0;
+
+          overlayMomentumRef.current = window.requestAnimationFrame(step);
+        };
+
+        overlayMomentumRef.current = window.requestAnimationFrame(step);
+      }
+    }
+
     // Reset pinch state
     pinchRef.current.active = false;
     // Clear long press timer
@@ -967,7 +1054,7 @@ export function SpreadsheetTable({
     toolbarDragRef.current.resetTimer = setTimeout(() => {
       toolbarDragRef.current.moved = false;
       toolbarDragRef.current.resetTimer = null;
-    }, 180);
+    }, 700);
   }, []);
 
   const handleToolbarTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -987,17 +1074,20 @@ export function SpreadsheetTable({
     const touch = e.touches[0];
     const deltaX = Math.abs(touch.clientX - toolbarDragRef.current.x);
     const deltaY = Math.abs(touch.clientY - toolbarDragRef.current.y);
-    if (deltaX > 8 && deltaX > deltaY) {
+    if (deltaX > 6 || deltaY > 10) {
       toolbarDragRef.current.moved = true;
     }
   }, []);
 
   const handleToolbarTouchEnd = useCallback(() => {
+    if (toolbarDragRef.current.moved) {
+      toolbarDragRef.current.suppressClickUntil = Date.now() + 650;
+    }
     resetToolbarDragState();
   }, [resetToolbarDragState]);
 
   const handleToolbarClickCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!toolbarDragRef.current.moved) return;
+    if (!toolbarDragRef.current.moved && Date.now() >= toolbarDragRef.current.suppressClickUntil) return;
     e.preventDefault();
     e.stopPropagation();
     resetToolbarDragState();
@@ -2061,7 +2151,7 @@ export function SpreadsheetTable({
         {frozenColumns.size > 0 && (
           <div
             ref={frozenTouchLayerRef}
-            className="absolute z-20 bg-background"
+            className="sipena-grade-frozen-layer absolute z-20 bg-background"
             style={{
               left: 0,
               top: totalHeaderHeight * zoomFactor,
@@ -2077,7 +2167,7 @@ export function SpreadsheetTable({
             <div
               style={{
                 position: 'relative',
-                transform: `translateY(-${scrollTop}px)`,
+                transform: `translate3d(0, -${scrollTop}px, 0)`,
                 height: getTotalHeight(),
                 width: '100%',
               }}
