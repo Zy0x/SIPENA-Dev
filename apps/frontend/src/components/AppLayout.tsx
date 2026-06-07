@@ -415,8 +415,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
        {/* Sidebar */}
        <aside
          ref={sidebarRef}
-         data-sipena-sidebar="main"
-         data-mobile-state={sidebarOpen ? "open" : "closed"}
          className={cn(
            "fixed inset-y-0 left-0 z-50 flex flex-col",
             "lg:bg-card lg:border-r lg:border-border",
@@ -629,7 +627,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
  
        {/* Spacer for sidebar on desktop */}
        <div
-         data-sipena-sidebar-spacer="true"
          className={cn(
            "hidden lg:block shrink-0 transition-all duration-300 ease-out",
            sidebarCollapsed ? "w-[72px]" : "w-[260px]"

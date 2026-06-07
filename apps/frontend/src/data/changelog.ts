@@ -42,22 +42,6 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
-    id: "v2.4.47",
-    version: "2.4.47",
-    title: "Viewport Input Nilai Lebih Aman",
-    description: "Input Nilai diperbaiki untuk custom viewport browser, mobile fullscreen, dan toolbar tabel yang bisa digeser.",
-    type: "improvement",
-    is_critical: false,
-    released_at: "2026-06-07",
-    details: [
-      "Sidebar dipaksa menjadi drawer mobile pada viewport di bawah 1024px, termasuk mode custom viewport DevTools.",
-      "Tab Struktur BAB dan Input Nilai dibuat lebih jelas sebagai tab aktif/nonaktif dan tidak mudah terlihat terpotong.",
-      "Toolbar tabel sekarang punya indikator geser saat tombol lanjutan berada di samping.",
-      "Mode fullscreen native mendapat fallback area aman untuk layar punch-hole/dot display.",
-      "Area tabel mobile portrait diperbesar agar lebih banyak baris nilai terlihat.",
-    ],
-  },
-  {
     id: "v2.4.46",
     version: "2.4.46",
     title: "Tabel Input Nilai Lebih Jelas",

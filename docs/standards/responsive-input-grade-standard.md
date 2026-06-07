@@ -31,9 +31,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Pada fullscreen landscape pendek, toolbar harus memprioritaskan satu baris compact. Label panjang boleh disembunyikan, tetapi icon dan tombol aksi wajib tetap dapat ditekan.
 - Fullscreen Input Nilai harus membedakan mode `Mode Layar Penuh Panel` di dalam tab browser dan `Mode Layar Penuh Native` yang memakai Fullscreen API. Jika browser menolak Fullscreen API, UI wajib fallback ke mode panel dengan pesan non-teknis.
 - Mode Layar Penuh Native wajib membaca `visualViewport`, orientasi, DPR, dan `safe-area-inset-*` agar tombol kanan/kiri tidak masuk area notch, punch-hole, navigation bar, atau cutout mobile.
-- Jika browser tidak melaporkan safe-area dengan benar pada perangkat punch-hole/dot display, fullscreen native wajib memakai fallback padding top khusus perangkat touch agar toolbar tidak berada di bawah kamera.
 - Pada mobile portrait sekitar `392x778`, toolbar tabel harus mengutamakan satu baris compact dengan scroll horizontal terkontrol. Pencarian siswa tetap terlihat dalam satu layar, sementara ruang vertikal harus diprioritaskan untuk tabel.
-- Toolbar yang memakai scroll horizontal wajib punya indikator visual bahwa area bisa digeser, terutama pada viewport mobile portrait dan fullscreen landscape.
 - Tombol tutup fullscreen wajib keluar dari overlay Input Nilai dan, bila aktif, juga keluar dari fullscreen browser.
 - Tombol close/tutup harus selalu terlihat, memakai warna destructive/merah, dan tidak boleh terdorong keluar viewport.
 - Count pencarian siswa tidak boleh menambah tinggi toolbar secara tiba-tiba. Jika ruang sempit, count dipindah ke info bar atau disembunyikan.
@@ -48,12 +46,6 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Isi dropdown harus kontras di light/dark mode. State hover/active tidak boleh membuat teks deskripsi menyatu dengan background.
 - State hover/active item menu tidak boleh memakai background penuh yang membuat judul, ikon, atau deskripsi sulit dibaca. Pakai tint ringan dari token semantic dan cek light/dark mode.
 - Modal dan popover yang berisi tabel harus punya satu scroll container utama yang jelas.
-
-## Shell, Sidebar, dan Tab
-
-- Pada viewport di bawah `1024px`, termasuk custom viewport DevTools, sidebar harus selalu berperilaku sebagai drawer mobile. Jangan biarkan collapsed desktop sidebar menyisakan panel putih dan spacer yang memakan area konten.
-- Tab utama seperti `Struktur BAB` dan `Input Nilai` harus terlihat sebagai tab aktif/nonaktif yang jelas: tinggi cukup, active state kontras, border/radius tegas, dan tidak terpotong pada `415x866`.
-- Saat viewport custom browser berbeda dari ukuran layar fisik, CSS berbasis `max-width` tetap harus menjadi pengaman terakhir selain state/animasi JavaScript.
 
 ## Tabel dan Scroll
 
