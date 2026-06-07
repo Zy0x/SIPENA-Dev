@@ -430,8 +430,12 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("scrollPageBy(deltaY)");
     expect(spreadsheetSource).toContain("overlayPanRef");
     expect(spreadsheetSource).toContain("toolbarDragRef");
+    expect(spreadsheetSource).toContain("handleToolbarPointerDownCapture");
+    expect(spreadsheetSource).toContain("handleGuardedDropdownPointerDown");
+    expect(spreadsheetSource).toContain("handleToolbarDropdownOpenChange");
     expect(spreadsheetSource).toContain("handleToolbarClickCapture");
     expect(spreadsheetSource).toContain("onWheel={handleWheel}");
+    expect(spreadsheetSource).toContain("handleFrozenLayerWheel");
     expect(spreadsheetSource).toContain("onTouchStart={handleTouchStart}");
     expect(spreadsheetSource).toContain("isStandaloneFinalColumn(column)");
     expect(spreadsheetSource).toContain("height: totalHeaderHeight * zoomFactor");
@@ -448,6 +452,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).toContain("exitFullscreen");
     expect(gradesPageSource).toContain("fullscreenchange");
     expect(gradesPageSource).toContain("sipenaGradeFullscreen");
+    expect(gradesPageSource).toContain("isGradeFullscreenHistoryState(event.state)");
     expect(gradesPageSource).toContain("popstate");
     expect(gradesPageSource).toContain("skipHistoryBack");
     expect(gradesPageSource).toContain("gradeOverlayOpenRef");

@@ -109,6 +109,10 @@ interface GradesProps {
   mode?: GradeInputMode;
 }
 
+function isGradeFullscreenHistoryState(state: unknown): state is { sipenaGradeFullscreen: true } {
+  return typeof state === "object" && state !== null && (state as { sipenaGradeFullscreen?: unknown }).sipenaGradeFullscreen === true;
+}
+
 interface GuestSession {
   guestId: string;
   name: string;
@@ -431,8 +435,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       gradeFullscreenHistoryRef.current = true;
     }
 
-    const handlePopState = () => {
+    const handlePopState = (event: PopStateEvent) => {
       if (!gradeFullscreenHistoryRef.current) return;
+      // Dialog close inside fullscreen returns to this marker. Keep fullscreen active.
+      if (isGradeFullscreenHistoryState(event.state)) return;
       gradeFullscreenHistoryRef.current = false;
       void closeGradeFullscreen({ skipHistoryBack: true });
     };

@@ -106,6 +106,17 @@ const NAME_CELL_VERTICAL_PADDING = 12;
 const NAME_LINE_HEIGHT = 16;
 const NISN_LINE_HEIGHT = 12;
 const GRADE_HINT_POPUP_ENABLED = false;
+const TOOLBAR_DRAG_SUPPRESS_MS = 650;
+const TOOLBAR_DRAG_RESET_MS = 700;
+const TOOLBAR_DRAG_THRESHOLD_X = 6;
+const TOOLBAR_DRAG_THRESHOLD_Y = 10;
+const WHEEL_LINE_HEIGHT = 16;
+
+function normalizeWheelDelta(delta: number, deltaMode: number, pageSize: number): number {
+  if (deltaMode === 1) return delta * WHEEL_LINE_HEIGHT;
+  if (deltaMode === 2) return delta * pageSize;
+  return delta;
+}
 
 function estimateWrappedLineCount(text: string, width: number): number {
   const words = text.trim().split(/\s+/).filter(Boolean);
@@ -212,6 +223,8 @@ export function SpreadsheetTable({
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
   const [hoveredColumnIndex, setHoveredColumnIndex] = useState<number | null>(null);
   const [showFreezeMenu, setShowFreezeMenu] = useState(false);
+  const [showProtectionMenu, setShowProtectionMenu] = useState(false);
+  const [showFullscreenMenu, setShowFullscreenMenu] = useState(false);
   const [freezeMenuType, setFreezeMenuType] = useState<'column' | 'row'>('column');
   // Auto-lock format in fullscreen mode
   const [formatLocked, setFormatLocked] = useState(false);
@@ -246,12 +259,16 @@ export function SpreadsheetTable({
     x: number;
     y: number;
     moved: boolean;
+    pointerActive: boolean;
+    pointerId: number | null;
     suppressClickUntil: number;
     resetTimer: ReturnType<typeof setTimeout> | null;
   }>({
     x: 0,
     y: 0,
     moved: false,
+    pointerActive: false,
+    pointerId: null,
     suppressClickUntil: 0,
     resetTimer: null,
   });
@@ -636,25 +653,35 @@ export function SpreadsheetTable({
     }
   }, []);
 
+  const scrollSpreadsheetBy = useCallback((deltaX: number, deltaY: number) => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    el.scrollLeft += deltaX;
+    el.scrollTop += deltaY;
+  }, []);
+
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     const el = scrollContainerRef.current;
     if (!el) return;
 
     const originatedInScrollContainer = e.target instanceof Node && el.contains(e.target);
-    const isVerticalWheel = Math.abs(e.deltaY) > Math.abs(e.deltaX);
+    const deltaX = normalizeWheelDelta(e.deltaX, e.deltaMode, el.clientWidth);
+    const deltaY = normalizeWheelDelta(e.deltaY, e.deltaMode, el.clientHeight);
+    const isVerticalWheel = Math.abs(deltaY) > Math.abs(deltaX);
 
     if (!originatedInScrollContainer) {
       const tolerance = 1;
       const atTop = el.scrollTop <= tolerance;
       const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
       const shouldReleaseToPage = !isFullscreen && isVerticalWheel && (
-        (e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)
+        (deltaY < 0 && atTop) || (deltaY > 0 && atBottom)
       );
 
       if (shouldReleaseToPage) {
-        scrollPageBy(e.deltaY);
+        scrollPageBy(deltaY);
       } else {
-        el.scrollBy({ left: e.deltaX, top: e.deltaY, behavior: "auto" });
+        scrollSpreadsheetBy(deltaX, deltaY);
       }
       e.preventDefault();
       e.stopPropagation();
@@ -666,14 +693,40 @@ export function SpreadsheetTable({
     const tolerance = 1;
     const atTop = el.scrollTop <= tolerance;
     const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
-    const shouldReleaseToPage = (e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom);
+    const shouldReleaseToPage = (deltaY < 0 && atTop) || (deltaY > 0 && atBottom);
 
     if (!shouldReleaseToPage) return;
 
-    scrollPageBy(e.deltaY);
+    scrollPageBy(deltaY);
     e.preventDefault();
     e.stopPropagation();
-  }, [isFullscreen, scrollPageBy]);
+  }, [isFullscreen, scrollPageBy, scrollSpreadsheetBy]);
+
+  const handleFrozenLayerWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    cancelOverlayMomentum();
+
+    const deltaX = normalizeWheelDelta(e.deltaX, e.deltaMode, el.clientWidth);
+    const deltaY = normalizeWheelDelta(e.deltaY, e.deltaMode, el.clientHeight);
+    const isVerticalWheel = Math.abs(deltaY) > Math.abs(deltaX);
+    const tolerance = 1;
+    const atTop = el.scrollTop <= tolerance;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
+    const shouldReleaseToPage = !isFullscreen && isVerticalWheel && (
+      (deltaY < 0 && atTop) || (deltaY > 0 && atBottom)
+    );
+
+    if (shouldReleaseToPage) {
+      scrollPageBy(deltaY);
+    } else {
+      scrollSpreadsheetBy(deltaX, deltaY);
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+  }, [cancelOverlayMomentum, isFullscreen, scrollPageBy, scrollSpreadsheetBy]);
 
   // Toggle freeze column - blocked when format is locked
   const toggleFreezeColumn = useCallback((colIndex: number) => {
@@ -944,7 +997,7 @@ export function SpreadsheetTable({
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
-  }, []);
+  }, [cancelOverlayMomentum]);
 
   // Show hint popup - for both long press (mobile) and hover (desktop fullscreen)
   const showHintForCell = useCallback((
@@ -1054,44 +1107,98 @@ export function SpreadsheetTable({
     toolbarDragRef.current.resetTimer = setTimeout(() => {
       toolbarDragRef.current.moved = false;
       toolbarDragRef.current.resetTimer = null;
-    }, 700);
+    }, TOOLBAR_DRAG_RESET_MS);
   }, []);
 
-  const handleToolbarTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length !== 1) return;
-    const touch = e.touches[0];
-    toolbarDragRef.current.x = touch.clientX;
-    toolbarDragRef.current.y = touch.clientY;
+  const isToolbarActivationSuppressed = useCallback(() => (
+    toolbarDragRef.current.moved || Date.now() < toolbarDragRef.current.suppressClickUntil
+  ), []);
+
+  const handleToolbarPointerDownCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    toolbarDragRef.current.x = e.clientX;
+    toolbarDragRef.current.y = e.clientY;
     toolbarDragRef.current.moved = false;
+    toolbarDragRef.current.pointerActive = true;
+    toolbarDragRef.current.pointerId = e.pointerId;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer capture is best-effort; the click guard still works without it.
+    }
     if (toolbarDragRef.current.resetTimer) {
       clearTimeout(toolbarDragRef.current.resetTimer);
       toolbarDragRef.current.resetTimer = null;
     }
   }, []);
 
-  const handleToolbarTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length !== 1) return;
-    const touch = e.touches[0];
-    const deltaX = Math.abs(touch.clientX - toolbarDragRef.current.x);
-    const deltaY = Math.abs(touch.clientY - toolbarDragRef.current.y);
-    if (deltaX > 6 || deltaY > 10) {
+  const handleToolbarPointerMoveCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!toolbarDragRef.current.pointerActive || toolbarDragRef.current.pointerId !== e.pointerId) return;
+    const deltaX = Math.abs(e.clientX - toolbarDragRef.current.x);
+    const deltaY = Math.abs(e.clientY - toolbarDragRef.current.y);
+    if (deltaX > TOOLBAR_DRAG_THRESHOLD_X || deltaY > TOOLBAR_DRAG_THRESHOLD_Y) {
       toolbarDragRef.current.moved = true;
     }
   }, []);
 
-  const handleToolbarTouchEnd = useCallback(() => {
+  const handleToolbarPointerEndCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (toolbarDragRef.current.pointerId !== null && toolbarDragRef.current.pointerId !== e.pointerId) return;
     if (toolbarDragRef.current.moved) {
-      toolbarDragRef.current.suppressClickUntil = Date.now() + 650;
+      toolbarDragRef.current.suppressClickUntil = Date.now() + TOOLBAR_DRAG_SUPPRESS_MS;
     }
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // The pointer may already be released by the browser.
+    }
+    toolbarDragRef.current.pointerActive = false;
+    toolbarDragRef.current.pointerId = null;
     resetToolbarDragState();
   }, [resetToolbarDragState]);
 
   const handleToolbarClickCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!toolbarDragRef.current.moved && Date.now() >= toolbarDragRef.current.suppressClickUntil) return;
+    if (!isToolbarActivationSuppressed()) return;
     e.preventDefault();
     e.stopPropagation();
     resetToolbarDragState();
-  }, [resetToolbarDragState]);
+  }, [isToolbarActivationSuppressed, resetToolbarDragState]);
+
+  const handleToolbarDropdownOpenChange = useCallback((
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>,
+    nextOpen: boolean,
+  ) => {
+    if (nextOpen && (toolbarDragRef.current.pointerActive || isToolbarActivationSuppressed())) return;
+    setOpen(nextOpen);
+  }, [isToolbarActivationSuppressed]);
+
+  const handleGuardedDropdownPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.currentTarget.focus({ preventScroll: true });
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleGuardedDropdownClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    if (e.detail === 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleProtectionDropdownPointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (isToolbarActivationSuppressed()) return;
+    setShowProtectionMenu((current) => !current);
+  }, [isToolbarActivationSuppressed]);
+
+  const handleFullscreenDropdownPointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (isToolbarActivationSuppressed()) return;
+    setShowFullscreenMenu((current) => !current);
+  }, [isToolbarActivationSuppressed]);
 
   const handleCellTouchEnd = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -1740,10 +1847,10 @@ export function SpreadsheetTable({
       {/* Toolbar - matching template style */}
       <div
         className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3`}
-        onTouchStart={handleToolbarTouchStart}
-        onTouchMove={handleToolbarTouchMove}
-        onTouchEnd={handleToolbarTouchEnd}
-        onTouchCancel={handleToolbarTouchEnd}
+        onPointerDownCapture={handleToolbarPointerDownCapture}
+        onPointerMoveCapture={handleToolbarPointerMoveCapture}
+        onPointerUpCapture={handleToolbarPointerEndCapture}
+        onPointerCancelCapture={handleToolbarPointerEndCapture}
         onClickCapture={handleToolbarClickCapture}
       >
         <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
@@ -1774,14 +1881,21 @@ export function SpreadsheetTable({
               {scrollLockMode ? <Hand className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
               <span className="sipena-grade-action-text hidden sm:inline">{protectionModeLabel}</span>
             </Button>
-            <DropdownMenu>
+            <DropdownMenu
+              open={showProtectionMenu}
+              onOpenChange={(nextOpen) => handleToolbarDropdownOpenChange(setShowProtectionMenu, nextOpen)}
+            >
               <DropdownMenuTrigger asChild>
                 <Button
+                  type="button"
                   variant={formatLocked || scrollLockMode ? "default" : "ghost"}
                   size="sm"
                   className="h-9 sm:h-10 w-9 sm:w-10 rounded-none border-0 border-l border-border/50 px-0"
                   title="Pilih mode proteksi spreadsheet"
-                  style={{ touchAction: 'manipulation' }}
+                  onPointerDown={handleGuardedDropdownPointerDown}
+                  onPointerUp={handleProtectionDropdownPointerUp}
+                  onClick={handleGuardedDropdownClick}
+                  style={{ touchAction: 'pan-x' }}
                 >
                   <ChevronDown className="w-4 h-4" />
                 </Button>
@@ -1916,13 +2030,20 @@ export function SpreadsheetTable({
           {/* Fullscreen button for non-fullscreen mode */}
           {!isFullscreen && onEnterFullscreen && (
             onEnterBrowserFullscreen ? (
-              <DropdownMenu>
+              <DropdownMenu
+                open={showFullscreenMenu}
+                onOpenChange={(nextOpen) => handleToolbarDropdownOpenChange(setShowFullscreenMenu, nextOpen)}
+              >
                 <DropdownMenuTrigger asChild>
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
                     className="sipena-grade-fullscreen-trigger h-9 gap-1 px-2.5 sm:px-3"
-                    style={{ touchAction: 'manipulation' }}
+                    onPointerDown={handleGuardedDropdownPointerDown}
+                    onPointerUp={handleFullscreenDropdownPointerUp}
+                    onClick={handleGuardedDropdownClick}
+                    style={{ touchAction: 'pan-x' }}
                   >
                     <Maximize2 className="w-4 h-4" />
                     <span className="sipena-grade-fullscreen-label hidden sm:inline">Fullscreen</span>
@@ -2151,6 +2272,7 @@ export function SpreadsheetTable({
         {frozenColumns.size > 0 && (
           <div
             ref={frozenTouchLayerRef}
+            onWheel={handleFrozenLayerWheel}
             className="sipena-grade-frozen-layer absolute z-20 bg-background"
             style={{
               left: 0,
