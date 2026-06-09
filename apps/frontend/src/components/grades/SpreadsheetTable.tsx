@@ -44,6 +44,7 @@ import {
   captureViewportTelemetrySnapshot,
   clearViewportCssVariables,
 } from "@/lib/viewportTelemetry";
+import { isVerticalScrollBoundary, scrollPageBy } from "@/lib/scrollChaining";
 
 // Types
 interface Chapter {
@@ -272,6 +273,7 @@ export function SpreadsheetTable({
     suppressClickUntil: 0,
     resetTimer: null,
   });
+  const suppressCoarseDropdownClickUntilRef = useRef(0);
   const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
   const overlayPanRef = useRef<{ x: number; y: number; time: number; velocityX: number; velocityY: number } | null>(null);
   const overlayMomentumRef = useRef<number | null>(null);
@@ -644,15 +646,6 @@ export function SpreadsheetTable({
 
   useEffect(() => () => cancelOverlayMomentum(), [cancelOverlayMomentum]);
 
-  const scrollPageBy = useCallback((deltaY: number) => {
-    const pageScroller = document.querySelector<HTMLElement>("[data-app-scroll-container]");
-    if (pageScroller && pageScroller.scrollHeight > pageScroller.clientHeight) {
-      pageScroller.scrollBy({ top: deltaY, behavior: "auto" });
-    } else {
-      window.scrollBy({ top: deltaY, behavior: "auto" });
-    }
-  }, []);
-
   const scrollSpreadsheetBy = useCallback((deltaX: number, deltaY: number) => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -671,11 +664,8 @@ export function SpreadsheetTable({
     const isVerticalWheel = Math.abs(deltaY) > Math.abs(deltaX);
 
     if (!originatedInScrollContainer) {
-      const tolerance = 1;
-      const atTop = el.scrollTop <= tolerance;
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
       const shouldReleaseToPage = !isFullscreen && isVerticalWheel && (
-        (deltaY < 0 && atTop) || (deltaY > 0 && atBottom)
+        isVerticalScrollBoundary(el, deltaY)
       );
 
       if (shouldReleaseToPage) {
@@ -690,17 +680,14 @@ export function SpreadsheetTable({
 
     if (!isVerticalWheel || isFullscreen) return;
 
-    const tolerance = 1;
-    const atTop = el.scrollTop <= tolerance;
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
-    const shouldReleaseToPage = (deltaY < 0 && atTop) || (deltaY > 0 && atBottom);
+    const shouldReleaseToPage = isVerticalScrollBoundary(el, deltaY);
 
     if (!shouldReleaseToPage) return;
 
     scrollPageBy(deltaY);
     e.preventDefault();
     e.stopPropagation();
-  }, [isFullscreen, scrollPageBy, scrollSpreadsheetBy]);
+  }, [isFullscreen, scrollSpreadsheetBy]);
 
   const handleFrozenLayerWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     const el = scrollContainerRef.current;
@@ -711,11 +698,8 @@ export function SpreadsheetTable({
     const deltaX = normalizeWheelDelta(e.deltaX, e.deltaMode, el.clientWidth);
     const deltaY = normalizeWheelDelta(e.deltaY, e.deltaMode, el.clientHeight);
     const isVerticalWheel = Math.abs(deltaY) > Math.abs(deltaX);
-    const tolerance = 1;
-    const atTop = el.scrollTop <= tolerance;
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
     const shouldReleaseToPage = !isFullscreen && isVerticalWheel && (
-      (deltaY < 0 && atTop) || (deltaY > 0 && atBottom)
+      isVerticalScrollBoundary(el, deltaY)
     );
 
     if (shouldReleaseToPage) {
@@ -726,7 +710,7 @@ export function SpreadsheetTable({
 
     e.preventDefault();
     e.stopPropagation();
-  }, [cancelOverlayMomentum, isFullscreen, scrollPageBy, scrollSpreadsheetBy]);
+  }, [cancelOverlayMomentum, isFullscreen, scrollSpreadsheetBy]);
 
   // Toggle freeze column - blocked when format is locked
   const toggleFreezeColumn = useCallback((colIndex: number) => {
@@ -908,11 +892,8 @@ export function SpreadsheetTable({
       const now = performance.now();
       const dt = Math.max(8, now - previous.time);
       const isMostlyVertical = Math.abs(deltaY) > Math.abs(deltaX);
-      const tolerance = 1;
-      const atTop = el.scrollTop <= tolerance;
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - tolerance;
       const shouldReleaseToPage = !isFullscreen && isMostlyVertical && (
-        (deltaY < 0 && atTop) || (deltaY > 0 && atBottom)
+        isVerticalScrollBoundary(el, deltaY)
       );
       overlayPanRef.current = {
         x: touch.clientX,
@@ -950,7 +931,7 @@ export function SpreadsheetTable({
       setZoomLevel(newZoom);
       setZoomInput(newZoom.toString());
     }
-  }, [getDistance, formatLocked, isFullscreen, scrollPageBy]);
+  }, [getDistance, formatLocked, isFullscreen]);
 
   const handleTouchEnd = useCallback((_e: React.TouchEvent) => {
     const overlayPan = overlayPanRef.current;
@@ -1121,11 +1102,6 @@ export function SpreadsheetTable({
     toolbarDragRef.current.moved = false;
     toolbarDragRef.current.pointerActive = true;
     toolbarDragRef.current.pointerId = e.pointerId;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // Pointer capture is best-effort; the click guard still works without it.
-    }
     if (toolbarDragRef.current.resetTimer) {
       clearTimeout(toolbarDragRef.current.resetTimer);
       toolbarDragRef.current.resetTimer = null;
@@ -1141,20 +1117,31 @@ export function SpreadsheetTable({
     }
   }, []);
 
-  const handleToolbarPointerEndCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (toolbarDragRef.current.pointerId !== null && toolbarDragRef.current.pointerId !== e.pointerId) return;
+  const finishToolbarPointer = useCallback((pointerId: number) => {
+    if (!toolbarDragRef.current.pointerActive) return;
+    if (toolbarDragRef.current.pointerId !== null && toolbarDragRef.current.pointerId !== pointerId) return;
     if (toolbarDragRef.current.moved) {
       toolbarDragRef.current.suppressClickUntil = Date.now() + TOOLBAR_DRAG_SUPPRESS_MS;
-    }
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // The pointer may already be released by the browser.
     }
     toolbarDragRef.current.pointerActive = false;
     toolbarDragRef.current.pointerId = null;
     resetToolbarDragState();
   }, [resetToolbarDragState]);
+
+  const handleToolbarPointerEndCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    finishToolbarPointer(e.pointerId);
+  }, [finishToolbarPointer]);
+
+  useEffect(() => {
+    const handlePointerEnd = (event: PointerEvent) => finishToolbarPointer(event.pointerId);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+
+    return () => {
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+    };
+  }, [finishToolbarPointer]);
 
   const handleToolbarClickCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isToolbarActivationSuppressed()) return;
@@ -1167,12 +1154,12 @@ export function SpreadsheetTable({
     setOpen: React.Dispatch<React.SetStateAction<boolean>>,
     nextOpen: boolean,
   ) => {
-    if (nextOpen && (toolbarDragRef.current.pointerActive || isToolbarActivationSuppressed())) return;
+    if (nextOpen && isToolbarActivationSuppressed()) return;
     setOpen(nextOpen);
   }, [isToolbarActivationSuppressed]);
 
   const handleGuardedDropdownPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
     e.currentTarget.focus({ preventScroll: true });
     e.preventDefault();
     e.stopPropagation();
@@ -1180,22 +1167,25 @@ export function SpreadsheetTable({
 
   const handleGuardedDropdownClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     if (e.detail === 0) return;
+    if (Date.now() >= suppressCoarseDropdownClickUntilRef.current) return;
     e.preventDefault();
     e.stopPropagation();
   }, []);
 
   const handleProtectionDropdownPointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
     e.preventDefault();
     e.stopPropagation();
+    suppressCoarseDropdownClickUntilRef.current = Date.now() + TOOLBAR_DRAG_SUPPRESS_MS;
     if (isToolbarActivationSuppressed()) return;
     setShowProtectionMenu((current) => !current);
   }, [isToolbarActivationSuppressed]);
 
   const handleFullscreenDropdownPointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
     e.preventDefault();
     e.stopPropagation();
+    suppressCoarseDropdownClickUntilRef.current = Date.now() + TOOLBAR_DRAG_SUPPRESS_MS;
     if (isToolbarActivationSuppressed()) return;
     setShowFullscreenMenu((current) => !current);
   }, [isToolbarActivationSuppressed]);
@@ -2093,7 +2083,7 @@ export function SpreadsheetTable({
 
       {/* Freeze Menu Dropdown - column freeze only */}
       {showFreezeMenu && !formatLocked && (
-        <div ref={freezeMenuRef} className="sipena-freeze-menu absolute top-14 sm:top-16 left-2 sm:left-3 z-[120] bg-card rounded-lg shadow-xl border p-3 sm:p-4 max-h-96 overflow-y-auto w-72 sm:w-80">
+        <div ref={freezeMenuRef} className="sipena-freeze-menu sipena-scroll-chain-page absolute top-14 sm:top-16 left-2 sm:left-3 z-[120] bg-card rounded-lg shadow-xl border p-3 sm:p-4 max-h-96 overflow-y-auto w-72 sm:w-80">
           <div className="font-semibold mb-3 text-sm">Pilih Kolom Freeze</div>
           <div className="sipena-freeze-menu-grid grid grid-cols-3 sm:grid-cols-4 gap-2">
             {columns.slice(0, Math.min(16, columns.length)).map((col, i) => (
@@ -2242,7 +2232,7 @@ export function SpreadsheetTable({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="sipena-grade-scroll absolute inset-x-0 bottom-0 overflow-auto"
+          className="sipena-grade-scroll sipena-scroll-chain-page absolute inset-x-0 bottom-0 overflow-auto"
           style={{
             top: totalHeaderHeight * zoomFactor,
             paddingLeft: getFrozenWidth(),

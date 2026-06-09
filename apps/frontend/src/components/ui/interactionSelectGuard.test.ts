@@ -25,6 +25,8 @@ describe("interactive text selection guard", () => {
     expect(dropdownSource).toContain("className={cn(\"select-none\", className)}");
     expect(tabsSource).toContain("inline-flex select-none");
     expect(popoverSource).toContain("className={cn(\"select-none\", className)}");
+    expect(buttonSource).toContain("hover:bg-primary/10 hover:text-foreground");
+    expect(dropdownSource).toContain("focus:bg-primary/10 focus:text-foreground");
   });
 
   it("keeps global interactive roles non-selectable while text fields remain selectable", () => {

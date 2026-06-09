@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.50",
+    version: "2.4.50",
+    title: "Interaksi Toolbar dan Scroll Lebih Andal",
+    description: "Toolbar Input Nilai, tab konten, kontras tombol/menu, dan standar scroll internal diperkuat agar interaksi web lebih stabil.",
+    type: "bugfix",
+    is_critical: true,
+    released_at: "2026-06-09",
+    details: [
+      "Tombol toolbar Input Nilai kembali bisa ditekan tanpa kehilangan perlindungan dari salah tap saat toolbar digeser.",
+      "Tab Struktur BAB dan Input Nilai kini menyatu dengan panel konten memakai tint biru primer.",
+      "State hover/focus tombol, menu, select, popover, dan quick start diperbaiki agar teks tetap terbaca di light/dark mode.",
+      "Scroll internal halaman distandarkan agar meneruskan scroll ke body saat mentok, sementara modal dan fullscreen tetap mengunci latar.",
+    ],
+  },
+  {
     id: "v2.4.49",
     version: "2.4.49",
     title: "Input Nilai dan PWA Lebih Stabil",

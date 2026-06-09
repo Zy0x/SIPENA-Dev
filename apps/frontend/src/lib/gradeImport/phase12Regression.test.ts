@@ -389,7 +389,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(settingsSource).toContain("Rapor");
     expect(settingsSource).toContain("Akan datang");
     expect(settingsSource).toContain("disabled={isDisabled}");
-    expect(gradesPageSource).toContain("overflow-visible border border-border shadow-sm");
+    expect(gradesPageSource).toContain("sipena-grade-tab-panel mt-0");
+    expect(gradesPageSource).toContain("overflow-visible rounded-none border-0 shadow-none");
     expect(gradesPageSource).toContain("relative z-30 bg-card");
     expect(spreadsheetSource).toContain("label: 'Rata-rata'");
     expect(spreadsheetSource).toContain("column.type === 'chapter_avg'");

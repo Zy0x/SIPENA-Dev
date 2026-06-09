@@ -34,6 +34,8 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Pada mobile portrait sekitar `392x778`, toolbar tabel harus mengutamakan satu baris compact dengan scroll horizontal terkontrol. Pencarian siswa tetap terlihat dalam satu layar, sementara ruang vertikal harus diprioritaskan untuk tabel.
 - Toolbar yang memakai scroll horizontal wajib menampilkan scrollbar horizontal tipis berbasis token tema agar user tahu area tersebut dapat digeser.
 - Toolbar horizontal wajib membedakan gesture drag dan tap. Jika user menggeser toolbar melewati threshold kecil, klik/tap tombol di bawah jari harus dibatalkan agar tidak memicu aksi tidak sengaja.
+- Toolbar horizontal tidak boleh memakai `setPointerCapture` pada container karena event tombol anak dapat diambil alih dan seluruh tombol menjadi tidak bisa ditekan.
+- Dropdown Proteksi dan Fullscreen pada toolbar harus memakai perilaku normal untuk mouse/keyboard, dengan guard touch/pen yang hanya membuka menu pada `pointerup` jika gesture bukan drag.
 - Aksi `Kelola Nilai`, `Rumus`, dan `Pembulatan` harus bisa duduk dalam satu baris fleksibel jika ruang cukup; pencarian siswa boleh memakai baris penuh agar input tetap nyaman.
 - Tombol tutup fullscreen wajib keluar dari overlay Input Nilai dan, bila aktif, juga keluar dari fullscreen browser.
 - Tombol close/tutup harus selalu terlihat, memakai warna destructive/merah, dan tidak boleh terdorong keluar viewport.
@@ -71,6 +73,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Field edit nama BAB dan Tugas harus fleksibel (`min-width: 0` dan `flex: 1`) sehingga nama panjang bisa diedit tanpa kolom input kecil.
 - Teks bantuan seperti `Klik = edit` hanya tampil jika membantu dan tidak mengurangi ruang input utama.
 - Tombol, select, dropdown, badge, dan tab harus `select-none` agar label tidak mudah terblok saat user drag atau scroll.
+- Tab Input Nilai harus terlihat menyatu dengan panel konten di bawahnya. Active tab memakai tint primer dan berbagi background/border dengan panel.
 - Tooltip prediksi nilai tidak boleh muncul di fullscreen mobile sampai ada desain yang tidak menutup cell input.
 
 ## Telemetry Viewport Senyap
@@ -129,3 +132,5 @@ Acceptance visual:
 ## Aturan Dokumentasi
 
 Jika bug responsif baru ditemukan, tambahkan pola viewport dan akar masalahnya ke dokumen ini atau ke changelog teknis terkait. Jangan hanya memperbaiki CSS lokal tanpa menambah guard test atau standar bila bug tersebut dapat berulang.
+
+Untuk standar global tombol, kontras, dan scroll internal lintas halaman, ikuti `docs/standards/ui-interaction-scroll-standard.md`.

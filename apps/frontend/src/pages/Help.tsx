@@ -392,7 +392,7 @@ export default function Help() {
                 <Button
                   key={item.step}
                   variant="outline"
-                  className="h-auto py-3 sm:py-4 flex flex-col gap-1.5 sm:gap-2 hover:bg-primary/10 hover:border-primary text-xs sm:text-sm"
+                  className="h-auto py-3 sm:py-4 flex flex-col gap-1.5 sm:gap-2 text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground focus-visible:text-foreground text-xs sm:text-sm"
                   onClick={() => navigate(item.link)}
                 >
                   <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] sm:text-sm font-bold">

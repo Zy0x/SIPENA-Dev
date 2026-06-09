@@ -34,6 +34,7 @@ import { Chapter } from "@/hooks/useChapters";
 import { Assignment } from "@/hooks/useAssignments";
 import { AddChapterDialog } from "./AddChapterDialog";
 import { AddAssignmentDialog } from "./AddAssignmentDialog";
+import { cn } from "@/lib/utils";
 
 interface ChapterStructureProps {
   chapters: Chapter[];
@@ -46,6 +47,7 @@ interface ChapterStructureProps {
   onDeleteChapter: (id: string) => void;
   onDeleteAssignment: (id: string) => void;
   isLoading?: boolean;
+  className?: string;
 }
 
 export function ChapterStructure({
@@ -59,6 +61,7 @@ export function ChapterStructure({
   onDeleteChapter,
   onDeleteAssignment,
   isLoading,
+  className,
 }: ChapterStructureProps) {
   const [addChapterOpen, setAddChapterOpen] = useState(false);
   const [addAssignmentOpen, setAddAssignmentOpen] = useState(false);
@@ -114,7 +117,7 @@ export function ChapterStructure({
   const totalAssignments = Object.values(assignments).reduce((sum, arr) => sum + arr.length, 0);
 
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

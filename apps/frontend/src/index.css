@@ -3438,9 +3438,51 @@
     background: transparent;
   }
 
+  .sipena-scroll-chain-page {
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sipena-scroll-isolated {
+    overscroll-behavior: contain;
+  }
+
+  .sipena-scroll-isolated .sipena-scroll-chain-page,
+  .sipena-scroll-isolated .overflow-auto,
+  .sipena-scroll-isolated .overflow-scroll,
+  .sipena-scroll-isolated .overflow-y-auto,
+  .sipena-scroll-isolated .overflow-y-scroll {
+    overscroll-behavior-y: contain;
+  }
+
   /* Focus styles for accessibility */
   html[data-input-modality="keyboard"] *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  .overflow-auto,
+  .overflow-scroll,
+  .overflow-y-auto,
+  .overflow-y-scroll {
+    overscroll-behavior-y: auto;
+  }
+
+  .overflow-auto,
+  .overflow-scroll,
+  .overflow-x-auto,
+  .overflow-x-scroll {
+    overscroll-behavior-x: contain;
+  }
+
+  .sipena-scroll-isolated,
+  .sipena-scroll-isolated .overflow-auto,
+  .sipena-scroll-isolated .overflow-scroll,
+  .sipena-scroll-isolated .overflow-y-auto,
+  .sipena-scroll-isolated .overflow-y-scroll {
+    overscroll-behavior-y: contain;
   }
 }
 
@@ -3511,23 +3553,33 @@
   }
 
   .sipena-grade-mode-tabs {
+    position: relative;
+    z-index: 2;
     overflow: hidden;
-    border: 1px solid hsl(var(--border) / 0.72);
-    background: hsl(var(--muted) / 0.58);
+    border: 1px solid hsl(var(--primary) / 0.24);
+    border-bottom: 0;
+    border-radius: 0.875rem 0.875rem 0 0;
+    background: linear-gradient(180deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.055));
+    padding: 0.25rem 0.25rem 0;
   }
 
   .sipena-grade-mode-tab {
     min-height: 2.5rem;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: 0.625rem 0.625rem 0 0;
     white-space: nowrap;
     text-align: center;
-    color: hsl(var(--muted-foreground));
+    color: hsl(var(--foreground) / 0.72);
     transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
   }
 
   .sipena-grade-mode-tab[data-state="active"] {
-    background: hsl(var(--background));
+    transform: translateY(1px);
+    border-color: hsl(var(--primary) / 0.26);
+    background: hsl(var(--card));
     color: hsl(var(--foreground));
-    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.08), inset 0 0 0 1px hsl(var(--border) / 0.7);
+    box-shadow: 0 -1px 0 hsl(var(--card)), 0 1px 0 hsl(var(--card));
   }
 
   .sipena-grade-mode-tab[data-state="active"] svg {
@@ -3535,8 +3587,24 @@
   }
 
   .sipena-grade-mode-tab[data-state="inactive"]:hover {
-    background: hsl(var(--background) / 0.66);
+    background: hsl(var(--primary) / 0.08);
     color: hsl(var(--foreground));
+  }
+
+  .sipena-grade-tab-panel {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    border: 1px solid hsl(var(--primary) / 0.22);
+    border-radius: 0 0.875rem 0.875rem 0.875rem;
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    padding: 0.75rem;
+    box-shadow: 0 10px 30px hsl(var(--primary) / 0.06);
+  }
+
+  .sipena-grade-tab-panel > .rounded-none {
+    background: transparent;
   }
 
   .sipena-grade-browser-fullscreen {
@@ -4351,7 +4419,8 @@
 
 /* Sidebar scroll isolation */
 [aria-label="Menu navigasi"] {
-  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
 }
 
 .table-responsive {
