@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.52",
+    version: "2.4.52",
+    title: "Divider Binder Input Nilai Lebih Rapi",
+    description: "Tab Struktur BAB dan Input Nilai kini membentuk satu siluet binder tanpa celah atau sudut panel yang terpisah.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-11",
+    details: [
+      "Celah antar-tab dihilangkan dan border yang bertemu ditumpuk agar hanya terlihat sebagai satu garis pemisah.",
+      "Tab aktif dibuat sedikit lebih tinggi seperti indeks binder dan terbuka langsung ke lembar konten.",
+      "Sudut kiri atas panel disambungkan lurus dengan tab pertama pada kedua mode.",
+    ],
+  },
+  {
     id: "v2.4.51",
     version: "2.4.51",
     title: "Tab Input Nilai Menyatu Seperti Binder",
