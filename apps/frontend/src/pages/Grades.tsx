@@ -1537,7 +1537,12 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         )}
 
         {subjectId && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="sipena-grade-tabs animate-fade-in-up delay-200">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            data-active-tab={activeTab}
+            className="sipena-grade-tabs animate-fade-in-up delay-200"
+          >
             <TabsList aria-label="Mode halaman input nilai" className="sipena-grade-mode-tabs grid w-full max-w-sm grid-cols-2">
               <TabsTrigger value="structure" className="sipena-grade-mode-tab gap-2" data-tour="structure-tab">
                 <Settings className="w-4 h-4" />

@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.50";
-export const VERSION_DATE = "2026-06-09";
+export const APP_VERSION = "2.4.51";
+export const VERSION_DATE = "2026-06-10";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.51": "Tab Struktur BAB dan Input Nilai kini berbentuk divider binder yang menyatu langsung dengan panel konten.",
   "2.4.50": "Input Nilai memperbaiki klik toolbar, menyatukan tab dengan panel, memperkuat kontras tombol/menu, dan menstandarkan scroll internal lintas halaman.",
   "2.4.49": "Input Nilai memperbaiki scroll chaining mobile, modal fullscreen, hint prediksi sementara, toolbar touch, visual proteksi, dan update PWA otomatis anti-stuck.",
   "2.4.48": "Input Nilai memperbaiki toolbar aksi, scroll touch kolom frozen, back gesture fullscreen, tab mode, dan menahan tooltip prediksi di fullscreen mobile.",

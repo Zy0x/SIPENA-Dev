@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.51",
+    version: "2.4.51",
+    title: "Tab Input Nilai Menyatu Seperti Binder",
+    description: "Tab Struktur BAB dan Input Nilai kini menjadi divider yang menyatu langsung dengan lembar konten di bawahnya.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-10",
+    details: [
+      "Kotak luar daftar tab dihilangkan agar tidak terlihat sebagai komponen terpisah.",
+      "Tab aktif menutupi garis atas panel sehingga border, latar, dan konten membentuk satu bidang binder.",
+      "Bentuk divider tetap responsif dan mempertahankan tint biru primer pada tab yang tidak aktif.",
+    ],
+  },
+  {
     id: "v2.4.50",
     version: "2.4.50",
     title: "Interaksi Toolbar dan Scroll Lebih Andal",
