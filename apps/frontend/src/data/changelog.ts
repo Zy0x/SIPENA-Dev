@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.53",
+    version: "2.4.53",
+    title: "Perpindahan Tab Tidak Meloncat",
+    description: "Posisi halaman kini tetap stabil saat berpindah antara Struktur BAB dan Input Nilai.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-11",
+    details: [
+      "Container tab mempertahankan tinggi terbesar yang sudah terlihat agar dokumen tidak menyusut mendadak.",
+      "Klik tab, navigasi keyboard, dan tombol menuju Struktur BAB menggunakan perilaku stabil yang sama.",
+      "Kunci tinggi direset saat kelas atau mata pelajaran berubah agar tidak membawa ukuran konten lama.",
+    ],
+  },
+  {
     id: "v2.4.52",
     version: "2.4.52",
     title: "Divider Binder Input Nilai Lebih Rapi",

@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.52";
+export const APP_VERSION = "2.4.53";
 export const VERSION_DATE = "2026-06-11";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.53": "Perpindahan tab Input Nilai menjaga tinggi panel agar posisi scroll halaman tidak meloncat ke atas.",
   "2.4.52": "Divider tab Input Nilai dirapikan tanpa celah dan disambungkan ke panel sebagai satu siluet binder.",
   "2.4.51": "Tab Struktur BAB dan Input Nilai kini berbentuk divider binder yang menyatu langsung dengan panel konten.",
   "2.4.50": "Input Nilai memperbaiki klik toolbar, menyatukan tab dengan panel, memperkuat kontras tombol/menu, dan menstandarkan scroll internal lintas halaman.",

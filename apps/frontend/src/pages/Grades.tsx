@@ -95,6 +95,7 @@ import { SmartStudentSearch } from "@/components/grades/SmartStudentSearch";
 import { ChapterStructure } from "@/components/grades/ChapterStructure";
 import { SpreadsheetTable } from "@/components/grades/SpreadsheetTable";
 import { EmptyStudentsState } from "@/components/grades/EmptyStudentsState";
+import { lockGradeTabsMinHeight } from "@/components/grades/gradeTabViewportStability";
 import GradeBackupRestoreDialog from "@/components/grades/GradeBackupRestoreDialog";
 import GradeImportExportDialog, { type GradeImportExportTab } from "@/components/grades/GradeImportExportDialog";
 import {
@@ -329,6 +330,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [lockedStudentId, setLockedStudentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("input");
+  const gradeTabsRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenMode, setFullscreenMode] = useState<"app" | "browser" | null>(null);
   const gradeFullscreenHistoryRef = useRef(false);
@@ -356,6 +358,13 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   useEffect(() => {
     gradeOverlayOpenRef.current = gradeOverlayOpen;
   }, [gradeOverlayOpen]);
+
+  const handleActiveTabChange = useCallback((nextTab: string) => {
+    if (nextTab === activeTab) return;
+
+    lockGradeTabsMinHeight(gradeTabsRef.current);
+    setActiveTab(nextTab);
+  }, [activeTab]);
 
   useEffect(() => {
     if (!isGuestMode) {
@@ -511,6 +520,11 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const guestData = guestQuery.data;
   const classId = isGuestMode ? guestData?.access.classId || "" : selectedClassId;
   const subjectId = isGuestMode ? guestData?.access.subjectId || "" : selectedSubjectId;
+
+  useEffect(() => {
+    gradeTabsRef.current?.style.removeProperty("min-height");
+  }, [classId, subjectId]);
+
   const {
     formula: ownerFormula,
     saveFormula,
@@ -1538,8 +1552,9 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
         {subjectId && (
           <Tabs
+            ref={gradeTabsRef}
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={handleActiveTabChange}
             data-active-tab={activeTab}
             className="sipena-grade-tabs animate-fade-in-up delay-200"
           >
@@ -1576,7 +1591,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="flex items-center justify-between">
                     <span>Tambahkan BAB dan tugas terlebih dahulu.</span>
-                    <Button variant="outline" size="sm" onClick={() => setActiveTab("structure")}>
+                    <Button variant="outline" size="sm" onClick={() => handleActiveTabChange("structure")}>
                       Tambah BAB <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
                   </AlertDescription>
