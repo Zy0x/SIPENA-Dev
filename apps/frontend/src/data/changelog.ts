@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.54",
+    version: "2.4.54",
+    title: "Edit BAB dan Tugas Responsif",
+    description: "Pengeditan nama BAB dan Tugas kini memakai ruang viewport secara penuh dan tetap rapi pada mobile, tablet, desktop, serta layar lebar.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-11",
+    details: [
+      "Batas lebar tetap pada input edit BAB dan Tugas dihapus agar field mengikuti lebar panel yang tersedia.",
+      "Tombol simpan/batal, edit, dan hapus berpindah ke baris aksi saat viewport sempit sehingga nama tidak lagi terhimpit.",
+      "Trigger buka/tutup BAB dipisahkan dari tombol edit/hapus agar interaksi lebih bersih dan aman untuk touch.",
+      "Guard regression ditambahkan untuk mencegah input edit kembali memakai max-width sempit.",
+    ],
+  },
+  {
     id: "v2.4.53",
     version: "2.4.53",
     title: "Perpindahan Tab Tidak Meloncat",

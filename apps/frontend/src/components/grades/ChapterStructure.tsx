@@ -72,8 +72,8 @@ export function ChapterStructure({
   const [editValue, setEditValue] = useState("");
 
   const toggleChapter = (chapterId: string) => {
-    setExpandedChapters((prev) => {
-      const next = new Set(prev);
+    setExpandedChapters((previous) => {
+      const next = new Set(previous);
       if (next.has(chapterId)) {
         next.delete(chapterId);
       } else {
@@ -84,29 +84,39 @@ export function ChapterStructure({
   };
 
   const handleEditChapter = (chapter: Chapter) => {
+    setEditingAssignment(null);
     setEditingChapter(chapter.id);
     setEditValue(chapter.name);
+  };
+
+  const handleCancelChapter = () => {
+    setEditingChapter(null);
+    setEditValue("");
   };
 
   const handleSaveChapter = (id: string) => {
     if (editValue.trim()) {
       onUpdateChapter(id, editValue.trim());
     }
-    setEditingChapter(null);
-    setEditValue("");
+    handleCancelChapter();
   };
 
   const handleEditAssignment = (assignment: Assignment) => {
+    setEditingChapter(null);
     setEditingAssignment(assignment.id);
     setEditValue(assignment.name);
+  };
+
+  const handleCancelAssignment = () => {
+    setEditingAssignment(null);
+    setEditValue("");
   };
 
   const handleSaveAssignment = (id: string) => {
     if (editValue.trim()) {
       onUpdateAssignment(id, editValue.trim());
     }
-    setEditingAssignment(null);
-    setEditValue("");
+    handleCancelAssignment();
   };
 
   const handleAddAssignment = (chapter: Chapter) => {
@@ -114,233 +124,280 @@ export function ChapterStructure({
     setAddAssignmentOpen(true);
   };
 
-  const totalAssignments = Object.values(assignments).reduce((sum, arr) => sum + arr.length, 0);
+  const totalAssignments = Object.values(assignments).reduce((sum, items) => sum + items.length, 0);
 
   return (
     <Card className={cn(className)}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-primary" />
+      <CardHeader className="px-3 pb-4 pt-3 sm:px-5 sm:pt-5 lg:px-6 lg:pt-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <CardTitle className="text-lg">Struktur BAB & Tugas</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {chapters.length} BAB • {totalAssignments} Tugas
+                {chapters.length} BAB - {totalAssignments} Tugas
               </p>
             </div>
           </div>
-          <Button onClick={() => setAddChapterOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
+          <Button onClick={() => setAddChapterOpen(true)} className="w-full gap-2 sm:w-auto">
+            <Plus className="h-4 w-4" />
             Tambah BAB
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+
+      <CardContent className="px-3 pb-3 sm:px-5 sm:pb-5 lg:px-6 lg:pb-6">
         {chapters.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <div className="py-8 text-center text-muted-foreground">
+            <BookOpen className="mx-auto mb-3 h-12 w-12 opacity-50" />
             <p className="font-medium">Belum ada BAB</p>
             <p className="text-sm">Tambahkan BAB untuk mulai input nilai tugas</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {chapters.map((chapter) => (
-              <Collapsible
-                key={chapter.id}
-                open={expandedChapters.has(chapter.id)}
-                onOpenChange={() => toggleChapter(chapter.id)}
-              >
-                <div className="border rounded-lg overflow-hidden">
-                  <CollapsibleTrigger asChild>
-                    <div className="flex min-w-0 items-center justify-between gap-2 p-3 bg-muted/50 hover:bg-muted/80 cursor-pointer transition-colors">
-                      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                        {expandedChapters.has(chapter.id) ? (
-                          <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
-                        )}
-                        {editingChapter === chapter.id ? (
-                          <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2" onClick={(e) => e.stopPropagation()}>
-                            <Input
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="h-9 min-w-0 flex-1 sm:max-w-xl"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleSaveChapter(chapter.id);
-                                if (e.key === "Escape") setEditingChapter(null);
-                              }}
-                            />
+            {chapters.map((chapter) => {
+              const chapterAssignments = assignments[chapter.id] || [];
+              const isExpanded = expandedChapters.has(chapter.id);
+              const isEditingChapter = editingChapter === chapter.id;
+
+              return (
+                <Collapsible
+                  key={chapter.id}
+                  open={isExpanded}
+                  onOpenChange={() => toggleChapter(chapter.id)}
+                >
+                  <div className="overflow-hidden rounded-lg border">
+                    {isEditingChapter ? (
+                      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 bg-muted/50 p-3 max-[420px]:grid-cols-1 sm:gap-3">
+                        <ChevronDown className="mt-3 h-4 w-4 shrink-0 text-muted-foreground max-[420px]:hidden" />
+                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-[820px]:grid-cols-1">
+                          <Input
+                            value={editValue}
+                            onChange={(event) => setEditValue(event.target.value)}
+                            className="h-10 min-w-0 w-full px-3"
+                            autoFocus
+                            aria-label="Nama BAB"
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") handleSaveChapter(chapter.id);
+                              if (event.key === "Escape") handleCancelChapter();
+                            }}
+                          />
+                          <div className="flex shrink-0 justify-end gap-1 max-[820px]:border-t max-[820px]:pt-2">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 shrink-0"
+                              className="h-10 w-10 shrink-0"
                               onClick={() => handleSaveChapter(chapter.id)}
+                              aria-label="Simpan nama BAB"
+                              title="Simpan"
                             >
-                              <Check className="w-4 h-4 text-grade-pass" />
+                              <Check className="h-4 w-4 text-grade-pass" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 shrink-0"
-                              onClick={() => setEditingChapter(null)}
+                              className="h-10 w-10 shrink-0"
+                              onClick={handleCancelChapter}
+                              aria-label="Batal mengedit nama BAB"
+                              title="Batal"
                             >
-                              <X className="w-4 h-4 text-destructive" />
+                              <X className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
-                        ) : (
-                          <span className="min-w-0 break-words font-medium">{chapter.name}</span>
-                        )}
-                        <Badge variant="secondary" className="shrink-0 text-xs">
-                          {assignments[chapter.id]?.length || 0} tugas
-                        </Badge>
+                        </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1 sm:gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEditChapter(chapter)}
-                          aria-label="Edit nama BAB"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              aria-label="Hapus BAB"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus BAB?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Menghapus "{chapter.name}" akan menghapus semua tugas dan nilai terkait.
-                                Tindakan ini tidak dapat dibatalkan.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => onDeleteChapter(chapter.id)}
-                                className="bg-destructive hover:bg-destructive/90"
-                              >
-                                Hapus
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <div className="p-3 space-y-2 bg-background">
-                      {(assignments[chapter.id] || []).map((assignment) => (
-                        <div
-                          key={assignment.id}
-                          className="flex min-w-0 items-center justify-between gap-2 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex min-w-0 flex-1 items-center gap-2">
-                            <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
-                            {editingAssignment === assignment.id ? (
-                              <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-                                <Input
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  className="h-8 min-w-0 flex-1 sm:max-w-lg"
-                                  autoFocus
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") handleSaveAssignment(assignment.id);
-                                    if (e.key === "Escape") setEditingAssignment(null);
-                                  }}
-                                />
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 shrink-0"
-                                  onClick={() => handleSaveAssignment(assignment.id)}
-                                >
-                                  <Check className="w-3 h-3 text-grade-pass" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 shrink-0"
-                                  onClick={() => setEditingAssignment(null)}
-                                >
-                                  <X className="w-3 h-3 text-destructive" />
-                                </Button>
-                              </div>
+                    ) : (
+                      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-muted/50 p-2 transition-colors hover:bg-muted/80 max-[420px]:grid-cols-1 sm:p-3">
+                        <CollapsibleTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex min-h-10 min-w-0 items-center gap-2 rounded-md px-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:gap-3"
+                            aria-label={`${isExpanded ? "Tutup" : "Buka"} ${chapter.name}`}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                             ) : (
-                              <span className="min-w-0 break-words text-sm">{assignment.name}</span>
+                              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                             )}
-                          </div>
-                          {editingAssignment !== assignment.id && (
-                            <div className="flex shrink-0 items-center gap-1">
+                            <span className="min-w-0 flex-1 break-words font-medium">{chapter.name}</span>
+                            <Badge variant="secondary" className="shrink-0 text-xs">
+                              {chapterAssignments.length} tugas
+                            </Badge>
+                          </button>
+                        </CollapsibleTrigger>
+
+                        <div className="flex shrink-0 justify-end gap-1 max-[420px]:border-t max-[420px]:pt-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 sm:h-9 sm:w-9"
+                            onClick={() => handleEditChapter(chapter)}
+                            aria-label="Edit nama BAB"
+                            title="Edit nama BAB"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
-                                onClick={() => handleEditAssignment(assignment)}
-                                aria-label="Edit nama tugas"
+                                className="h-10 w-10 text-destructive hover:text-destructive sm:h-9 sm:w-9"
+                                aria-label="Hapus BAB"
+                                title="Hapus BAB"
                               >
-                                <Edit2 className="w-3 h-3" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus BAB?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Menghapus "{chapter.name}" akan menghapus semua tugas dan nilai terkait.
+                                  Tindakan ini tidak dapat dibatalkan.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => onDeleteChapter(chapter.id)}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Hapus
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    )}
+
+                    <CollapsibleContent>
+                      <div className="space-y-2 bg-background p-2 sm:p-3">
+                        {chapterAssignments.map((assignment) => {
+                          const isEditingAssignment = editingAssignment === assignment.id;
+
+                          return (
+                            <div
+                              key={assignment.id}
+                              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md bg-muted/30 p-2 transition-colors hover:bg-muted/50 max-[420px]:grid-cols-1"
+                            >
+                              <div className="flex min-w-0 items-start gap-2">
+                                <FileText
+                                  className={cn(
+                                    "h-4 w-4 shrink-0 text-muted-foreground",
+                                    isEditingAssignment ? "mt-3 max-[420px]:hidden" : "mt-2.5",
+                                  )}
+                                />
+                                {isEditingAssignment ? (
+                                  <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-[820px]:grid-cols-1">
+                                    <Input
+                                      value={editValue}
+                                      onChange={(event) => setEditValue(event.target.value)}
+                                      className="h-10 min-w-0 w-full px-3"
+                                      autoFocus
+                                      aria-label="Nama tugas"
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter") handleSaveAssignment(assignment.id);
+                                        if (event.key === "Escape") handleCancelAssignment();
+                                      }}
+                                    />
+                                    <div className="flex shrink-0 justify-end gap-1 max-[820px]:border-t max-[820px]:pt-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-10 w-10 shrink-0"
+                                        onClick={() => handleSaveAssignment(assignment.id)}
+                                        aria-label="Simpan nama tugas"
+                                        title="Simpan"
+                                      >
+                                        <Check className="h-4 w-4 text-grade-pass" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-10 w-10 shrink-0"
+                                        onClick={handleCancelAssignment}
+                                        aria-label="Batal mengedit nama tugas"
+                                        title="Batal"
+                                      >
+                                        <X className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="min-w-0 flex-1 break-words py-2 text-sm">
+                                    {assignment.name}
+                                  </span>
+                                )}
+                              </div>
+
+                              {!isEditingAssignment && (
+                                <div className="flex shrink-0 justify-end gap-1 max-[420px]:border-t max-[420px]:pt-2">
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 text-destructive hover:text-destructive"
-                                    aria-label="Hapus tugas"
+                                    className="h-10 w-10 sm:h-9 sm:w-9"
+                                    onClick={() => handleEditAssignment(assignment)}
+                                    aria-label="Edit nama tugas"
+                                    title="Edit nama tugas"
                                   >
-                                    <Trash2 className="w-3 h-3" />
+                                    <Edit2 className="h-4 w-4" />
                                   </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Hapus Tugas?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Menghapus "{assignment.name}" akan menghapus semua nilai terkait.
-                                      Tindakan ini tidak dapat dibatalkan.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => onDeleteAssignment(assignment.id)}
-                                      className="bg-destructive hover:bg-destructive/90"
-                                    >
-                                      Hapus
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-10 w-10 text-destructive hover:text-destructive sm:h-9 sm:w-9"
+                                        aria-label="Hapus tugas"
+                                        title="Hapus tugas"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Hapus Tugas?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Menghapus "{assignment.name}" akan menghapus semua nilai terkait.
+                                          Tindakan ini tidak dapat dibatalkan.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => onDeleteAssignment(assignment.id)}
+                                          className="bg-destructive hover:bg-destructive/90"
+                                        >
+                                          Hapus
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-2 mt-2"
-                        onClick={() => handleAddAssignment(chapter)}
-                      >
-                        <Plus className="w-4 h-4" />
-                        Tambah Tugas
-                      </Button>
-                    </div>
-                  </CollapsibleContent>
-                </div>
-              </Collapsible>
-            ))}
+                          );
+                        })}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2 min-h-10 w-full gap-2"
+                          onClick={() => handleAddAssignment(chapter)}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Tambah Tugas
+                        </Button>
+                      </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              );
+            })}
           </div>
         )}
       </CardContent>

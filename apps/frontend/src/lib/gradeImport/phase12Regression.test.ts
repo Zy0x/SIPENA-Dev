@@ -583,8 +583,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(agentsSource).toContain("npm run viewport:sync -- --days 30");
     expect(agentsSource).toContain(".codex/viewport-observations/latest.json");
     expect(responsiveStandardSource).toContain(".codex/viewport-observations/latest.json");
-    expect(chapterStructureSource).toContain("h-9 min-w-0 flex-1 sm:max-w-xl");
-    expect(chapterStructureSource).toContain("h-8 min-w-0 flex-1 sm:max-w-lg");
+    expect(chapterStructureSource).not.toContain("sm:max-w-xl");
+    expect(chapterStructureSource).not.toContain("sm:max-w-lg");
+    expect(chapterStructureSource).toContain("className=\"h-10 min-w-0 w-full px-3\"");
+    expect(chapterStructureSource).toContain("max-[820px]:grid-cols-1");
+    expect(chapterStructureSource).toContain("max-[420px]:hidden");
     expect(chapterStructureSource).not.toContain("className=\"h-8 w-40\"");
     expect(chapterStructureSource).not.toContain("className=\"h-7 w-32\"");
 

@@ -71,6 +71,11 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Nama siswa panjang harus wrap, bukan truncate, kecuali pada konteks yang benar-benar memiliki tooltip/akses detail lain.
 - Placeholder dan teks input tidak boleh tertutup icon.
 - Field edit nama BAB dan Tugas harus fleksibel (`min-width: 0` dan `flex: 1`) sehingga nama panjang bisa diedit tanpa kolom input kecil.
+- Editor nama BAB dan Tugas tidak boleh memakai `max-width` desktop seperti `sm:max-w-*`; input wajib mengisi lebar panel yang tersedia pada mobile, tablet, desktop, dan layar lebar.
+- Aksi simpan/batal editor nama BAB/Tugas harus turun ke baris aksi di viewport tablet sempit sekitar `<=820px`, bukan mengorbankan lebar input.
+- Ikon non-kritis pada editor nama BAB/Tugas boleh disembunyikan di viewport sangat sempit sekitar `<=420px` agar input tetap menjadi elemen utama.
+- Aksi edit/hapus pada baris BAB/Tugas harus turun ke baris aksi di viewport sempit sekitar `<=420px`, dengan target sentuh minimal `40px`.
+- Trigger buka/tutup BAB harus terpisah dari tombol edit/hapus agar kontrol tidak saling memicu dan tetap valid untuk keyboard maupun touch.
 - Teks bantuan seperti `Klik = edit` hanya tampil jika membantu dan tidak mengurangi ruang input utama.
 - Tombol, select, dropdown, badge, dan tab harus `select-none` agar label tidak mudah terblok saat user drag atau scroll.
 - Tab Input Nilai harus terlihat menyatu dengan panel konten di bawahnya. Active tab memakai tint primer dan berbagi background/border dengan panel.
