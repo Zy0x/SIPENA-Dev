@@ -39,6 +39,7 @@ import {
   Loader2,
   Calendar,
   Layers,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
@@ -126,6 +127,14 @@ export default function StudentRankings() {
 
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const classKkm = selectedClass?.class_kkm ?? 75;
+  const isAllSubjectsMode = selectedSubjectIds.length === 0;
+  const activeSubjectCount = isAllSubjectsMode ? subjects.length : selectedSubjectIds.length;
+  const subjectScopeLabel = isAllSubjectsMode
+    ? `Semua ${subjects.length} mapel`
+    : `${selectedSubjectIds.length}/${subjects.length} mapel`;
+  const subjectScopeDescription = isAllSubjectsMode
+    ? "Ranking memakai seluruh mata pelajaran kelas ini."
+    : "Ranking hanya memakai mata pelajaran yang dipilih.";
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -148,19 +157,21 @@ export default function StudentRankings() {
   }, [selectedClassId, semesterFilter]);
 
   const toggleSubjectSelection = (subjectId: string) => {
-    setSelectedSubjectIds((prev) =>
-      prev.includes(subjectId)
+    setSelectedSubjectIds((prev) => {
+      if (prev.length === 0) return [subjectId];
+
+      const next = prev.includes(subjectId)
         ? prev.filter((id) => id !== subjectId)
-        : [...prev, subjectId]
-    );
+        : [...prev, subjectId];
+
+      return next;
+    });
+    setCurrentPage(1);
   };
 
   const selectAllSubjects = () => {
-    setSelectedSubjectIds(subjects.map((s) => s.id));
-  };
-
-  const clearSubjectSelection = () => {
     setSelectedSubjectIds([]);
+    setCurrentPage(1);
   };
 
   // Responsive rank badge with dynamic text sizing
@@ -387,6 +398,23 @@ export default function StudentRankings() {
 
   const overallColumnTypographyOptions = useMemo(() => buildColumnTypographyOptions(overallExportConfig), [buildColumnTypographyOptions, overallExportConfig]);
 
+  const rankingTotalItems = overallRankings.length;
+  const isShowingAllRankings = pageLimit === -1 || pageLimit >= rankingTotalItems;
+  const effectivePageLimit = isShowingAllRankings ? Math.max(rankingTotalItems, 1) : pageLimit;
+  const totalRankingPages = isShowingAllRankings
+    ? 1
+    : Math.max(1, Math.ceil(rankingTotalItems / effectivePageLimit));
+  const safeCurrentPage = isShowingAllRankings ? 1 : Math.min(currentPage, totalRankingPages);
+  const paginatedRankings = useMemo(() => {
+    if (isShowingAllRankings) return overallRankings;
+    const startIdx = (safeCurrentPage - 1) * effectivePageLimit;
+    return overallRankings.slice(startIdx, startIdx + effectivePageLimit);
+  }, [effectivePageLimit, isShowingAllRankings, overallRankings, safeCurrentPage]);
+
+  useEffect(() => {
+    if (currentPage !== safeCurrentPage) setCurrentPage(safeCurrentPage);
+  }, [currentPage, safeCurrentPage]);
+
   const exportOverallRanking = async ({
     formatId,
     includeSignature: nextIncludeSignature,
@@ -529,12 +557,12 @@ export default function StudentRankings() {
                         Ranking Keseluruhan
                       </Badge>
                       <Badge variant="outline" className="rounded-full">
-                        {selectedSubjectIds.length > 0 ? `${selectedSubjectIds.length}/${subjects.length} mapel` : `Semua ${subjects.length} mapel`}
+                        {subjectScopeLabel}
                       </Badge>
                     </div>
                     <CardTitle className="text-base sm:text-lg">Peringkat gabungan satu kelas</CardTitle>
                     <CardDescription className="text-xs sm:text-sm">
-                      Nilai akhir dihitung dari mapel yang dipilih, lalu diurutkan untuk seluruh siswa kelas {selectedClass?.name}.
+                      {subjectScopeDescription} Kelas {selectedClass?.name}.
                     </CardDescription>
                   </div>
                   <UnifiedExportStudio
@@ -598,7 +626,7 @@ export default function StudentRankings() {
                   </div>
                   <div className="rounded-lg border bg-background/80 px-3 py-2">
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Mapel Aktif</p>
-                    <p className="text-lg font-bold">{selectedSubjectIds.length || subjects.length}</p>
+                    <p className="text-lg font-bold">{activeSubjectCount}</p>
                   </div>
                   <div className="rounded-lg border bg-background/80 px-3 py-2">
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">KKM Kelas</p>
@@ -618,52 +646,58 @@ export default function StudentRankings() {
                     <div>
                       <CardTitle className="text-sm sm:text-base">Mapel yang Dihitung</CardTitle>
                       <CardDescription className="text-xs sm:text-sm">
-                        Kosongkan pilihan untuk memakai semua mapel. Pilih beberapa mapel untuk ranking khusus.
+                        {subjectScopeDescription}
                       </CardDescription>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                    <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
                       <Button
                         type="button"
-                        variant={selectedSubjectIds.length === subjects.length ? "default" : "outline"}
+                        variant={isAllSubjectsMode ? "default" : "outline"}
                         size="sm"
+                        aria-pressed={isAllSubjectsMode}
                         onClick={selectAllSubjects}
-                        className="h-9 text-xs"
+                        className="h-9 text-xs touch-manipulation"
                       >
                         Semua Mapel
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={selectedSubjectIds.length === 0 ? "secondary" : "outline"}
-                        size="sm"
-                        onClick={clearSubjectSelection}
-                        className="h-9 text-xs"
-                      >
-                        Pakai Default
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2">
+                    <span className="text-xs font-medium text-muted-foreground">Cakupan ranking</span>
+                    <Badge variant={isAllSubjectsMode ? "secondary" : "outline"} className="shrink-0 rounded-full">
+                      {subjectScopeLabel}
+                    </Badge>
+                  </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {subjects.map((subject) => {
-                      const selected = selectedSubjectIds.includes(subject.id);
-                      const effectiveSelected = selectedSubjectIds.length === 0 || selected;
+                      const isSubjectActive = selectedSubjectIds.includes(subject.id);
                       return (
                         <Button
                           key={subject.id}
                           type="button"
-                          variant={selected ? "default" : "outline"}
-                          aria-pressed={effectiveSelected}
+                          variant={isSubjectActive ? "default" : "outline"}
+                          aria-pressed={isSubjectActive}
+                          data-selected={isSubjectActive}
                           onClick={() => toggleSubjectSelection(subject.id)}
                           className={cn(
-                            "h-auto min-h-12 justify-between gap-3 whitespace-normal px-3 py-2 text-left",
-                            effectiveSelected && !selected && "border-primary/40 bg-primary/5 text-primary",
+                            "sipena-ranking-subject-button h-auto min-h-12 justify-between gap-3 whitespace-normal break-words px-3 py-2 text-left touch-manipulation",
+                            isSubjectActive
+                              ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                              : "border-border bg-background text-foreground hover:border-primary/40",
                           )}
                         >
                           <span className="min-w-0 flex-1 break-words text-sm font-semibold">{subject.name}</span>
-                          <Badge variant={effectiveSelected ? "secondary" : "outline"} className="shrink-0 text-[10px]">
+                          <span className={cn(
+                            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                            isSubjectActive
+                              ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+                              : "border-border bg-muted text-muted-foreground",
+                          )}>
+                            {isSubjectActive && <Check className="h-3 w-3" />}
                             KKM {subject.kkm}
-                          </Badge>
+                          </span>
                         </Button>
                       );
                     })}
@@ -681,9 +715,9 @@ export default function StudentRankings() {
                         Ranking Keseluruhan
                       </CardTitle>
                       <CardDescription className="text-[10px] sm:text-xs">
-                        {selectedSubjectIds.length > 0 
-                          ? `${selectedSubjectIds.length} mata pelajaran dipilih` 
-                          : "Semua mata pelajaran"}
+                        {isAllSubjectsMode
+                          ? "Semua mata pelajaran"
+                          : `${selectedSubjectIds.length} mata pelajaran dipilih`}
                         {" • "}{overallRankings.length} siswa • KKM Kelas: {classKkm}
                       </CardDescription>
                     </div>
@@ -696,7 +730,34 @@ export default function StudentRankings() {
                     </div>
                   ) : (
                     <>
-                      <div className="overflow-x-auto">
+                      <div className="divide-y sm:hidden">
+                        {paginatedRankings.map((ranking) => {
+                          const isPassing = ranking.overallAverage >= classKkm;
+                          return (
+                            <div key={ranking.student.id} className="flex items-center gap-3 px-4 py-3">
+                              <div className="shrink-0">{getRankBadge(ranking.rank)}</div>
+                              <div className="min-w-0 flex-1">
+                                <p className="whitespace-normal break-words text-sm font-semibold leading-snug">
+                                  {ranking.student.name}
+                                </p>
+                                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                  NISN {ranking.student.nisn || "-"}
+                                </p>
+                              </div>
+                              <span className={cn(
+                                "inline-flex min-w-14 shrink-0 justify-center rounded-full border px-2 py-1 text-xs font-bold",
+                                isPassing
+                                  ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                                  : "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
+                              )}>
+                                {formatGrade(ranking.overallAverage)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="hidden overflow-x-auto sm:block">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -707,52 +768,38 @@ export default function StudentRankings() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {(() => {
-                              const totalItems = overallRankings.length;
-                              const isShowAll = pageLimit === -1 || pageLimit >= totalItems;
-                              const effectiveLimit = isShowAll ? totalItems : pageLimit;
-                              const totalPages = Math.max(1, Math.ceil(totalItems / effectiveLimit));
-                              const safePage = isShowAll ? 1 : Math.min(currentPage, totalPages);
-                              const startIdx = (safePage - 1) * effectiveLimit;
-                              const paginatedRankings = isShowAll ? overallRankings : overallRankings.slice(startIdx, startIdx + effectiveLimit);
-                              // Reset to page 1 when showing all to prevent inconsistency
-                              if (isShowAll && currentPage !== 1) {
-                                setCurrentPage(1);
-                              }
-
-                              return paginatedRankings.map((ranking) => (
-                                <TableRow key={ranking.student.id} className="hover:bg-primary/5">
-                                  <TableCell className="py-2 sm:py-3">
-                                    {getRankBadge(ranking.rank)}
-                                  </TableCell>
-                                  <TableCell className="max-w-[160px] whitespace-normal break-words py-2 text-xs font-semibold sm:max-w-none sm:py-3 sm:text-sm">
-                                    {ranking.student.name}
-                                  </TableCell>
-                                  <TableCell className="text-xs sm:text-sm py-2 sm:py-3 hidden sm:table-cell">
-                                    {ranking.student.nisn}
-                                  </TableCell>
-                                  <TableCell className="text-right py-2 sm:py-3">
-                                    <span className={cn(
-                                      "inline-flex min-w-14 justify-center rounded-full border px-2 py-1 text-xs font-bold sm:text-sm",
-                                      ranking.overallAverage >= classKkm
-                                        ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
-                                        : "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
-                                    )}>
-                                      {formatGrade(ranking.overallAverage)}
-                                    </span>
-                                  </TableCell>
-                                </TableRow>
-                              ));
-                            })()}
+                            {paginatedRankings.map((ranking) => (
+                              <TableRow key={ranking.student.id} className="hover:bg-primary/5">
+                                <TableCell className="py-2 sm:py-3">
+                                  {getRankBadge(ranking.rank)}
+                                </TableCell>
+                                <TableCell className="max-w-[160px] whitespace-normal break-words py-2 text-xs font-semibold sm:max-w-none sm:py-3 sm:text-sm">
+                                  {ranking.student.name}
+                                </TableCell>
+                                <TableCell className="text-xs sm:text-sm py-2 sm:py-3 hidden sm:table-cell">
+                                  {ranking.student.nisn}
+                                </TableCell>
+                                <TableCell className="text-right py-2 sm:py-3">
+                                  <span className={cn(
+                                    "inline-flex min-w-14 justify-center rounded-full border px-2 py-1 text-xs font-bold sm:text-sm",
+                                    ranking.overallAverage >= classKkm
+                                      ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                                      : "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
+                                  )}>
+                                    {formatGrade(ranking.overallAverage)}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
                           </TableBody>
                         </Table>
                       </div>
 
                       {/* Pagination Controls */}
                       <PaginationControls
-                        currentPage={Math.min(currentPage, Math.max(1, Math.ceil(overallRankings.length / pageLimit)))}
-                        totalPages={Math.max(1, Math.ceil(overallRankings.length / pageLimit))}
-                        totalItems={overallRankings.length}
+                        currentPage={safeCurrentPage}
+                        totalPages={totalRankingPages}
+                        totalItems={rankingTotalItems}
                         limit={pageLimit}
                         onPageChange={(p) => setCurrentPage(p)}
                         onLimitChange={(l) => { setPageLimit(l); setCurrentPage(1); }}

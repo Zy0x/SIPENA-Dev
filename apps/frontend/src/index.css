@@ -3520,6 +3520,30 @@
   }
 }
 
+@media (hover: none), (pointer: coarse) {
+  .sipena-ranking-subject-button {
+    touch-action: manipulation;
+  }
+
+  .sipena-ranking-subject-button[data-selected="true"],
+  .sipena-ranking-subject-button[data-selected="true"]:hover {
+    background-color: hsl(var(--primary)) !important;
+    border-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    box-shadow: 0 1px 2px 0 hsl(var(--primary) / 0.18) !important;
+    transform: none !important;
+  }
+
+  .sipena-ranking-subject-button[data-selected="false"],
+  .sipena-ranking-subject-button[data-selected="false"]:hover {
+    background-color: hsl(var(--background)) !important;
+    border-color: hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
+
 @layer components {
   .app-page {
     @apply box-border w-full min-w-0 max-w-none space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5 lg:px-8 lg:py-8;

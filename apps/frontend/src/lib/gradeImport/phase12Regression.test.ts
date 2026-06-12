@@ -821,8 +821,15 @@ describe("phase 12 grade import regression suite", () => {
     expect(rankingSource).not.toContain("Per Mapel");
     expect(rankingSource).toContain("Peringkat gabungan satu kelas");
     expect(rankingSource).toContain("Mapel yang Dihitung");
-    expect(rankingSource).toContain("aria-pressed={effectiveSelected}");
+    expect(rankingSource).toContain("const isAllSubjectsMode = selectedSubjectIds.length === 0");
+    expect(rankingSource).toContain("aria-pressed={isSubjectActive}");
+    expect(rankingSource).toContain("data-selected={isSubjectActive}");
+    expect(rankingSource).toContain("sipena-ranking-subject-button");
+    expect(rankingSource).toContain("const paginatedRankings = useMemo");
+    expect(rankingSource).toContain("divide-y sm:hidden");
+    expect(rankingSource).toContain("hidden overflow-x-auto sm:block");
     expect(rankingSource).toContain("whitespace-normal break-words");
+    expect(globalStyles).toContain(".sipena-ranking-subject-button[data-selected=\"true\"]");
     expect(globalStyles).toContain("@keyframes sipena-guided-action-pulse");
     expect(globalStyles).toContain("@keyframes sipena-restore-drop-pulse");
     expect(globalStyles).toContain(".sipena-preview-cell-note-badge");
