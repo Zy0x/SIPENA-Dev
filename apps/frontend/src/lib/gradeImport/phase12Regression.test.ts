@@ -822,6 +822,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(rankingSource).toContain("Peringkat gabungan satu kelas");
     expect(rankingSource).toContain("Mapel yang Dihitung");
     expect(rankingSource).toContain("const isAllSubjectsMode = selectedSubjectIds.length === 0");
+    expect(rankingSource).toContain("const clearSubjectSelection = () =>");
+    expect(rankingSource).toContain("Hapus Pilihan");
+    expect(rankingSource).toContain("disabled={!hasExplicitSubjectSelection}");
     expect(rankingSource).toContain("aria-pressed={isSubjectActive}");
     expect(rankingSource).toContain("data-selected={isSubjectActive}");
     expect(rankingSource).toContain("sipena-ranking-subject-button");

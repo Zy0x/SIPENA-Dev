@@ -40,6 +40,7 @@ import {
   Calendar,
   Layers,
   Check,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
@@ -128,11 +129,13 @@ export default function StudentRankings() {
   const selectedClass = classes.find((c) => c.id === selectedClassId);
   const classKkm = selectedClass?.class_kkm ?? 75;
   const isAllSubjectsMode = selectedSubjectIds.length === 0;
+  const hasExplicitSubjectSelection = selectedSubjectIds.length > 0;
+  const areAllSubjectsSelected = subjects.length > 0 && selectedSubjectIds.length === subjects.length;
   const activeSubjectCount = isAllSubjectsMode ? subjects.length : selectedSubjectIds.length;
-  const subjectScopeLabel = isAllSubjectsMode
+  const subjectScopeLabel = isAllSubjectsMode || areAllSubjectsSelected
     ? `Semua ${subjects.length} mapel`
     : `${selectedSubjectIds.length}/${subjects.length} mapel`;
-  const subjectScopeDescription = isAllSubjectsMode
+  const subjectScopeDescription = isAllSubjectsMode || areAllSubjectsSelected
     ? "Ranking memakai seluruh mata pelajaran kelas ini."
     : "Ranking hanya memakai mata pelajaran yang dipilih.";
 
@@ -170,6 +173,11 @@ export default function StudentRankings() {
   };
 
   const selectAllSubjects = () => {
+    setSelectedSubjectIds(subjects.map((subject) => subject.id));
+    setCurrentPage(1);
+  };
+
+  const clearSubjectSelection = () => {
     setSelectedSubjectIds([]);
     setCurrentPage(1);
   };
@@ -649,16 +657,28 @@ export default function StudentRankings() {
                         {subjectScopeDescription}
                       </CardDescription>
                     </div>
-                    <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
                       <Button
                         type="button"
-                        variant={isAllSubjectsMode ? "default" : "outline"}
+                        variant={isAllSubjectsMode || areAllSubjectsSelected ? "default" : "outline"}
                         size="sm"
-                        aria-pressed={isAllSubjectsMode}
+                        aria-pressed={isAllSubjectsMode || areAllSubjectsSelected}
                         onClick={selectAllSubjects}
                         className="h-9 text-xs touch-manipulation"
                       >
                         Semua Mapel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label="Hapus semua pilihan mapel"
+                        disabled={!hasExplicitSubjectSelection}
+                        onClick={clearSubjectSelection}
+                        className="h-9 gap-1.5 text-xs touch-manipulation"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Hapus Pilihan
                       </Button>
                     </div>
                   </div>
