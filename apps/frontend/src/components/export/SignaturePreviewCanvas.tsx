@@ -1,4 +1,4 @@
-export { SignaturePreviewCanvas, type SignaturePreviewData, type ExportPreviewHighlightTarget } from "./SignaturePreviewDocument";
+export { SignaturePreviewCanvas, type SignaturePreviewData, type ExportPreviewHighlightTarget } from "./ReportPdfPreviewCanvas";
 /*
 import { useCallback, useMemo, useRef, type Dispatch, type PointerEvent as ReactPointerEvent, type SetStateAction } from "react";
 import { Move } from "lucide-react";

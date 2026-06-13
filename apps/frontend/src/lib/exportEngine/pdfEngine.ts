@@ -135,7 +135,7 @@ function drawMetaGroups(doc: jsPDF, config: ExportConfig, pageWidth: number) {
   });
 }
 
-export function exportToPDF(config: ExportConfig): void {
+export function buildReportPdfDocument(config: ExportConfig): jsPDF {
   const layoutPlan = buildReportLayoutPlanV2(config);
   const paper = resolveReportPaperSize(config.paperSize, {
     orientation: "landscape",
@@ -264,5 +264,9 @@ export function exportToPDF(config: ExportConfig): void {
     drawFooter(page.number, layoutPlan.pages.length);
   });
 
-  doc.save(`${getExportFileBaseName(config)}.pdf`);
+  return doc;
+}
+
+export function exportToPDF(config: ExportConfig): void {
+  buildReportPdfDocument(config).save(`${getExportFileBaseName(config)}.pdf`);
 }
