@@ -28,18 +28,27 @@ function compactNisnForRankingExport(nisn: string) {
 
 const SUBJECT_EXPORT_LABELS: Record<string, string> = {
   "bahasa indonesia": "B. Indo",
+  "bahasa indonesia tingkat lanjut": "BI TL",
   "bahasa inggris": "B. Ing",
+  "bahasa inggris tingkat lanjut": "B. Ing TL",
+  "bahasa asing": "B. Asg",
   "matematika": "MTK",
+  "matematika wajib": "MTK",
+  "matematika tingkat lanjut": "MTL",
   "pendidikan pancasila": "PPKn",
   "pendidikan kewarganegaraan": "PKn",
+  "pendidikan agama dan budi pekerti": "Agama",
   "pancasila": "PPKn",
   "ilmu pengetahuan alam dan sosial": "IPAS",
   "ipas": "IPAS",
+  "ipa": "IPA",
+  "ips": "IPS",
   "pjok": "PJOK",
   "pendidikan jasmani olahraga dan kesehatan": "PJOK",
   "informatika": "TIK",
   "seni budaya": "Seni",
   "prakarya": "Prak.",
+  "prakarya dan kewirausahaan": "PKWU",
   "sejarah": "Sej.",
   "geografi": "Geo.",
   "fisika": "Fis.",
@@ -47,6 +56,9 @@ const SUBJECT_EXPORT_LABELS: Record<string, string> = {
   "biologi": "Bio.",
   "ekonomi": "Eko.",
   "sosiologi": "Sos.",
+  "antropologi": "Ant.",
+  "muatan lokal": "Mulok",
+  "bahasa daerah": "B. Drh",
 };
 
 const SUBJECT_EXPORT_STOP_WORDS = new Set(["dan", "yang", "di", "ke", "dari", "untuk", "pada", "the", "of", "and"]);

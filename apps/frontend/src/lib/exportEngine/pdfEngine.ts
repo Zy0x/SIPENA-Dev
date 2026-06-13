@@ -6,8 +6,12 @@ import {
   getColumnBodyAlignment,
   getColumnHeaderAlignment,
   getColumnTypography,
+  resolveSignaturePlacementFromBounds,
   resolveReportPaperSize,
+  type ReportExportLayoutPlanV2,
   type ReportDocumentStyle,
+  type ReportLayoutPageV2,
+  type SignaturePlacement,
 } from "@/lib/reportExportLayoutV2";
 import { type ExportColumn, type ExportConfig, type HeaderGroup } from "@/lib/reportExportLayout";
 import { getExportContinuationTitle, getExportFileBaseName, getExportMetaGroups, getExportTitle } from "@/lib/exportEngine/shared";
@@ -135,7 +139,45 @@ function drawMetaGroups(doc: jsPDF, config: ExportConfig, pageWidth: number) {
   });
 }
 
-export function buildReportPdfDocument(config: ExportConfig): jsPDF {
+export interface BuiltReportPdfDocument {
+  doc: jsPDF;
+  layoutPlan: ReportExportLayoutPlanV2;
+  signaturePlacement: SignaturePlacement | null;
+}
+
+function resolveRenderedSignaturePlacement(
+  layoutPlan: ReportExportLayoutPlanV2,
+  page: ReportLayoutPageV2,
+  config: ExportConfig,
+  finalY: number,
+) {
+  if (!config.signature || !layoutPlan.signaturePlacement) return null;
+
+  return resolveSignaturePlacementFromBounds({
+    pageIndex: layoutPlan.signaturePlacement.pageIndex,
+    signature: config.signature,
+    signatureMetrics: {
+      widthMm: layoutPlan.signaturePlacement.widthMm,
+      heightMm: layoutPlan.signaturePlacement.heightMm,
+      safeXMm: 0,
+      safeYMm: 0,
+      safeWidthMm: 0,
+      safeHeightMm: 0,
+    },
+    pageWidthMm: layoutPlan.metrics.pageWidthMm,
+    pageHeightMm: layoutPlan.metrics.pageHeightMm,
+    marginLeftMm: layoutPlan.metrics.marginLeftMm,
+    marginRightMm: layoutPlan.metrics.marginRightMm,
+    marginTopMm: layoutPlan.metrics.marginTopMm,
+    marginBottomMm: layoutPlan.metrics.marginBottomMm,
+    footerHeightMm: layoutPlan.metrics.footerHeightMm,
+    safeZoneTopMm: page.pageType === "table"
+      ? finalY + layoutPlan.metrics.signatureGapMm
+      : page.tableStartY,
+  });
+}
+
+export function buildReportPdfDocumentResult(config: ExportConfig): BuiltReportPdfDocument {
   const layoutPlan = buildReportLayoutPlanV2(config);
   const paper = resolveReportPaperSize(config.paperSize, {
     orientation: "landscape",
@@ -147,6 +189,7 @@ export function buildReportPdfDocument(config: ExportConfig): jsPDF {
   const pageHeight = doc.internal.pageSize.getHeight();
   const title = getExportTitle(config);
   const continuationTitle = getExportContinuationTitle(config);
+  let renderedSignaturePlacement: SignaturePlacement | null = null;
 
   const drawFooter = (pageNumber: number, totalPages: number) => {
     doc.setFontSize(FOOTER.fontSize);
@@ -244,6 +287,7 @@ export function buildReportPdfDocument(config: ExportConfig): jsPDF {
       const finalY = page.pageType === "table"
         ? ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || page.estimatedTableEndY)
         : page.tableStartY;
+      renderedSignaturePlacement = resolveRenderedSignaturePlacement(layoutPlan, page, config, finalY);
       addSignatureBlockPDF(
         doc,
         {
@@ -251,11 +295,11 @@ export function buildReportPdfDocument(config: ExportConfig): jsPDF {
           fontSize: Math.max(config.signature.fontSize || 10, layoutPlan.documentStyle.metaFontSize),
         },
         finalY,
-        layoutPlan.signaturePlacement
+        renderedSignaturePlacement
           ? {
-              xMm: layoutPlan.signaturePlacement.xMm,
-              yMm: layoutPlan.signaturePlacement.yMm,
-              widthMm: layoutPlan.signaturePlacement.widthMm,
+              xMm: renderedSignaturePlacement.xMm,
+              yMm: renderedSignaturePlacement.yMm,
+              widthMm: renderedSignaturePlacement.widthMm,
             }
           : null,
       );
@@ -264,6 +308,15 @@ export function buildReportPdfDocument(config: ExportConfig): jsPDF {
     drawFooter(page.number, layoutPlan.pages.length);
   });
 
+  return {
+    doc,
+    layoutPlan,
+    signaturePlacement: config.includeSignature ? renderedSignaturePlacement : null,
+  };
+}
+
+export function buildReportPdfDocument(config: ExportConfig): jsPDF {
+  const { doc } = buildReportPdfDocumentResult(config);
   return doc;
 }
 

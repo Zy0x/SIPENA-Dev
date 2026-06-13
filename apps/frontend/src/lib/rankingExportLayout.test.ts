@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ExportColumn, ExportConfig } from "./reportExportLayout";
-import { buildReportLayoutPlanV2, getColumnBodyAlignment } from "./reportExportLayoutV2";
+import { buildReportLayoutPlanV2, getColumnBodyAlignment, getColumnHeaderAlignment } from "./reportExportLayoutV2";
 import { pdfEffectiveFontSize } from "./exportEngine/sharedMetrics";
 import {
   buildCompactRankingDocumentStyle,
@@ -112,6 +112,7 @@ describe("ranking export layout", () => {
 
     expect(nisnColumn && getColumnBodyAlignment(documentStyle, nisnColumn)).toBe("center");
     expect(statusColumn && getColumnBodyAlignment(documentStyle, statusColumn)).toBe("center");
+    expect(statusColumn && getColumnHeaderAlignment(documentStyle, statusColumn)).toBe("center");
     expect(gradeColumn && getColumnBodyAlignment(documentStyle, gradeColumn)).toBe("center");
   });
 });

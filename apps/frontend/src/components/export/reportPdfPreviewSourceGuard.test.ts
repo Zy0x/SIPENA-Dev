@@ -13,8 +13,11 @@ describe("generic report PDF preview source guard", () => {
 
     expect(previewEntrypoint).toContain("./ReportPdfPreviewCanvas");
     expect(previewEntrypoint).not.toContain("./SignaturePreviewDocument");
-    expect(previewCanvas).toContain("buildReportPdfDocument(config)");
+    expect(previewCanvas).toContain("buildReportPdfDocumentResult(config)");
+    expect(previewCanvas).toContain("renderedSignaturePlacement");
     expect(previewCanvas).toContain("getDocument({ data:");
+    expect(pdfEngine).toContain("resolveSignaturePlacementFromBounds");
+    expect(pdfEngine).toContain("finalY + layoutPlan.metrics.signatureGapMm");
     expect(pdfEngine).toContain("export function buildReportPdfDocument");
     expect(pdfEngine).toContain("buildReportPdfDocument(config).save");
   });

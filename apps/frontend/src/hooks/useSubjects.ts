@@ -5,6 +5,8 @@ import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { logActivity } from "@/lib/activityLogger";
 
+export { DEFAULT_SUBJECT_GROUPS, DEFAULT_SUBJECTS } from "@/lib/defaultSubjects";
+
 export interface Subject {
   id: string;
   user_id: string;
@@ -30,16 +32,6 @@ export interface UpdateSubjectInput {
   name?: string;
   kkm?: number;
 }
-
-export const DEFAULT_SUBJECTS = [
-  "Bahasa Indonesia",
-  "Matematika",
-  "IPAS",
-  "Pendidikan Pancasila",
-  "Bahasa Inggris",
-  "Seni Budaya",
-  "PJOK",
-];
 
 /**
  * Hook untuk mengelola mata pelajaran

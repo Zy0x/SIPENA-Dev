@@ -13,7 +13,7 @@ import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mj
 import type { SignatureSettingsConfig } from "@/hooks/useSignatureSettings";
 import type { ExportConfig } from "@/lib/reportExportLayout";
 import { buildReportLayoutPlanV2, type ReportExportLayoutPlanV2, type ReportLayoutPageV2, type SignaturePlacement } from "@/lib/reportExportLayoutV2";
-import { buildReportPdfDocument } from "@/lib/exportEngine/pdfEngine";
+import { buildReportPdfDocumentResult } from "@/lib/exportEngine/pdfEngine";
 import { pdfBodyRowHeightMm, pdfHeaderRowHeightMm, mmToPx } from "@/lib/exportEngine/sharedMetrics";
 import { resolveSignatureRenderBoxMm } from "@/lib/exportSignature";
 import {
@@ -188,6 +188,7 @@ export function SignaturePreviewCanvas({
   const config = useMemo(() => buildPreviewConfig(previewData, draft), [draft, previewData]);
   const layoutPlan = useMemo(() => (config ? buildReportLayoutPlanV2(config) : null), [config]);
   const [pages, setPages] = useState<RenderedPage[]>([]);
+  const [renderedSignaturePlacement, setRenderedSignaturePlacement] = useState<SignaturePlacement | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [liveSignaturePosition, setLiveSignaturePosition] = useState<{ xMm: number; yMm: number } | null>(null);
@@ -199,23 +200,26 @@ export function SignaturePreviewCanvas({
     () => layoutPlan ? layoutPlan.pages.map((page) => buildPageHotspots(layoutPlan, page)) : [],
     [layoutPlan],
   );
+  const signaturePlacement = renderedSignaturePlacement ?? layoutPlan?.signaturePlacement ?? null;
 
   useEffect(() => {
-    onSignaturePlacementChange?.(layoutPlan?.signaturePlacement ?? null);
-  }, [layoutPlan?.signaturePlacement, onSignaturePlacementChange]);
+    onSignaturePlacementChange?.(signaturePlacement);
+  }, [onSignaturePlacementChange, signaturePlacement]);
 
   useEffect(() => {
     if (!config || !layoutPlan) {
       setPages([]);
+      setRenderedSignaturePlacement(null);
       return;
     }
 
     let cancelled = false;
     setIsRendering(true);
+    setRenderedSignaturePlacement(null);
 
     const render = async () => {
-      const doc = buildReportPdfDocument(config);
-      const pdf = await getDocument({ data: doc.output("arraybuffer") }).promise;
+      const built = buildReportPdfDocumentResult(config);
+      const pdf = await getDocument({ data: built.doc.output("arraybuffer") }).promise;
       const nextPages: RenderedPage[] = [];
       const renderScaleBase = typeof window === "undefined" ? 1.5 : Math.max(1.5, Math.min(window.devicePixelRatio || 1, 2));
 
@@ -240,6 +244,7 @@ export function SignaturePreviewCanvas({
 
       if (!cancelled) {
         setPages(nextPages);
+        setRenderedSignaturePlacement(built.signaturePlacement);
         setIsRendering(false);
       }
     };
@@ -247,6 +252,7 @@ export function SignaturePreviewCanvas({
     void render().catch(() => {
       if (!cancelled) {
         setPages([]);
+        setRenderedSignaturePlacement(null);
         setIsRendering(false);
       }
     });
@@ -262,7 +268,6 @@ export function SignaturePreviewCanvas({
     }
   }, [dragState]);
 
-  const signaturePlacement = layoutPlan?.signaturePlacement ?? null;
   const signaturePageIndex = signaturePlacement?.pageIndex ?? null;
   const overlayPosition = liveSignaturePosition ?? (signaturePlacement
     ? { xMm: signaturePlacement.xMm, yMm: signaturePlacement.yMm }

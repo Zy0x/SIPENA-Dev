@@ -14,14 +14,18 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Loader2, AlertCircle } from "lucide-react";
-import { useSubjects, DEFAULT_SUBJECTS } from "@/hooks/useSubjects";
+import { useSubjects } from "@/hooks/useSubjects";
 import { useEnhancedToast } from "@/contexts/ToastContext";
+import { DEFAULT_SUBJECT_GROUPS } from "@/lib/defaultSubjects";
 
 interface AddSubjectDialogProps {
   classId: string;
@@ -181,12 +185,21 @@ export default function AddSubjectDialog({
                 <SelectTrigger id="subject-name">
                   <SelectValue placeholder="Pilih mata pelajaran" />
                 </SelectTrigger>
-                <SelectContent>
-                  {DEFAULT_SUBJECTS.map((subject) => (
-                    <SelectItem key={subject} value={subject}>
-                      {subject}
-                    </SelectItem>
+                <SelectContent className="max-h-[min(28rem,var(--radix-select-content-available-height))]">
+                  {DEFAULT_SUBJECT_GROUPS.map((group, index) => (
+                    <SelectGroup key={group.id}>
+                      <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.label}
+                      </SelectLabel>
+                      {group.subjects.map((subject) => (
+                        <SelectItem key={`${group.id}-${subject}`} value={subject}>
+                          {subject}
+                        </SelectItem>
+                      ))}
+                      {index < DEFAULT_SUBJECT_GROUPS.length - 1 ? <SelectSeparator /> : null}
+                    </SelectGroup>
                   ))}
+                  <SelectSeparator />
                   <SelectItem value="Lainnya">Lainnya (Custom)</SelectItem>
                 </SelectContent>
               </Select>

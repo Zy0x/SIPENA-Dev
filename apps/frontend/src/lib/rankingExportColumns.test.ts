@@ -65,17 +65,22 @@ describe("ranking export columns", () => {
       { id: "subject-1", name: "Bahasa Indonesia", kkm: 75 },
       { id: "subject-2", name: "Matematika", kkm: 75 },
       { id: "subject-3", name: "Pendidikan Pancasila", kkm: 75 },
+      { id: "subject-4", name: "Matematika Tingkat Lanjut", kkm: 75 },
+      { id: "subject-5", name: "Biologi", kkm: 75 },
     ]);
 
     expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "rank")!)).toBe("Rank");
     expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "subject_subject-1")!)).toBe("B. Indo");
     expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "subject_subject-2")!)).toBe("MTK");
     expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "subject_subject-3")!)).toBe("PPKn");
+    expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "subject_subject-4")!)).toBe("MTL");
+    expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "subject_subject-5")!)).toBe("Bio.");
     expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "average")!)).toBe("Rata-rata");
   });
 
   it("falls back to short subject labels for custom long subject names", () => {
     expect(compactSubjectLabelForRankingExport("Teknologi Informasi dan Komunikasi")).toBe("TIK");
     expect(compactSubjectLabelForRankingExport("Antropologi")).toBe("Ant.");
+    expect(compactSubjectLabelForRankingExport("Robotika dan AI")).toBe("RA");
   });
 });
