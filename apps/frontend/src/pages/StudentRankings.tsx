@@ -47,7 +47,7 @@ import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import { useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { UnifiedExportStudio, type ExportColumnOption, type ExportColumnTypographyOption, type ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
 import { ExportPreviewRenderer } from "@/components/export/ExportPreviewRenderer";
-import { buildRankingExportColumns, getDefaultSelectedColumns, buildRankingExportData } from "@/lib/rankingExportColumns";
+import { buildRankingExportColumns, getDefaultSelectedColumns, buildRankingExportData, getRankingExportColumnLabel } from "@/lib/rankingExportColumns";
 import { getNaturalColumnWidthMmV2, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
 import { exportReport, type ExportColumn, type ExportConfig, type ReportPaperSize } from "@/lib/exportReports";
 import type { RankingColumn } from "@/components/rankings/RankingColumnSelector";
@@ -276,7 +276,7 @@ export default function StudentRankings() {
 
   const overallExportColumns = useMemo<ExportColumn[]>(() => selectedOverallColumns.map((column) => ({
     key: column.key,
-    label: column.label,
+    label: getRankingExportColumnLabel(column),
     type: mapRankingColumnType(column),
   })), [mapRankingColumnType, selectedOverallColumns]);
 

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 export interface RankingColumn {
   id: string;
   label: string;
+  exportLabel?: string;
   key: string;
   description?: string;
   category: "identity" | "grades" | "summary";

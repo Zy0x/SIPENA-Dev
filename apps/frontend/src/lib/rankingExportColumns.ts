@@ -26,6 +26,68 @@ function compactNisnForRankingExport(nisn: string) {
   return nisn.trim().slice(0, 17);
 }
 
+const SUBJECT_EXPORT_LABELS: Record<string, string> = {
+  "bahasa indonesia": "B. Indo",
+  "bahasa inggris": "B. Ing",
+  "matematika": "MTK",
+  "pendidikan pancasila": "PPKn",
+  "pendidikan kewarganegaraan": "PKn",
+  "pancasila": "PPKn",
+  "ilmu pengetahuan alam dan sosial": "IPAS",
+  "ipas": "IPAS",
+  "pjok": "PJOK",
+  "pendidikan jasmani olahraga dan kesehatan": "PJOK",
+  "informatika": "TIK",
+  "seni budaya": "Seni",
+  "prakarya": "Prak.",
+  "sejarah": "Sej.",
+  "geografi": "Geo.",
+  "fisika": "Fis.",
+  "kimia": "Kim.",
+  "biologi": "Bio.",
+  "ekonomi": "Eko.",
+  "sosiologi": "Sos.",
+};
+
+const SUBJECT_EXPORT_STOP_WORDS = new Set(["dan", "yang", "di", "ke", "dari", "untuk", "pada", "the", "of", "and"]);
+
+function normalizeSubjectLabel(label: string) {
+  return label.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function shortenSubjectWord(word: string) {
+  if (word.length <= 5) return word;
+  return `${word.slice(0, 3)}.`;
+}
+
+export function compactSubjectLabelForRankingExport(label: string) {
+  const normalized = normalizeSubjectLabel(label);
+  const mapped = SUBJECT_EXPORT_LABELS[normalized];
+  if (mapped) return mapped;
+
+  const cleanLabel = label.trim().replace(/\s+/g, " ");
+  if (!cleanLabel) return label;
+  if (cleanLabel.length <= 5) return cleanLabel;
+
+  const words = cleanLabel.split(" ");
+  if (words.length === 1) {
+    return shortenSubjectWord(words[0]);
+  }
+
+  const meaningfulWords = words.filter((word) => !SUBJECT_EXPORT_STOP_WORDS.has(word.toLowerCase()));
+  const acronym = meaningfulWords
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("")
+    .slice(0, 6);
+
+  if (acronym.length >= 2) return acronym;
+  return words.slice(0, 2).map(shortenSubjectWord).join(" ");
+}
+
+export function getRankingExportColumnLabel(column: RankingColumn) {
+  return column.exportLabel ?? column.label;
+}
+
 /**
  * Build default ranking export columns based on subjects
  * Includes identity, per-subject grades, and summary columns
@@ -39,6 +101,7 @@ export function buildRankingExportColumns(
   columns.push({
     id: "rank",
     label: "Peringkat",
+    exportLabel: "Rank",
     key: "Peringkat",
     category: "identity",
     description: "Nomor urut ranking siswa",
@@ -68,6 +131,7 @@ export function buildRankingExportColumns(
     columns.push({
       id: `subject_${subject.id}`,
       label: subject.name,
+      exportLabel: compactSubjectLabelForRankingExport(subject.name),
       key: subject.name,
       category: "grades",
       description: `Nilai rata-rata ${subject.name} (KKM: ${subject.kkm})`,
@@ -80,6 +144,7 @@ export function buildRankingExportColumns(
   columns.push({
     id: "average",
     label: "Rata-rata Keseluruhan",
+    exportLabel: "Rata-rata",
     key: "Rata-rata",
     category: "summary",
     description: "Rata-rata nilai dari semua mata pelajaran",

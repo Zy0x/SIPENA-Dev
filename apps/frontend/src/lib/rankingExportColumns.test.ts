@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { RankingColumn } from "@/components/rankings/RankingColumnSelector";
-import { buildRankingExportData } from "./rankingExportColumns";
+import {
+  buildRankingExportColumns,
+  buildRankingExportData,
+  compactSubjectLabelForRankingExport,
+  getRankingExportColumnLabel,
+} from "./rankingExportColumns";
 
 const columns: RankingColumn[] = [
   {
@@ -53,5 +58,24 @@ describe("ranking export columns", () => {
     expect(row?.Nama).toBe("Muhammad Akmal");
     expect(String(row?.NISN)).toBe("12345678901234567");
     expect(String(row?.NISN)).toHaveLength(17);
+  });
+
+  it("uses compact export-only labels so ranking headers do not split words", () => {
+    const exportColumns = buildRankingExportColumns([
+      { id: "subject-1", name: "Bahasa Indonesia", kkm: 75 },
+      { id: "subject-2", name: "Matematika", kkm: 75 },
+      { id: "subject-3", name: "Pendidikan Pancasila", kkm: 75 },
+    ]);
+
+    expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "rank")!)).toBe("Rank");
+    expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "subject_subject-1")!)).toBe("B. Indo");
+    expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "subject_subject-2")!)).toBe("MTK");
+    expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "subject_subject-3")!)).toBe("PPKn");
+    expect(getRankingExportColumnLabel(exportColumns.find((column) => column.id === "average")!)).toBe("Rata-rata");
+  });
+
+  it("falls back to short subject labels for custom long subject names", () => {
+    expect(compactSubjectLabelForRankingExport("Teknologi Informasi dan Komunikasi")).toBe("TIK");
+    expect(compactSubjectLabelForRankingExport("Antropologi")).toBe("Ant.");
   });
 });
