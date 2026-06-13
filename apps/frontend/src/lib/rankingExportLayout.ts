@@ -5,27 +5,44 @@ import {
   resolveReportPaperSize,
   type ReportDocumentStyle,
 } from "./reportExportLayoutV2";
+import { pdfEffectiveFontSize } from "./exportEngine/sharedMetrics";
 
 const RANKING_EXPORT_PAGE_MARGIN_MM = 16;
 const RANKING_COMPACT_MIN_COLUMN_WIDTH_MM = 8;
+const RANKING_INDEX_COLUMN_WIDTH_MM = 8;
+const RANKING_NAME_COLUMN_WIDTH_MM = 24;
+const RANKING_NISN_COLUMN_WIDTH_MM = 18;
+const RANKING_GRADE_COLUMN_WIDTH_MM = 10.75;
+const RANKING_SUMMARY_COLUMN_WIDTH_MM = 17;
+const RANKING_STATUS_COLUMN_WIDTH_MM = 20;
+const RANKING_READABLE_STYLE_FONT_PT = 11.25;
+const RANKING_HEADER_ROW_HEIGHT_MM = 10.4;
+const RANKING_BODY_ROW_HEIGHT_MM = 8.3;
+const RANKING_MAX_BODY_ROW_HEIGHT_MM = 9.8;
+
+type RankingExportRow = Record<string, string | number>;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
 
 function preferredRankingColumnWidthMm(column: ExportColumn) {
   switch (column.type) {
     case "index":
-      return 8;
+      return RANKING_INDEX_COLUMN_WIDTH_MM;
     case "name":
-      return 24;
+      return RANKING_NAME_COLUMN_WIDTH_MM;
     case "nisn":
-      return 17;
+      return RANKING_NISN_COLUMN_WIDTH_MM;
     case "status":
-      return 19;
+      return RANKING_STATUS_COLUMN_WIDTH_MM;
     case "grandAvg":
     case "avgRapor":
     case "rapor":
     case "chapterAvg":
-      return 15;
+      return RANKING_SUMMARY_COLUMN_WIDTH_MM;
     default:
-      return 11;
+      return RANKING_GRADE_COLUMN_WIDTH_MM;
   }
 }
 
@@ -67,6 +84,66 @@ function fitRankingColumnWidths(columns: ExportColumn[], paperSize: ReportPaperS
   return widths.map((width) => Math.max(RANKING_COMPACT_MIN_COLUMN_WIDTH_MM, width * scale));
 }
 
+function estimateWrappedLineCount(text: string, fontPt: number, widthMm: number) {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  if (!normalized) return 1;
+
+  const usableWidthMm = Math.max(8, widthMm - 4);
+  const averageCharWidthMm = Math.max(0.86, fontPt * 0.14);
+  const charsPerLine = Math.max(6, Math.floor(usableWidthMm / averageCharWidthMm));
+  const words = normalized.split(" ");
+  let lines = 1;
+  let currentLineLength = 0;
+
+  words.forEach((word) => {
+    const wordLength = word.length;
+    if (currentLineLength === 0) {
+      currentLineLength = Math.min(wordLength, charsPerLine);
+      lines += Math.max(0, Math.ceil(wordLength / charsPerLine) - 1);
+      return;
+    }
+
+    const nextLength = currentLineLength + 1 + wordLength;
+    if (nextLength <= charsPerLine) {
+      currentLineLength = nextLength;
+      return;
+    }
+
+    lines += 1;
+    currentLineLength = Math.min(wordLength, charsPerLine);
+    lines += Math.max(0, Math.ceil(wordLength / charsPerLine) - 1);
+  });
+
+  return clamp(lines, 1, 3);
+}
+
+function resolveRankingBodyRowHeightMm(
+  style: ReportDocumentStyle,
+  columns: ExportColumn[],
+  widths: number[],
+  rows: RankingExportRow[],
+) {
+  const nameIndex = columns.findIndex((column) => column.type === "name");
+  const nameColumn = nameIndex >= 0 ? columns[nameIndex] : null;
+  const nameWidthMm = nameIndex >= 0 ? widths[nameIndex] ?? RANKING_NAME_COLUMN_WIDTH_MM : RANKING_NAME_COLUMN_WIDTH_MM;
+  const bodyFontPt = pdfEffectiveFontSize(Math.max(style.tableBodyFontSize, RANKING_READABLE_STYLE_FONT_PT));
+  const maxNameLines = nameColumn && rows.length > 0
+    ? Math.max(...rows.map((row) => estimateWrappedLineCount(String(row[nameColumn.key] ?? ""), bodyFontPt, nameWidthMm)))
+    : 2;
+  const textHeightMm = Math.min(maxNameLines, 3) * bodyFontPt * 0.34;
+  return Number(clamp(textHeightMm + 2, RANKING_BODY_ROW_HEIGHT_MM, RANKING_MAX_BODY_ROW_HEIGHT_MM).toFixed(2));
+}
+
+function resolveRankingHeaderRowHeightMm(style: ReportDocumentStyle, columns: ExportColumn[], widths: number[]) {
+  const headerFontPt = pdfEffectiveFontSize(Math.max(style.tableHeaderFontSize, RANKING_READABLE_STYLE_FONT_PT));
+  const maxHeaderLines = Math.max(
+    1,
+    ...columns.map((column, index) => estimateWrappedLineCount(column.label, headerFontPt, widths[index] ?? preferredRankingColumnWidthMm(column))),
+  );
+  const textHeightMm = Math.min(maxHeaderLines, 3) * headerFontPt * 0.34;
+  return Number(clamp(textHeightMm + 3, RANKING_HEADER_ROW_HEIGHT_MM, 12.4).toFixed(2));
+}
+
 export function createDefaultRankingDocumentStyle(): ReportDocumentStyle {
   const baseStyle = createDefaultReportDocumentStyle();
 
@@ -74,8 +151,8 @@ export function createDefaultRankingDocumentStyle(): ReportDocumentStyle {
     ...baseStyle,
     titleFontSize: 14,
     metaFontSize: 9.25,
-    tableHeaderFontSize: 11.25,
-    tableBodyFontSize: 11.25,
+    tableHeaderFontSize: RANKING_READABLE_STYLE_FONT_PT,
+    tableBodyFontSize: RANKING_READABLE_STYLE_FONT_PT,
     layoutPreset: "compact",
     experimentalColumnTypographyEnabled: true,
     experimentalColumnLayoutEnabled: true,
@@ -83,8 +160,8 @@ export function createDefaultRankingDocumentStyle(): ReportDocumentStyle {
       ...baseStyle.tableSizing,
       mode: "autofit-content",
       tableWidthPercent: 100,
-      headerRowHeightMm: 8.8,
-      bodyRowHeightMm: 6.2,
+      headerRowHeightMm: RANKING_HEADER_ROW_HEIGHT_MM,
+      bodyRowHeightMm: RANKING_BODY_ROW_HEIGHT_MM,
     },
   };
 }
@@ -93,21 +170,36 @@ export function buildCompactRankingDocumentStyle(
   baseStyle: Partial<ReportDocumentStyle> | undefined,
   columns: ExportColumn[],
   paperSize: ReportPaperSize,
+  rows: RankingExportRow[] = [],
 ): ReportDocumentStyle {
   const resolvedStyle = resolveDocumentStyle(baseStyle ?? createDefaultRankingDocumentStyle());
   const widths = fitRankingColumnWidths(columns, paperSize);
+  const readableHeaderFontSize = Math.max(resolvedStyle.tableHeaderFontSize, RANKING_READABLE_STYLE_FONT_PT);
+  const readableBodyFontSize = Math.max(resolvedStyle.tableBodyFontSize, RANKING_READABLE_STYLE_FONT_PT);
+  const headerRowHeightMm = Math.max(
+    resolvedStyle.tableSizing.headerRowHeightMm ?? 0,
+    resolveRankingHeaderRowHeightMm({ ...resolvedStyle, tableHeaderFontSize: readableHeaderFontSize }, columns, widths),
+  );
+  const bodyRowHeightMm = Math.max(
+    resolvedStyle.tableSizing.bodyRowHeightMm ?? 0,
+    resolveRankingBodyRowHeightMm({ ...resolvedStyle, tableBodyFontSize: readableBodyFontSize }, columns, widths, rows),
+  );
 
   return {
     ...resolvedStyle,
+    tableHeaderFontSize: readableHeaderFontSize,
+    tableBodyFontSize: readableBodyFontSize,
     experimentalColumnLayoutEnabled: true,
     tableSizing: {
       ...resolvedStyle.tableSizing,
       mode: "autofit-content",
       tableWidthPercent: 100,
+      headerRowHeightMm,
+      bodyRowHeightMm,
     },
     columnFontOverrides: Object.fromEntries(columns.map((column, index) => {
       const existing = resolvedStyle.columnFontOverrides[column.key] || {};
-      const bodyAlignment = column.type === "name" || column.type === "status"
+      const bodyAlignment = column.type === "name"
         ? existing.bodyAlignment ?? "left"
         : "center";
 

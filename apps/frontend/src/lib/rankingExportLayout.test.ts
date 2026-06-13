@@ -23,7 +23,18 @@ function buildRankingColumns(subjectCount: number): ExportColumn[] {
   ];
 }
 
-function buildConfig(columns: ExportColumn[], documentStyle = createDefaultRankingDocumentStyle()): ExportConfig {
+function buildRows(columns: ExportColumn[], names = ["Siti Aminah"]) {
+  return names.map((name) => Object.fromEntries(columns.map((column) => [
+    column.key,
+    column.type === "name" ? name : column.type === "nisn" ? "0012345678" : column.type === "status" ? "Belum Lulus" : 88,
+  ])));
+}
+
+function buildConfig(
+  columns: ExportColumn[],
+  documentStyle = createDefaultRankingDocumentStyle(),
+  data: Record<string, string | number>[] = buildRows(columns),
+): ExportConfig {
   return {
     className: "IX A",
     subjectName: "Ranking Keseluruhan",
@@ -33,12 +44,7 @@ function buildConfig(columns: ExportColumn[], documentStyle = createDefaultRanki
     columns,
     headerGroups: [{ label: "Ranking Keseluruhan", colSpan: columns.length }],
     chapterGroups: [],
-    data: [
-      Object.fromEntries(columns.map((column) => [
-        column.key,
-        column.type === "name" ? "Siti Aminah" : column.type === "nisn" ? "0012345678" : column.type === "status" ? "Lulus" : 88,
-      ])),
-    ],
+    data,
     dateStr: "13/06/2026",
     studentCount: 1,
     chapterCount: 0,
@@ -60,7 +66,7 @@ describe("ranking export layout", () => {
 
   it("keeps all overall ranking columns in one A4 segment with the compact style", () => {
     const columns = buildRankingColumns(18);
-    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4");
+    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4", buildRows(columns));
     const plan = buildReportLayoutPlanV2(buildConfig(columns, documentStyle));
 
     expect(plan.pages[0]?.columns).toHaveLength(columns.length);
@@ -72,7 +78,7 @@ describe("ranking export layout", () => {
 
   it("does not stretch a small ranking table to the full page width", () => {
     const columns = buildRankingColumns(7);
-    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4");
+    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4", buildRows(columns));
     const plan = buildReportLayoutPlanV2(buildConfig(columns, documentStyle));
     const usedWidth = plan.pages[0]?.columnWidthsMm.reduce((sum, width) => sum + width, 0) ?? 0;
     const usableWidth = plan.metrics.pageWidthMm - plan.metrics.marginLeftMm - plan.metrics.marginRightMm;
@@ -83,10 +89,28 @@ describe("ranking export layout", () => {
 
   it("keeps the name column compact enough to wrap long names", () => {
     const columns = buildRankingColumns(7);
-    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4");
+    const data = buildRows(columns, [
+      "Siti Aminah",
+      "Nama Siswa Sangat Panjang Untuk Menguji Pembungkusan",
+    ]);
+    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4", data);
     const nameWidth = documentStyle.columnFontOverrides.Nama?.widthMm;
 
     expect(nameWidth).toBeLessThanOrEqual(24);
+    expect(documentStyle.tableSizing.bodyRowHeightMm).toBeGreaterThanOrEqual(8.3);
+    expect(documentStyle.tableSizing.bodyRowHeightMm).toBeLessThanOrEqual(9.8);
     expect(pdfEffectiveFontSize(documentStyle.tableBodyFontSize)).toBeGreaterThan(9);
+  });
+
+  it("keeps non-name ranking cells centered in the compact layout", () => {
+    const columns = buildRankingColumns(3);
+    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4", buildRows(columns));
+    const nisnColumn = columns.find((column) => column.type === "nisn");
+    const statusColumn = columns.find((column) => column.type === "status");
+    const gradeColumn = columns.find((column) => column.type === "assignment");
+
+    expect(nisnColumn && getColumnBodyAlignment(documentStyle, nisnColumn)).toBe("center");
+    expect(statusColumn && getColumnBodyAlignment(documentStyle, statusColumn)).toBe("center");
+    expect(gradeColumn && getColumnBodyAlignment(documentStyle, gradeColumn)).toBe("center");
   });
 });

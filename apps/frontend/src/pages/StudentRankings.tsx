@@ -280,11 +280,6 @@ export default function StudentRankings() {
     type: mapRankingColumnType(column),
   })), [mapRankingColumnType, selectedOverallColumns]);
 
-  const compactRankingDocumentStyle = useMemo(
-    () => buildCompactRankingDocumentStyle(documentStyle, overallExportColumns, paperSize),
-    [documentStyle, overallExportColumns, paperSize],
-  );
-
   const overallExportConfig = useMemo<ExportConfig | null>(() => {
     if (!selectedClass) return null;
     const subjectsToUse = selectedSubjectIds.length > 0
@@ -302,6 +297,12 @@ export default function StudentRankings() {
       selectedColumnIdsToUse,
       classKkm,
       formatGrade,
+    );
+    const compactRankingDocumentStyle = buildCompactRankingDocumentStyle(
+      documentStyle,
+      overallExportColumns,
+      paperSize,
+      data,
     );
 
     return {
@@ -347,7 +348,7 @@ export default function StudentRankings() {
     buildExportSignature,
     buildMetaGroups,
     classKkm,
-    compactRankingDocumentStyle,
+    documentStyle,
     exportColumns,
     hasSignature,
     includeSignature,
@@ -407,7 +408,7 @@ export default function StudentRankings() {
         suggestedBodyFontSize: Number(documentStyle.tableBodyFontSize.toFixed(2)),
         suggestedWidthMm: Number((compactWidth ?? getNaturalColumnWidthMmV2(column, styleForColumn)).toFixed(2)),
         suggestedHeaderAlignment: "center",
-        suggestedBodyAlignment: column.type === "name" || column.type === "status" ? "left" : "center",
+        suggestedBodyAlignment: column.type === "name" ? "left" : "center",
       };
     });
   }, [documentStyle]);
@@ -454,7 +455,12 @@ export default function StudentRankings() {
       includeSignature: nextIncludeSignature && hasSignature,
       signature: buildExportSignature(nextSignatureConfig),
       paperSize: nextPaperSize,
-      documentStyle: buildCompactRankingDocumentStyle(nextDocumentStyle ?? documentStyle, overallExportConfig.columns, nextPaperSize),
+      documentStyle: buildCompactRankingDocumentStyle(
+        nextDocumentStyle ?? documentStyle,
+        overallExportConfig.columns,
+        nextPaperSize,
+        overallExportConfig.data,
+      ),
       autoFitOnePage: nextAutoFitOnePage ?? autoFitOnePage,
     };
     const fileBaseName = exportConfig.fileBaseName?.replace(/\s+/g, "_") || "Ranking_Keseluruhan";
@@ -625,7 +631,12 @@ export default function StudentRankings() {
                             includeSignature: previewIncludeSignature && hasSignature,
                             signature: buildExportSignature(draft),
                             paperSize: previewPaperSize,
-                            documentStyle: buildCompactRankingDocumentStyle(previewDocumentStyle ?? documentStyle, overallExportConfig.columns, previewPaperSize),
+                            documentStyle: buildCompactRankingDocumentStyle(
+                              previewDocumentStyle ?? documentStyle,
+                              overallExportConfig.columns,
+                              previewPaperSize,
+                              overallExportConfig.data,
+                            ),
                             autoFitOnePage: previewAutoFit ?? autoFitOnePage,
                           }}
                         />

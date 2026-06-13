@@ -436,6 +436,7 @@ function TablePreview({
   onHighlightTargetSelect?: (target: ExportPreviewHighlightTarget | null) => void;
 }) {
   const totalWidth = widths.reduce((sum, width) => sum + width, 0) * PX_PER_MM;
+  const useContentWidth = documentStyle.tableSizing.mode === "autofit-content";
 
   // Use SAME formulas as PDF engine for row heights
   const headerRowHeightPx = mmToPx(
@@ -505,7 +506,8 @@ function TablePreview({
     <table
       style={{
         width: totalWidth,
-        minWidth: "100%",
+        minWidth: useContentWidth ? totalWidth : "100%",
+        maxWidth: useContentWidth ? totalWidth : undefined,
         borderCollapse: "collapse",
         tableLayout: "fixed",
         ...resolveHighlight(undefined, "table"),
