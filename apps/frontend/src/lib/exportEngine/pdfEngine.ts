@@ -10,7 +10,6 @@ import {
   resolveReportPaperSize,
   type ReportExportLayoutPlanV2,
   type ReportDocumentStyle,
-  type ReportLayoutPageV2,
   type SignaturePlacement,
 } from "@/lib/reportExportLayoutV2";
 import { type ExportColumn, type ExportConfig, type HeaderGroup } from "@/lib/reportExportLayout";
@@ -145,16 +144,44 @@ export interface BuiltReportPdfDocument {
   signaturePlacement: SignaturePlacement | null;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function anchorDefaultSignatureAfterContent(placement: SignaturePlacement, config: ExportConfig): SignaturePlacement {
+  const signature = config.signature;
+  if (!signature) return placement;
+
+  const isManualPlacement = signature.manualXPercent != null || signature.manualYPercent != null;
+  const hasVerticalOffset = Math.abs(Number(signature.signatureOffsetY || 0)) >= 0.05;
+  const preset = signature.signaturePreset ?? "bottom-right";
+  if (isManualPlacement || hasVerticalOffset || preset === "follow-content") {
+    return placement;
+  }
+
+  const breathingRoomMm = 3;
+  const desiredXMm = placement.safeZone.safeXMm + Math.max(0, placement.safeZone.safeWidthMm - placement.widthMm);
+  const desiredYMm = placement.safeZone.safeYMm + breathingRoomMm;
+  const maxXMm = placement.movementBounds.safeXMm + Math.max(0, placement.movementBounds.safeWidthMm - placement.widthMm);
+  const maxYMm = placement.movementBounds.safeYMm + Math.max(0, placement.movementBounds.safeHeightMm - placement.heightMm);
+
+  return {
+    ...placement,
+    xMm: clamp(desiredXMm, placement.movementBounds.safeXMm, maxXMm),
+    yMm: clamp(desiredYMm, placement.movementBounds.safeYMm, maxYMm),
+  };
+}
+
 function resolveRenderedSignaturePlacement(
   layoutPlan: ReportExportLayoutPlanV2,
-  page: ReportLayoutPageV2,
   config: ExportConfig,
-  finalY: number,
+  pageIndex: number,
+  safeZoneTopMm: number,
 ) {
   if (!config.signature || !layoutPlan.signaturePlacement) return null;
 
-  return resolveSignaturePlacementFromBounds({
-    pageIndex: layoutPlan.signaturePlacement.pageIndex,
+  const placement = resolveSignaturePlacementFromBounds({
+    pageIndex,
     signature: config.signature,
     signatureMetrics: {
       widthMm: layoutPlan.signaturePlacement.widthMm,
@@ -171,10 +198,10 @@ function resolveRenderedSignaturePlacement(
     marginTopMm: layoutPlan.metrics.marginTopMm,
     marginBottomMm: layoutPlan.metrics.marginBottomMm,
     footerHeightMm: layoutPlan.metrics.footerHeightMm,
-    safeZoneTopMm: page.pageType === "table"
-      ? finalY + layoutPlan.metrics.signatureGapMm
-      : page.tableStartY,
+    safeZoneTopMm,
   });
+
+  return anchorDefaultSignatureAfterContent(placement, config);
 }
 
 export function buildReportPdfDocumentResult(config: ExportConfig): BuiltReportPdfDocument {
@@ -287,7 +314,29 @@ export function buildReportPdfDocumentResult(config: ExportConfig): BuiltReportP
       const finalY = page.pageType === "table"
         ? ((doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || page.estimatedTableEndY)
         : page.tableStartY;
-      renderedSignaturePlacement = resolveRenderedSignaturePlacement(layoutPlan, page, config, finalY);
+      const safeZoneTopMm = page.pageType === "table"
+        ? finalY + layoutPlan.metrics.signatureGapMm
+        : page.tableStartY;
+      renderedSignaturePlacement = resolveRenderedSignaturePlacement(
+        layoutPlan,
+        config,
+        doc.getNumberOfPages() - 1,
+        safeZoneTopMm,
+      );
+      const printableBottomMm = layoutPlan.metrics.pageHeightMm - layoutPlan.metrics.marginBottomMm - layoutPlan.metrics.footerHeightMm;
+      if (
+        page.pageType === "table"
+        && renderedSignaturePlacement
+        && safeZoneTopMm + renderedSignaturePlacement.heightMm > printableBottomMm
+      ) {
+        doc.addPage();
+        renderedSignaturePlacement = resolveRenderedSignaturePlacement(
+          layoutPlan,
+          config,
+          doc.getNumberOfPages() - 1,
+          layoutPlan.metrics.nextPageTableStartY,
+        );
+      }
       addSignatureBlockPDF(
         doc,
         {
@@ -304,9 +353,13 @@ export function buildReportPdfDocumentResult(config: ExportConfig): BuiltReportP
           : null,
       );
     }
-
-    drawFooter(page.number, layoutPlan.pages.length);
   });
+
+  const totalPages = doc.getNumberOfPages();
+  for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+    doc.setPage(pageNumber);
+    drawFooter(pageNumber, totalPages);
+  }
 
   return {
     doc,
