@@ -7,25 +7,25 @@ import {
 } from "./reportExportLayoutV2";
 
 const RANKING_EXPORT_PAGE_MARGIN_MM = 16;
-const RANKING_COMPACT_MIN_COLUMN_WIDTH_MM = 4;
+const RANKING_COMPACT_MIN_COLUMN_WIDTH_MM = 8;
 
 function preferredRankingColumnWidthMm(column: ExportColumn) {
   switch (column.type) {
     case "index":
       return 8;
     case "name":
-      return 30;
+      return 24;
     case "nisn":
       return 17;
     case "status":
-      return 16;
+      return 19;
     case "grandAvg":
     case "avgRapor":
     case "rapor":
     case "chapterAvg":
       return 15;
     default:
-      return 12;
+      return 11;
   }
 }
 
@@ -74,8 +74,8 @@ export function createDefaultRankingDocumentStyle(): ReportDocumentStyle {
     ...baseStyle,
     titleFontSize: 14,
     metaFontSize: 9.25,
-    tableHeaderFontSize: 9.25,
-    tableBodyFontSize: 9.5,
+    tableHeaderFontSize: 11.25,
+    tableBodyFontSize: 11.25,
     layoutPreset: "compact",
     experimentalColumnTypographyEnabled: true,
     experimentalColumnLayoutEnabled: true,
@@ -83,8 +83,8 @@ export function createDefaultRankingDocumentStyle(): ReportDocumentStyle {
       ...baseStyle.tableSizing,
       mode: "autofit-content",
       tableWidthPercent: 100,
-      headerRowHeightMm: 7.4,
-      bodyRowHeightMm: 5.1,
+      headerRowHeightMm: 8.8,
+      bodyRowHeightMm: 6.2,
     },
   };
 }

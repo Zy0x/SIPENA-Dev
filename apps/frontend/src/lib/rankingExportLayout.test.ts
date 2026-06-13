@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ExportColumn, ExportConfig } from "./reportExportLayout";
 import { buildReportLayoutPlanV2, getColumnBodyAlignment } from "./reportExportLayoutV2";
+import { pdfEffectiveFontSize } from "./exportEngine/sharedMetrics";
 import {
   buildCompactRankingDocumentStyle,
   createDefaultRankingDocumentStyle,
@@ -53,8 +54,8 @@ describe("ranking export layout", () => {
     const nisnColumn: ExportColumn = { key: "NISN", label: "NISN", type: "nisn" };
 
     expect(getColumnBodyAlignment(style, nisnColumn)).toBe("center");
-    expect(style.tableHeaderFontSize).toBeGreaterThan(9);
-    expect(style.tableBodyFontSize).toBeGreaterThan(9);
+    expect(pdfEffectiveFontSize(style.tableHeaderFontSize)).toBeGreaterThan(9);
+    expect(pdfEffectiveFontSize(style.tableBodyFontSize)).toBeGreaterThan(9);
   });
 
   it("keeps all overall ranking columns in one A4 segment with the compact style", () => {
@@ -78,5 +79,14 @@ describe("ranking export layout", () => {
 
     expect(plan.documentStyle.tableSizing.mode).toBe("autofit-content");
     expect(usedWidth).toBeLessThan(usableWidth * 0.75);
+  });
+
+  it("keeps the name column compact enough to wrap long names", () => {
+    const columns = buildRankingColumns(7);
+    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4");
+    const nameWidth = documentStyle.columnFontOverrides.Nama?.widthMm;
+
+    expect(nameWidth).toBeLessThanOrEqual(24);
+    expect(pdfEffectiveFontSize(documentStyle.tableBodyFontSize)).toBeGreaterThan(9);
   });
 });
