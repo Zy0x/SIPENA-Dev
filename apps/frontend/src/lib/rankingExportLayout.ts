@@ -15,7 +15,7 @@ const RANKING_NISN_COLUMN_WIDTH_MM = 18;
 const RANKING_GRADE_COLUMN_WIDTH_MM = 10.75;
 const RANKING_SUMMARY_COLUMN_WIDTH_MM = 17;
 const RANKING_STATUS_COLUMN_WIDTH_MM = 20;
-const RANKING_READABLE_STYLE_FONT_PT = 11.25;
+const RANKING_READABLE_STYLE_FONT_PT = 13;
 const RANKING_HEADER_ROW_HEIGHT_MM = 10.4;
 const RANKING_BODY_ROW_HEIGHT_MM = 8.3;
 const RANKING_MAX_BODY_ROW_HEIGHT_MM = 9.8;
@@ -158,7 +158,7 @@ export function createDefaultRankingDocumentStyle(): ReportDocumentStyle {
     experimentalColumnLayoutEnabled: true,
     tableSizing: {
       ...baseStyle.tableSizing,
-      mode: "autofit-content",
+      mode: "fixed",
       tableWidthPercent: 100,
       headerRowHeightMm: RANKING_HEADER_ROW_HEIGHT_MM,
       bodyRowHeightMm: RANKING_BODY_ROW_HEIGHT_MM,
@@ -192,7 +192,7 @@ export function buildCompactRankingDocumentStyle(
     experimentalColumnLayoutEnabled: true,
     tableSizing: {
       ...resolvedStyle.tableSizing,
-      mode: "autofit-content",
+      mode: "fixed",
       tableWidthPercent: 100,
       headerRowHeightMm,
       bodyRowHeightMm,

@@ -18,6 +18,14 @@ interface StudentRankingEntry {
   gradedSubjectCount: number;
 }
 
+function compactStudentNameForRankingExport(name: string) {
+  return name.trim().replace(/\s+/g, " ").split(" ").slice(0, 2).join(" ");
+}
+
+function compactNisnForRankingExport(nisn: string) {
+  return nisn.trim().slice(0, 17);
+}
+
 /**
  * Build default ranking export columns based on subjects
  * Includes identity, per-subject grades, and summary columns
@@ -117,9 +125,9 @@ export function buildRankingExportData(
       if (column.id === "rank") {
         row[column.key] = ranking.rank;
       } else if (column.id === "name") {
-        row[column.key] = ranking.student.name;
+        row[column.key] = compactStudentNameForRankingExport(ranking.student.name);
       } else if (column.id === "nisn") {
-        row[column.key] = ranking.student.nisn;
+        row[column.key] = compactNisnForRankingExport(ranking.student.nisn);
       } else if (column.id.startsWith("subject_")) {
         const subjectId = column.subjectId;
         if (subjectId) {

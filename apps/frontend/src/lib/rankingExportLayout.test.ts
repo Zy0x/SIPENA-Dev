@@ -60,8 +60,8 @@ describe("ranking export layout", () => {
     const nisnColumn: ExportColumn = { key: "NISN", label: "NISN", type: "nisn" };
 
     expect(getColumnBodyAlignment(style, nisnColumn)).toBe("center");
-    expect(pdfEffectiveFontSize(style.tableHeaderFontSize)).toBeGreaterThan(9);
-    expect(pdfEffectiveFontSize(style.tableBodyFontSize)).toBeGreaterThan(9);
+    expect(pdfEffectiveFontSize(style.tableHeaderFontSize)).toBeGreaterThanOrEqual(11);
+    expect(pdfEffectiveFontSize(style.tableBodyFontSize)).toBeGreaterThanOrEqual(11);
   });
 
   it("keeps all overall ranking columns in one A4 segment with the compact style", () => {
@@ -76,15 +76,16 @@ describe("ranking export layout", () => {
     );
   });
 
-  it("does not stretch a small ranking table to the full page width", () => {
+  it("fits a small ranking table to the printable page margins", () => {
     const columns = buildRankingColumns(7);
     const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4", buildRows(columns));
     const plan = buildReportLayoutPlanV2(buildConfig(columns, documentStyle));
     const usedWidth = plan.pages[0]?.columnWidthsMm.reduce((sum, width) => sum + width, 0) ?? 0;
     const usableWidth = plan.metrics.pageWidthMm - plan.metrics.marginLeftMm - plan.metrics.marginRightMm;
 
-    expect(plan.documentStyle.tableSizing.mode).toBe("autofit-content");
-    expect(usedWidth).toBeLessThan(usableWidth * 0.75);
+    expect(plan.documentStyle.tableSizing.mode).toBe("fixed");
+    expect(usedWidth).toBeGreaterThanOrEqual(usableWidth - 0.01);
+    expect(usedWidth).toBeLessThanOrEqual(usableWidth + 0.01);
   });
 
   it("keeps the name column compact enough to wrap long names", () => {
@@ -99,7 +100,7 @@ describe("ranking export layout", () => {
     expect(nameWidth).toBeLessThanOrEqual(24);
     expect(documentStyle.tableSizing.bodyRowHeightMm).toBeGreaterThanOrEqual(8.3);
     expect(documentStyle.tableSizing.bodyRowHeightMm).toBeLessThanOrEqual(9.8);
-    expect(pdfEffectiveFontSize(documentStyle.tableBodyFontSize)).toBeGreaterThan(9);
+    expect(pdfEffectiveFontSize(documentStyle.tableBodyFontSize)).toBeGreaterThanOrEqual(11);
   });
 
   it("keeps non-name ranking cells centered in the compact layout", () => {
