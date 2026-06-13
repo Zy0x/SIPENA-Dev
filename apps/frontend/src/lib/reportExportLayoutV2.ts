@@ -437,7 +437,7 @@ export function getColumnTypography(style: ReportDocumentStyle, columnKey: strin
 }
 
 export function getDefaultColumnAlignment(columnType: ExportColumn["type"]) {
-  if (columnType === "name" || columnType === "nisn" || columnType === "status") {
+  if (columnType === "name" || columnType === "status") {
     return "left" as const;
   }
   return "center" as const;

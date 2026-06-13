@@ -789,7 +789,7 @@ export default function GradeReports() {
         suggestedBodyFontSize: Number(suggestedBodyFontSize.toFixed(2)),
         suggestedWidthMm: Number(getNaturalColumnWidthMmV2(column, documentStyle).toFixed(2)),
         suggestedHeaderAlignment: "center" as const,
-        suggestedBodyAlignment: column.type === "name" || column.type === "nisn" ? "left" as const : "center" as const,
+        suggestedBodyAlignment: column.type === "name" || column.type === "status" ? "left" as const : "center" as const,
       };
     });
   }, [documentStyle, exportColumns, exportData]);

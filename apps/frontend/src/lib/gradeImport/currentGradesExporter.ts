@@ -138,10 +138,28 @@ function styleHeaderRow(ws: XLSX.WorkSheet, rowIndex: number, columnCount: numbe
 function forceTextColumn(ws: XLSX.WorkSheet, columnIndex: number, firstRow: number, lastRow: number) {
   for (let row = firstRow; row <= lastRow; row += 1) {
     const ref = XLSX.utils.encode_cell({ r: row, c: columnIndex });
-    const cell = ws[ref] as XLSX.CellObject | undefined;
+    const cell = ws[ref] as StyledCell | undefined;
     if (cell) {
       cell.t = "s";
       cell.z = "@";
+    }
+  }
+}
+
+function alignColumnCenter(ws: XLSX.WorkSheet, columnIndex: number, firstRow: number, lastRow: number) {
+  for (let row = firstRow; row <= lastRow; row += 1) {
+    const ref = XLSX.utils.encode_cell({ r: row, c: columnIndex });
+    const cell = ws[ref] as StyledCell | undefined;
+    if (cell) {
+      const previousStyle = (cell.s || {}) as Record<string, unknown>;
+      cell.s = {
+        ...previousStyle,
+        alignment: {
+          ...((previousStyle.alignment || {}) as Record<string, unknown>),
+          horizontal: "center",
+          vertical: "center",
+        },
+      };
     }
   }
 }
@@ -293,6 +311,7 @@ function createGradesSheet(context: GradeExportContext, columns: ExportColumn[])
   setFreezePane(ws, 3, 1);
   styleHeaderRow(ws, 0, header.length);
   forceTextColumn(ws, 1, 1, rows.length);
+  alignColumnCenter(ws, 1, 0, rows.length);
   ws["!autofilter"] = {
     ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: header.length - 1 } }),
   };

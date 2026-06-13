@@ -48,9 +48,10 @@ import { useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { UnifiedExportStudio, type ExportColumnOption, type ExportColumnTypographyOption, type ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
 import { ExportPreviewRenderer } from "@/components/export/ExportPreviewRenderer";
 import { buildRankingExportColumns, getDefaultSelectedColumns, buildRankingExportData } from "@/lib/rankingExportColumns";
-import { createDefaultReportDocumentStyle, getNaturalColumnWidthMmV2, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
+import { getNaturalColumnWidthMmV2, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
 import { exportReport, type ExportColumn, type ExportConfig, type ReportPaperSize } from "@/lib/exportReports";
 import type { RankingColumn } from "@/components/rankings/RankingColumnSelector";
+import { buildCompactRankingDocumentStyle, createDefaultRankingDocumentStyle } from "@/lib/rankingExportLayout";
 
 const RANKING_EXPORT_FORMATS: ExportStudioFormatOption[] = [
   {
@@ -106,7 +107,7 @@ export default function StudentRankings() {
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [exportFormat, setExportFormat] = useState<"pdf" | "excel" | "csv" | "png-hd" | "png-4k">("pdf");
   const [paperSize, setPaperSize] = useState<ReportPaperSize>("a4");
-  const [documentStyle, setDocumentStyle] = useState<ReportDocumentStyle>(() => createDefaultReportDocumentStyle());
+  const [documentStyle, setDocumentStyle] = useState<ReportDocumentStyle>(() => createDefaultRankingDocumentStyle());
   const [autoFitOnePage, setAutoFitOnePage] = useState(false);
   const [includeSignature, setIncludeSignature] = useState(false);
   const {
@@ -273,16 +274,22 @@ export default function StudentRankings() {
     });
   }, [exportColumns, selectedExportColumnIds, selectedSubjectIds]);
 
+  const overallExportColumns = useMemo<ExportColumn[]>(() => selectedOverallColumns.map((column) => ({
+    key: column.key,
+    label: column.label,
+    type: mapRankingColumnType(column),
+  })), [mapRankingColumnType, selectedOverallColumns]);
+
+  const compactRankingDocumentStyle = useMemo(
+    () => buildCompactRankingDocumentStyle(documentStyle, overallExportColumns, paperSize),
+    [documentStyle, overallExportColumns, paperSize],
+  );
+
   const overallExportConfig = useMemo<ExportConfig | null>(() => {
     if (!selectedClass) return null;
     const subjectsToUse = selectedSubjectIds.length > 0
       ? subjects.filter((subject) => selectedSubjectIds.includes(subject.id))
       : subjects;
-    const columns: ExportColumn[] = selectedOverallColumns.map((column) => ({
-      key: column.key,
-      label: column.label,
-      type: mapRankingColumnType(column),
-    }));
     const exportColumnsToUse = selectedSubjectIds.length > 0
       ? exportColumns.filter((column) => column.category !== "grades" || !column.subjectId || selectedSubjectIds.includes(column.subjectId))
       : exportColumns;
@@ -303,8 +310,8 @@ export default function StudentRankings() {
       kkm: classKkm,
       periodLabel: rankingPeriodLabel,
       isCombinedView,
-      columns,
-      headerGroups: [{ label: "Ranking Keseluruhan", colSpan: columns.length }],
+      columns: overallExportColumns,
+      headerGroups: [{ label: "Ranking Keseluruhan", colSpan: overallExportColumns.length }],
       chapterGroups: [],
       data,
       dateStr: new Date().toLocaleDateString("id-ID"),
@@ -314,7 +321,7 @@ export default function StudentRankings() {
       includeSignature: includeSignature && hasSignature,
       signature: buildExportSignature(signatureConfig),
       paperSize,
-      documentStyle,
+      documentStyle: compactRankingDocumentStyle,
       autoFitOnePage,
       documentTitle: "RANKING KESELURUHAN SISWA",
       continuationTitle: "Lanjutan Ranking Keseluruhan Siswa",
@@ -340,18 +347,17 @@ export default function StudentRankings() {
     buildExportSignature,
     buildMetaGroups,
     classKkm,
-    documentStyle,
+    compactRankingDocumentStyle,
     exportColumns,
     hasSignature,
     includeSignature,
     isCombinedView,
-    mapRankingColumnType,
     overallRankings,
+    overallExportColumns,
     paperSize,
     rankingPeriodLabel,
     selectedClass,
     selectedExportColumnIds,
-    selectedOverallColumns,
     selectedSubjectIds,
     signatureConfig,
     subjects,
@@ -387,6 +393,8 @@ export default function StudentRankings() {
         .map((value) => String(value));
       const sampleValue = values.find((value) => value.trim().length > 0) || "";
       const maxValueLength = values.reduce((max, value) => Math.max(max, value.length), 0);
+      const styleForColumn = (config.documentStyle ?? documentStyle) as ReportDocumentStyle;
+      const compactWidth = styleForColumn.columnFontOverrides[column.key]?.widthMm;
       return {
         key: column.key,
         label: column.label,
@@ -397,9 +405,9 @@ export default function StudentRankings() {
         maxValueLength,
         suggestedHeaderFontSize: Number(documentStyle.tableHeaderFontSize.toFixed(2)),
         suggestedBodyFontSize: Number(documentStyle.tableBodyFontSize.toFixed(2)),
-        suggestedWidthMm: Number(getNaturalColumnWidthMmV2(column, documentStyle).toFixed(2)),
+        suggestedWidthMm: Number((compactWidth ?? getNaturalColumnWidthMmV2(column, styleForColumn)).toFixed(2)),
         suggestedHeaderAlignment: "center",
-        suggestedBodyAlignment: column.type === "name" || column.type === "nisn" ? "left" : "center",
+        suggestedBodyAlignment: column.type === "name" || column.type === "status" ? "left" : "center",
       };
     });
   }, [documentStyle]);
@@ -446,7 +454,7 @@ export default function StudentRankings() {
       includeSignature: nextIncludeSignature && hasSignature,
       signature: buildExportSignature(nextSignatureConfig),
       paperSize: nextPaperSize,
-      documentStyle: nextDocumentStyle ?? documentStyle,
+      documentStyle: buildCompactRankingDocumentStyle(nextDocumentStyle ?? documentStyle, overallExportConfig.columns, nextPaperSize),
       autoFitOnePage: nextAutoFitOnePage ?? autoFitOnePage,
     };
     const fileBaseName = exportConfig.fileBaseName?.replace(/\s+/g, "_") || "Ranking_Keseluruhan";
@@ -617,7 +625,7 @@ export default function StudentRankings() {
                             includeSignature: previewIncludeSignature && hasSignature,
                             signature: buildExportSignature(draft),
                             paperSize: previewPaperSize,
-                            documentStyle: previewDocumentStyle ?? documentStyle,
+                            documentStyle: buildCompactRankingDocumentStyle(previewDocumentStyle ?? documentStyle, overallExportConfig.columns, previewPaperSize),
                             autoFitOnePage: previewAutoFit ?? autoFitOnePage,
                           }}
                         />

@@ -911,7 +911,7 @@ export default function Attendance() {
           type: column.type,
         }).toFixed(2)),
         suggestedHeaderAlignment: "center" as const,
-        suggestedBodyAlignment: column.key === "name" || column.key === "nisn" ? "left" as const : "center" as const,
+        suggestedBodyAlignment: column.key === "name" ? "left" as const : "center" as const,
       };
     });
   }, [attendancePreviewData]);
