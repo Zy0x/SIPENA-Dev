@@ -73,18 +73,18 @@ export function createDefaultRankingDocumentStyle(): ReportDocumentStyle {
   return {
     ...baseStyle,
     titleFontSize: 14,
-    metaFontSize: 8.5,
-    tableHeaderFontSize: 8,
-    tableBodyFontSize: 8.25,
+    metaFontSize: 9.25,
+    tableHeaderFontSize: 9.25,
+    tableBodyFontSize: 9.5,
     layoutPreset: "compact",
     experimentalColumnTypographyEnabled: true,
     experimentalColumnLayoutEnabled: true,
     tableSizing: {
       ...baseStyle.tableSizing,
-      mode: "fixed",
+      mode: "autofit-content",
       tableWidthPercent: 100,
-      headerRowHeightMm: 7,
-      bodyRowHeightMm: 4.8,
+      headerRowHeightMm: 7.4,
+      bodyRowHeightMm: 5.1,
     },
   };
 }
@@ -102,7 +102,7 @@ export function buildCompactRankingDocumentStyle(
     experimentalColumnLayoutEnabled: true,
     tableSizing: {
       ...resolvedStyle.tableSizing,
-      mode: resolvedStyle.tableSizing.mode === "autofit-content" ? "fixed" : resolvedStyle.tableSizing.mode,
+      mode: "autofit-content",
       tableWidthPercent: 100,
     },
     columnFontOverrides: Object.fromEntries(columns.map((column, index) => {

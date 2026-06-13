@@ -53,6 +53,8 @@ describe("ranking export layout", () => {
     const nisnColumn: ExportColumn = { key: "NISN", label: "NISN", type: "nisn" };
 
     expect(getColumnBodyAlignment(style, nisnColumn)).toBe("center");
+    expect(style.tableHeaderFontSize).toBeGreaterThan(9);
+    expect(style.tableBodyFontSize).toBeGreaterThan(9);
   });
 
   it("keeps all overall ranking columns in one A4 segment with the compact style", () => {
@@ -65,5 +67,16 @@ describe("ranking export layout", () => {
     expect(plan.columnWidthsMm.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(
       plan.metrics.pageWidthMm - plan.metrics.marginLeftMm - plan.metrics.marginRightMm,
     );
+  });
+
+  it("does not stretch a small ranking table to the full page width", () => {
+    const columns = buildRankingColumns(7);
+    const documentStyle = buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4");
+    const plan = buildReportLayoutPlanV2(buildConfig(columns, documentStyle));
+    const usedWidth = plan.pages[0]?.columnWidthsMm.reduce((sum, width) => sum + width, 0) ?? 0;
+    const usableWidth = plan.metrics.pageWidthMm - plan.metrics.marginLeftMm - plan.metrics.marginRightMm;
+
+    expect(plan.documentStyle.tableSizing.mode).toBe("autofit-content");
+    expect(usedWidth).toBeLessThan(usableWidth * 0.75);
   });
 });
