@@ -235,7 +235,7 @@ export function ReportRoundingSettingsDialog({
           </div>
 
           <div className="rounded-xl border bg-background p-3 text-sm text-muted-foreground">
-            Tombol <span className="font-semibold text-foreground">Mapel Pilihan</span> hanya memperbarui{" "}
+            Tombol <span className="font-semibold text-foreground">Mapel Saat Ini</span> hanya memperbarui{" "}
             <span className="font-semibold text-foreground">{subjectName}</span>. Tombol{" "}
             <span className="font-semibold text-foreground">Seluruh Mapel</span> hanya menyalin aturan pembulatan ke{" "}
             <span className="font-semibold text-foreground">{Math.max(0, subjectCount)} mapel</span> pada kelas ini tanpa mengubah rumus bobot tiap mapel.
@@ -248,7 +248,7 @@ export function ReportRoundingSettingsDialog({
           </Button>
           <Button type="button" variant="secondary" onClick={handleApplyToSelectedSubject} disabled={isBusy}>
             {pendingScope === "selected" && isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {pendingScope === "selected" && isBusy ? "Menerapkan..." : "Terapkan ke Mapel Pilihan"}
+            {pendingScope === "selected" && isBusy ? "Menerapkan..." : "Terapkan ke Mapel Saat Ini"}
           </Button>
           <Button
             type="button"
