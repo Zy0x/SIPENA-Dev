@@ -9,14 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -79,7 +71,7 @@ export default function ClassDetailDialog({
         case 'name':
           comparison = a.name.localeCompare(b.name);
           break;
-        case 'nisn':
+        case 'nisn': {
           // Numerical sorting for NISN (handles mixed alphanumeric)
           const nisnA = parseInt(a.nisn.replace(/\D/g, '')) || 0;
           const nisnB = parseInt(b.nisn.replace(/\D/g, '')) || 0;
@@ -89,6 +81,7 @@ export default function ClassDetailDialog({
             comparison = a.nisn.localeCompare(b.nisn);
           }
           break;
+        }
         case 'bookmark':
           comparison = (b.is_bookmarked ? 1 : 0) - (a.is_bookmarked ? 1 : 0);
           break;
@@ -133,20 +126,17 @@ export default function ClassDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* max-h-[90dvh] agar dialog muat di semua layar termasuk mobile */}
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-3xl max-h-[90dvh] overflow-hidden flex flex-col p-0 rounded-2xl">
-          {/* Header fixed — tidak ikut scroll */}
-          <DialogHeader className="px-4 pt-4 pb-3 flex-shrink-0 border-b border-border">
+        <DialogContent className="flex h-[min(calc(100dvh-1rem),44rem)] w-[calc(100vw-1rem)] max-w-3xl max-h-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:h-[min(calc(100dvh-3rem),46rem)] sm:w-[calc(100vw-3rem)]">
+          <DialogHeader className="shrink-0 border-b border-border px-4 pb-3 pr-16 pt-4 sm:px-5 sm:pr-16">
             <DialogTitle className="text-sm sm:text-base">
-              Detail Kelas — {classData.name}
+              Detail Kelas - {classData.name}
             </DialogTitle>
             <DialogDescription className="text-xs">
               {students.length} siswa terdaftar
             </DialogDescription>
           </DialogHeader>
 
-          {/* Search and Filter Controls — fixed di bawah header */}
-          <div className="flex flex-col sm:flex-row gap-2 px-4 py-3 flex-shrink-0 border-b border-border">
+          <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-3 sm:flex-row sm:px-5">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -177,7 +167,10 @@ export default function ClassDetailDialog({
             </Select>
           </div>
 
-          <div className="flex-1 overflow-auto min-h-0 px-4 pb-4">
+          <div
+            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-y-auto overscroll-auto px-4 pb-4 pt-3 scrollbar-thin sm:px-5"
+            aria-label={`Daftar siswa kelas ${classData.name}`}
+          >
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -187,84 +180,97 @@ export default function ClassDetailDialog({
                 {students.length === 0 ? "Belum ada siswa" : "Tidak ditemukan"}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {/* No: lebar fixed kecil */}
-                    <TableHead className="w-10 text-center">No</TableHead>
-                    {/* Nama: flex mengisi sisa ruang, tidak ada min-width paksa */}
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50"
+              <table className="w-full table-fixed caption-bottom text-sm">
+                <colgroup>
+                  <col className="w-12" />
+                  <col />
+                  <col className="w-24 sm:w-32" />
+                  <col className="w-28" />
+                </colgroup>
+                <thead className="sticky top-0 z-10 bg-background shadow-[0_1px_0_hsl(var(--border))]">
+                  <tr>
+                    <th className="h-11 px-2 text-center align-middle text-xs font-medium text-muted-foreground sm:px-4">
+                      No
+                    </th>
+                    <th
+                      className="h-11 cursor-pointer px-2 text-left align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
                       onClick={() => handleSort('name')}
                     >
                       <div className="flex items-center text-xs sm:text-sm">
                         Nama
                         <SortIcon field="name" />
                       </div>
-                    </TableHead>
-                    {/* NISN: whitespace-nowrap, lebar mengikuti konten */}
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 whitespace-nowrap"
+                    </th>
+                    <th
+                      className="h-11 cursor-pointer px-2 text-left align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
                       onClick={() => handleSort('nisn')}
                     >
                       <div className="flex items-center text-xs sm:text-sm">
                         NISN
                         <SortIcon field="nisn" />
                       </div>
-                    </TableHead>
-                    {/* Aksi: lebar fixed cukup untuk 3 tombol icon */}
-                    <TableHead className="w-28 text-center">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                    </th>
+                    <th className="h-11 px-2 text-center align-middle text-xs font-medium text-muted-foreground sm:px-4 sm:text-sm">
+                      Aksi
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
                   {filteredAndSortedStudents.map((student, index) => (
-                    <TableRow key={student.id}>
-                      <TableCell className="text-center w-10 flex-shrink-0">{index + 1}</TableCell>
-                      <TableCell className="font-medium min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
+                    <tr key={student.id} className="border-b transition-colors hover:bg-muted/50">
+                      <td className="px-2 py-3 text-center align-middle sm:px-4">{index + 1}</td>
+                      <td className="min-w-0 px-2 py-3 align-middle font-medium sm:px-4">
+                        <div className="flex min-w-0 items-center gap-2">
                           {student.is_bookmarked && (
-                            <Star className="w-4 h-4 text-grade-warning fill-grade-warning flex-shrink-0" />
+                            <Star className="h-4 w-4 shrink-0 fill-grade-warning text-grade-warning" />
                           )}
-                          {/* Pola sama dengan Attendance.tsx: break-words, bukan truncate */}
                           <span className="break-words leading-snug">{student.name}</span>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{student.nisn}</TableCell>
-                      <TableCell className="w-28 flex-shrink-0">
+                      </td>
+                      <td className="px-2 py-3 align-middle text-xs text-muted-foreground sm:px-4">
+                        <span className="block break-words leading-snug">{student.nisn}</span>
+                      </td>
+                      <td className="px-2 py-3 align-middle sm:px-4">
                         <div className="flex justify-center gap-1">
                           <Button
+                            type="button"
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => handleToggleBookmark(student)}
                             title={student.is_bookmarked ? "Hapus bookmark" : "Bookmark"}
+                            aria-label={student.is_bookmarked ? "Hapus bookmark siswa" : "Bookmark siswa"}
                           >
-                            <Star className={`w-4 h-4 ${student.is_bookmarked ? "fill-grade-warning text-grade-warning" : ""}`} />
+                            <Star className={`h-4 w-4 ${student.is_bookmarked ? "fill-grade-warning text-grade-warning" : ""}`} />
                           </Button>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => setEditStudent(student)}
                             title="Edit siswa"
+                            aria-label="Edit siswa"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive"
                             onClick={() => setDeleteConfirm(student)}
                             title="Hapus siswa"
+                            aria-label="Hapus siswa"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             )}
           </div>
         </DialogContent>
