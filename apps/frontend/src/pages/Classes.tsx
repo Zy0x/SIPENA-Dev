@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useClasses } from "@/hooks/useClasses";
+import { useSubjects } from "@/hooks/useSubjects";
 import AddClassDialog from "@/components/classes/AddClassDialog";
 import ClassCard from "@/components/classes/ClassCard";
 import ClassKkmSetupDialog from "@/components/classes/ClassKkmSetupDialog";
@@ -52,6 +53,7 @@ const classesTourSteps: TourStep[] = [
 
 export default function Classes() {
   const { classes, isLoading } = useClasses();
+  const { allSubjects, isLoading: subjectsLoading } = useSubjects();
   const [searchQuery, setSearchQuery] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [showOCRImport, setShowOCRImport] = useState(false);
@@ -77,6 +79,14 @@ export default function Classes() {
   const classesWithoutKkm = useMemo(() => (
     classes.filter((cls) => cls.class_kkm === null)
   ), [classes]);
+
+  const subjectCountByClassId = useMemo(() => {
+    const counts = new Map<string, number>();
+    allSubjects.forEach((subject) => {
+      counts.set(subject.class_id, (counts.get(subject.class_id) || 0) + 1);
+    });
+    return counts;
+  }, [allSubjects]);
 
   // GSAP entrance
   useEffect(() => {
@@ -231,7 +241,11 @@ export default function Classes() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredClasses.map((cls, index) => (
               <div key={cls.id} data-tour={index === 0 ? "class-card" : undefined}>
-                <ClassCard classData={cls} />
+                <ClassCard
+                  classData={cls}
+                  subjectCount={subjectCountByClassId.get(cls.id) || 0}
+                  isSubjectCountLoading={subjectsLoading}
+                />
               </div>
             ))}
           </div>

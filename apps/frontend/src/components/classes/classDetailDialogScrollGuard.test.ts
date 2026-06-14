@@ -22,10 +22,9 @@ describe("class detail dialog scroll guard", () => {
     expect(source).toContain("min-h-0 flex-1 overflow-y-auto overscroll-auto");
     expect(source).toContain('aria-label={`Daftar siswa kelas ${classData.name}`}');
     expect(source).toContain('className="w-full table-fixed caption-bottom text-sm"');
-    expect(source).toContain('className="bg-background shadow-[0_1px_0_hsl(var(--border))]"');
+    expect(source).toContain('className="sticky top-0 z-10 bg-background shadow-[0_1px_0_hsl(var(--border))]"');
     expect(source).toContain('type="button"');
     expect(source).not.toContain("@/components/ui/table");
     expect(source).not.toContain("<Table>");
-    expect(source).not.toContain('className="sticky top-0 z-10 bg-background');
   });
 });

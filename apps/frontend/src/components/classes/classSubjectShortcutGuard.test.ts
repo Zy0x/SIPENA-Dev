@@ -15,12 +15,22 @@ function readSource(relativePath: string): string {
 describe("class subject shortcut guard", () => {
   it("routes a class card subject shortcut into a preselected add-subject flow", () => {
     const classCardSource = readSource("apps/frontend/src/components/classes/ClassCard.tsx");
+    const classesSource = readSource("apps/frontend/src/pages/Classes.tsx");
     const subjectsSource = readSource("apps/frontend/src/pages/Subjects.tsx");
     const addSubjectSource = readSource("apps/frontend/src/components/subjects/AddSubjectDialog.tsx");
+
+    expect(classesSource).toContain("const { allSubjects, isLoading: subjectsLoading } = useSubjects();");
+    expect(classesSource).toContain("subjectCountByClassId");
+    expect(classesSource).toContain("subjectCount={subjectCountByClassId.get(cls.id) || 0}");
+    expect(classesSource).toContain("isSubjectCountLoading={subjectsLoading}");
 
     expect(classCardSource).toContain("handleTambahMapel");
     expect(classCardSource).toContain("action=add-subject");
     expect(classCardSource).toContain("encodeURIComponent(classData.id)");
+    expect(classCardSource).toContain("navigate(hasSubjects ? subjectUrl : `${subjectUrl}&action=add-subject`)");
+    expect(classCardSource).toContain("showMissingSubjectDialog");
+    expect(classCardSource).toContain("Tambahkan Mapel Terlebih Dahulu");
+    expect(classCardSource).toContain("setShowMissingSubjectDialog(true)");
     expect(classCardSource).toContain("<BookOpen");
     expect(classCardSource).toContain("<span className=\"truncate\">Mapel</span>");
 

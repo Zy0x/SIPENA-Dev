@@ -43,9 +43,15 @@ import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import { useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { useGradeFormulaSettings } from "@/hooks/useGradeFormulaSettings";
+import { useGradeTableColorScheme } from "@/hooks/useGradeTableColorScheme";
 import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
 import { UnifiedExportStudio, type ExportColumnTypographyOption, type ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
 import { ExportPreviewRenderer } from "@/components/export/ExportPreviewRenderer";
+import {
+  getGradeTableChapterTone,
+  getGradeTableColumnBodyTone,
+  getGradeTableColumnHeaderTone,
+} from "@/lib/gradeTableColorSchemes";
 
 const REPORT_EXPORT_FORMATS: ExportStudioFormatOption[] = [
   {
@@ -175,6 +181,7 @@ export default function GradeReports() {
     isSaving: signatureSaving,
     saveSignature,
   } = useSignatureSettings();
+  const { colorScheme: gradeTableColorScheme } = useGradeTableColorScheme();
 
   useEffect(() => {
     if (!signatureLoading) {
@@ -993,19 +1000,45 @@ export default function GradeReports() {
     return subHeaders;
   };
 
-  const getColumnBackground = (col: any) => {
-    if (isCombinedView) {
-      if (col.semester === 1) return "bg-blue-50/30 dark:bg-blue-950/10";
-      if (col.semester === 2) return "bg-green-50/30 dark:bg-green-950/10";
-      if (col.type === "rapor" || col.type === "avgRapor") return "bg-primary/5";
-    } else {
-      // Single semester view backgrounds
-      if (col.type === "assignment") return "bg-blue-50/20 dark:bg-blue-950/5";
-      if (col.type === "chapterAvg") return "bg-blue-100/40 dark:bg-blue-900/20";
+  const getChapterIndexForColumn = (col: any) => {
+    if (!col.chapterId) return 0;
+    return allChapters.findIndex((chapter) => chapter.id === col.chapterId);
+  };
+
+  const getReportColumnToneType = (col: any) => {
+    if (col.type === "assignment") return "assignment";
+    if (col.type === "chapterAvg" || col.type === "grandAvg" || col.type === "avgRapor") return "chapter_avg";
+    if (col.type === "sts") return "sts";
+    if (col.type === "sas") return "sas";
+    if (col.type === "rapor") return "final";
+    if (col.type === "status") return "status";
+    if (col.type === "index") return "index";
+    return "name";
+  };
+
+  const getReportColumnHeaderTone = (col: any) => {
+    return getGradeTableColumnHeaderTone(gradeTableColorScheme, {
+      type: getReportColumnToneType(col),
+      chapterIndex: Math.max(0, getChapterIndexForColumn(col)),
+    });
+  };
+
+  const getReportColumnBodyTone = (col: any) => {
+    return getGradeTableColumnBodyTone(gradeTableColorScheme, {
+      type: getReportColumnToneType(col),
+    });
+  };
+
+  const getReportGroupTone = (group: { isChapter?: boolean; semester?: number }, idx: number) => {
+    if (group.isChapter) {
+      return getGradeTableChapterTone(gradeTableColorScheme, Math.max(0, idx - 1)).header;
     }
-    if (col.type === "grandAvg" || col.type === "avgRapor") return "bg-muted/50";
-    if (col.type === "rapor") return "bg-primary/10";
-    return "";
+
+    if (group.semester === 1 || group.semester === 2) {
+      return getGradeTableChapterTone(gradeTableColorScheme, group.semester - 1).header;
+    }
+
+    return getGradeTableColumnHeaderTone(gradeTableColorScheme, { type: "final" });
   };
 
   return (
@@ -1264,7 +1297,7 @@ export default function GradeReports() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="sipena-report-grade-table-shell sipena-scroll-chain-page max-h-[70dvh] overflow-auto scrollbar-thin">
+              <div className="sipena-report-grade-table-shell sipena-scroll-chain-page h-[70dvh] min-h-[420px] overflow-auto bg-background scrollbar-thin">
                 <table className="min-w-max border-separate border-spacing-0 text-sm">
                   <colgroup>
                     {visibleColumns.map((col) => (
@@ -1287,12 +1320,13 @@ export default function GradeReports() {
                             key={`${group.label}-${idx}`}
                             colSpan={group.colSpan}
                             className={cn(
-                              "h-10 border-b border-r border-border/70 bg-card px-3 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-xs",
-                              group.bgClass,
-                              idx === 0 && "sticky left-0 z-40 min-w-[13rem] text-left",
+                              "h-10 border border-border px-3 text-center align-middle text-[11px] font-bold text-muted-foreground",
+                              idx === 0
+                                ? "sticky left-0 z-50 min-w-[19rem] bg-muted"
+                                : getReportGroupTone(group, idx),
                             )}
                           >
-                            {idx === 0 ? "Identitas Siswa" : group.label}
+                            {idx === 0 ? "Data Siswa" : group.label}
                           </th>
                         ))}
                       </tr>
@@ -1303,17 +1337,16 @@ export default function GradeReports() {
                         <th
                           key={col.key}
                           className={cn(
-                            "h-11 border-b border-r border-border/70 bg-background px-3 text-left align-middle text-[10px] font-semibold text-muted-foreground sm:text-xs",
+                            "h-10 border border-border px-2 text-center align-middle text-[11px] font-bold",
                             col.type !== "name" && col.type !== "index" && col.type !== "nisn" && "text-center",
-                            (col.type === "index" || col.type === "name") && "sticky z-40 bg-background",
-                            col.type === "index" && "left-0 text-center",
-                            col.type === "name" && "left-12 min-w-40",
-                            idx === visibleColumns.length - 1 && "border-r-0",
-                            getColumnBackground(col),
-                            (col.type === "grandAvg" || col.type === "avgRapor" || col.type === "rapor" || col.type === "chapterAvg") && "font-bold text-foreground",
+                            (col.type === "index" || col.type === "name" || col.type === "nisn") && "sticky z-50 bg-muted text-muted-foreground",
+                            col.type === "index" && "left-0",
+                            col.type === "name" && "left-12",
+                            col.type === "nisn" && "left-[13rem]",
+                            col.type !== "index" && col.type !== "name" && col.type !== "nisn" && getReportColumnHeaderTone(col),
                           )}
                         >
-                          <span className="block leading-tight">{col.label}</span>
+                          <span className="block truncate px-1 text-center leading-tight">{col.label}</span>
                         </th>
                       ))}
                     </tr>
@@ -1328,14 +1361,14 @@ export default function GradeReports() {
                             <td
                               key={col.key}
                               className={cn(
-                                "h-12 border-b border-r border-border/60 bg-background px-3 align-middle text-[10px] transition-colors group-hover:bg-muted/40 sm:text-xs",
+                                "h-11 border border-border/40 px-2 align-middle text-[11px] transition-colors",
                                 col.type !== "name" && col.type !== "index" && col.type !== "nisn" && "text-center",
-                                (col.type === "index" || col.type === "name") && "sticky z-20 bg-background group-hover:bg-muted",
+                                (col.type === "index" || col.type === "name" || col.type === "nisn") && "sticky z-20 bg-primary/5 group-hover:bg-fuchsia-100/80 dark:group-hover:bg-fuchsia-950/45",
                                 col.type === "index" && "left-0 text-center font-medium",
-                                col.type === "name" && "left-12 max-w-40 font-medium",
-                                col.type === "name" && "truncate",
-                                colIdx === visibleColumns.length - 1 && "border-r-0",
-                                getColumnBackground(col),
+                                col.type === "name" && "left-12 max-w-40 truncate font-medium",
+                                col.type === "nisn" && "left-[13rem] text-center",
+                                col.type !== "index" && col.type !== "name" && col.type !== "nisn" && (getReportColumnBodyTone(col) || (index % 2 === 0 ? "bg-background" : "bg-muted/20")),
+                                "group-hover:border-fuchsia-300/80 group-hover:bg-fuchsia-50/90 dark:group-hover:border-fuchsia-700/70 dark:group-hover:bg-fuchsia-950/35",
                                 (col.type === "grandAvg" || col.type === "avgRapor" || col.type === "rapor") && "font-bold text-foreground",
                               )}
                             >

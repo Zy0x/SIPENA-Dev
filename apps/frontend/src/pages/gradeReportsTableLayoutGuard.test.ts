@@ -17,12 +17,15 @@ describe("grade reports table layout guard", () => {
     const source = readSource("apps/frontend/src/pages/GradeReports.tsx");
 
     expect(source).toContain("sipena-report-grade-table-shell sipena-scroll-chain-page");
-    expect(source).toContain("max-h-[70dvh] overflow-auto scrollbar-thin");
+    expect(source).toContain("h-[70dvh] min-h-[420px] overflow-auto bg-background scrollbar-thin");
     expect(source).toContain('<table className="min-w-max border-separate border-spacing-0 text-sm">');
     expect(source).toContain('<thead className="sticky top-0 z-30">');
-    expect(source).toContain("Identitas Siswa");
-    expect(source).toContain("sticky z-40 bg-background");
-    expect(source).toContain("group-hover:bg-muted/40");
+    expect(source).toContain("getGradeTableChapterTone");
+    expect(source).toContain("getGradeTableColumnHeaderTone");
+    expect(source).toContain("getGradeTableColumnBodyTone");
+    expect(source).toContain("Data Siswa");
+    expect(source).toContain("left-[13rem]");
+    expect(source).toContain("group-hover:bg-fuchsia-50/90");
     expect(source).not.toContain("@/components/ui/table");
     expect(source).not.toContain("<Table>");
   });

@@ -40,15 +40,19 @@ import ClassDetailDialog from "./ClassDetailDialog";
 
 interface ClassCardProps {
   classData: Class;
+  subjectCount?: number;
+  isSubjectCountLoading?: boolean;
 }
 
-export default function ClassCard({ classData }: ClassCardProps) {
+export default function ClassCard({ classData, subjectCount = 0, isSubjectCountLoading = false }: ClassCardProps) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [showMissingSubjectDialog, setShowMissingSubjectDialog] = useState(false);
   const { deleteClass, duplicateClass } = useClasses();
+  const hasSubjects = subjectCount > 0;
 
   const handleDelete = async () => {
     await deleteClass.mutateAsync(classData.id);
@@ -60,11 +64,17 @@ export default function ClassCard({ classData }: ClassCardProps) {
   };
 
   const handleInputNilai = () => {
-    navigate(`/grades?classId=${classData.id}`);
+    if (isSubjectCountLoading || hasSubjects) {
+      navigate(`/grades?classId=${encodeURIComponent(classData.id)}`);
+      return;
+    }
+
+    setShowMissingSubjectDialog(true);
   };
 
   const handleTambahMapel = () => {
-    navigate(`/subjects?classId=${encodeURIComponent(classData.id)}&action=add-subject`);
+    const subjectUrl = `/subjects?classId=${encodeURIComponent(classData.id)}`;
+    navigate(hasSubjects ? subjectUrl : `${subjectUrl}&action=add-subject`);
   };
 
   return (
@@ -204,6 +214,23 @@ export default function ClassCard({ classData }: ClassCardProps) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showMissingSubjectDialog} onOpenChange={setShowMissingSubjectDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tambahkan Mapel Terlebih Dahulu</AlertDialogTitle>
+            <AlertDialogDescription>
+              Kelas <strong>{classData.name}</strong> belum memiliki mata pelajaran. Tambahkan mapel agar halaman Input Nilai bisa dibuka sesuai kelas ini.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleTambahMapel}>
+              Tambah Mapel
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
