@@ -1,11 +1,29 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, X, LayoutDashboard, School, BookOpen, FileSpreadsheet, CalendarDays, BarChart3, Settings, HelpCircle, Info, Trophy, Users, Shield, Clock, Bookmark, Star } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import {
+  BarChart3,
+  BookOpen,
+  Bookmark,
+  CalendarDays,
+  Clock,
+  FileSpreadsheet,
+  HelpCircle,
+  Info,
+  LayoutDashboard,
+  School,
+  Search,
+  Settings,
+  Shield,
+  Star,
+  Trophy,
+  Users,
+  X,
+} from "lucide-react";
+
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface SearchItem {
@@ -31,7 +49,6 @@ const searchableItems: SearchItem[] = [
   { title: "Tahun Ajaran", description: "Kelola tahun ajaran dan semester", href: "/settings", icon: Clock, keywords: ["tahun ajaran", "semester", "periode", "akademik", "ta"], category: "Pengaturan" },
   { title: "Panduan", description: "Bantuan dan panduan penggunaan aplikasi", href: "/help", icon: HelpCircle, keywords: ["bantuan", "help", "panduan", "cara", "tutorial", "faq", "petunjuk"], category: "Lainnya" },
   { title: "Tentang", description: "Informasi tentang SIPENA dan developer", href: "/about", icon: Info, keywords: ["tentang", "about", "versi", "developer", "info", "sipena", "changelog"], category: "Lainnya" },
-  // Deep search items
   { title: "Ekspor Presensi", description: "Ekspor data kehadiran ke Excel, PDF, atau PNG", href: "/attendance", icon: CalendarDays, keywords: ["ekspor presensi", "cetak presensi", "download presensi", "png", "excel presensi"], category: "Fitur" },
   { title: "Hari Libur Kustom", description: "Tambah dan kelola hari libur sekolah", href: "/attendance", icon: Star, keywords: ["hari libur", "libur", "cuti", "holiday", "tanggal merah"], category: "Fitur" },
   { title: "Kegiatan Khusus", description: "Tandai tanggal khusus seperti ujian atau study tour", href: "/attendance", icon: Bookmark, keywords: ["kegiatan", "event", "ujian", "uts", "uas", "study tour", "class meeting", "kegiatan khusus"], category: "Fitur" },
@@ -51,79 +68,85 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const results = useMemo(() => {
-    if (!query.trim()) return searchableItems.filter(item => item.category !== "Fitur"); // Don't show deep items when empty
+    if (!query.trim()) return searchableItems.filter((item) => item.category !== "Fitur");
+
     const q = query.toLowerCase().trim();
     const words = q.split(/\s+/);
-    
+
     return searchableItems
-      .map(item => {
+      .map((item) => {
         let score = 0;
         const titleLower = item.title.toLowerCase();
         const descLower = item.description.toLowerCase();
-        
-        // Exact title match = highest
+
         if (titleLower === q) score += 100;
         else if (titleLower.startsWith(q)) score += 80;
         else if (titleLower.includes(q)) score += 60;
-        
-        // Description match
+
         if (descLower.includes(q)) score += 30;
-        
-        // Keyword match (most important for deep search)
-        item.keywords.forEach(k => {
-          if (k === q) score += 70;
-          else if (k.startsWith(q)) score += 50;
-          else if (k.includes(q)) score += 35;
+
+        item.keywords.forEach((keyword) => {
+          if (keyword === q) score += 70;
+          else if (keyword.startsWith(q)) score += 50;
+          else if (keyword.includes(q)) score += 35;
         });
-        
-        // Multi-word matching
-        words.forEach(word => {
+
+        words.forEach((word) => {
           if (titleLower.includes(word)) score += 15;
           if (descLower.includes(word)) score += 8;
-          item.keywords.forEach(k => {
-            if (k.includes(word)) score += 12;
+          item.keywords.forEach((keyword) => {
+            if (keyword.includes(word)) score += 12;
           });
         });
-        
+
         return { item, score };
       })
-      .filter(r => r.score > 0)
+      .filter((result) => result.score > 0)
       .sort((a, b) => b.score - a.score)
-      .map(r => r.item);
+      .map((result) => result.item);
   }, [query]);
 
   useEffect(() => {
     if (open) {
       setQuery("");
       setHighlightedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 100);
+      window.setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
 
-  useEffect(() => { setHighlightedIndex(0); }, [query]);
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [query]);
 
-  const handleSelect = useCallback((href: string) => {
-    onOpenChange(false);
-    navigate(href);
-  }, [navigate, onOpenChange]);
+  const handleSelect = useCallback(
+    (href: string) => {
+      onOpenChange(false);
+      navigate(href);
+    },
+    [navigate, onOpenChange],
+  );
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHighlightedIndex(prev => (prev < results.length - 1 ? prev + 1 : 0));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : results.length - 1));
-    } else if (e.key === "Enter" && results[highlightedIndex]) {
-      e.preventDefault();
-      handleSelect(results[highlightedIndex].href);
-    }
-  }, [results, highlightedIndex, handleSelect]);
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (results.length === 0) return;
 
-  // Group results by category
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setHighlightedIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
+      } else if (event.key === "Enter" && results[highlightedIndex]) {
+        event.preventDefault();
+        handleSelect(results[highlightedIndex].href);
+      }
+    },
+    [handleSelect, highlightedIndex, results],
+  );
+
   const grouped = useMemo(() => {
     const groups: Record<string, SearchItem[]> = {};
-    results.forEach(item => {
+    results.forEach((item) => {
       if (!groups[item.category]) groups[item.category] = [];
       groups[item.category].push(item);
     });
@@ -134,81 +157,122 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 gap-0 rounded-2xl overflow-hidden">
+      <DialogContent
+        className={cn(
+          "sipena-global-search-dialog flex w-[min(calc(100vw-1rem),42rem)] max-w-none max-h-[min(720px,calc(100dvh-1rem))] flex-col gap-0 overflow-hidden rounded-[1.5rem] border-border/80 bg-background p-0 shadow-2xl sm:w-[min(calc(100vw-3rem),42rem)]",
+          "[&>button[aria-label='Tutup_dialog']]:right-3 [&>button[aria-label='Tutup_dialog']]:top-3 [&>button[aria-label='Tutup_dialog']]:h-10 [&>button[aria-label='Tutup_dialog']]:w-10",
+          "[&>button[aria-label='Tutup_dialog']]:!border-border [&>button[aria-label='Tutup_dialog']]:!bg-background [&>button[aria-label='Tutup_dialog']]:!text-muted-foreground [&>button[aria-label='Tutup_dialog']]:shadow-sm",
+          "[&>button[aria-label='Tutup_dialog']]:hover:!bg-muted [&>button[aria-label='Tutup_dialog']]:hover:!text-foreground",
+        )}
+      >
         <DialogTitle className="sr-only">Pencarian Global</DialogTitle>
-        {/* Search input */}
-        <div className="flex items-center gap-2 px-4 border-b border-border">
-          <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          <Input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Cari halaman, fitur, atau pengaturan..."
-            className="border-0 shadow-none focus-visible:ring-0 h-12 text-sm pr-8"
-          />
-          {query && (
-            <button onClick={() => setQuery("")} className="p-1 rounded-md hover:bg-muted touch-manipulation min-w-[28px] min-h-[28px] flex items-center justify-center flex-shrink-0">
-              <X className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-          )}
+
+        <div className="shrink-0 border-b border-border/70 bg-muted/20 px-4 py-4 pr-16 sm:px-5 sm:py-5 sm:pr-16">
+          <div className="relative flex h-12 items-center rounded-2xl border border-border/80 bg-background shadow-sm transition-colors focus-within:border-primary/45 focus-within:ring-4 focus-within:ring-primary/10">
+            <Search className="pointer-events-none absolute left-4 h-4 w-4 text-muted-foreground" />
+            <Input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Cari halaman, fitur, atau pengaturan..."
+              className="h-full border-0 bg-transparent pl-11 pr-11 text-[15px] shadow-none outline-none placeholder:text-muted-foreground/75 focus-visible:ring-0"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-2 inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Bersihkan pencarian"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span>{results.length} hasil tersedia</span>
+            <span className="hidden sm:inline">Ctrl/Cmd K</span>
+          </div>
         </div>
 
-        {/* Results */}
-        <ScrollArea className="max-h-[60vh]">
-          <div className="p-2">
+        <ScrollArea className="min-h-0 max-h-[min(58dvh,430px)]">
+          <div className="space-y-3 p-3 sm:p-4" role="listbox" aria-label="Hasil pencarian global">
             {results.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <Search className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-sm">Tidak ditemukan untuk "{query}"</p>
-                <p className="text-[10px] mt-1 text-muted-foreground/60">Coba kata kunci lain seperti "nilai", "presensi", atau "ekspor"</p>
+              <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center text-muted-foreground">
+                <Search className="mb-3 h-9 w-9 opacity-30" />
+                <p className="text-sm font-medium text-foreground">Tidak ditemukan untuk "{query}"</p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
+                  Coba kata kunci lain seperti "nilai", "presensi", atau "ekspor".
+                </p>
               </div>
             ) : (
               Object.entries(grouped).map(([category, items]) => (
-                <div key={category} className="mb-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">{category}</p>
-                  {items.map((item) => {
-                    flatIndex++;
-                    const idx = flatIndex;
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={`${item.href}-${item.title}`}
-                        onClick={() => handleSelect(item.href)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors touch-manipulation min-h-[44px]",
-                          highlightedIndex === idx ? "bg-primary/10 text-primary" : "hover:bg-muted/60"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                          highlightedIndex === idx ? "bg-primary/20" : "bg-muted/60"
-                        )}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{item.title}</p>
-                          <p className="text-[11px] text-muted-foreground truncate">{item.description}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                <section key={category} className="space-y-1.5">
+                  <p className="px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {category}
+                  </p>
+                  <div className="space-y-1">
+                    {items.map((item) => {
+                      flatIndex += 1;
+                      const idx = flatIndex;
+                      const Icon = item.icon;
+                      const isHighlighted = highlightedIndex === idx;
+
+                      return (
+                        <button
+                          key={`${item.href}-${item.title}`}
+                          type="button"
+                          onClick={() => handleSelect(item.href)}
+                          role="option"
+                          aria-selected={isHighlighted}
+                          className={cn(
+                            "group flex min-h-[56px] w-full touch-manipulation items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
+                            isHighlighted
+                              ? "bg-primary/10 text-foreground ring-1 ring-primary/20"
+                              : "text-foreground hover:bg-muted/70",
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors",
+                              isHighlighted
+                                ? "bg-primary/15 text-primary"
+                                : "bg-muted/60 text-muted-foreground group-hover:text-foreground",
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className={cn("truncate text-sm font-semibold", isHighlighted && "text-primary")}>
+                              {item.title}
+                            </p>
+                            <p className="truncate text-xs leading-5 text-muted-foreground">{item.description}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
               ))
             )}
           </div>
         </ScrollArea>
 
-        {/* Footer hint */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-muted/20 text-[10px] text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <kbd className="px-1.5 py-0.5 bg-muted rounded text-[9px] font-mono">↑↓</kbd>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border/70 bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:px-5">
+          <div className="flex min-w-0 items-center gap-2">
+            <kbd className="rounded-md border border-border bg-background px-2 py-1 font-mono text-[10px] leading-none text-foreground shadow-sm">
+              Up/Down
+            </kbd>
             <span>Navigasi</span>
-            <kbd className="px-1.5 py-0.5 bg-muted rounded text-[9px] font-mono">Enter</kbd>
+            <kbd className="rounded-md border border-border bg-background px-2 py-1 font-mono text-[10px] leading-none text-foreground shadow-sm">
+              Enter
+            </kbd>
             <span>Pilih</span>
           </div>
-          <div className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-muted rounded text-[9px] font-mono">Esc</kbd>
+          <div className="flex items-center gap-2">
+            <kbd className="rounded-md border border-border bg-background px-2 py-1 font-mono text-[10px] leading-none text-foreground shadow-sm">
+              Esc
+            </kbd>
             <span>Tutup</span>
           </div>
         </div>
@@ -225,15 +289,15 @@ export function GlobalSearchTrigger({ onClick }: { onClick: () => void }) {
           onClick={onClick}
           className={cn(
             "flex items-center justify-center w-9 h-9 rounded-xl transition-colors touch-manipulation",
-            "text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80"
+            "text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80",
           )}
           aria-label="Pencarian global (Ctrl+K)"
         >
-          <Search className="w-4 h-4" />
+          <Search className="h-4 w-4" />
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={4} className="text-xs">
-        Cari <kbd className="ml-1 px-1 py-0.5 bg-muted rounded text-[9px] font-mono">⌘K</kbd>
+        Cari <kbd className="ml-1 rounded bg-muted px-1 py-0.5 font-mono text-[9px]">Ctrl+K</kbd>
       </TooltipContent>
     </Tooltip>
   );
