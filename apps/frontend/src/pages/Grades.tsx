@@ -528,8 +528,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const {
     formula: ownerFormula,
     saveFormula,
+    saveRoundingForSubjects,
     isLoading: formulaLoading,
     isSaving: formulaSaving,
+    isSavingRoundingForSubjects,
   } = useGradeFormulaSettings(isGuestMode ? undefined : subjectId);
   const formula = useMemo(
     () => (isGuestMode ? normalizeFormula(guestData?.formulaSetting?.formula ?? DEFAULT_FORMULA) : ownerFormula),
@@ -970,13 +972,39 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       if (isGuestMode) return;
       try {
         await saveFormula(nextFormula);
+        success(
+          "Pembulatan diterapkan",
+          `Aturan pembulatan diterapkan ke ${selectedSubject?.name || "mapel pilihan"}.`,
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : "Pembulatan rapor gagal disimpan";
         showError("Gagal menyimpan pembulatan", message);
         throw err;
       }
     },
-    [isGuestMode, saveFormula, showError],
+    [isGuestMode, saveFormula, selectedSubject?.name, showError, success],
+  );
+
+  const handleReportRoundingApplyToAllSubjects = useCallback(
+    async (nextFormula: CustomFormula) => {
+      if (isGuestMode) return;
+      const subjectIds = subjects.map((subject) => subject.id);
+      try {
+        await saveRoundingForSubjects({
+          subjectIds,
+          reportRounding: nextFormula.reportRounding,
+        });
+        success(
+          "Pembulatan diterapkan",
+          `Aturan pembulatan diterapkan ke ${subjectIds.length} mapel pada kelas ini.`,
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Pembulatan gagal diterapkan ke seluruh mapel";
+        showError("Gagal menyimpan pembulatan", message);
+        throw err;
+      }
+    },
+    [isGuestMode, saveRoundingForSubjects, showError, subjects, success],
   );
 
   const invalidateGuestData = useCallback(() => {
@@ -1793,7 +1821,11 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onOpenChange={setShowReportRoundingSettings}
           formula={formula}
           onFormulaChange={handleReportRoundingChange}
+          onApplyToAllSubjects={handleReportRoundingApplyToAllSubjects}
           isSaving={formulaSaving}
+          isSavingAllSubjects={isSavingRoundingForSubjects}
+          subjectName={selectedSubject?.name || "mapel pilihan"}
+          subjectCount={subjects.length}
         />
       )}
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, CheckCircle2 } from "lucide-react";
+import { Calculator, CheckCircle2, Loader2 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -86,7 +86,11 @@ interface ReportRoundingSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   formula: CustomFormula;
   onFormulaChange: (formula: CustomFormula) => Promise<void> | void;
+  onApplyToAllSubjects?: (formula: CustomFormula) => Promise<void> | void;
   isSaving?: boolean;
+  isSavingAllSubjects?: boolean;
+  subjectName?: string;
+  subjectCount?: number;
 }
 
 export function ReportRoundingSettingsDialog({
@@ -94,17 +98,24 @@ export function ReportRoundingSettingsDialog({
   onOpenChange,
   formula,
   onFormulaChange,
+  onApplyToAllSubjects,
   isSaving = false,
+  isSavingAllSubjects = false,
+  subjectName = "mapel pilihan",
+  subjectCount = 0,
 }: ReportRoundingSettingsDialogProps) {
   const currentMode = formula.reportRounding?.mode || "default";
   const currentTarget = formula.reportRounding?.target || "report";
   const [draftMode, setDraftMode] = useState<ReportRoundingMode>(currentMode);
   const [draftTarget, setDraftTarget] = useState<ReportRoundingTarget>(currentTarget);
+  const [pendingScope, setPendingScope] = useState<"selected" | "all" | null>(null);
+  const isBusy = isSaving || isSavingAllSubjects;
 
   useEffect(() => {
     if (open) {
       setDraftMode(currentMode);
       setDraftTarget(currentTarget);
+      setPendingScope(null);
     }
   }, [currentMode, currentTarget, open]);
 
@@ -113,16 +124,34 @@ export function ReportRoundingSettingsDialog({
     [draftMode],
   );
 
-  const handleSave = async () => {
-    await onFormulaChange({
-      ...formula,
-      reportRounding: { mode: draftMode, target: draftTarget },
-    });
-    onOpenChange(false);
+  const buildNextFormula = () => ({
+    ...formula,
+    reportRounding: { mode: draftMode, target: draftTarget },
+  });
+
+  const handleApplyToSelectedSubject = async () => {
+    setPendingScope("selected");
+    try {
+      await onFormulaChange(buildNextFormula());
+      onOpenChange(false);
+    } finally {
+      setPendingScope(null);
+    }
+  };
+
+  const handleApplyToAllSubjects = async () => {
+    if (!onApplyToAllSubjects) return;
+    setPendingScope("all");
+    try {
+      await onApplyToAllSubjects(buildNextFormula());
+      onOpenChange(false);
+    } finally {
+      setPendingScope(null);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !isSaving && onOpenChange(nextOpen)}>
+    <Dialog open={open} onOpenChange={(nextOpen) => !isBusy && onOpenChange(nextOpen)}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -204,14 +233,30 @@ export function ReportRoundingSettingsDialog({
             Pilihan: <span className="font-semibold">{selectedOption.title}</span> untuk{" "}
             <span className="font-semibold">{getReportRoundingTargetLabel(draftTarget)}</span>
           </div>
+
+          <div className="rounded-xl border bg-background p-3 text-sm text-muted-foreground">
+            Tombol <span className="font-semibold text-foreground">Mapel Pilihan</span> hanya memperbarui{" "}
+            <span className="font-semibold text-foreground">{subjectName}</span>. Tombol{" "}
+            <span className="font-semibold text-foreground">Seluruh Mapel</span> hanya menyalin aturan pembulatan ke{" "}
+            <span className="font-semibold text-foreground">{Math.max(0, subjectCount)} mapel</span> pada kelas ini tanpa mengubah rumus bobot tiap mapel.
+          </div>
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isBusy}>
             Batal
           </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Menyimpan..." : "Simpan Pembulatan"}
+          <Button type="button" variant="secondary" onClick={handleApplyToSelectedSubject} disabled={isBusy}>
+            {pendingScope === "selected" && isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {pendingScope === "selected" && isBusy ? "Menerapkan..." : "Terapkan ke Mapel Pilihan"}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleApplyToAllSubjects}
+            disabled={isBusy || !onApplyToAllSubjects || subjectCount <= 0}
+          >
+            {pendingScope === "all" && isBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {pendingScope === "all" && isBusy ? "Menerapkan..." : "Terapkan ke Seluruh Mapel"}
           </Button>
         </DialogFooter>
       </DialogContent>

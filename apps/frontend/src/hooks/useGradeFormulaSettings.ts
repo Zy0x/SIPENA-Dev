@@ -2,7 +2,14 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useAuth } from "@/contexts/AuthContext";
-import { DEFAULT_FORMULA, normalizeFormula, type CustomFormula } from "@/lib/gradeFormula";
+import {
+  DEFAULT_FORMULA,
+  normalizeFormula,
+  normalizeReportRounding,
+  type CustomFormula,
+  type ReportRoundingSetting,
+} from "@/lib/gradeFormula";
+import type { Json } from "@/infrastructure/supabase/supabase.types";
 
 export interface GradeFormulaSetting {
   id: string;
@@ -90,6 +97,63 @@ export function useGradeFormulaSettings(subjectId?: string, fallbackFormula?: Cu
     },
   });
 
+  const saveRoundingForSubjectsMutation = useMutation({
+    mutationFn: async ({
+      subjectIds,
+      reportRounding,
+    }: {
+      subjectIds: string[];
+      reportRounding: ReportRoundingSetting;
+    }) => {
+      if (!user?.id) throw new Error("User belum masuk");
+
+      const uniqueSubjectIds = Array.from(new Set(subjectIds.filter(Boolean)));
+      if (uniqueSubjectIds.length === 0) throw new Error("Tidak ada mata pelajaran yang dapat diperbarui");
+
+      const normalizedRounding = normalizeReportRounding(reportRounding);
+      const { data: existingRows, error: selectError } = await supabase
+        .from("grade_formula_settings")
+        .select("subject_id, formula")
+        .eq("user_id", user.id)
+        .in("subject_id", uniqueSubjectIds);
+
+      if (selectError) throw selectError;
+
+      const existingFormulaBySubject = new Map(
+        ((existingRows || []) as Array<{ subject_id: string; formula: unknown }>).map((row) => [
+          row.subject_id,
+          normalizeFormula(row.formula),
+        ]),
+      );
+      const updatedAt = new Date().toISOString();
+      const payload = uniqueSubjectIds.map((targetSubjectId) => ({
+        user_id: user.id,
+        subject_id: targetSubjectId,
+        formula: {
+          ...normalizeFormula(existingFormulaBySubject.get(targetSubjectId) ?? DEFAULT_FORMULA),
+          reportRounding: normalizedRounding,
+        } as unknown as Json,
+        updated_at: updatedAt,
+      }));
+
+      const { data, error } = await supabase
+        .from("grade_formula_settings")
+        .upsert(payload, { onConflict: "user_id,subject_id" })
+        .select("*");
+
+      if (error) throw error;
+      return data as unknown as GradeFormulaSetting[];
+    },
+    onSuccess: (settings) => {
+      settings.forEach((setting) => {
+        queryClient.setQueryData(queryKey(setting.user_id, setting.subject_id), setting);
+      });
+      queryClient.invalidateQueries({ queryKey: ["grade_formula_settings"] });
+      queryClient.invalidateQueries({ queryKey: ["student-rankings"] });
+      queryClient.invalidateQueries({ queryKey: ["report-grades-all"] });
+    },
+  });
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -117,7 +181,9 @@ export function useGradeFormulaSettings(subjectId?: string, fallbackFormula?: Cu
     formula,
     setting: formulaQuery.data,
     isLoading: formulaQuery.isLoading,
-    isSaving: saveFormulaMutation.isPending,
+    isSaving: saveFormulaMutation.isPending || saveRoundingForSubjectsMutation.isPending,
     saveFormula: saveFormulaMutation.mutateAsync,
+    saveRoundingForSubjects: saveRoundingForSubjectsMutation.mutateAsync,
+    isSavingRoundingForSubjects: saveRoundingForSubjectsMutation.isPending,
   };
 }

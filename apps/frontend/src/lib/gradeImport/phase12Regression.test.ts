@@ -506,7 +506,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(roundingDialogSource).toContain("Pembulatan Nilai");
     expect(roundingDialogSource).toContain("Terapkan ke");
     expect(roundingDialogSource).toContain("Rata-rata BAB");
-    expect(roundingDialogSource).toContain("Simpan Pembulatan");
+    expect(roundingDialogSource).toContain("Terapkan ke Mapel Pilihan");
+    expect(roundingDialogSource).toContain("Terapkan ke Seluruh Mapel");
+    expect(gradesPageSource).toContain("saveRoundingForSubjects");
     expect(globalStyles).toContain(".sipena-grade-page");
     expect(globalStyles).toContain(".sipena-grade-table-shell");
     expect(globalStyles).toContain(".sipena-grade-mode-tabs");
