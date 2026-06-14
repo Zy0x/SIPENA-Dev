@@ -19,7 +19,7 @@ interface StudentRankingEntry {
 }
 
 function compactStudentNameForRankingExport(name: string) {
-  return name.trim().replace(/\s+/g, " ").split(" ").slice(0, 2).join(" ");
+  return name.trim().replace(/\s+/g, " ");
 }
 
 function compactNisnForRankingExport(nisn: string) {

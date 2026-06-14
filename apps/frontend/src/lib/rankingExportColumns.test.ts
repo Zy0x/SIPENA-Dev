@@ -36,7 +36,7 @@ const columns: RankingColumn[] = [
 ];
 
 describe("ranking export columns", () => {
-  it("keeps exported names to two words and NISN to at most 17 characters", () => {
+  it("keeps full exported names for wrapping and NISN to at most 17 characters", () => {
     const [row] = buildRankingExportData(
       [{
         student: {
@@ -55,7 +55,7 @@ describe("ranking export columns", () => {
       (value) => String(value),
     );
 
-    expect(row?.Nama).toBe("Muhammad Akmal");
+    expect(row?.Nama).toBe("Muhammad Akmal Zain Malik Firdaus");
     expect(String(row?.NISN)).toBe("12345678901234567");
     expect(String(row?.NISN)).toHaveLength(17);
   });

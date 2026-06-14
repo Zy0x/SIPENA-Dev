@@ -149,6 +149,79 @@ interface Student {
   nisn: string;
 }
 
+type ReportVisibleColumn = {
+  key: string;
+  label: string;
+  type: string;
+  chapterId?: string;
+  assignmentId?: string;
+  semester?: number;
+};
+
+type ReportHeaderGroup = {
+  label: string;
+  colSpan: number;
+  bgClass: string;
+  semester?: number;
+  isChapter?: boolean;
+};
+
+const REPORT_INDEX_COL_WIDTH = 45;
+const REPORT_NAME_COL_WIDTH = 168;
+const REPORT_NISN_COL_WIDTH = 88;
+const REPORT_GRADE_COL_WIDTH = 82;
+const REPORT_AVERAGE_COL_WIDTH = 92;
+const REPORT_STATUS_COL_WIDTH = 104;
+const REPORT_GROUP_HEADER_HEIGHT = 32;
+const REPORT_COLUMN_HEADER_HEIGHT = 40;
+const REPORT_DEFAULT_ROW_HEIGHT = 44;
+const REPORT_NAME_LINE_HEIGHT = 16;
+const REPORT_ROW_VERTICAL_PADDING = 14;
+
+function isReportFrozenColumn(column: ReportVisibleColumn) {
+  return column.type === "index" || column.type === "name" || column.type === "nisn";
+}
+
+function getReportColumnWidth(column: ReportVisibleColumn) {
+  if (column.type === "index") return REPORT_INDEX_COL_WIDTH;
+  if (column.type === "name") return REPORT_NAME_COL_WIDTH;
+  if (column.type === "nisn") return REPORT_NISN_COL_WIDTH;
+  if (column.type === "status") return REPORT_STATUS_COL_WIDTH;
+  if (column.type === "chapterAvg" || column.type === "grandAvg" || column.type === "avgRapor" || column.type === "rapor") {
+    return REPORT_AVERAGE_COL_WIDTH;
+  }
+  return REPORT_GRADE_COL_WIDTH;
+}
+
+function estimateReportWrappedLineCount(text: string, width: number) {
+  const words = text.trim().replace(/\s+/g, " ").split(" ").filter(Boolean);
+  if (words.length === 0) return 1;
+
+  const charsPerLine = Math.max(8, Math.floor(Math.max(52, width - 20) / 7.2));
+  let lines = 1;
+  let currentLineLength = 0;
+
+  words.forEach((word) => {
+    const wordLength = word.length;
+    if (currentLineLength === 0) {
+      currentLineLength = Math.min(wordLength, charsPerLine);
+      lines += Math.max(0, Math.ceil(wordLength / charsPerLine) - 1);
+      return;
+    }
+
+    if (currentLineLength + 1 + wordLength <= charsPerLine) {
+      currentLineLength += 1 + wordLength;
+      return;
+    }
+
+    lines += 1;
+    currentLineLength = Math.min(wordLength, charsPerLine);
+    lines += Math.max(0, Math.ceil(wordLength / charsPerLine) - 1);
+  });
+
+  return Math.max(1, lines);
+}
+
 export default function GradeReports() {
   const { toast } = useEnhancedToast();
   const queryClient = useQueryClient();
@@ -174,6 +247,8 @@ export default function GradeReports() {
   const [paperSize, setPaperSize] = useState<ReportPaperSize>("a4");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [includeSignature, setIncludeSignature] = useState(false);
+  const [reportScrollLeft, setReportScrollLeft] = useState(0);
+  const [reportScrollTop, setReportScrollTop] = useState(0);
   const {
     signatureConfig,
     hasSignature,
@@ -479,7 +554,7 @@ export default function GradeReports() {
 
   // Build visible columns based on export options
   const visibleColumns = useMemo(() => {
-    const cols: { key: string; label: string; type: string; chapterId?: string; assignmentId?: string; semester?: number }[] = [];
+    const cols: ReportVisibleColumn[] = [];
     
     // Always include No, Nama, NISN
     cols.push({ key: "no", label: "No", type: "index" });
@@ -888,8 +963,8 @@ export default function GradeReports() {
   const hasData = selectedClassId && selectedSubjectId && studentGrades.length > 0;
 
   // Calculate header groups for complex table layout - UNIFIED for both single and combined view
-  function getHeaderGroups(): { label: string; colSpan: number; bgClass: string; semester?: number; isChapter?: boolean }[] {
-    const groups: { label: string; colSpan: number; bgClass: string; semester?: number; isChapter?: boolean }[] = [];
+  function getHeaderGroups(): ReportHeaderGroup[] {
+    const groups: ReportHeaderGroup[] = [];
     
     // Fixed columns (No, Nama, NISN)
     groups.push({ label: "", colSpan: 3, bgClass: "" });
@@ -1039,6 +1114,143 @@ export default function GradeReports() {
     }
 
     return getGradeTableColumnHeaderTone(gradeTableColorScheme, { type: "final" });
+  };
+
+  const reportHeaderGroups = getHeaderGroups();
+  const reportHasGroupHeader = reportHeaderGroups.length > 1;
+  const reportHeaderHeight = (reportHasGroupHeader ? REPORT_GROUP_HEADER_HEIGHT : 0) + REPORT_COLUMN_HEADER_HEIGHT;
+
+  const reportColumnWidths = useMemo(
+    () => visibleColumns.map((column) => getReportColumnWidth(column)),
+    [visibleColumns],
+  );
+
+  const reportColumnLayouts = useMemo(() => {
+    let frozenLeft = 0;
+    let nonFrozenLeft = 0;
+
+    return visibleColumns.map((column, index) => {
+      const width = reportColumnWidths[index] ?? REPORT_GRADE_COL_WIDTH;
+      const frozen = isReportFrozenColumn(column);
+      const layout = {
+        column,
+        index,
+        width,
+        frozen,
+        left: frozen ? frozenLeft : nonFrozenLeft,
+      };
+
+      if (frozen) {
+        frozenLeft += width;
+      } else {
+        nonFrozenLeft += width;
+      }
+
+      return layout;
+    });
+  }, [reportColumnWidths, visibleColumns]);
+
+  const reportFrozenWidth = useMemo(
+    () => reportColumnLayouts.filter((layout) => layout.frozen).reduce((sum, layout) => sum + layout.width, 0),
+    [reportColumnLayouts],
+  );
+
+  const reportNonFrozenWidth = useMemo(
+    () => reportColumnLayouts.filter((layout) => !layout.frozen).reduce((sum, layout) => sum + layout.width, 0),
+    [reportColumnLayouts],
+  );
+
+  const reportGroupLayouts = useMemo(() => {
+    let startIndex = 0;
+
+    return reportHeaderGroups.map((group, groupIndex) => {
+      const start = startIndex;
+      const end = Math.min(visibleColumns.length - 1, startIndex + group.colSpan - 1);
+      const layouts = reportColumnLayouts.slice(start, end + 1);
+      const isFrozen = layouts.length > 0 && layouts.every((layout) => layout.frozen);
+      const firstVisibleLayout = isFrozen
+        ? layouts[0]
+        : layouts.find((layout) => !layout.frozen);
+      const width = layouts
+        .filter((layout) => (isFrozen ? layout.frozen : !layout.frozen))
+        .reduce((sum, layout) => sum + layout.width, 0);
+
+      startIndex += group.colSpan;
+
+      return {
+        ...group,
+        groupIndex,
+        width,
+        frozen: isFrozen,
+        left: firstVisibleLayout?.left ?? 0,
+      };
+    });
+  }, [reportColumnLayouts, reportHeaderGroups, visibleColumns.length]);
+
+  const reportRowHeights = useMemo(() => {
+    const nameWidth = reportColumnLayouts.find((layout) => layout.column.type === "name")?.width ?? REPORT_NAME_COL_WIDTH;
+
+    return studentGrades.map((sg) => {
+      const lineCount = estimateReportWrappedLineCount(String(sg.student?.name ?? ""), nameWidth);
+      return Math.max(REPORT_DEFAULT_ROW_HEIGHT, REPORT_ROW_VERTICAL_PADDING + lineCount * REPORT_NAME_LINE_HEIGHT);
+    });
+  }, [reportColumnLayouts, studentGrades]);
+
+  const reportRowTops = useMemo(() => {
+    let top = 0;
+    return reportRowHeights.map((height) => {
+      const currentTop = top;
+      top += height;
+      return currentTop;
+    });
+  }, [reportRowHeights]);
+
+  const reportBodyHeight = useMemo(
+    () => reportRowHeights.reduce((sum, height) => sum + height, 0),
+    [reportRowHeights],
+  );
+
+  const renderReportCellContent = (sg: any, col: ReportVisibleColumn, rowIndex: number) => {
+    const value = getCellValue(sg, col, rowIndex);
+
+    if (col.type === "status") {
+      const statusValue = isCombinedView && "avgRapor" in sg
+        ? sg.avgRapor
+        : "rapor" in sg
+          ? sg.rapor
+          : 0;
+      return (
+        <Badge className={cn(getStatusColor(statusValue), "px-2 py-0.5 text-[10px] sm:text-xs")}>
+          {value}
+        </Badge>
+      );
+    }
+
+    if (col.type === "name") {
+      return (
+        <span className="block w-full whitespace-normal break-words text-left text-[12px] font-medium leading-4 text-foreground">
+          {value}
+        </span>
+      );
+    }
+
+    if (col.type === "nisn") {
+      return (
+        <span className="block w-full text-center text-[11px] font-medium text-muted-foreground">
+          {value || "-"}
+        </span>
+      );
+    }
+
+    if (col.type === "index") {
+      return (
+        <span className="block w-full text-center text-[12px] font-medium text-muted-foreground">
+          {value}
+        </span>
+      );
+    }
+
+    return value;
   };
 
   return (
@@ -1297,95 +1509,184 @@ export default function GradeReports() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="sipena-report-grade-table-shell sipena-scroll-chain-page h-[70dvh] min-h-[420px] overflow-auto bg-background scrollbar-thin">
-                <table className="min-w-max border-separate border-spacing-0 text-sm">
-                  <colgroup>
-                    {visibleColumns.map((col) => (
-                      <col
-                        key={col.key}
-                        className={cn(
-                          col.type === "index" && "w-12",
-                          col.type === "name" && "w-40",
-                          col.type === "nisn" && "w-24",
-                          col.type !== "index" && col.type !== "name" && col.type !== "nisn" && "w-24",
-                        )}
-                      />
-                    ))}
-                  </colgroup>
-                  <thead className="sticky top-0 z-30">
-                    {getHeaderGroups().length > 1 && (
-                      <tr>
-                        {getHeaderGroups().map((group, idx) => (
-                          <th
-                            key={`${group.label}-${idx}`}
-                            colSpan={group.colSpan}
-                            className={cn(
-                              "h-10 border border-border px-3 text-center align-middle text-[11px] font-bold text-muted-foreground",
-                              idx === 0
-                                ? "sticky left-0 z-[70] min-w-[19rem] bg-card shadow-[2px_0_0_hsl(var(--border))]"
-                                : getReportGroupTone(group, idx),
-                            )}
-                          >
-                            {idx === 0 ? "Data Siswa" : group.label}
-                          </th>
-                        ))}
-                      </tr>
-                    )}
-
-                    <tr>
-                      {visibleColumns.map((col, idx) => (
-                        <th
-                          key={col.key}
-                          className={cn(
-                            "h-10 border border-border px-2 text-center align-middle text-[11px] font-bold",
-                            col.type !== "name" && col.type !== "index" && col.type !== "nisn" && "text-center",
-                            (col.type === "index" || col.type === "name" || col.type === "nisn") && "sticky z-[70] bg-card text-muted-foreground shadow-[1px_0_0_hsl(var(--border))]",
-                            col.type === "index" && "left-0",
-                            col.type === "name" && "left-12",
-                            col.type === "nisn" && "left-[13rem]",
-                            col.type !== "index" && col.type !== "name" && col.type !== "nisn" && getReportColumnHeaderTone(col),
-                          )}
+              <div className="sipena-report-grade-table-shell sipena-scroll-chain-page relative h-[70dvh] min-h-[420px] overflow-hidden bg-background">
+                {reportHasGroupHeader && (
+                  <div className="absolute inset-x-0 top-0 z-50 bg-primary/5" style={{ height: REPORT_GROUP_HEADER_HEIGHT }}>
+                    {reportGroupLayouts
+                      .filter((group) => group.frozen)
+                      .map((group) => (
+                        <div
+                          key={`report-group-frozen-${group.groupIndex}`}
+                          className="absolute top-0 flex items-center justify-center border-r border-border bg-muted px-2 text-center text-[11px] font-bold text-muted-foreground"
+                          style={{ left: group.left, width: group.width, height: REPORT_GROUP_HEADER_HEIGHT }}
+                          title="Data Siswa"
+                          aria-label="Data Siswa"
                         >
-                          <span className="block truncate px-1 text-center leading-tight">{col.label}</span>
-                        </th>
+                          Data Siswa
+                        </div>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {studentGrades.map((sg, index) => (
-                      <tr key={sg.student.id} className="group">
-                        {visibleColumns.map((col, colIdx) => {
-                          const value = getCellValue(sg, col, index);
 
-                          return (
-                            <td
-                              key={col.key}
+                    <div className="absolute top-0 overflow-hidden" style={{ left: reportFrozenWidth, right: 0, height: REPORT_GROUP_HEADER_HEIGHT }}>
+                      <div className="relative" style={{ width: reportNonFrozenWidth, transform: `translateX(-${reportScrollLeft}px)` }}>
+                        {reportGroupLayouts
+                          .filter((group) => !group.frozen && group.width > 0)
+                          .map((group) => (
+                            <div
+                              key={`report-group-${group.groupIndex}`}
                               className={cn(
-                                "h-11 border border-border/40 px-2 align-middle text-[11px] transition-colors",
-                                col.type !== "name" && col.type !== "index" && col.type !== "nisn" && "text-center",
-                                (col.type === "index" || col.type === "name" || col.type === "nisn") && "sticky z-40 bg-background shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted",
-                                col.type === "index" && "left-0 text-center font-medium",
-                                col.type === "name" && "left-12 max-w-40 truncate font-medium",
-                                col.type === "nisn" && "left-[13rem] text-center",
-                                col.type !== "index" && col.type !== "name" && col.type !== "nisn" && (getReportColumnBodyTone(col) || (index % 2 === 0 ? "bg-background" : "bg-muted/20")),
-                                "group-hover:border-fuchsia-300/80 group-hover:bg-fuchsia-50/90 dark:group-hover:border-fuchsia-700/70 dark:group-hover:bg-fuchsia-950/35",
-                                (col.type === "grandAvg" || col.type === "avgRapor" || col.type === "rapor") && "font-bold text-foreground",
+                                "absolute top-0 flex items-center justify-center border-r border-b px-2 text-center text-[11px] font-bold leading-tight",
+                                getReportGroupTone(group, group.groupIndex),
                               )}
+                              style={{ left: group.left, width: group.width, height: REPORT_GROUP_HEADER_HEIGHT }}
+                              title={group.label}
+                              aria-label={group.label}
                             >
-                              {col.type === "status" ? (
-                                <Badge className={cn(getStatusColor(isCombinedView && 'avgRapor' in sg ? sg.avgRapor : 'rapor' in sg ? (sg as any).rapor : 0), "text-[9px] sm:text-xs px-1.5 sm:px-2")}>
-                                  {value}
-                                </Badge>
-                              ) : (
-                                value
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
+                              <span className="line-clamp-2 whitespace-normal px-1">{group.label}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  className="absolute z-40 bg-muted"
+                  style={{
+                    left: 0,
+                    top: reportHasGroupHeader ? REPORT_GROUP_HEADER_HEIGHT : 0,
+                    width: reportFrozenWidth,
+                    height: REPORT_COLUMN_HEADER_HEIGHT,
+                  }}
+                >
+                  {reportColumnLayouts
+                    .filter((layout) => layout.frozen)
+                    .map((layout) => (
+                      <div
+                        key={`report-header-frozen-${layout.column.key}`}
+                        className="absolute flex items-center justify-center border border-border bg-muted px-2 text-center text-[11px] font-bold text-muted-foreground ring-1 ring-inset ring-primary/20"
+                        style={{ left: layout.left, width: layout.width, height: REPORT_COLUMN_HEADER_HEIGHT }}
+                        title={layout.column.label}
+                        aria-label={layout.column.label}
+                      >
+                        <span className="whitespace-normal text-center leading-tight">{layout.column.label}</span>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                </div>
+
+                <div
+                  className="absolute z-30 overflow-hidden bg-muted"
+                  style={{
+                    left: reportFrozenWidth,
+                    right: 0,
+                    top: reportHasGroupHeader ? REPORT_GROUP_HEADER_HEIGHT : 0,
+                    height: REPORT_COLUMN_HEADER_HEIGHT,
+                  }}
+                >
+                  <div className="relative" style={{ width: reportNonFrozenWidth, transform: `translateX(-${reportScrollLeft}px)` }}>
+                    {reportColumnLayouts
+                      .filter((layout) => !layout.frozen)
+                      .map((layout) => (
+                        <div
+                          key={`report-header-${layout.column.key}`}
+                          className={cn(
+                            "absolute flex items-center justify-center border border-border px-2 text-center text-[11px] font-bold leading-tight",
+                            getReportColumnHeaderTone(layout.column),
+                          )}
+                          style={{ left: layout.left, width: layout.width, height: REPORT_COLUMN_HEADER_HEIGHT }}
+                          title={layout.column.label}
+                          aria-label={layout.column.label}
+                        >
+                          <span className="line-clamp-2 whitespace-normal text-center">{layout.column.label}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 z-[35] h-3 bg-gradient-to-b from-border/40 to-transparent"
+                  style={{ top: Math.max(0, reportHeaderHeight - 1) }}
+                />
+
+                <div
+                  className="sipena-grade-scroll sipena-scroll-chain-page absolute bottom-0 overflow-auto scrollbar-thin"
+                  style={{
+                    left: reportFrozenWidth,
+                    right: 0,
+                    top: reportHeaderHeight,
+                    WebkitOverflowScrolling: "touch",
+                    overscrollBehaviorX: "contain",
+                  }}
+                  onScroll={(event) => {
+                    setReportScrollLeft(event.currentTarget.scrollLeft);
+                    setReportScrollTop(event.currentTarget.scrollTop);
+                  }}
+                >
+                  <div className="relative" style={{ width: reportNonFrozenWidth, height: reportBodyHeight, minHeight: "100%" }}>
+                    {studentGrades.map((sg, rowIndex) =>
+                      reportColumnLayouts
+                        .filter((layout) => !layout.frozen)
+                        .map((layout) => (
+                          <div
+                            key={`${sg.student.id}-${layout.column.key}`}
+                            className={cn(
+                              "absolute flex items-center justify-center border border-border/40 px-2 text-center text-[12px] transition-colors hover:border-fuchsia-300/80 hover:bg-fuchsia-50/90 dark:hover:border-fuchsia-700/70 dark:hover:bg-fuchsia-950/35",
+                              getReportColumnBodyTone(layout.column) || (rowIndex % 2 === 0 ? "bg-background" : "bg-muted/20"),
+                              (layout.column.type === "grandAvg" || layout.column.type === "avgRapor" || layout.column.type === "rapor") && "font-bold text-foreground",
+                            )}
+                            style={{
+                              left: layout.left,
+                              top: reportRowTops[rowIndex] ?? 0,
+                              width: layout.width,
+                              height: reportRowHeights[rowIndex] ?? REPORT_DEFAULT_ROW_HEIGHT,
+                            }}
+                          >
+                            {renderReportCellContent(sg, layout.column, rowIndex)}
+                          </div>
+                        )),
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className="sipena-grade-frozen-layer absolute left-0 z-20 overflow-hidden border-r-2 border-primary bg-background shadow-[2px_0_8px_rgba(15,23,42,0.12)]"
+                  style={{
+                    top: reportHeaderHeight,
+                    bottom: 0,
+                    width: reportFrozenWidth,
+                  }}
+                >
+                  <div
+                    className="relative"
+                    style={{
+                      width: reportFrozenWidth,
+                      height: reportBodyHeight,
+                      transform: `translate3d(0, -${reportScrollTop}px, 0)`,
+                    }}
+                  >
+                    {studentGrades.map((sg, rowIndex) =>
+                      reportColumnLayouts
+                        .filter((layout) => layout.frozen)
+                        .map((layout) => (
+                          <div
+                            key={`${sg.student.id}-${layout.column.key}-frozen`}
+                            className={cn(
+                              "absolute flex items-center border border-border/40 bg-primary/5 px-2 transition-colors hover:border-fuchsia-300/80 hover:bg-fuchsia-100/80 dark:hover:border-fuchsia-700/70 dark:hover:bg-fuchsia-950/40",
+                              layout.column.type === "name" ? "justify-start" : "justify-center",
+                            )}
+                            style={{
+                              left: layout.left,
+                              top: reportRowTops[rowIndex] ?? 0,
+                              width: layout.width,
+                              height: reportRowHeights[rowIndex] ?? REPORT_DEFAULT_ROW_HEIGHT,
+                            }}
+                          >
+                            {renderReportCellContent(sg, layout.column, rowIndex)}
+                          </div>
+                        )),
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

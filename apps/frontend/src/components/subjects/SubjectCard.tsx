@@ -13,14 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { BookOpen, Edit, Trash2, FileSpreadsheet, Link2, MoreVertical } from "lucide-react";
+import { BookOpen, Edit, Trash2, FileSpreadsheet, Link2 } from "lucide-react";
 import { Subject, useSubjects } from "@/hooks/useSubjects";
 import EditSubjectDialog from "./EditSubjectDialog";
 import { ShareLinkDialog } from "./ShareLinkDialog";
@@ -56,108 +49,89 @@ export default function SubjectCard({ subject, showClassName, className }: Subje
 
   return (
     <>
-      <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden h-full">
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-start gap-2 sm:gap-3">
-            {/* Icon */}
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+      <Card
+        role="button"
+        tabIndex={0}
+        onClick={handleInputGrades}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleInputGrades();
+          }
+        }}
+        className="group h-full cursor-pointer overflow-hidden border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      >
+        <CardContent className="flex h-full flex-col gap-3 p-4 sm:p-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
             </div>
 
-            {/* Content - responsive text sizing */}
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <h3 className="font-semibold text-foreground text-sm sm:text-base leading-tight line-clamp-2 break-words">
+            <div className="min-w-0 flex-1">
+              <h3 className="line-clamp-2 break-words text-base font-semibold leading-tight text-foreground">
                 {subject.name}
               </h3>
               {showClassName && className && (
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">{className}</p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">{className}</p>
               )}
-              <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 flex-wrap">
-                <span className="text-[10px] sm:text-xs text-muted-foreground">KKM:</span>
-                <Badge variant={getKkmVariant(subject.kkm)} className="text-[10px] sm:text-xs px-1.5 py-0">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">KKM</span>
+                <Badge variant={getKkmVariant(subject.kkm)} className="px-2 py-0.5 text-xs">
                   {subject.kkm}
                 </Badge>
-                {subject.is_custom && (
-                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0">Custom</Badge>
-                )}
+                {subject.is_custom && <Badge variant="outline" className="px-2 py-0.5 text-xs">Custom</Badge>}
               </div>
             </div>
+          </div>
 
-            {/* Actions - Mobile Dropdown + Desktop Buttons */}
-            <div className="flex-shrink-0">
-              {/* Desktop: Individual buttons (hidden on mobile) */}
-              <div className="hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-primary hover:bg-primary/10"
-                  onClick={handleInputGrades}
-                  title="Input Nilai"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  onClick={() => setShowShareDialog(true)}
-                  title="Bagikan Link"
-                >
-                  <Link2 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setShowEditDialog(true)}
-                  title="Edit"
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive"
-                  onClick={() => setShowDeleteDialog(true)}
-                  title="Hapus"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Mobile: Dropdown menu (visible on mobile) */}
-              <div className="sm:hidden">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={handleInputGrades} className="gap-2">
-                      <FileSpreadsheet className="w-4 h-4 text-primary" />
-                      <span>Input Nilai</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowShareDialog(true)} className="gap-2">
-                      <Link2 className="w-4 h-4 text-blue-600" />
-                      <span>Bagikan Link</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowEditDialog(true)} className="gap-2">
-                      <Edit className="w-4 h-4" />
-                      <span>Edit Mapel</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => setShowDeleteDialog(true)} 
-                      className="gap-2 text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Hapus Mapel</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+          <div className="mt-auto grid grid-cols-2 gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
+            <Button
+              type="button"
+              className="col-span-2 h-11 gap-2 rounded-xl sm:col-span-1"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleInputGrades();
+              }}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Input Nilai
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 gap-2 rounded-xl px-3"
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowShareDialog(true);
+              }}
+            >
+              <Link2 className="h-4 w-4 text-blue-600" />
+              <span className="sm:hidden lg:inline">Bagikan</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 gap-2 rounded-xl px-3"
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowEditDialog(true);
+              }}
+            >
+              <Edit className="h-4 w-4" />
+              <span className="sm:hidden lg:inline">Edit</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="col-span-2 h-11 gap-2 rounded-xl border-destructive/30 px-3 text-destructive hover:bg-destructive/10 sm:col-span-1"
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowDeleteDialog(true);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sm:hidden xl:inline">Hapus</span>
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -98,8 +98,7 @@ describe("ranking export layout", () => {
     const nameWidth = documentStyle.columnFontOverrides.Nama?.widthMm;
 
     expect(nameWidth).toBeLessThanOrEqual(24);
-    expect(documentStyle.tableSizing.bodyRowHeightMm).toBeGreaterThanOrEqual(8.3);
-    expect(documentStyle.tableSizing.bodyRowHeightMm).toBeLessThanOrEqual(9.8);
+    expect(documentStyle.tableSizing.bodyRowHeightMm).toBeGreaterThan(10);
     expect(pdfEffectiveFontSize(documentStyle.tableBodyFontSize)).toBeGreaterThanOrEqual(11);
   });
 

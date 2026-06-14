@@ -13,22 +13,26 @@ function readSource(relativePath: string): string {
 }
 
 describe("grade reports table layout guard", () => {
-  it("uses an input-grade style native table shell with stable grouped headers", () => {
+  it("uses an input-grade style layered shell with stable grouped headers and frozen columns", () => {
     const source = readSource("apps/frontend/src/pages/GradeReports.tsx");
 
     expect(source).toContain("sipena-report-grade-table-shell sipena-scroll-chain-page");
-    expect(source).toContain("h-[70dvh] min-h-[420px] overflow-auto bg-background scrollbar-thin");
-    expect(source).toContain('<table className="min-w-max border-separate border-spacing-0 text-sm">');
-    expect(source).toContain('<thead className="sticky top-0 z-30">');
+    expect(source).toContain("relative h-[70dvh] min-h-[420px] overflow-hidden bg-background");
+    expect(source).toContain("reportColumnLayouts");
+    expect(source).toContain("reportFrozenWidth");
+    expect(source).toContain("reportScrollLeft");
+    expect(source).toContain("reportScrollTop");
+    expect(source).toContain("sipena-grade-scroll sipena-scroll-chain-page");
+    expect(source).toContain("sipena-grade-frozen-layer");
+    expect(source).toContain("estimateReportWrappedLineCount");
     expect(source).toContain("getGradeTableChapterTone");
     expect(source).toContain("getGradeTableColumnHeaderTone");
     expect(source).toContain("getGradeTableColumnBodyTone");
     expect(source).toContain("Data Siswa");
-    expect(source).toContain("left-[13rem]");
-    expect(source).toContain("bg-card shadow-[2px_0_0_hsl(var(--border))]");
-    expect(source).toContain("sticky z-40 bg-background shadow-[1px_0_0_hsl(var(--border))]");
-    expect(source).toContain("group-hover:bg-fuchsia-50/90");
+    expect(source).toContain("border-r-2 border-primary bg-background");
+    expect(source).toContain("hover:bg-fuchsia-50/90");
+    expect(source).not.toContain("<table");
+    expect(source).not.toContain("<thead");
     expect(source).not.toContain("@/components/ui/table");
-    expect(source).not.toContain("<Table>");
   });
 });

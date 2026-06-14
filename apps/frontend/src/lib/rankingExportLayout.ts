@@ -18,7 +18,6 @@ const RANKING_STATUS_COLUMN_WIDTH_MM = 20;
 const RANKING_READABLE_STYLE_FONT_PT = 13;
 const RANKING_HEADER_ROW_HEIGHT_MM = 10.4;
 const RANKING_BODY_ROW_HEIGHT_MM = 8.3;
-const RANKING_MAX_BODY_ROW_HEIGHT_MM = 9.8;
 
 type RankingExportRow = Record<string, string | number>;
 
@@ -114,7 +113,7 @@ function estimateWrappedLineCount(text: string, fontPt: number, widthMm: number)
     lines += Math.max(0, Math.ceil(wordLength / charsPerLine) - 1);
   });
 
-  return clamp(lines, 1, 3);
+  return Math.max(1, lines);
 }
 
 function resolveRankingBodyRowHeightMm(
@@ -130,8 +129,8 @@ function resolveRankingBodyRowHeightMm(
   const maxNameLines = nameColumn && rows.length > 0
     ? Math.max(...rows.map((row) => estimateWrappedLineCount(String(row[nameColumn.key] ?? ""), bodyFontPt, nameWidthMm)))
     : 2;
-  const textHeightMm = Math.min(maxNameLines, 3) * bodyFontPt * 0.34;
-  return Number(clamp(textHeightMm + 2, RANKING_BODY_ROW_HEIGHT_MM, RANKING_MAX_BODY_ROW_HEIGHT_MM).toFixed(2));
+  const textHeightMm = maxNameLines * bodyFontPt * 0.34;
+  return Number(Math.max(RANKING_BODY_ROW_HEIGHT_MM, textHeightMm + 2).toFixed(2));
 }
 
 function resolveRankingHeaderRowHeightMm(style: ReportDocumentStyle, columns: ExportColumn[], widths: number[]) {
