@@ -22,7 +22,6 @@ import {
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -159,7 +158,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "sipena-global-search-dialog flex w-[min(calc(100vw-1rem),42rem)] max-w-none max-h-[min(720px,calc(100dvh-1rem))] flex-col gap-0 overflow-hidden rounded-[1.5rem] border-border/80 bg-background p-0 shadow-2xl sm:w-[min(calc(100vw-3rem),42rem)]",
+          "sipena-global-search-dialog flex h-[min(calc(100dvh-1rem),720px)] w-[min(calc(100vw-1rem),42rem)] max-w-none max-h-none flex-col gap-0 overflow-hidden rounded-[1.5rem] border-border/80 bg-background p-0 shadow-2xl sm:h-[min(calc(100dvh-3rem),720px)] sm:w-[min(calc(100vw-3rem),42rem)]",
           "[&>button[aria-label='Tutup_dialog']]:right-3 [&>button[aria-label='Tutup_dialog']]:top-3 [&>button[aria-label='Tutup_dialog']]:h-10 [&>button[aria-label='Tutup_dialog']]:w-10",
           "[&>button[aria-label='Tutup_dialog']]:!border-border [&>button[aria-label='Tutup_dialog']]:!bg-background [&>button[aria-label='Tutup_dialog']]:!text-muted-foreground [&>button[aria-label='Tutup_dialog']]:shadow-sm",
           "[&>button[aria-label='Tutup_dialog']]:hover:!bg-muted [&>button[aria-label='Tutup_dialog']]:hover:!text-foreground",
@@ -195,7 +194,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           </div>
         </div>
 
-        <ScrollArea className="min-h-0 max-h-[min(58dvh,430px)]">
+        <div className="sipena-global-search-results sipena-scroll-chain-page min-h-0 flex-1 overflow-y-auto overscroll-auto scrollbar-thin">
           <div className="space-y-3 p-3 sm:p-4" role="listbox" aria-label="Hasil pencarian global">
             {results.length === 0 ? (
               <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center text-muted-foreground">
@@ -256,7 +255,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border/70 bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:px-5">
           <div className="flex min-w-0 items-center gap-2">

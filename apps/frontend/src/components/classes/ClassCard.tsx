@@ -29,6 +29,7 @@ import {
   UserPlus,
   Eye,
   FileSpreadsheet,
+  BookOpen,
   Target,
   AlertCircle,
 } from "lucide-react";
@@ -60,6 +61,10 @@ export default function ClassCard({ classData }: ClassCardProps) {
 
   const handleInputNilai = () => {
     navigate(`/grades?classId=${classData.id}`);
+  };
+
+  const handleTambahMapel = () => {
+    navigate(`/subjects?classId=${encodeURIComponent(classData.id)}&action=add-subject`);
   };
 
   return (
@@ -142,7 +147,7 @@ export default function ClassCard({ classData }: ClassCardProps) {
             </DropdownMenu>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-1.5 sm:gap-2">
+          <div className="mt-4 grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -160,6 +165,15 @@ export default function ClassCard({ classData }: ClassCardProps) {
             >
               <UserPlus className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">Siswa</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-8 sm:h-9 text-[10px] sm:text-xs px-1 sm:px-2 gap-0.5 sm:gap-1"
+              onClick={handleTambahMapel}
+            >
+              <BookOpen className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">Mapel</span>
             </Button>
             <Button
               size="sm"

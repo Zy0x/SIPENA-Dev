@@ -17,14 +17,17 @@ describe("global search layout guard", () => {
     const source = readSource("apps/frontend/src/components/search/GlobalSearch.tsx");
 
     expect(source).toContain("sipena-global-search-dialog");
+    expect(source).toContain("h-[min(calc(100dvh-1rem),720px)]");
     expect(source).toContain("pr-16");
     expect(source).toContain("Bersihkan pencarian");
-    expect(source).toContain("max-h-[min(58dvh,430px)]");
+    expect(source).toContain("sipena-global-search-results sipena-scroll-chain-page");
+    expect(source).toContain("min-h-0 flex-1 overflow-y-auto overscroll-auto");
     expect(source).toContain('role="listbox"');
     expect(source).toContain('role="option"');
     expect(source).toContain("aria-selected={isHighlighted}");
     expect(source).toContain("Ctrl/Cmd K");
     expect(source).toContain("Up/Down");
     expect(source).toContain("[&>button[aria-label='Tutup_dialog']]:right-3");
+    expect(source).not.toContain("max-h-[min(58dvh,430px)]");
   });
 });

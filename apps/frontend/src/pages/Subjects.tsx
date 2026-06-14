@@ -83,6 +83,10 @@ export default function Subjects() {
   }, [subjects, searchQuery, sortBy]);
 
   const isLoading = classesLoading || subjectsLoading;
+  const addSubjectIntentKey =
+    searchParams.get("action") === "add-subject" && selectedClassId
+      ? `${selectedClassId}:add-subject`
+      : undefined;
 
   // GSAP entrance
   useEffect(() => {
@@ -112,7 +116,12 @@ export default function Subjects() {
             <TourButton tourKey="subjects" />
             {selectedClassId && selectedClass && (
               <div data-tour="add-subject">
-                <AddSubjectDialog classId={selectedClassId} className={selectedClass.name} defaultKkm={selectedClass.class_kkm} />
+                <AddSubjectDialog
+                  classId={selectedClassId}
+                  className={selectedClass.name}
+                  defaultKkm={selectedClass.class_kkm}
+                  openOnMountKey={addSubjectIntentKey}
+                />
               </div>
             )}
           </div>
@@ -217,7 +226,11 @@ export default function Subjects() {
               <p className="text-xs text-muted-foreground text-center max-w-xs mb-4">
                 Tambahkan mata pelajaran untuk kelas {selectedClass?.name}.
               </p>
-              <AddSubjectDialog classId={selectedClassId} className={selectedClass?.name || ""} defaultKkm={selectedClass?.class_kkm} />
+              <AddSubjectDialog
+                classId={selectedClassId}
+                className={selectedClass?.name || ""}
+                defaultKkm={selectedClass?.class_kkm}
+              />
             </div>
           </div>
         )}

@@ -10,14 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useStudents } from "@/hooks/useStudents";
@@ -1272,66 +1264,79 @@ export default function GradeReports() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table className="min-w-max">
-                  <TableHeader>
-                    {/* Level 1 Headers (Groups) - ALWAYS SHOW for hierarchical structure */}
+              <div className="sipena-report-grade-table-shell sipena-scroll-chain-page max-h-[70dvh] overflow-auto scrollbar-thin">
+                <table className="min-w-max border-separate border-spacing-0 text-sm">
+                  <colgroup>
+                    {visibleColumns.map((col) => (
+                      <col
+                        key={col.key}
+                        className={cn(
+                          col.type === "index" && "w-12",
+                          col.type === "name" && "w-40",
+                          col.type === "nisn" && "w-24",
+                          col.type !== "index" && col.type !== "name" && col.type !== "nisn" && "w-24",
+                        )}
+                      />
+                    ))}
+                  </colgroup>
+                  <thead className="sticky top-0 z-30">
                     {getHeaderGroups().length > 1 && (
-                      <TableRow className="border-b-2 bg-muted/30">
+                      <tr>
                         {getHeaderGroups().map((group, idx) => (
-                          <TableHead 
-                            key={idx}
+                          <th
+                            key={`${group.label}-${idx}`}
                             colSpan={group.colSpan}
                             className={cn(
-                              "text-center text-[10px] sm:text-xs font-bold",
+                              "h-10 border-b border-r border-border/70 bg-card px-3 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-xs",
                               group.bgClass,
-                              idx > 0 && "border-l-2 border-border/50"
+                              idx === 0 && "sticky left-0 z-40 min-w-[13rem] text-left",
                             )}
                           >
-                            {group.label}
-                          </TableHead>
+                            {idx === 0 ? "Identitas Siswa" : group.label}
+                          </th>
                         ))}
-                      </TableRow>
+                      </tr>
                     )}
-                    
-                    {/* Level 2 Headers (Column Labels) */}
-                    <TableRow>
+
+                    <tr>
                       {visibleColumns.map((col, idx) => (
-                        <TableHead 
+                        <th
                           key={col.key}
                           className={cn(
-                            "text-[10px] sm:text-xs font-medium",
-                            idx === 0 && "w-10 sm:w-12",
-                            idx === 1 && "min-w-[100px] sm:min-w-[140px]",
-                            (idx === 0 || idx === 1) && "sticky left-0 bg-background z-10",
-                            idx === 1 && "left-10 sm:left-12",
+                            "h-11 border-b border-r border-border/70 bg-background px-3 text-left align-middle text-[10px] font-semibold text-muted-foreground sm:text-xs",
                             col.type !== "name" && col.type !== "index" && col.type !== "nisn" && "text-center",
+                            (col.type === "index" || col.type === "name") && "sticky z-40 bg-background",
+                            col.type === "index" && "left-0 text-center",
+                            col.type === "name" && "left-12 min-w-40",
+                            idx === visibleColumns.length - 1 && "border-r-0",
                             getColumnBackground(col),
-                            (col.type === "grandAvg" || col.type === "avgRapor" || col.type === "rapor" || col.type === "chapterAvg") && "font-semibold"
+                            (col.type === "grandAvg" || col.type === "avgRapor" || col.type === "rapor" || col.type === "chapterAvg") && "font-bold text-foreground",
                           )}
                         >
-                          {col.label}
-                        </TableHead>
+                          <span className="block leading-tight">{col.label}</span>
+                        </th>
                       ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {studentGrades.map((sg, index) => (
-                      <TableRow key={sg.student.id}>
+                      <tr key={sg.student.id} className="group">
                         {visibleColumns.map((col, colIdx) => {
                           const value = getCellValue(sg, col, index);
-                          
+
                           return (
-                            <TableCell 
+                            <td
                               key={col.key}
                               className={cn(
-                                "text-[10px] sm:text-xs",
-                                (colIdx === 0 || colIdx === 1) && "sticky bg-background z-10",
-                                colIdx === 0 && "left-0 font-medium",
-                                colIdx === 1 && "left-10 sm:left-12 font-medium truncate max-w-[100px] sm:max-w-[140px]",
+                                "h-12 border-b border-r border-border/60 bg-background px-3 align-middle text-[10px] transition-colors group-hover:bg-muted/40 sm:text-xs",
                                 col.type !== "name" && col.type !== "index" && col.type !== "nisn" && "text-center",
+                                (col.type === "index" || col.type === "name") && "sticky z-20 bg-background group-hover:bg-muted",
+                                col.type === "index" && "left-0 text-center font-medium",
+                                col.type === "name" && "left-12 max-w-40 font-medium",
+                                col.type === "name" && "truncate",
+                                colIdx === visibleColumns.length - 1 && "border-r-0",
                                 getColumnBackground(col),
-                                (col.type === "grandAvg" || col.type === "avgRapor" || col.type === "rapor") && "font-bold"
+                                (col.type === "grandAvg" || col.type === "avgRapor" || col.type === "rapor") && "font-bold text-foreground",
                               )}
                             >
                               {col.type === "status" ? (
@@ -1341,13 +1346,13 @@ export default function GradeReports() {
                               ) : (
                                 value
                               )}
-                            </TableCell>
+                            </td>
                           );
                         })}
-                      </TableRow>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>

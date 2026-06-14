@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,6 +32,7 @@ interface AddSubjectDialogProps {
   className: string;
   defaultKkm?: number | null;
   trigger?: React.ReactNode;
+  openOnMountKey?: string;
   onSuccess?: () => void;
 }
 
@@ -40,9 +41,11 @@ export default function AddSubjectDialog({
   className,
   defaultKkm,
   trigger,
+  openOnMountKey,
   onSuccess,
 }: AddSubjectDialogProps) {
   const [open, setOpen] = useState(false);
+  const openedKeysRef = useRef(new Set<string>());
   const [selectedSubject, setSelectedSubject] = useState("");
   const [customName, setCustomName] = useState("");
   const [kkm, setKkm] = useState((defaultKkm ?? 70).toString());
@@ -59,6 +62,12 @@ export default function AddSubjectDialog({
       setKkm(effectiveDefaultKkm.toString());
     }
   }, [effectiveDefaultKkm, open]);
+
+  useEffect(() => {
+    if (!openOnMountKey || openedKeysRef.current.has(openOnMountKey)) return;
+    openedKeysRef.current.add(openOnMountKey);
+    setOpen(true);
+  }, [openOnMountKey]);
 
   // Check for duplicate subject name
   const checkDuplicate = (name: string): boolean => {

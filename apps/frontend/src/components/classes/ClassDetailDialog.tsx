@@ -168,7 +168,7 @@ export default function ClassDetailDialog({
           </div>
 
           <div
-            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-y-auto overscroll-auto px-4 pb-4 pt-3 scrollbar-thin sm:px-5"
+            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-y-auto overscroll-auto px-4 pb-4 scrollbar-thin sm:px-5"
             aria-label={`Daftar siswa kelas ${classData.name}`}
           >
             {isLoading ? (
@@ -187,7 +187,7 @@ export default function ClassDetailDialog({
                   <col className="w-24 sm:w-32" />
                   <col className="w-28" />
                 </colgroup>
-                <thead className="sticky top-0 z-10 bg-background shadow-[0_1px_0_hsl(var(--border))]">
+                <thead className="bg-background shadow-[0_1px_0_hsl(var(--border))]">
                   <tr>
                     <th className="h-11 px-2 text-center align-middle text-xs font-medium text-muted-foreground sm:px-4">
                       No
