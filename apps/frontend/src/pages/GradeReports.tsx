@@ -1322,7 +1322,7 @@ export default function GradeReports() {
                             className={cn(
                               "h-10 border border-border px-3 text-center align-middle text-[11px] font-bold text-muted-foreground",
                               idx === 0
-                                ? "sticky left-0 z-50 min-w-[19rem] bg-muted"
+                                ? "sticky left-0 z-[70] min-w-[19rem] bg-card shadow-[2px_0_0_hsl(var(--border))]"
                                 : getReportGroupTone(group, idx),
                             )}
                           >
@@ -1339,7 +1339,7 @@ export default function GradeReports() {
                           className={cn(
                             "h-10 border border-border px-2 text-center align-middle text-[11px] font-bold",
                             col.type !== "name" && col.type !== "index" && col.type !== "nisn" && "text-center",
-                            (col.type === "index" || col.type === "name" || col.type === "nisn") && "sticky z-50 bg-muted text-muted-foreground",
+                            (col.type === "index" || col.type === "name" || col.type === "nisn") && "sticky z-[70] bg-card text-muted-foreground shadow-[1px_0_0_hsl(var(--border))]",
                             col.type === "index" && "left-0",
                             col.type === "name" && "left-12",
                             col.type === "nisn" && "left-[13rem]",
@@ -1363,7 +1363,7 @@ export default function GradeReports() {
                               className={cn(
                                 "h-11 border border-border/40 px-2 align-middle text-[11px] transition-colors",
                                 col.type !== "name" && col.type !== "index" && col.type !== "nisn" && "text-center",
-                                (col.type === "index" || col.type === "name" || col.type === "nisn") && "sticky z-20 bg-primary/5 group-hover:bg-fuchsia-100/80 dark:group-hover:bg-fuchsia-950/45",
+                                (col.type === "index" || col.type === "name" || col.type === "nisn") && "sticky z-40 bg-background shadow-[1px_0_0_hsl(var(--border))] group-hover:bg-muted",
                                 col.type === "index" && "left-0 text-center font-medium",
                                 col.type === "name" && "left-12 max-w-40 truncate font-medium",
                                 col.type === "nisn" && "left-[13rem] text-center",

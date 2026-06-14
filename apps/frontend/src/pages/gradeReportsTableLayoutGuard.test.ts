@@ -25,6 +25,8 @@ describe("grade reports table layout guard", () => {
     expect(source).toContain("getGradeTableColumnBodyTone");
     expect(source).toContain("Data Siswa");
     expect(source).toContain("left-[13rem]");
+    expect(source).toContain("bg-card shadow-[2px_0_0_hsl(var(--border))]");
+    expect(source).toContain("sticky z-40 bg-background shadow-[1px_0_0_hsl(var(--border))]");
     expect(source).toContain("group-hover:bg-fuchsia-50/90");
     expect(source).not.toContain("@/components/ui/table");
     expect(source).not.toContain("<Table>");
