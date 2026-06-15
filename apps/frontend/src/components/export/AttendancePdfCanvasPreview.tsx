@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type SetStateAction,
 } from "react";
-import { Loader2, Move } from "lucide-react";
+import { Move } from "lucide-react";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { SignatureSettingsConfig } from "@/hooks/useSignatureSettings";
 import type { AttendancePrintDataset, AttendancePrintLayoutPlan, AttendancePrintPage } from "@/lib/attendancePrintLayout";
@@ -21,6 +21,7 @@ import {
   resolveManualSignaturePercents,
 } from "@/lib/attendancePdfPreview";
 import type { ExportPreviewHighlightTarget } from "@/components/export/SignaturePreviewCanvas";
+import { PreviewProgressIndicator } from "@/components/export/PreviewProgressIndicator";
 
 GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
 
@@ -61,6 +62,22 @@ interface PreviewHotspot {
   topMm: number;
   widthMm: number;
   heightMm: number;
+}
+
+interface PreviewRenderProgress {
+  percent: number;
+  phase: string;
+  detail: string;
+}
+
+function yieldPreviewFrame() {
+  return new Promise<void>((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve());
+      return;
+    }
+    setTimeout(resolve, 0);
+  });
 }
 
 function isSameHighlightTarget(
@@ -153,6 +170,11 @@ export function AttendancePdfCanvasPreview({
 }: AttendancePdfCanvasPreviewProps) {
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [isRendering, setIsRendering] = useState(true);
+  const [renderProgress, setRenderProgress] = useState<PreviewRenderProgress>({
+    percent: 0,
+    phase: "Menyiapkan preview PDF",
+    detail: "Mengumpulkan data presensi.",
+  });
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [liveSignaturePosition, setLiveSignaturePosition] = useState<{ xMm: number; yMm: number } | null>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -168,19 +190,46 @@ export function AttendancePdfCanvasPreview({
   useEffect(() => {
     let cancelled = false;
     setIsRendering(true);
+    setRenderProgress({
+      percent: 0,
+      phase: "Menyiapkan preview PDF",
+      detail: "Mengumpulkan data presensi.",
+    });
 
     const render = async () => {
+      await yieldPreviewFrame();
+      if (cancelled) return;
+      setRenderProgress({
+        percent: 14,
+        phase: "Menyusun dokumen PDF",
+        detail: "Menghitung halaman, kolom, rekap, dan tanda tangan.",
+      });
+      await yieldPreviewFrame();
       const built = buildAttendancePdfDocument({
         data,
         plan,
         signature,
         includeSignature,
       });
+      if (cancelled) return;
+      setRenderProgress({
+        percent: 32,
+        phase: "Membaca PDF",
+        detail: "Memuat dokumen presensi untuk live preview.",
+      });
+      await yieldPreviewFrame();
       const pdf = await getDocument({ data: built.arrayBuffer() }).promise;
       const nextPages: RenderedPage[] = [];
       const renderScaleBase = typeof window === "undefined" ? 1.5 : Math.max(1.5, Math.min(window.devicePixelRatio || 1, 2));
 
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        if (cancelled) return;
+        setRenderProgress({
+          percent: 32 + Math.round(((pageNumber - 1) / Math.max(pdf.numPages, 1)) * 60),
+          phase: "Merender halaman preview",
+          detail: `Halaman ${pageNumber} dari ${pdf.numPages}.`,
+        });
+        await yieldPreviewFrame();
         const page = await pdf.getPage(pageNumber);
         const baseViewport = page.getViewport({ scale: 1 });
         const cssScale = pageWidthPx / baseViewport.width;
@@ -197,9 +246,19 @@ export function AttendancePdfCanvasPreview({
           widthPx: pageWidthPx,
           heightPx: pageHeightPx,
         });
+        setRenderProgress({
+          percent: 32 + Math.round((pageNumber / Math.max(pdf.numPages, 1)) * 60),
+          phase: "Merender halaman preview",
+          detail: `Halaman ${pageNumber} dari ${pdf.numPages} selesai.`,
+        });
       }
 
       if (!cancelled) {
+        setRenderProgress({
+          percent: 100,
+          phase: "Preview siap",
+          detail: "Preview presensi sudah sama dengan dokumen ekspor.",
+        });
         setPages(nextPages);
         setIsRendering(false);
       }
@@ -208,6 +267,11 @@ export function AttendancePdfCanvasPreview({
     void render().catch(() => {
       if (!cancelled) {
         setPages([]);
+        setRenderProgress({
+          percent: 100,
+          phase: "Preview gagal",
+          detail: "Dokumen tidak bisa dirender.",
+        });
         setIsRendering(false);
       }
     });
@@ -439,21 +503,11 @@ export function AttendancePdfCanvasPreview({
       ))}
 
       {isRendering ? (
-        <div
-          style={{
-            width: pageWidthPx,
-            minHeight: 160,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            color: "#475569",
-            fontSize: 12,
-          }}
-        >
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Menyusun preview PDF akurat...
-        </div>
+        <PreviewProgressIndicator
+          percent={renderProgress.percent}
+          phase={renderProgress.phase}
+          detail={renderProgress.detail}
+        />
       ) : null}
     </div>
   );

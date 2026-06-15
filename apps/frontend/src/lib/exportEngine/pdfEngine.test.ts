@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 import type { ExportConfig } from "../reportExportLayout";
 import { buildReportPdfDocumentResult } from "./pdfEngine";
@@ -84,5 +85,24 @@ describe("report PDF engine", () => {
       finalY! + built.layoutPlan.metrics.signatureGapMm + 3,
       1,
     );
+  });
+
+  it("starts long ranking tables on the first PDF page", async () => {
+    const built = buildReportPdfDocumentResult(buildRankingConfig(60));
+    const pdf = await getDocument({ data: built.doc.output("arraybuffer") }).promise;
+
+    try {
+      expect(pdf.numPages).toBeGreaterThan(1);
+      const firstPage = await pdf.getPage(1);
+      const textContent = await firstPage.getTextContent();
+      const firstPageText = textContent.items
+        .map((item) => ("str" in item ? item.str : ""))
+        .join(" ");
+
+      expect(firstPageText).toContain("Siswa 1");
+      expect(firstPageText).toContain("Lulus");
+    } finally {
+      await pdf.destroy();
+    }
   });
 });

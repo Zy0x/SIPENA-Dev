@@ -281,7 +281,7 @@ export function buildReportPdfDocumentResult(config: ExportConfig): BuiltReportP
           top: layoutPlan.metrics.marginTopMm,
           bottom: layoutPlan.metrics.marginBottomMm + layoutPlan.metrics.footerHeightMm,
         },
-        pageBreak: "avoid",
+        pageBreak: "auto",
         rowPageBreak: "avoid",
         styles: {
           fontSize: pdfEffectiveFontSize(layoutPlan.documentStyle.tableBodyFontSize),

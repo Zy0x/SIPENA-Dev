@@ -44,12 +44,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
+import type { ExportProgressReporter } from "@/lib/exportProgress";
 import { useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { UnifiedExportStudio, type ExportColumnOption, type ExportColumnTypographyOption, type ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
 import { ExportPreviewRenderer } from "@/components/export/ExportPreviewRenderer";
 import { buildRankingExportColumns, getDefaultSelectedColumns, buildRankingExportData, getRankingExportColumnLabel } from "@/lib/rankingExportColumns";
 import { getNaturalColumnWidthMmV2, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
-import { exportReport, type ExportColumn, type ExportConfig, type ReportPaperSize } from "@/lib/exportReports";
+import { exportReportWithProgress, type ExportColumn, type ExportConfig, type ReportPaperSize } from "@/lib/exportReports";
 import type { RankingColumn } from "@/components/rankings/RankingColumnSelector";
 import { buildCompactRankingDocumentStyle, createDefaultRankingDocumentStyle } from "@/lib/rankingExportLayout";
 
@@ -97,7 +98,7 @@ const RANKING_EXPORT_FORMATS: ExportStudioFormatOption[] = [
 export default function StudentRankings() {
   const { toast } = useEnhancedToast();
   const { classes } = useClasses();
-  const { showLoader, overlay: exportOverlay } = useExportLoader();
+  const { runWithLoader, overlay: exportOverlay } = useExportLoader();
   const { activeYear } = useAcademicYear();
   const { semesterFilter, setSemesterFilter, isCombinedView } = useRankingSemesterFilter();
   const rankingPeriodLabel = isCombinedView ? "Ranking Tahunan / Semua Semester" : `Semester ${semesterFilter}`;
@@ -447,7 +448,7 @@ export default function StudentRankings() {
     paperSize: ReportPaperSize;
     documentStyle?: ReportDocumentStyle;
     autoFitOnePage?: boolean;
-    downloadPreviewPng: (quality: "hd" | "4k", fileName?: string) => Promise<void>;
+    downloadPreviewPng: (quality: "hd" | "4k", fileName?: string, progress?: ExportProgressReporter) => Promise<void>;
   }) => {
     if (!overallExportConfig) return;
     const exportConfig: ExportConfig = {
@@ -471,13 +472,13 @@ export default function StudentRankings() {
         : formatId === "csv"
           ? `${fileBaseName}.csv`
           : `${fileBaseName}.png`;
-    await showLoader(fileName);
-
-    if (formatId === "png-hd" || formatId === "png-4k") {
-      await downloadPreviewPng(formatId === "png-4k" ? "4k" : "hd", fileName);
-    } else {
-      exportReport(formatId as "pdf" | "excel" | "csv", exportConfig);
-    }
+    await runWithLoader(fileName, async (progress) => {
+      if (formatId === "png-hd" || formatId === "png-4k") {
+        await downloadPreviewPng(formatId === "png-4k" ? "4k" : "hd", fileName, progress);
+        return;
+      }
+      await exportReportWithProgress(formatId as "pdf" | "excel" | "csv", exportConfig, progress);
+    });
 
     toast({ title: "Ekspor berhasil", description: `File ${RANKING_EXPORT_FORMATS.find((item) => item.id === formatId)?.label || formatId.toUpperCase()} telah diunduh` });
   };

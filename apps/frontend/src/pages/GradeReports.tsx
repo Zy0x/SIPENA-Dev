@@ -42,10 +42,11 @@ import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { ProductTour, TourButton } from "@/components/ui/product-tour";
 import { cn } from "@/lib/utils";
-import { exportReport, type ExportConfig } from "@/lib/exportReports";
+import { exportReportWithProgress, type ExportConfig } from "@/lib/exportReports";
 import { createDefaultReportDocumentStyle, getNaturalColumnWidthMmV2, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
+import type { ExportProgressReporter } from "@/lib/exportProgress";
 import { useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { useGradeFormulaSettings } from "@/hooks/useGradeFormulaSettings";
 import { useGradeTableColorScheme } from "@/hooks/useGradeTableColorScheme";
@@ -251,7 +252,7 @@ function buildReportPreviewHeaderGroups(groups: ReportHeaderGroup[]): ReportHead
 export default function GradeReports() {
   const { toast } = useEnhancedToast();
   const queryClient = useQueryClient();
-  const { showLoader, overlay: exportOverlay } = useExportLoader();
+  const { runWithLoader, overlay: exportOverlay } = useExportLoader();
   const { activeYear, semestersForActiveYear, activeYearId } = useAcademicYear();
   const { semesterFilter, setSemesterFilter, isCombinedView } = useReportSemesterFilter();
   
@@ -911,7 +912,7 @@ export default function GradeReports() {
     paperSize: ReportPaperSize;
     documentStyle?: ReportDocumentStyle;
     autoFitOnePage?: boolean;
-    downloadPreviewPng: (quality: "hd" | "4k", fileName?: string) => Promise<void>;
+    downloadPreviewPng: (quality: "hd" | "4k", fileName?: string, progress?: ExportProgressReporter) => Promise<void>;
   }) => {
     if (!selectedClassId || !selectedSubjectId) {
       toast({ title: "Pilih kelas dan mapel terlebih dahulu", variant: "error" });
@@ -972,14 +973,14 @@ export default function GradeReports() {
         : formatId === "csv"
           ? `${fileBaseName}.csv`
           : `${fileBaseName}.png`;
-    await showLoader(fileName);
-
     try {
-      if (formatId === "png-hd" || formatId === "png-4k") {
-        await downloadPreviewPng(formatId === "png-4k" ? "4k" : "hd", fileName);
-      } else {
-        exportReport(formatId as "pdf" | "excel" | "csv", exportConfigOverride);
-      }
+      await runWithLoader(fileName, async (progress) => {
+        if (formatId === "png-hd" || formatId === "png-4k") {
+          await downloadPreviewPng(formatId === "png-4k" ? "4k" : "hd", fileName, progress);
+          return;
+        }
+        await exportReportWithProgress(formatId as "pdf" | "excel" | "csv", exportConfigOverride, progress);
+      });
       const formatLabel = REPORT_EXPORT_FORMATS.find((item) => item.id === formatId)?.label || formatId.toUpperCase();
       toast({ title: "Ekspor berhasil", description: `File ${formatLabel} telah diunduh` });
     } catch (error) {

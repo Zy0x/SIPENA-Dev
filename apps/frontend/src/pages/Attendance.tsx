@@ -295,7 +295,7 @@ export default function Attendance() {
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
-  const { showLoader, overlay: exportOverlay } = useExportLoader();
+  const { showLoader, runWithLoader, overlay: exportOverlay } = useExportLoader();
 
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -1192,9 +1192,13 @@ export default function Attendance() {
       : (selectedAttendanceColumnKeys.length > 0 ? selectedAttendanceColumnKeys : defaultAttendanceVisibleColumnKeys);
     const visibleSet = new Set(exportVisibleColumnKeys);
     const fileName = `Presensi_${selectedClass.name}_${currentMonth.getFullYear()}.xlsx`;
-    await showLoader(fileName);
+    await runWithLoader(fileName, async (progress) => {
+    progress.update({ percent: 8, phase: "Data", message: "Mengambil data presensi tahunan." });
+    await progress.yieldFrame();
     const year = currentMonth.getFullYear();
     const yearlyData = await getYearlyData(year);
+    progress.update({ percent: 22, phase: "Workbook", message: "Menyusun ringkasan dan sheet bulanan." });
+    await progress.yieldFrame();
     const wb = XLSX.utils.book_new();
     const monthNamesList = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
@@ -1252,6 +1256,11 @@ export default function Attendance() {
     XLSX.utils.book_append_sheet(wb, wsSummary, "Ringkasan");
 
     monthNamesList.forEach((monthName, monthIndex) => {
+      progress.update({
+        percent: 26 + Math.round((monthIndex / monthNamesList.length) * 44),
+        phase: "Sheet Bulanan",
+        message: `Menyusun sheet ${monthName}.`,
+      });
       const monthStart = new Date(year, monthIndex, 1);
       const monthEnd2 = endOfMonth(monthStart);
       const days = eachDayOfInterval({ start: monthStart, end: monthEnd2 });
@@ -1437,6 +1446,8 @@ export default function Attendance() {
       XLSX.utils.book_append_sheet(wb, ws, monthName);
     });
 
+    progress.update({ percent: 76, phase: "Rekap Tahunan", message: "Menyusun sheet rekap tahunan." });
+    await progress.yieldFrame();
     const yearlySummaryHeader = ["No", "Nama Siswa", "NISN", ...monthNamesList.map(m => `H-${m.slice(0,3)}`), "Total H", "Total I", "Total S", "Total A", "Total D", "% Kehadiran"];
     const yearlySummaryData: (string | number)[][] = [];
     students.forEach((student, idx) => {
@@ -1484,10 +1495,15 @@ export default function Attendance() {
     }));
     XLSX.utils.book_append_sheet(wb, wsYearly, "Rekap Tahunan");
 
+    progress.update({ percent: 94, phase: "Download", message: "Menulis workbook Excel." });
+    await progress.yieldFrame();
     XLSX.writeFile(wb, `Presensi_${selectedClass.name}_${year}.xlsx`);
+    progress.update({ percent: 100, phase: "Download", message: "File Excel siap, download dimulai." });
+    await progress.yieldFrame();
+    });
     showSuccess("Berhasil", `File Excel lengkap dengan ${12 + 2} sheet berhasil diunduh`);
     setShowExportDialog(false);
-  }, [students, selectedClass, currentMonth, getYearlyData, showSuccess, workDayFormat, signatureConfig, includeSignature, selectedAttendanceColumnKeys, defaultAttendanceVisibleColumnKeys]);
+  }, [students, selectedClass, currentMonth, getYearlyData, showSuccess, workDayFormat, signatureConfig, includeSignature, selectedAttendanceColumnKeys, defaultAttendanceVisibleColumnKeys, runWithLoader]);
 
   const handleExportPDF = useCallback(async (
     signatureOverride?: typeof signatureConfig,
@@ -1497,7 +1513,9 @@ export default function Attendance() {
     const exportSignature = signatureOverride ?? normalizeAttendanceSignatureConfig(signatureConfig);
     const shouldIncludeSignature = includeSignatureOverride ?? includeSignature;
     const fileName = `Presensi_${selectedClass.name}_${format(currentMonth, "MMMM_yyyy", { locale: idLocale })}.pdf`;
-    await showLoader(fileName);
+    await runWithLoader(fileName, async (progress) => {
+    progress.update({ percent: 10, phase: "Layout PDF", message: "Menyusun data PDF presensi bulanan." });
+    await progress.yieldFrame();
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
@@ -1751,10 +1769,15 @@ export default function Attendance() {
       }, legendY);
     }
 
+    progress.update({ percent: 94, phase: "Download", message: "Menulis file PDF." });
+    await progress.yieldFrame();
     doc.save(`Presensi_${selectedClass.name}_${format(currentMonth, "MMMM_yyyy", { locale: idLocale })}.pdf`);
+    progress.update({ percent: 100, phase: "Download", message: "File PDF siap, download dimulai." });
+    await progress.yieldFrame();
+    });
     showSuccess("Berhasil", "File PDF berhasil diunduh");
     setShowExportDialog(false);
-  }, [selectedClass, currentMonth, monthDays, filteredStudents, students, isHoliday, getAttendance, getAttendanceNote, showSuccess, dayEvents, holidays, workDayFormat, includeSignature, signatureConfig, effectiveDays]);
+  }, [selectedClass, currentMonth, monthDays, filteredStudents, students, isHoliday, getAttendance, getAttendanceNote, showSuccess, dayEvents, holidays, workDayFormat, includeSignature, signatureConfig, effectiveDays, runWithLoader]);
 
   const handleExportPNG = useCallback(async (
     quality: "4k" | "hd" = "hd",
@@ -2192,7 +2215,7 @@ export default function Attendance() {
         },
         columnStyles,
         alternateRowStyles: { fillColor: [245, 247, 250] },
-        pageBreak: "avoid",
+        pageBreak: "auto",
         rowPageBreak: "avoid",
         didParseCell: (data) => {
           if (data.section === "head" && mergedHeadCols.has(data.column.index)) {
@@ -2434,9 +2457,10 @@ export default function Attendance() {
       sanitizeFileNamePart(format(currentMonth, "MMMM_yyyy", { locale: idLocale })),
       quality === "4k" ? "PNG_4K" : "PNG_HD",
     ].join("_");
-    await showLoader(`${baseFileName}.png`);
-
     try {
+      const exportResult = await runWithLoader(`${baseFileName}.png`, async (progress) => {
+      progress.update({ percent: 10, phase: "Layout", message: "Menghitung layout presensi untuk PNG." });
+      await progress.yieldFrame();
       const plan = buildAttendancePrintLayoutPlan({
         data: attendancePrintDataset,
         paperSize: exportPaperSize,
@@ -2450,6 +2474,8 @@ export default function Attendance() {
         eventAnnotationDisplayMode: attendanceEventAnnotationDisplayMode,
         inlineLabelStyle: attendanceInlineLabelStyle,
       });
+      progress.update({ percent: 24, phase: "PDF Sumber", message: "Menyusun PDF sumber untuk raster PNG." });
+      await progress.yieldFrame();
       const builtPdf = buildAttendancePdfDocument({
         data: attendancePrintDataset,
         plan,
@@ -2458,12 +2484,20 @@ export default function Attendance() {
       });
       const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist/legacy/build/pdf.mjs");
       GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
+      progress.update({ percent: 34, phase: "Membaca PDF", message: "Memuat PDF sumber untuk dirender ke PNG." });
+      await progress.yieldFrame();
       const pdf = await getDocument({ data: builtPdf.arrayBuffer() }).promise;
       const renderedPages: Array<{ canvas: HTMLCanvasElement; fileName: string; dataUrl: string }> = [];
       let resolvedRasterScale = 0;
       const targetWidthPx = getAttendancePngTargetWidthPx(quality);
 
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        progress.update({
+          percent: 36 + Math.round(((pageNumber - 1) / Math.max(pdf.numPages, 1)) * 40),
+          phase: "Render PNG",
+          message: `Merender halaman ${pageNumber} dari ${pdf.numPages}.`,
+        });
+        await progress.yieldFrame();
         const page = await pdf.getPage(pageNumber);
         const baseViewport = page.getViewport({ scale: 1 });
         const rasterScale = Math.max(targetWidthPx / Math.max(baseViewport.width, 1), quality === "4k" ? 4 : 2);
@@ -2484,11 +2518,22 @@ export default function Attendance() {
             : `${baseFileName}_hal-${String(pageNumber).padStart(2, "0")}.png`,
           dataUrl: canvas.toDataURL("image/png"),
         });
+        progress.update({
+          percent: 36 + Math.round((pageNumber / Math.max(pdf.numPages, 1)) * 40),
+          phase: "Render PNG",
+          message: `Halaman ${pageNumber} dari ${pdf.numPages} selesai.`,
+        });
       }
       await pdf.destroy();
 
       let downloadedFileName = renderedPages[0]?.fileName ?? `${baseFileName}.png`;
       const downloadKind: "png" | "zip" = renderedPages.length > 1 ? "zip" : "png";
+      progress.update({
+        percent: 84,
+        phase: downloadKind === "zip" ? "ZIP" : "Download",
+        message: downloadKind === "zip" ? "Mengarsipkan halaman PNG ke ZIP." : "Menyiapkan file PNG.",
+      });
+      await progress.yieldFrame();
 
       if (renderedPages.length === 1) {
         const link = document.createElement("a");
@@ -2505,6 +2550,8 @@ export default function Attendance() {
         const zipBlob = await archive.generateAsync({ type: "blob" });
         downloadBlobFile(zipBlob, downloadedFileName);
       }
+      progress.update({ percent: 94, phase: "Finalisasi", message: "Mencatat hasil ekspor PNG." });
+      await progress.yieldFrame();
 
       if (attendanceDebugEnabled) {
         const traceBase = buildAttendanceTraceBase({
@@ -2538,11 +2585,15 @@ export default function Attendance() {
         });
         autoDownloadAttendanceTrace(finalTrace, downloadedFileName);
       }
+      progress.update({ percent: 100, phase: "Download", message: "File PNG siap, download dimulai." });
+      await progress.yieldFrame();
+      return { pageCount: renderedPages.length };
+      });
 
       showSuccess(
         "Berhasil",
-        renderedPages.length > 1
-          ? `${renderedPages.length} halaman PNG ${quality === "4k" ? "4K Ultra HD" : "HD"} berhasil diarsipkan ke ZIP`
+        exportResult.pageCount > 1
+          ? `${exportResult.pageCount} halaman PNG ${quality === "4k" ? "4K Ultra HD" : "HD"} berhasil diarsipkan ke ZIP`
           : `File PNG ${quality === "4k" ? "4K Ultra HD" : "HD"} berhasil diunduh`,
       );
       setShowExportDialog(false);
@@ -2566,7 +2617,7 @@ export default function Attendance() {
     paperSize,
     selectedAttendanceColumnKeys,
     selectedClass,
-    showLoader,
+    runWithLoader,
     showSuccess,
     showWarning,
   ]);
@@ -2589,9 +2640,10 @@ export default function Attendance() {
     const exportVisibleColumnKeys = visibleColumnKeysOverride ?? selectedAttendanceColumnKeys;
     const fileName = `Presensi_${selectedClass.name}_${format(currentMonth, "MMMM_yyyy", { locale: idLocale })}.pdf`;
 
-    await showLoader(fileName);
-
     try {
+      await runWithLoader(fileName, async (progress) => {
+      progress.update({ percent: 12, phase: "Layout PDF", message: "Menghitung layout halaman presensi." });
+      await progress.yieldFrame();
       const plan = buildAttendancePrintLayoutPlan({
         data: attendancePrintDataset,
         paperSize: exportPaperSize,
@@ -2605,6 +2657,8 @@ export default function Attendance() {
         eventAnnotationDisplayMode: attendanceEventAnnotationDisplayMode,
         inlineLabelStyle: attendanceInlineLabelStyle,
       });
+      progress.update({ percent: 34, phase: "Render PDF", message: "Menyusun dokumen PDF vektor." });
+      await progress.yieldFrame();
 
       const runtimeEntries: AttendancePdfRuntimeTrace[] = [];
       const runtimeMismatches: AttendanceExportMismatch[] = [];
@@ -2627,6 +2681,8 @@ export default function Attendance() {
           if (event.mismatch) runtimeMismatches.push(event.mismatch);
         },
       });
+      progress.update({ percent: 92, phase: "Finalisasi", message: "Dokumen PDF selesai dibuat." });
+      await progress.yieldFrame();
       if (attendanceDebugEnabled) {
         const finalTrace = commitAttendanceTrace({
           ...traceBase,
@@ -2645,6 +2701,9 @@ export default function Attendance() {
           showWarning("Diagnostik ekspor", `Terdeteksi ${finalTrace.mismatch.length} mismatch pada jalur PDF presensi.`);
         }
       }
+      progress.update({ percent: 100, phase: "Download", message: "File PDF siap, download dimulai." });
+      await progress.yieldFrame();
+      });
 
       showSuccess("Berhasil", "File PDF vektor berhasil diunduh");
       setShowExportDialog(false);
@@ -2668,7 +2727,7 @@ export default function Attendance() {
     paperSize,
     selectedAttendanceColumnKeys,
     selectedClass,
-    showLoader,
+    runWithLoader,
     showSuccess,
     showWarning,
   ]);

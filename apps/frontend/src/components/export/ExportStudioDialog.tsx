@@ -80,6 +80,7 @@ import { cn } from "@/lib/utils";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { exportElementToPng } from "@/lib/exportEngine/pngEngine";
 import { PX_PER_MM } from "@/lib/exportEngine/sharedMetrics";
+import type { ExportProgressReporter } from "@/lib/exportProgress";
 import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
 import {
   StudioActionFooter,
@@ -136,7 +137,7 @@ export interface ExportStudioExportArgs {
   paperSize: ReportPaperSize;
   documentStyle?: ReportDocumentStyle;
   autoFitOnePage?: boolean;
-  downloadPreviewPng: (quality: "hd" | "4k", fileName?: string) => Promise<void>;
+  downloadPreviewPng: (quality: "hd" | "4k", fileName?: string, progress?: ExportProgressReporter) => Promise<void>;
 }
 
 export interface ExportColumnOption {
@@ -3234,11 +3235,15 @@ export function ExportStudioDialog({
     await onSaveSignature(draft);
   }, [draft, onSaveSignature, supportsSignature]);
 
-  const downloadPreviewPng = useCallback(async (quality: "hd" | "4k", fileName = `export-${quality}.png`) => {
+  const downloadPreviewPng = useCallback(async (
+    quality: "hd" | "4k",
+    fileName = `export-${quality}.png`,
+    progress?: ExportProgressReporter,
+  ) => {
     if (!previewCaptureRef.current) {
       throw new Error("Preview belum siap untuk diubah menjadi PNG.");
     }
-    await exportElementToPng(previewCaptureRef.current, quality, fileName);
+    await exportElementToPng(previewCaptureRef.current, quality, fileName, progress);
   }, []);
 
   const handleSave = useCallback(async () => {

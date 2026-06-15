@@ -7,9 +7,11 @@ import jsPDF from "jspdf";
 import autoTable, { RowInput, CellDef } from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { addSignatureBlockPDF, getSignatureRowsExcel, getSignatureRowsCSV } from "./exportSignature";
-import { exportToPDF as exportToPDFEngine } from "@/lib/exportEngine/pdfEngine";
+import { buildReportPdfDocument, exportToPDF as exportToPDFEngine } from "@/lib/exportEngine/pdfEngine";
 import { exportToExcel as exportToExcelEngine } from "@/lib/exportEngine/excelEngine";
 import { exportToCSV as exportToCSVEngine } from "@/lib/exportEngine/csvEngine";
+import { getExportFileBaseName } from "@/lib/exportEngine/shared";
+import { reportExportProgress, type ExportProgressReporter } from "@/lib/exportProgress";
 import {
   buildReportLayoutPlanV2,
   getColumnBodyAlignment,
@@ -251,7 +253,7 @@ export function exportToPDF(config: ExportConfig): void {
           top: layoutPlan.metrics.marginTopMm,
           bottom: layoutPlan.metrics.marginBottomMm + layoutPlan.metrics.footerHeightMm,
         },
-        pageBreak: "avoid",
+        pageBreak: "auto",
         rowPageBreak: "avoid",
         styles: {
           fontSize: Math.max(5, layoutPlan.documentStyle.tableBodyFontSize - 2),
@@ -534,6 +536,35 @@ export function exportReport(
       break;
     case 'csv':
       exportToCSVEngine(config);
+      break;
+  }
+}
+
+export async function exportReportWithProgress(
+  format: "pdf" | "excel" | "csv",
+  config: ExportConfig,
+  progress?: ExportProgressReporter,
+): Promise<void> {
+  await reportExportProgress(progress, 6, "Validasi", "Mengecek konfigurasi ekspor.");
+
+  switch (format) {
+    case "pdf": {
+      await reportExportProgress(progress, 18, "Layout PDF", "Menghitung layout halaman, kolom, dan tabel.");
+      const doc = buildReportPdfDocument(config);
+      await reportExportProgress(progress, 90, "Finalisasi PDF", "Dokumen PDF selesai disusun.");
+      doc.save(`${getExportFileBaseName(config)}.pdf`);
+      await reportExportProgress(progress, 100, "Download", "File PDF siap, download dimulai.");
+      break;
+    }
+    case "excel":
+      await reportExportProgress(progress, 20, "Workbook Excel", "Menyusun sheet ringkasan dan data.");
+      exportToExcelEngine(config);
+      await reportExportProgress(progress, 100, "Download", "File Excel siap, download dimulai.");
+      break;
+    case "csv":
+      await reportExportProgress(progress, 24, "CSV", "Menyusun baris dan header CSV.");
+      exportToCSVEngine(config);
+      await reportExportProgress(progress, 100, "Download", "File CSV siap, download dimulai.");
       break;
   }
 }
