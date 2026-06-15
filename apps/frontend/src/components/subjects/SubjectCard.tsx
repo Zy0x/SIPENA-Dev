@@ -59,9 +59,9 @@ export default function SubjectCard({ subject, showClassName, className }: Subje
             handleInputGrades();
           }
         }}
-        className="group h-full cursor-pointer overflow-hidden border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="group h-full min-w-0 cursor-pointer overflow-hidden border-border/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
-        <CardContent className="flex h-full flex-col gap-3 p-4 sm:p-4">
+        <CardContent className="flex h-full min-h-[11.75rem] flex-col gap-3 p-4">
           <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/10">
               <BookOpen className="h-5 w-5 text-primary" />
@@ -84,54 +84,59 @@ export default function SubjectCard({ subject, showClassName, className }: Subje
             </div>
           </div>
 
-          <div className="mt-auto grid grid-cols-2 gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
+          <div className="mt-auto grid min-w-0 gap-2">
             <Button
               type="button"
-              className="col-span-2 h-11 gap-2 rounded-xl sm:col-span-1"
+              className="h-11 w-full min-w-0 gap-2 rounded-xl px-3"
               onClick={(event) => {
                 event.stopPropagation();
                 handleInputGrades();
               }}
             >
               <FileSpreadsheet className="h-4 w-4" />
-              Input Nilai
+              <span className="min-w-0 truncate">Input Nilai</span>
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 gap-2 rounded-xl px-3"
-              onClick={(event) => {
-                event.stopPropagation();
-                setShowShareDialog(true);
-              }}
-            >
-              <Link2 className="h-4 w-4 text-blue-600" />
-              <span className="sm:hidden lg:inline">Bagikan</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 gap-2 rounded-xl px-3"
-              onClick={(event) => {
-                event.stopPropagation();
-                setShowEditDialog(true);
-              }}
-            >
-              <Edit className="h-4 w-4" />
-              <span className="sm:hidden lg:inline">Edit</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="col-span-2 h-11 gap-2 rounded-xl border-destructive/30 px-3 text-destructive hover:bg-destructive/10 sm:col-span-1"
-              onClick={(event) => {
-                event.stopPropagation();
-                setShowDeleteDialog(true);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sm:hidden xl:inline">Hapus</span>
-            </Button>
+            <div className="grid min-w-0 grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 min-w-0 gap-1.5 rounded-xl px-2 text-xs sm:text-sm"
+                aria-label="Bagikan link mata pelajaran"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowShareDialog(true);
+                }}
+              >
+                <Link2 className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                <span className="min-w-0 truncate">Bagikan</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 min-w-0 gap-1.5 rounded-xl px-2 text-xs sm:text-sm"
+                aria-label="Edit mata pelajaran"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowEditDialog(true);
+                }}
+              >
+                <Edit className="h-4 w-4 flex-shrink-0" />
+                <span className="min-w-0 truncate">Edit</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 min-w-0 gap-1.5 rounded-xl border-destructive/30 px-2 text-xs text-destructive hover:bg-destructive/10 sm:text-sm"
+                aria-label="Hapus mata pelajaran"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowDeleteDialog(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4 flex-shrink-0" />
+                <span className="min-w-0 truncate">Hapus</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -18,18 +18,28 @@ describe("grade reports table layout guard", () => {
 
     expect(source).toContain("sipena-report-grade-table-shell sipena-scroll-chain-page");
     expect(source).toContain("relative h-[70dvh] min-h-[420px] overflow-hidden bg-background");
+    expect(source).toContain("isReportFullscreen");
+    expect(source).toContain("reportZoom");
+    expect(source).toContain("REPORT_ZOOM_MIN");
+    expect(source).toContain("ZoomIn");
+    expect(source).toContain("ZoomOut");
+    expect(source).toContain('return column.type === "index" || column.type === "name";');
     expect(source).toContain("reportColumnLayouts");
     expect(source).toContain("reportFrozenWidth");
     expect(source).toContain("reportScrollLeft");
     expect(source).toContain("reportScrollTop");
     expect(source).toContain("sipena-grade-scroll sipena-scroll-chain-page");
     expect(source).toContain("sipena-grade-frozen-layer");
+    expect(source).toContain("buildReportPreviewHeaderGroups");
+    expect(source).toContain('{ ...identityGroup, label: "Data Siswa", colSpan: 2 }');
+    expect(source).toContain('{ label: "", colSpan: 1, bgClass: "bg-background" }');
     expect(source).toContain("estimateReportWrappedLineCount");
     expect(source).toContain("getGradeTableChapterTone");
     expect(source).toContain("getGradeTableColumnHeaderTone");
     expect(source).toContain("getGradeTableColumnBodyTone");
     expect(source).toContain("Data Siswa");
     expect(source).toContain("border-r-2 border-primary bg-background");
+    expect(source).toContain("REPORT_SOLID_FROZEN_SURFACE");
     expect(source).toContain("hover:bg-fuchsia-50/90");
     expect(source).not.toContain("<table");
     expect(source).not.toContain("<thead");

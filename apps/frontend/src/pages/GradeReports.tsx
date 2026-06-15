@@ -32,6 +32,11 @@ import {
   Calendar,
   Layers,
   RefreshCw,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
@@ -177,9 +182,15 @@ const REPORT_COLUMN_HEADER_HEIGHT = 40;
 const REPORT_DEFAULT_ROW_HEIGHT = 44;
 const REPORT_NAME_LINE_HEIGHT = 16;
 const REPORT_ROW_VERTICAL_PADDING = 14;
+const REPORT_ZOOM_MIN = 80;
+const REPORT_ZOOM_MAX = 125;
+const REPORT_ZOOM_STEP = 5;
+const REPORT_SOLID_HEADER_SURFACE = "bg-background";
+const REPORT_SOLID_FROZEN_SURFACE =
+  "bg-background dark:bg-background";
 
 function isReportFrozenColumn(column: ReportVisibleColumn) {
-  return column.type === "index" || column.type === "name" || column.type === "nisn";
+  return column.type === "index" || column.type === "name";
 }
 
 function getReportColumnWidth(column: ReportVisibleColumn) {
@@ -222,6 +233,21 @@ function estimateReportWrappedLineCount(text: string, width: number) {
   return Math.max(1, lines);
 }
 
+function clampReportZoom(value: number) {
+  return Math.max(REPORT_ZOOM_MIN, Math.min(REPORT_ZOOM_MAX, value));
+}
+
+function buildReportPreviewHeaderGroups(groups: ReportHeaderGroup[]): ReportHeaderGroup[] {
+  const [identityGroup, ...restGroups] = groups;
+  if (!identityGroup || identityGroup.colSpan !== 3) return groups;
+
+  return [
+    { ...identityGroup, label: "Data Siswa", colSpan: 2 },
+    { label: "", colSpan: 1, bgClass: "bg-background" },
+    ...restGroups,
+  ];
+}
+
 export default function GradeReports() {
   const { toast } = useEnhancedToast();
   const queryClient = useQueryClient();
@@ -249,6 +275,8 @@ export default function GradeReports() {
   const [includeSignature, setIncludeSignature] = useState(false);
   const [reportScrollLeft, setReportScrollLeft] = useState(0);
   const [reportScrollTop, setReportScrollTop] = useState(0);
+  const [reportZoom, setReportZoom] = useState(100);
+  const [isReportFullscreen, setIsReportFullscreen] = useState(false);
   const {
     signatureConfig,
     hasSignature,
@@ -1116,13 +1144,24 @@ export default function GradeReports() {
     return getGradeTableColumnHeaderTone(gradeTableColorScheme, { type: "final" });
   };
 
-  const reportHeaderGroups = getHeaderGroups();
+  const reportHeaderGroups = buildReportPreviewHeaderGroups(getHeaderGroups());
   const reportHasGroupHeader = reportHeaderGroups.length > 1;
-  const reportHeaderHeight = (reportHasGroupHeader ? REPORT_GROUP_HEADER_HEIGHT : 0) + REPORT_COLUMN_HEADER_HEIGHT;
+  const reportZoomFactor = reportZoom / 100;
+  const reportGroupHeaderHeight = reportHasGroupHeader
+    ? Math.max(28, Math.round(REPORT_GROUP_HEADER_HEIGHT * reportZoomFactor))
+    : 0;
+  const reportColumnHeaderHeight = Math.max(34, Math.round(REPORT_COLUMN_HEADER_HEIGHT * reportZoomFactor));
+  const reportHeaderHeight = reportGroupHeaderHeight + reportColumnHeaderHeight;
+  const reportDefaultRowHeight = Math.max(36, Math.round(REPORT_DEFAULT_ROW_HEIGHT * reportZoomFactor));
+  const reportNameLineHeight = Math.max(14, Math.round(REPORT_NAME_LINE_HEIGHT * reportZoomFactor));
+  const reportRowVerticalPadding = Math.max(10, Math.round(REPORT_ROW_VERTICAL_PADDING * reportZoomFactor));
+  const reportHeaderFontSize = Math.max(10, Number((11 * reportZoomFactor).toFixed(1)));
+  const reportBodyFontSize = Math.max(10.5, Number((12 * reportZoomFactor).toFixed(1)));
+  const reportStatusFontSize = Math.max(10, Number((10.5 * reportZoomFactor).toFixed(1)));
 
   const reportColumnWidths = useMemo(
-    () => visibleColumns.map((column) => getReportColumnWidth(column)),
-    [visibleColumns],
+    () => visibleColumns.map((column) => Math.round(getReportColumnWidth(column) * reportZoomFactor)),
+    [reportZoomFactor, visibleColumns],
   );
 
   const reportColumnLayouts = useMemo(() => {
@@ -1163,38 +1202,48 @@ export default function GradeReports() {
   const reportGroupLayouts = useMemo(() => {
     let startIndex = 0;
 
-    return reportHeaderGroups.map((group, groupIndex) => {
+    return reportHeaderGroups.flatMap((group, groupIndex) => {
       const start = startIndex;
       const end = Math.min(visibleColumns.length - 1, startIndex + group.colSpan - 1);
       const layouts = reportColumnLayouts.slice(start, end + 1);
-      const isFrozen = layouts.length > 0 && layouts.every((layout) => layout.frozen);
-      const firstVisibleLayout = isFrozen
-        ? layouts[0]
-        : layouts.find((layout) => !layout.frozen);
-      const width = layouts
-        .filter((layout) => (isFrozen ? layout.frozen : !layout.frozen))
-        .reduce((sum, layout) => sum + layout.width, 0);
+      const frozenLayouts = layouts.filter((layout) => layout.frozen);
+      const nonFrozenLayouts = layouts.filter((layout) => !layout.frozen);
 
       startIndex += group.colSpan;
 
-      return {
-        ...group,
-        groupIndex,
-        width,
-        frozen: isFrozen,
-        left: firstVisibleLayout?.left ?? 0,
-      };
+      return [
+        frozenLayouts.length > 0
+          ? {
+              ...group,
+              groupIndex,
+              part: "frozen" as const,
+              width: frozenLayouts.reduce((sum, layout) => sum + layout.width, 0),
+              frozen: true,
+              left: frozenLayouts[0]?.left ?? 0,
+            }
+          : null,
+        nonFrozenLayouts.length > 0
+          ? {
+              ...group,
+              groupIndex,
+              part: "scroll" as const,
+              width: nonFrozenLayouts.reduce((sum, layout) => sum + layout.width, 0),
+              frozen: false,
+              left: nonFrozenLayouts[0]?.left ?? 0,
+            }
+          : null,
+      ].filter(Boolean);
     });
   }, [reportColumnLayouts, reportHeaderGroups, visibleColumns.length]);
 
   const reportRowHeights = useMemo(() => {
-    const nameWidth = reportColumnLayouts.find((layout) => layout.column.type === "name")?.width ?? REPORT_NAME_COL_WIDTH;
+    const nameWidth = reportColumnLayouts.find((layout) => layout.column.type === "name")?.width ?? Math.round(REPORT_NAME_COL_WIDTH * reportZoomFactor);
 
     return studentGrades.map((sg) => {
       const lineCount = estimateReportWrappedLineCount(String(sg.student?.name ?? ""), nameWidth);
-      return Math.max(REPORT_DEFAULT_ROW_HEIGHT, REPORT_ROW_VERTICAL_PADDING + lineCount * REPORT_NAME_LINE_HEIGHT);
+      return Math.max(reportDefaultRowHeight, reportRowVerticalPadding + lineCount * reportNameLineHeight);
     });
-  }, [reportColumnLayouts, studentGrades]);
+  }, [reportColumnLayouts, reportDefaultRowHeight, reportNameLineHeight, reportRowVerticalPadding, reportZoomFactor, studentGrades]);
 
   const reportRowTops = useMemo(() => {
     let top = 0;
@@ -1210,6 +1259,18 @@ export default function GradeReports() {
     [reportRowHeights],
   );
 
+  const updateReportZoom = (nextZoom: number) => {
+    setReportZoom(clampReportZoom(nextZoom));
+  };
+
+  const getReportGroupClassName = (group: ReportHeaderGroup & { groupIndex: number }) => {
+    if (group.label === "Data Siswa" || group.label === "") {
+      return "border-border bg-background text-muted-foreground";
+    }
+
+    return getReportGroupTone(group, group.groupIndex);
+  };
+
   const renderReportCellContent = (sg: any, col: ReportVisibleColumn, rowIndex: number) => {
     const value = getCellValue(sg, col, rowIndex);
 
@@ -1220,7 +1281,7 @@ export default function GradeReports() {
           ? sg.rapor
           : 0;
       return (
-        <Badge className={cn(getStatusColor(statusValue), "px-2 py-0.5 text-[10px] sm:text-xs")}>
+        <Badge className={cn(getStatusColor(statusValue), "px-2 py-0.5")} style={{ fontSize: reportStatusFontSize }}>
           {value}
         </Badge>
       );
@@ -1228,7 +1289,7 @@ export default function GradeReports() {
 
     if (col.type === "name") {
       return (
-        <span className="block w-full whitespace-normal break-words text-left text-[12px] font-medium leading-4 text-foreground">
+        <span className="block w-full whitespace-normal break-words text-left font-medium leading-4 text-foreground" style={{ fontSize: reportBodyFontSize }}>
           {value}
         </span>
       );
@@ -1236,7 +1297,7 @@ export default function GradeReports() {
 
     if (col.type === "nisn") {
       return (
-        <span className="block w-full text-center text-[11px] font-medium text-muted-foreground">
+        <span className="block w-full text-center font-medium text-muted-foreground" style={{ fontSize: Math.max(10.5, reportBodyFontSize - 0.5) }}>
           {value || "-"}
         </span>
       );
@@ -1244,7 +1305,7 @@ export default function GradeReports() {
 
     if (col.type === "index") {
       return (
-        <span className="block w-full text-center text-[12px] font-medium text-muted-foreground">
+        <span className="block w-full text-center font-medium text-muted-foreground" style={{ fontSize: reportBodyFontSize }}>
           {value}
         </span>
       );
@@ -1494,8 +1555,11 @@ export default function GradeReports() {
 
         {/* Report Table with Dynamic Columns */}
         {hasData && (
-          <Card className="animate-fade-in-up overflow-hidden">
-            <CardHeader className="pb-2 sm:pb-3">
+          <Card className={cn(
+            "animate-fade-in-up overflow-hidden",
+            isReportFullscreen && "fixed inset-0 z-[9998] flex flex-col rounded-none border-0 bg-background",
+          )}>
+            <CardHeader className={cn("pb-2 sm:pb-3", isReportFullscreen && "shrink-0 border-b bg-background/95 backdrop-blur")}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <CardTitle className="text-sm sm:text-base truncate">
                   {selectedClass?.name} - {selectedSubject?.name}
@@ -1505,39 +1569,90 @@ export default function GradeReports() {
                   <Badge variant="outline" className="text-[10px] sm:text-xs">{studentGrades.length} siswa</Badge>
                   <Badge variant="secondary" className="text-[10px] sm:text-xs">{allChapters.length} BAB</Badge>
                   <Badge variant="secondary" className="text-[10px] sm:text-xs">{allAssignments.length} tugas</Badge>
+                  <div className="ml-0 flex h-9 items-center overflow-hidden rounded-xl border border-border bg-background sm:ml-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-none"
+                      aria-label="Perkecil tabel laporan"
+                      onClick={() => updateReportZoom(reportZoom - REPORT_ZOOM_STEP)}
+                      disabled={reportZoom <= REPORT_ZOOM_MIN}
+                    >
+                      <ZoomOut className="h-4 w-4" />
+                    </Button>
+                    <span className="min-w-12 px-2 text-center text-xs font-semibold tabular-nums text-muted-foreground">
+                      {reportZoom}%
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-none"
+                      aria-label="Perbesar tabel laporan"
+                      onClick={() => updateReportZoom(reportZoom + REPORT_ZOOM_STEP)}
+                      disabled={reportZoom >= REPORT_ZOOM_MAX}
+                    >
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5 rounded-xl px-2 text-xs sm:px-3"
+                    onClick={() => updateReportZoom(100)}
+                    disabled={reportZoom === 100}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Reset</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5 rounded-xl px-2 text-xs sm:px-3"
+                    onClick={() => setIsReportFullscreen((current) => !current)}
+                  >
+                    {isReportFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                    <span>{isReportFullscreen ? "Tutup" : "Fullscreen"}</span>
+                  </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="sipena-report-grade-table-shell sipena-scroll-chain-page relative h-[70dvh] min-h-[420px] overflow-hidden bg-background">
+            <CardContent className={cn("p-0", isReportFullscreen && "min-h-0 flex-1")}>
+              <div className={cn(
+                "sipena-report-grade-table-shell sipena-scroll-chain-page relative h-[70dvh] min-h-[420px] overflow-hidden bg-background",
+                isReportFullscreen && "h-[calc(100dvh-5.25rem)] min-h-0",
+              )}>
                 {reportHasGroupHeader && (
-                  <div className="absolute inset-x-0 top-0 z-50 bg-primary/5" style={{ height: REPORT_GROUP_HEADER_HEIGHT }}>
+                  <div className="absolute inset-x-0 top-0 z-50 bg-background" style={{ height: reportGroupHeaderHeight }}>
                     {reportGroupLayouts
                       .filter((group) => group.frozen)
                       .map((group) => (
                         <div
-                          key={`report-group-frozen-${group.groupIndex}`}
-                          className="absolute top-0 flex items-center justify-center border-r border-border bg-muted px-2 text-center text-[11px] font-bold text-muted-foreground"
-                          style={{ left: group.left, width: group.width, height: REPORT_GROUP_HEADER_HEIGHT }}
-                          title="Data Siswa"
-                          aria-label="Data Siswa"
+                          key={`report-group-frozen-${group.groupIndex}-${group.part}`}
+                          className="absolute top-0 flex items-center justify-center border-r border-b border-border bg-background px-2 text-center text-[11px] font-bold text-muted-foreground"
+                          style={{ left: group.left, width: group.width, height: reportGroupHeaderHeight, fontSize: reportHeaderFontSize }}
+                          title={group.label || "NISN"}
+                          aria-label={group.label || "NISN"}
                         >
-                          Data Siswa
+                          {group.label}
                         </div>
                       ))}
 
-                    <div className="absolute top-0 overflow-hidden" style={{ left: reportFrozenWidth, right: 0, height: REPORT_GROUP_HEADER_HEIGHT }}>
+                    <div className="absolute top-0 overflow-hidden bg-background" style={{ left: reportFrozenWidth, right: 0, height: reportGroupHeaderHeight }}>
                       <div className="relative" style={{ width: reportNonFrozenWidth, transform: `translateX(-${reportScrollLeft}px)` }}>
                         {reportGroupLayouts
                           .filter((group) => !group.frozen && group.width > 0)
                           .map((group) => (
                             <div
-                              key={`report-group-${group.groupIndex}`}
+                              key={`report-group-${group.groupIndex}-${group.part}`}
                               className={cn(
-                                "absolute top-0 flex items-center justify-center border-r border-b px-2 text-center text-[11px] font-bold leading-tight",
-                                getReportGroupTone(group, group.groupIndex),
+                                "absolute top-0 flex items-center justify-center border-r border-b px-2 text-center font-bold leading-tight",
+                                getReportGroupClassName(group),
                               )}
-                              style={{ left: group.left, width: group.width, height: REPORT_GROUP_HEADER_HEIGHT }}
+                              style={{ left: group.left, width: group.width, height: reportGroupHeaderHeight, fontSize: reportHeaderFontSize }}
                               title={group.label}
                               aria-label={group.label}
                             >
@@ -1550,12 +1665,12 @@ export default function GradeReports() {
                 )}
 
                 <div
-                  className="absolute z-40 bg-muted"
+                  className="absolute z-40 bg-background"
                   style={{
                     left: 0,
-                    top: reportHasGroupHeader ? REPORT_GROUP_HEADER_HEIGHT : 0,
+                    top: reportGroupHeaderHeight,
                     width: reportFrozenWidth,
-                    height: REPORT_COLUMN_HEADER_HEIGHT,
+                    height: reportColumnHeaderHeight,
                   }}
                 >
                   {reportColumnLayouts
@@ -1563,8 +1678,8 @@ export default function GradeReports() {
                     .map((layout) => (
                       <div
                         key={`report-header-frozen-${layout.column.key}`}
-                        className="absolute flex items-center justify-center border border-border bg-muted px-2 text-center text-[11px] font-bold text-muted-foreground ring-1 ring-inset ring-primary/20"
-                        style={{ left: layout.left, width: layout.width, height: REPORT_COLUMN_HEADER_HEIGHT }}
+                        className="absolute flex items-center justify-center border border-border bg-background px-2 text-center font-bold text-muted-foreground ring-1 ring-inset ring-primary/20"
+                        style={{ left: layout.left, width: layout.width, height: reportColumnHeaderHeight, fontSize: reportHeaderFontSize }}
                         title={layout.column.label}
                         aria-label={layout.column.label}
                       >
@@ -1574,12 +1689,12 @@ export default function GradeReports() {
                 </div>
 
                 <div
-                  className="absolute z-30 overflow-hidden bg-muted"
+                  className="absolute z-30 overflow-hidden bg-background"
                   style={{
                     left: reportFrozenWidth,
                     right: 0,
-                    top: reportHasGroupHeader ? REPORT_GROUP_HEADER_HEIGHT : 0,
-                    height: REPORT_COLUMN_HEADER_HEIGHT,
+                    top: reportGroupHeaderHeight,
+                    height: reportColumnHeaderHeight,
                   }}
                 >
                   <div className="relative" style={{ width: reportNonFrozenWidth, transform: `translateX(-${reportScrollLeft}px)` }}>
@@ -1589,10 +1704,11 @@ export default function GradeReports() {
                         <div
                           key={`report-header-${layout.column.key}`}
                           className={cn(
-                            "absolute flex items-center justify-center border border-border px-2 text-center text-[11px] font-bold leading-tight",
+                            "absolute flex items-center justify-center border border-border px-2 text-center font-bold leading-tight",
+                            REPORT_SOLID_HEADER_SURFACE,
                             getReportColumnHeaderTone(layout.column),
                           )}
-                          style={{ left: layout.left, width: layout.width, height: REPORT_COLUMN_HEADER_HEIGHT }}
+                          style={{ left: layout.left, width: layout.width, height: reportColumnHeaderHeight, fontSize: reportHeaderFontSize }}
                           title={layout.column.label}
                           aria-label={layout.column.label}
                         >
@@ -1638,7 +1754,8 @@ export default function GradeReports() {
                               left: layout.left,
                               top: reportRowTops[rowIndex] ?? 0,
                               width: layout.width,
-                              height: reportRowHeights[rowIndex] ?? REPORT_DEFAULT_ROW_HEIGHT,
+                              height: reportRowHeights[rowIndex] ?? reportDefaultRowHeight,
+                              fontSize: reportBodyFontSize,
                             }}
                           >
                             {renderReportCellContent(sg, layout.column, rowIndex)}
@@ -1649,7 +1766,7 @@ export default function GradeReports() {
                 </div>
 
                 <div
-                  className="sipena-grade-frozen-layer absolute left-0 z-20 overflow-hidden border-r-2 border-primary bg-background shadow-[2px_0_8px_rgba(15,23,42,0.12)]"
+                  className="sipena-grade-frozen-layer sipena-report-frozen-layer absolute left-0 z-20 overflow-hidden border-r-2 border-primary bg-background shadow-[2px_0_8px_rgba(15,23,42,0.12)]"
                   style={{
                     top: reportHeaderHeight,
                     bottom: 0,
@@ -1671,14 +1788,16 @@ export default function GradeReports() {
                           <div
                             key={`${sg.student.id}-${layout.column.key}-frozen`}
                             className={cn(
-                              "absolute flex items-center border border-border/40 bg-primary/5 px-2 transition-colors hover:border-fuchsia-300/80 hover:bg-fuchsia-100/80 dark:hover:border-fuchsia-700/70 dark:hover:bg-fuchsia-950/40",
+                              "absolute flex items-center border border-border/40 px-2 transition-colors hover:border-fuchsia-300/80 hover:bg-fuchsia-100/80 dark:hover:border-fuchsia-700/70 dark:hover:bg-fuchsia-950/40",
+                              REPORT_SOLID_FROZEN_SURFACE,
                               layout.column.type === "name" ? "justify-start" : "justify-center",
                             )}
                             style={{
                               left: layout.left,
                               top: reportRowTops[rowIndex] ?? 0,
                               width: layout.width,
-                              height: reportRowHeights[rowIndex] ?? REPORT_DEFAULT_ROW_HEIGHT,
+                              height: reportRowHeights[rowIndex] ?? reportDefaultRowHeight,
+                              fontSize: reportBodyFontSize,
                             }}
                           >
                             {renderReportCellContent(sg, layout.column, rowIndex)}

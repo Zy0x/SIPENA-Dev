@@ -63,6 +63,7 @@ export default function Subjects() {
 
   const { subjects, isLoading: subjectsLoading } = useSubjects(selectedClassId);
   const selectedClass = classes.find((c) => c.id === selectedClassId);
+  const hasSelectedClass = Boolean(selectedClassId && selectedClass);
 
   const filteredSubjects = useMemo(() => {
     let result = subjects;
@@ -148,7 +149,13 @@ export default function Subjects() {
 
         {classes.length > 0 && (
           <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:p-4">
-            <div className="grid gap-3 lg:grid-cols-[minmax(16rem,24rem)_1fr_auto] lg:items-end">
+            <div
+              className={
+                hasSelectedClass
+                  ? "grid gap-3 lg:grid-cols-[minmax(20rem,32rem)_minmax(16rem,1fr)_minmax(9rem,12rem)] lg:items-end"
+                  : "grid gap-3 lg:grid-cols-[minmax(22rem,44rem)_1fr] lg:items-end"
+              }
+            >
               <div className="min-w-0" data-tour="class-select">
                 <Label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <School className="h-4 w-4 text-primary" />
@@ -259,7 +266,7 @@ export default function Subjects() {
         )}
 
         {!isLoading && filteredSubjects.length > 0 && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-3">
             {filteredSubjects.map((subject) => (
               <SubjectCard key={subject.id} subject={subject} />
             ))}

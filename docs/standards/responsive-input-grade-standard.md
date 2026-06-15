@@ -22,6 +22,8 @@ Setiap perubahan UI Input Nilai wajib aman di viewport berikut:
 - Laptop: `1366x768`, `1440x900`
 - Desktop lebar: `1920x1080`, `2560x1440`, `3840x2160`
 
+Observasi `viewport_observations` terbaru pada 2026-06-13 menunjukkan `/grades` sebagai route dominan untuk mobile QA. Outlier yang wajib dipertahankan dalam regression sweep: `320x616`, `393x406`, `393x462`, `393x514`, `415x462`, `415x525`, `415x866`, `393x886` dengan safe-area atas sampai `36px`, serta landscape pendek `894x399`, `946x335`, dan `946x415`. Pada viewport pendek tersebut, header kartu, info bar, dan toolbar wajib memadat sebelum mengorbankan area spreadsheet.
+
 Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sembunyikan label non-kritis, pertahankan ikon dan tooltip/aria-label, lalu gunakan scroll horizontal terkontrol. Jangan memotong tombol.
 
 ## Toolbar Input Nilai

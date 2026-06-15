@@ -42,4 +42,19 @@ describe("grade toolbar interaction guard", () => {
     expect(scrollHelper).toContain("scrollPageBy");
     expect(standard).toContain("setPointerCapture");
   });
+
+  it("keeps observed mobile grade outliers compact", () => {
+    const spreadsheetSource = readSource("apps/frontend/src/components/grades/SpreadsheetTable.tsx");
+    const globalStyles = readSource("apps/frontend/src/index.css");
+    const standard = readSource("docs/standards/responsive-input-grade-standard.md");
+
+    expect(spreadsheetSource).toContain("min(100dvh, var(--sipena-visual-viewport-height, 100dvh))");
+    expect(spreadsheetSource).toContain("sipena-grade-info-bar");
+    expect(globalStyles).toContain("@media (max-width: 430px) and (max-height: 540px)");
+    expect(globalStyles).toContain(".sipena-grade-card-actions .sipena-grade-rounding-badge");
+    expect(globalStyles).toContain("height: clamp(260px, calc(100dvh - 9rem), 360px)");
+    expect(globalStyles).toContain("@media (orientation: landscape) and (max-height: 380px)");
+    expect(standard).toContain("393x406");
+    expect(standard).toContain("946x335");
+  });
 });

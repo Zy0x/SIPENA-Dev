@@ -18,6 +18,7 @@ import { ExternalAuthOnboarding } from "@/components/onboarding/ExternalAuthOnbo
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { ThemePreferenceSync } from "@/components/theme/ThemePreferenceSync";
 import { ViewportTelemetryReporter } from "@/hooks/useViewportTelemetry";
+import { useTouchScrollClickGuard } from "@/hooks/useTouchScrollClickGuard";
 
 // Pages
 import Index from "../pages/Index";
@@ -53,6 +54,8 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  useTouchScrollClickGuard();
+
   // Show splash screen only on first visit or PWA launch
   const [showSplash, setShowSplash] = useState(() => {
     const isPWA = window.matchMedia("(display-mode: standalone)").matches;

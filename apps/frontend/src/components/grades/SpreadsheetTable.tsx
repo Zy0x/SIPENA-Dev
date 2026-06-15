@@ -1822,6 +1822,11 @@ export function SpreadsheetTable({
     );
   }, [activeTableColorScheme, chapters.length, chapterHeaders, columns, frozenColumns, formatLocked, handleResizeStart, hoveredColumnIndex, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, totalHeaderHeight, zoomFactor]);
 
+  const fullscreenViewportHeight =
+    fullscreenMode === "browser"
+      ? "min(100dvh, var(--sipena-visual-viewport-height, 100dvh))"
+      : "100dvh";
+
   return (
     <div 
       ref={containerRef}
@@ -1829,8 +1834,8 @@ export function SpreadsheetTable({
       style={{
         ...(isFullscreen && {
           width: '100vw',
-          height: '100dvh', // Use dynamic viewport height for mobile
-          maxHeight: '100dvh',
+          height: fullscreenViewportHeight,
+          maxHeight: fullscreenViewportHeight,
         }),
       }}
     >
@@ -2117,7 +2122,7 @@ export function SpreadsheetTable({
       )}
 
       {/* Info Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b bg-muted/50 px-3 py-1.5 text-xs">
+      <div className="sipena-grade-info-bar flex items-center gap-2 overflow-x-auto border-b bg-muted/50 px-3 py-1.5 text-xs">
         {isFullscreen && (
           <Badge variant="pass" className="gap-1 flex-shrink-0 text-xs">
             <CheckCircle2 className="w-3 h-3" />

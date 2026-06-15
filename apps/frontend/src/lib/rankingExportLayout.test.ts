@@ -88,7 +88,7 @@ describe("ranking export layout", () => {
     expect(usedWidth).toBeLessThanOrEqual(usableWidth + 0.01);
   });
 
-  it("keeps the name column compact enough to wrap long names", () => {
+  it("keeps the name column compact enough to wrap long names without forcing every row taller", () => {
     const columns = buildRankingColumns(7);
     const data = buildRows(columns, [
       "Siti Aminah",
@@ -98,7 +98,7 @@ describe("ranking export layout", () => {
     const nameWidth = documentStyle.columnFontOverrides.Nama?.widthMm;
 
     expect(nameWidth).toBeLessThanOrEqual(24);
-    expect(documentStyle.tableSizing.bodyRowHeightMm).toBeGreaterThan(10);
+    expect(documentStyle.tableSizing.bodyRowHeightMm).toBeLessThanOrEqual(6.7);
     expect(pdfEffectiveFontSize(documentStyle.tableBodyFontSize)).toBeGreaterThanOrEqual(11);
   });
 

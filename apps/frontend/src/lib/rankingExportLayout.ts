@@ -17,7 +17,7 @@ const RANKING_SUMMARY_COLUMN_WIDTH_MM = 17;
 const RANKING_STATUS_COLUMN_WIDTH_MM = 20;
 const RANKING_READABLE_STYLE_FONT_PT = 13;
 const RANKING_HEADER_ROW_HEIGHT_MM = 10.4;
-const RANKING_BODY_ROW_HEIGHT_MM = 8.3;
+const RANKING_BODY_ROW_HEIGHT_MM = 6.7;
 
 type RankingExportRow = Record<string, string | number>;
 
@@ -116,23 +116,6 @@ function estimateWrappedLineCount(text: string, fontPt: number, widthMm: number)
   return Math.max(1, lines);
 }
 
-function resolveRankingBodyRowHeightMm(
-  style: ReportDocumentStyle,
-  columns: ExportColumn[],
-  widths: number[],
-  rows: RankingExportRow[],
-) {
-  const nameIndex = columns.findIndex((column) => column.type === "name");
-  const nameColumn = nameIndex >= 0 ? columns[nameIndex] : null;
-  const nameWidthMm = nameIndex >= 0 ? widths[nameIndex] ?? RANKING_NAME_COLUMN_WIDTH_MM : RANKING_NAME_COLUMN_WIDTH_MM;
-  const bodyFontPt = pdfEffectiveFontSize(Math.max(style.tableBodyFontSize, RANKING_READABLE_STYLE_FONT_PT));
-  const maxNameLines = nameColumn && rows.length > 0
-    ? Math.max(...rows.map((row) => estimateWrappedLineCount(String(row[nameColumn.key] ?? ""), bodyFontPt, nameWidthMm)))
-    : 2;
-  const textHeightMm = maxNameLines * bodyFontPt * 0.34;
-  return Number(Math.max(RANKING_BODY_ROW_HEIGHT_MM, textHeightMm + 2).toFixed(2));
-}
-
 function resolveRankingHeaderRowHeightMm(style: ReportDocumentStyle, columns: ExportColumn[], widths: number[]) {
   const headerFontPt = pdfEffectiveFontSize(Math.max(style.tableHeaderFontSize, RANKING_READABLE_STYLE_FONT_PT));
   const maxHeaderLines = Math.max(
@@ -169,7 +152,7 @@ export function buildCompactRankingDocumentStyle(
   baseStyle: Partial<ReportDocumentStyle> | undefined,
   columns: ExportColumn[],
   paperSize: ReportPaperSize,
-  rows: RankingExportRow[] = [],
+  _rows: RankingExportRow[] = [],
 ): ReportDocumentStyle {
   const resolvedStyle = resolveDocumentStyle(baseStyle ?? createDefaultRankingDocumentStyle());
   const widths = fitRankingColumnWidths(columns, paperSize);
@@ -179,10 +162,7 @@ export function buildCompactRankingDocumentStyle(
     resolvedStyle.tableSizing.headerRowHeightMm ?? 0,
     resolveRankingHeaderRowHeightMm({ ...resolvedStyle, tableHeaderFontSize: readableHeaderFontSize }, columns, widths),
   );
-  const bodyRowHeightMm = Math.max(
-    resolvedStyle.tableSizing.bodyRowHeightMm ?? 0,
-    resolveRankingBodyRowHeightMm({ ...resolvedStyle, tableBodyFontSize: readableBodyFontSize }, columns, widths, rows),
-  );
+  const bodyRowHeightMm = RANKING_BODY_ROW_HEIGHT_MM;
 
   return {
     ...resolvedStyle,
