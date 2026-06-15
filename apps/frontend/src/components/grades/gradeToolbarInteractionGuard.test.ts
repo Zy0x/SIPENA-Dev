@@ -38,9 +38,22 @@ describe("grade toolbar interaction guard", () => {
 
     expect(globalStyles).toContain(".sipena-scroll-chain-page");
     expect(globalStyles).toContain(".sipena-scroll-isolated");
+    expect(globalStyles).toContain("touch-action: pan-x pan-y");
     expect(scrollHelper).toContain("isVerticalScrollBoundary");
     expect(scrollHelper).toContain("scrollPageBy");
     expect(standard).toContain("setPointerCapture");
+  });
+
+  it("lets vertical touch gestures escape toolbar and frozen table edges in fullscreen", () => {
+    const spreadsheetSource = readSource("apps/frontend/src/components/grades/SpreadsheetTable.tsx");
+    const globalStyles = readSource("apps/frontend/src/index.css");
+
+    expect(globalStyles).toContain(".sipena-grade-toolbar button");
+    expect(globalStyles).toContain("touch-action: pan-x pan-y !important");
+    expect(spreadsheetSource).toContain("const shouldReleaseToPage = isVerticalWheel &&");
+    expect(spreadsheetSource).toContain("const shouldReleaseToPage = isMostlyVertical &&");
+    expect(spreadsheetSource).not.toContain("!isFullscreen && isVerticalWheel");
+    expect(spreadsheetSource).not.toContain("!isFullscreen && isMostlyVertical");
   });
 
   it("keeps observed mobile grade outliers compact", () => {

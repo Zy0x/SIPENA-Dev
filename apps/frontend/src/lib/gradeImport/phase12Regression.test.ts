@@ -422,11 +422,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("getGradeHeaderTooltip");
     expect(spreadsheetSource).toContain("data-grade-header-tooltip");
     expect(spreadsheetSource).toContain("title={getGradeHeaderTooltip(column.label)}");
-    expect(spreadsheetSource).toContain("overscrollBehaviorY: isFullscreen ? 'contain' : 'auto'");
+    expect(spreadsheetSource).toContain("overscrollBehaviorY: 'auto'");
     expect(spreadsheetSource).toContain("previousBodyOverflow");
     expect(spreadsheetSource).toContain('body.style.overflow = "hidden"');
     expect(spreadsheetSource).toContain("originatedInScrollContainer");
-    expect(spreadsheetSource).toContain("if (!isVerticalWheel || isFullscreen) return;");
+    expect(spreadsheetSource).toContain("if (!isVerticalWheel) return;");
     expect(spreadsheetSource).toContain("shouldReleaseToPage");
     expect(spreadsheetSource).toContain("scrollPageBy(deltaY)");
     expect(spreadsheetSource).toContain("overlayPanRef");
@@ -550,7 +550,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-protection-menu .sipena-protection-item[data-highlighted] svg");
     expect(globalStyles).toContain("color: hsl(var(--muted-foreground)) !important");
     expect(globalStyles).toContain(".sipena-protection-split--active");
-    expect(globalStyles).toContain("touch-action: pan-x");
+    expect(globalStyles).toContain("touch-action: pan-x pan-y");
     expect(pwaManagerSource).toContain("UPDATE_AUTO_APPLY_SECONDS = 10");
     expect(pwaManagerSource).toContain("Tunggu");
     expect(pwaManagerSource).toContain("UPDATE_HARD_RELOAD_MS");

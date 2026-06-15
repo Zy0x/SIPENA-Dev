@@ -1,4 +1,13 @@
-import { useState, useMemo, useEffect } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+  type TouchEvent as ReactTouchEvent,
+  type UIEvent as ReactUIEvent,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useStudents } from "@/hooks/useStudents";
@@ -37,6 +52,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
@@ -58,6 +74,12 @@ import {
   getGradeTableColumnBodyTone,
   getGradeTableColumnHeaderTone,
 } from "@/lib/gradeTableColorSchemes";
+import { isVerticalScrollBoundary, scrollPageBy } from "@/lib/scrollChaining";
+import {
+  applyViewportCssVariables,
+  captureViewportTelemetrySnapshot,
+  clearViewportCssVariables,
+} from "@/lib/viewportTelemetry";
 
 const REPORT_EXPORT_FORMATS: ExportStudioFormatOption[] = [
   {
@@ -277,7 +299,13 @@ export default function GradeReports() {
   const [reportScrollLeft, setReportScrollLeft] = useState(0);
   const [reportScrollTop, setReportScrollTop] = useState(0);
   const [reportZoom, setReportZoom] = useState(100);
-  const [isReportFullscreen, setIsReportFullscreen] = useState(false);
+  const [reportFullscreenMode, setReportFullscreenMode] = useState<"app" | "browser" | null>(null);
+  const isReportFullscreen = reportFullscreenMode !== null;
+  const reportFullscreenViewportHeight = reportFullscreenMode === "browser"
+    ? "min(100dvh, var(--sipena-visual-viewport-height, 100dvh))"
+    : "100dvh";
+  const reportScrollRef = useRef<HTMLDivElement | null>(null);
+  const reportFrozenTouchRef = useRef<{ x: number; y: number } | null>(null);
   const {
     signatureConfig,
     hasSignature,
@@ -292,6 +320,187 @@ export default function GradeReports() {
       setIncludeSignature(hasSignature);
     }
   }, [hasSignature, signatureLoading]);
+
+  const closeReportFullscreen = useCallback(async () => {
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // Keep closing the app overlay even if the browser rejects exitFullscreen.
+      }
+    }
+
+    setReportFullscreenMode(null);
+  }, []);
+
+  const openReportAppFullscreen = useCallback(() => {
+    setReportFullscreenMode("app");
+  }, []);
+
+  const openReportBrowserFullscreen = useCallback(async () => {
+    setReportFullscreenMode("browser");
+
+    if (typeof document === "undefined") return;
+
+    const target = document.documentElement;
+    if (!target.requestFullscreen) {
+      setReportFullscreenMode("app");
+      toast({
+        title: "Layar penuh native tidak tersedia",
+        description: "Mode layar penuh panel tetap dibuka di dalam tab browser.",
+      });
+      return;
+    }
+
+    try {
+      await target.requestFullscreen({ navigationUI: "hide" });
+    } catch {
+      setReportFullscreenMode("app");
+      toast({
+        title: "Layar penuh native diblokir",
+        description: "Browser tidak mengizinkan layar penuh perangkat. Mode layar penuh panel tetap aktif.",
+      });
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const handleFullscreenChange = () => {
+      if (reportFullscreenMode === "browser" && !document.fullscreenElement) {
+        setReportFullscreenMode(null);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [reportFullscreenMode]);
+
+  useEffect(() => {
+    if (!isReportFullscreen || typeof document === "undefined") return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlOverscrollBehavior = html.style.overscrollBehavior;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "contain";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "contain";
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscrollBehavior;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+    };
+  }, [isReportFullscreen]);
+
+  useEffect(() => {
+    if (!isReportFullscreen || reportFullscreenMode !== "browser" || typeof document === "undefined") return;
+
+    const target = document.documentElement;
+    const updateViewportMetrics = () => {
+      applyViewportCssVariables(captureViewportTelemetrySnapshot(window.location.pathname || "/reports/grades"), target);
+    };
+
+    updateViewportMetrics();
+
+    const visualViewport = window.visualViewport;
+    window.addEventListener("resize", updateViewportMetrics);
+    window.addEventListener("orientationchange", updateViewportMetrics);
+    visualViewport?.addEventListener("resize", updateViewportMetrics);
+    visualViewport?.addEventListener("scroll", updateViewportMetrics);
+
+    return () => {
+      window.removeEventListener("resize", updateViewportMetrics);
+      window.removeEventListener("orientationchange", updateViewportMetrics);
+      visualViewport?.removeEventListener("resize", updateViewportMetrics);
+      visualViewport?.removeEventListener("scroll", updateViewportMetrics);
+      clearViewportCssVariables(target);
+    };
+  }, [isReportFullscreen, reportFullscreenMode]);
+
+  const syncReportScrollState = useCallback((element: HTMLDivElement) => {
+    setReportScrollLeft(element.scrollLeft);
+    setReportScrollTop(element.scrollTop);
+  }, []);
+
+  const handleReportScroll = useCallback((event: ReactUIEvent<HTMLDivElement>) => {
+    syncReportScrollState(event.currentTarget);
+  }, [syncReportScrollState]);
+
+  const scrollReportTableBy = useCallback((deltaX: number, deltaY: number) => {
+    const element = reportScrollRef.current;
+    if (!element) return false;
+
+    element.scrollLeft += deltaX;
+    element.scrollTop += deltaY;
+    syncReportScrollState(element);
+    return true;
+  }, [syncReportScrollState]);
+
+  const handleReportFrozenWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    const element = reportScrollRef.current;
+    if (!element) return;
+
+    const deltaX = event.deltaX;
+    const deltaY = event.deltaY;
+    const isVerticalWheel = Math.abs(deltaY) > Math.abs(deltaX);
+
+    if (isVerticalWheel && isVerticalScrollBoundary(element, deltaY)) {
+      scrollPageBy(deltaY);
+    } else {
+      scrollReportTableBy(deltaX, deltaY);
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  }, [scrollReportTableBy]);
+
+  const handleReportFrozenTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length !== 1) {
+      reportFrozenTouchRef.current = null;
+      return;
+    }
+
+    reportFrozenTouchRef.current = {
+      x: event.touches[0].clientX,
+      y: event.touches[0].clientY,
+    };
+  }, []);
+
+  const handleReportFrozenTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    const element = reportScrollRef.current;
+    const previous = reportFrozenTouchRef.current;
+    if (!element || !previous || event.touches.length !== 1) return;
+
+    const touch = event.touches[0];
+    const deltaX = previous.x - touch.clientX;
+    const deltaY = previous.y - touch.clientY;
+    const isMostlyVertical = Math.abs(deltaY) > Math.abs(deltaX);
+
+    reportFrozenTouchRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+    };
+
+    if (isMostlyVertical && isVerticalScrollBoundary(element, deltaY)) {
+      scrollPageBy(deltaY);
+    } else {
+      scrollReportTableBy(deltaX, deltaY);
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  }, [scrollReportTableBy]);
+
+  const handleReportFrozenTouchEnd = useCallback(() => {
+    reportFrozenTouchRef.current = null;
+  }, []);
 
   // Get semester objects for combined view
   const semester1 = semestersForActiveYear.find(s => s.number === 1);
@@ -1559,8 +1768,12 @@ export default function GradeReports() {
           <Card className={cn(
             "animate-fade-in-up overflow-hidden",
             isReportFullscreen && "fixed inset-0 z-[9998] flex flex-col rounded-none border-0 bg-background",
-          )}>
-            <CardHeader className={cn("pb-2 sm:pb-3", isReportFullscreen && "shrink-0 border-b bg-background/95 backdrop-blur")}>
+            reportFullscreenMode === "browser" && "sipena-grade-browser-fullscreen",
+          )} style={isReportFullscreen ? { height: reportFullscreenViewportHeight, maxHeight: reportFullscreenViewportHeight } : undefined}>
+            <CardHeader className={cn(
+              "pb-2 sm:pb-3",
+              isReportFullscreen && "sipena-grade-toolbar sipena-grade-toolbar--fullscreen shrink-0 overflow-x-auto border-b bg-background/95 backdrop-blur",
+            )}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <CardTitle className="text-sm sm:text-base truncate">
                   {selectedClass?.name} - {selectedSubject?.name}
@@ -1608,16 +1821,49 @@ export default function GradeReports() {
                     <RotateCcw className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Reset</span>
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-9 gap-1.5 rounded-xl px-2 text-xs sm:px-3"
-                    onClick={() => setIsReportFullscreen((current) => !current)}
-                  >
-                    {isReportFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                    <span>{isReportFullscreen ? "Tutup" : "Fullscreen"}</span>
-                  </Button>
+                  {isReportFullscreen ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1.5 rounded-xl px-2 text-xs sm:px-3"
+                      onClick={() => void closeReportFullscreen()}
+                    >
+                      <Minimize2 className="h-3.5 w-3.5" />
+                      <span>Tutup</span>
+                    </Button>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 gap-1.5 rounded-xl px-2 text-xs sm:px-3"
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Fullscreen</span>
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-64 max-w-[calc(100vw-1rem)]">
+                        <DropdownMenuItem onClick={openReportAppFullscreen} className="min-h-[48px] items-start gap-2 py-2.5">
+                          <Maximize2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <div>
+                            <p className="font-medium">Fullscreen Panel</p>
+                            <p className="text-xs text-muted-foreground">Layar penuh di dalam tab browser.</p>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void openReportBrowserFullscreen()} className="min-h-[48px] items-start gap-2 py-2.5">
+                          <Maximize2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <div>
+                            <p className="font-medium">Fullscreen Native</p>
+                            <p className="text-xs text-muted-foreground">Memakai mode layar penuh perangkat.</p>
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -1625,7 +1871,7 @@ export default function GradeReports() {
               <div className={cn(
                 "sipena-report-grade-table-shell sipena-scroll-chain-page relative h-[70dvh] min-h-[420px] overflow-hidden bg-background",
                 isReportFullscreen && "h-[calc(100dvh-5.25rem)] min-h-0",
-              )}>
+              )} style={isReportFullscreen ? { height: `calc(${reportFullscreenViewportHeight} - 5.25rem)` } : undefined}>
                 {reportHasGroupHeader && (
                   <div className="absolute inset-x-0 top-0 z-50 bg-background" style={{ height: reportGroupHeaderHeight }}>
                     {reportGroupLayouts
@@ -1726,6 +1972,7 @@ export default function GradeReports() {
                 />
 
                 <div
+                  ref={reportScrollRef}
                   className="sipena-grade-scroll sipena-scroll-chain-page absolute bottom-0 overflow-auto scrollbar-thin"
                   style={{
                     left: reportFrozenWidth,
@@ -1733,11 +1980,10 @@ export default function GradeReports() {
                     top: reportHeaderHeight,
                     WebkitOverflowScrolling: "touch",
                     overscrollBehaviorX: "contain",
+                    overscrollBehaviorY: "auto",
+                    touchAction: "pan-x pan-y",
                   }}
-                  onScroll={(event) => {
-                    setReportScrollLeft(event.currentTarget.scrollLeft);
-                    setReportScrollTop(event.currentTarget.scrollTop);
-                  }}
+                  onScroll={handleReportScroll}
                 >
                   <div className="relative" style={{ width: reportNonFrozenWidth, height: reportBodyHeight, minHeight: "100%" }}>
                     {studentGrades.map((sg, rowIndex) =>
@@ -1768,10 +2014,16 @@ export default function GradeReports() {
 
                 <div
                   className="sipena-grade-frozen-layer sipena-report-frozen-layer absolute left-0 z-20 overflow-hidden border-r-2 border-primary bg-background shadow-[2px_0_8px_rgba(15,23,42,0.12)]"
+                  onWheel={handleReportFrozenWheel}
+                  onTouchStart={handleReportFrozenTouchStart}
+                  onTouchMove={handleReportFrozenTouchMove}
+                  onTouchEnd={handleReportFrozenTouchEnd}
+                  onTouchCancel={handleReportFrozenTouchEnd}
                   style={{
                     top: reportHeaderHeight,
                     bottom: 0,
                     width: reportFrozenWidth,
+                    touchAction: "none",
                   }}
                 >
                   <div

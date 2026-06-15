@@ -28,6 +28,10 @@ describe("touch scroll click guard", () => {
     expect(hookSource).toContain("document.addEventListener(\"click\", handleClick, true)");
     expect(hookSource).toContain("event.stopImmediatePropagation()");
     expect(hookSource).toContain("[role='button']");
+    expect(hookSource).toContain("[role='combobox']");
+    expect(hookSource).toContain("[aria-haspopup='menu']");
+    expect(hookSource).toContain("[aria-haspopup='listbox']");
+    expect(hookSource).toContain("[data-radix-collection-item]");
     expect(hookSource).toContain("[data-touch-scroll-click-target='true']");
     expect(appSource).toContain("useTouchScrollClickGuard()");
   });

@@ -664,7 +664,7 @@ export function SpreadsheetTable({
     const isVerticalWheel = Math.abs(deltaY) > Math.abs(deltaX);
 
     if (!originatedInScrollContainer) {
-      const shouldReleaseToPage = !isFullscreen && isVerticalWheel && (
+      const shouldReleaseToPage = isVerticalWheel && (
         isVerticalScrollBoundary(el, deltaY)
       );
 
@@ -678,7 +678,7 @@ export function SpreadsheetTable({
       return;
     }
 
-    if (!isVerticalWheel || isFullscreen) return;
+    if (!isVerticalWheel) return;
 
     const shouldReleaseToPage = isVerticalScrollBoundary(el, deltaY);
 
@@ -687,7 +687,7 @@ export function SpreadsheetTable({
     scrollPageBy(deltaY);
     e.preventDefault();
     e.stopPropagation();
-  }, [isFullscreen, scrollSpreadsheetBy]);
+  }, [scrollSpreadsheetBy]);
 
   const handleFrozenLayerWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     const el = scrollContainerRef.current;
@@ -698,7 +698,7 @@ export function SpreadsheetTable({
     const deltaX = normalizeWheelDelta(e.deltaX, e.deltaMode, el.clientWidth);
     const deltaY = normalizeWheelDelta(e.deltaY, e.deltaMode, el.clientHeight);
     const isVerticalWheel = Math.abs(deltaY) > Math.abs(deltaX);
-    const shouldReleaseToPage = !isFullscreen && isVerticalWheel && (
+    const shouldReleaseToPage = isVerticalWheel && (
       isVerticalScrollBoundary(el, deltaY)
     );
 
@@ -710,7 +710,7 @@ export function SpreadsheetTable({
 
     e.preventDefault();
     e.stopPropagation();
-  }, [cancelOverlayMomentum, isFullscreen, scrollSpreadsheetBy]);
+  }, [cancelOverlayMomentum, scrollSpreadsheetBy]);
 
   // Toggle freeze column - blocked when format is locked
   const toggleFreezeColumn = useCallback((colIndex: number) => {
@@ -892,7 +892,7 @@ export function SpreadsheetTable({
       const now = performance.now();
       const dt = Math.max(8, now - previous.time);
       const isMostlyVertical = Math.abs(deltaY) > Math.abs(deltaX);
-      const shouldReleaseToPage = !isFullscreen && isMostlyVertical && (
+      const shouldReleaseToPage = isMostlyVertical && (
         isVerticalScrollBoundary(el, deltaY)
       );
       overlayPanRef.current = {
@@ -931,7 +931,7 @@ export function SpreadsheetTable({
       setZoomLevel(newZoom);
       setZoomInput(newZoom.toString());
     }
-  }, [getDistance, formatLocked, isFullscreen]);
+  }, [getDistance, formatLocked]);
 
   const handleTouchEnd = useCallback((_e: React.TouchEvent) => {
     const overlayPan = overlayPanRef.current;
@@ -2243,7 +2243,7 @@ export function SpreadsheetTable({
             paddingLeft: getFrozenWidth(),
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorX: 'contain',
-            overscrollBehaviorY: isFullscreen ? 'contain' : 'auto',
+            overscrollBehaviorY: 'auto',
             touchAction: 'pan-x pan-y',
             WebkitTapHighlightColor: 'transparent',
           }}

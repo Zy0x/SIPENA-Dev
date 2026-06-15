@@ -3504,18 +3504,19 @@
 
   .sipena-grade-toolbar button,
   .sipena-grade-toolbar--fullscreen button {
-    touch-action: pan-x !important;
+    touch-action: pan-x pan-y !important;
   }
 
   .sipena-grade-toolbar input,
   .sipena-grade-toolbar--fullscreen input,
   .sipena-grade-toolbar [role="combobox"],
   .sipena-grade-toolbar--fullscreen [role="combobox"] {
-    touch-action: manipulation !important;
+    touch-action: pan-x pan-y !important;
   }
 
   .sipena-grade-scroll {
-    overscroll-behavior: contain;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 }
@@ -3694,7 +3695,7 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
     overscroll-behavior-y: auto;
-    touch-action: pan-x;
+    touch-action: pan-x pan-y;
     will-change: scroll-position;
     contain: paint;
   }

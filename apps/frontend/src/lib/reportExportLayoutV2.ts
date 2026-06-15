@@ -1,6 +1,6 @@
 // TESTING
 import { computeSignatureHeight, type SignatureData } from "./exportSignature";
-import { pdfBodyRowHeightMm, pdfHeaderRowHeightMm } from "./exportEngine/sharedMetrics";
+import { pdfBodyRowHeightMm, pdfEffectiveFontSize, pdfHeaderRowHeightMm } from "./exportEngine/sharedMetrics";
 import { ATTENDANCE_SHELL_MM } from "./exportEngine/attendanceShellMetrics";
 import type { ExportColumn, ExportConfig, HeaderGroup, ReportPaperSize } from "./reportExportLayout";
 import { resolveSignatureSignerBlockWidthMm } from "./signatureLayout";
@@ -531,6 +531,12 @@ function getBodyHeightMm(style: ReportDocumentStyle) {
   return pdfBodyRowHeightMm(style.tableBodyFontSize, style.tableSizing.bodyRowHeightMm);
 }
 
+function getPaginationBodyHeightMm(style: ReportDocumentStyle) {
+  const minBodyHeight = getBodyHeightMm(style);
+  const readableLineHeight = pdfEffectiveFontSize(style.tableBodyFontSize) * 0.62 + 1.8;
+  return Math.max(minBodyHeight, readableLineHeight);
+}
+
 function estimateSignatureBlockMetrics(signature: SignatureData | null | undefined): SignatureBlockMetrics | null {
   if (!signature) return null;
   const signers = Array.isArray(signature.signers) && signature.signers.length > 0
@@ -664,8 +670,9 @@ function getCapacity(metrics: ReportLayoutMetrics, tableStartY: number, groupCou
     - metrics.footerHeightMm
     - tableStartY
     - getHeaderHeightMm(style, groupCount)
+    - 2
     - reserveSignature;
-  return Math.max(1, Math.floor(usableHeight / getBodyHeightMm(style)));
+  return Math.max(1, Math.floor(usableHeight / getPaginationBodyHeightMm(style)));
 }
 /**
  * Iteratively shrink font sizes until all data rows + signature fit on a single page.
@@ -760,7 +767,7 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
 
   if (config.paperSize === "full-page") {
     const headerHeight = getHeaderHeightMm(documentStyle, config.headerGroups.length);
-    const bodyHeight = getBodyHeightMm(documentStyle);
+    const bodyHeight = getPaginationBodyHeightMm(documentStyle);
     const estimatedTableHeightMm = headerHeight + config.data.length * bodyHeight;
     const estimatedTableEndY = metrics.firstPageTableStartY + estimatedTableHeightMm;
     const resolvedFullPagePaper = resolveReportPaperSize("full-page", {
@@ -859,7 +866,7 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
     const nextCapacity = getCapacity(metrics, metrics.nextPageTableStartY, segment.headerGroups.length, documentStyle, 0);
     const lastCapacity = getCapacity(metrics, metrics.nextPageTableStartY, segment.headerGroups.length, documentStyle, segmentIndex === segments.length - 1 ? signatureReserve : 0);
     const headerHeight = getHeaderHeightMm(documentStyle, segment.headerGroups.length);
-    const bodyHeight = getBodyHeightMm(documentStyle);
+    const bodyHeight = getPaginationBodyHeightMm(documentStyle);
     const rows = [...config.data];
 
     if (rows.length <= firstCapacityWithSignature) {

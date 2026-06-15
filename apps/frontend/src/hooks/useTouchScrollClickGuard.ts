@@ -10,10 +10,14 @@ const INTERACTIVE_SELECTOR = [
   "input[type='submit']",
   "input[type='reset']",
   "[role='button']",
+  "[role='combobox']",
   "[role='menuitem']",
   "[role='option']",
   "[role='tab']",
   "[role='switch']",
+  "[aria-haspopup='menu']",
+  "[aria-haspopup='listbox']",
+  "[data-radix-collection-item]",
   "[data-touch-scroll-click-target='true']",
 ].join(",");
 
