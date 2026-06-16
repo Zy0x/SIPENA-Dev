@@ -80,14 +80,14 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
   return (
     <>
       <Card className="group overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-        <CardContent className="flex h-full flex-col gap-4 p-4 sm:p-5">
-          <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-primary/10 ring-1 ring-primary/10 sm:h-20 sm:w-20">
-              <School className="h-8 w-8 text-primary sm:h-10 sm:w-10" />
+        <CardContent className="flex h-full flex-col gap-3 p-3.5 sm:p-4">
+          <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/10 sm:h-14 sm:w-14">
+              <School className="h-6 w-6 text-primary sm:h-7 sm:w-7" />
             </div>
 
-            <div className="flex min-h-16 min-w-0 items-center sm:min-h-20">
-              <h3 className="truncate text-2xl font-bold leading-tight text-foreground sm:text-3xl">
+            <div className="flex min-h-12 min-w-0 items-center sm:min-h-14">
+              <h3 className="truncate text-xl font-bold leading-tight text-foreground sm:text-2xl">
                 {classData.name}
               </h3>
             </div>
@@ -125,10 +125,10 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
             </DropdownMenu>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <div className="flex items-center gap-2 text-foreground">
               <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="text-sm font-semibold sm:text-base">
+              <span className="text-sm font-semibold">
                 {classData.student_count || 0} siswa
               </span>
             </div>
@@ -136,17 +136,17 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
               {classData.class_kkm !== null ? (
                 <>
                   <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="text-sm font-semibold sm:text-base">KKM Kelas: {classData.class_kkm}</span>
+                  <span className="text-sm font-semibold">KKM Kelas: {classData.class_kkm}</span>
                 </>
               ) : (
                 <>
                   <AlertCircle className="h-4 w-4 shrink-0 text-grade-warning" />
-                  <span className="text-sm font-semibold text-grade-warning sm:text-base">KKM kelas belum diisi</span>
+                  <span className="text-sm font-semibold text-grade-warning">KKM kelas belum diisi</span>
                 </>
               )}
             </div>
             {classData.description && (
-              <p className="line-clamp-2 break-words text-sm font-medium leading-6 text-muted-foreground sm:text-base">
+              <p className="line-clamp-2 break-words text-sm leading-5 text-muted-foreground text-justify">
                 {classData.description}
               </p>
             )}

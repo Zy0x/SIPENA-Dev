@@ -34,13 +34,16 @@ describe("class management UX guard", () => {
     const cardSource = readSource("apps/frontend/src/components/classes/ClassCard.tsx");
 
     expect(cardSource).toContain('data-tour="class-card-menu"');
-    expect(cardSource).toContain("sm:h-20 sm:w-20");
-    expect(cardSource).toContain("text-2xl font-bold");
+    expect(cardSource).toContain("sm:h-14 sm:w-14");
+    expect(cardSource).toContain("text-xl font-bold");
     expect(cardSource).toContain("line-clamp-2");
+    expect(cardSource).toContain("text-justify");
     expect(cardSource).toContain("rounded-full border border-border/70");
     expect(cardSource).toContain("Edit Kelas");
     expect(cardSource).toContain("Duplikasi");
     expect(cardSource).toContain("Hapus Kelas");
+    expect(cardSource).not.toContain("sm:h-20 sm:w-20");
+    expect(cardSource).not.toContain("sm:text-3xl");
     expect(cardSource).not.toContain("opacity-0 group-hover:opacity-100");
     expect(cardSource).not.toContain("Lihat Detail");
     expect(cardSource).not.toContain("Tambah Siswa");
@@ -53,7 +56,9 @@ describe("class management UX guard", () => {
     expect(detailSource).toContain("Deskripsi Kelas");
     expect(detailSource).toContain("Belum ada deskripsi kelas.");
     expect(detailSource).toContain("isDescriptionExpanded");
-    expect(detailSource).toContain("line-clamp-3");
+    expect(detailSource).toContain("line-clamp-2");
+    expect(detailSource).toContain("text-justify");
+    expect(detailSource).toContain("py-2.5");
     expect(detailSource).toContain("Lihat selengkapnya...");
     expect(detailSource).toContain("onOpenAutoFocus");
     expect(detailSource).toContain("event.preventDefault()");

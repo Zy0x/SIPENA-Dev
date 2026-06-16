@@ -53,7 +53,7 @@ export default function ClassDetailDialog({
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const classDescription = classData.description?.trim() || "Belum ada deskripsi kelas.";
-  const shouldCollapseDescription = classDescription.length > 180;
+  const shouldCollapseDescription = classDescription.length > 110;
 
   useEffect(() => {
     if (open) {
@@ -143,7 +143,7 @@ export default function ClassDetailDialog({
             requestAnimationFrame(() => titleRef.current?.focus());
           }}
         >
-          <DialogHeader className="shrink-0 border-b border-border px-4 pb-3 pr-16 pt-4 sm:px-5 sm:pr-16">
+          <DialogHeader className="shrink-0 border-b border-border px-4 pb-2.5 pr-16 pt-3.5 sm:px-5 sm:pr-16">
             <DialogTitle ref={titleRef} tabIndex={-1} className="text-sm outline-none sm:text-base">
               Detail Kelas - {classData.name}
             </DialogTitle>
@@ -152,14 +152,14 @@ export default function ClassDetailDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <section className="shrink-0 border-b border-border bg-muted/20 px-4 py-3 sm:px-5" data-tour="class-detail-summary">
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+          <section className="shrink-0 border-b border-border bg-muted/20 px-4 py-2.5 sm:px-5" data-tour="class-detail-summary">
+            <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div className="min-w-0">
-                <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   <NotebookText className="h-3.5 w-3.5" />
                   Deskripsi Kelas
                 </div>
-                <p className={`break-words text-sm leading-6 text-foreground ${shouldCollapseDescription && !isDescriptionExpanded ? "line-clamp-3" : ""}`}>
+                <p className={`break-words text-justify text-sm leading-5 text-foreground ${shouldCollapseDescription && !isDescriptionExpanded ? "line-clamp-2" : ""}`}>
                   {classDescription}
                 </p>
                 {shouldCollapseDescription && (
@@ -167,29 +167,29 @@ export default function ClassDetailDialog({
                     type="button"
                     variant="link"
                     size="sm"
-                    className="mt-1 h-auto px-0 py-0 text-xs font-semibold"
+                    className="mt-0.5 h-auto px-0 py-0 text-xs font-semibold"
                     onClick={() => setIsDescriptionExpanded((value) => !value)}
                   >
                     {isDescriptionExpanded ? "Tampilkan lebih sedikit" : "Lihat selengkapnya..."}
                   </Button>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:min-w-44 sm:grid-cols-1">
-                <div className="rounded-xl border border-border/70 bg-background px-3 py-2">
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <div className="grid grid-cols-2 gap-2 sm:min-w-40 sm:grid-cols-1">
+                <div className="rounded-xl border border-border/70 bg-background px-3 py-1.5">
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                     <Target className="h-3.5 w-3.5" />
                     KKM Kelas
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     {classData.class_kkm ?? "Belum diisi"}
                   </p>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background px-3 py-2">
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <div className="rounded-xl border border-border/70 bg-background px-3 py-1.5">
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                     <Users className="h-3.5 w-3.5" />
                     Siswa
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     {students.length} terdaftar
                   </p>
                 </div>
@@ -197,7 +197,7 @@ export default function ClassDetailDialog({
             </div>
           </section>
 
-          <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-3 sm:flex-row sm:px-5" data-tour="class-detail-tools">
+          <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-2.5 sm:flex-row sm:px-5" data-tour="class-detail-tools">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
