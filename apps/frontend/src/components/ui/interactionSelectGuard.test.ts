@@ -19,6 +19,7 @@ describe("interactive text selection guard", () => {
     const dropdownSource = readSource("apps/frontend/src/components/ui/dropdown-menu.tsx");
     const tabsSource = readSource("apps/frontend/src/components/ui/tabs.tsx");
     const popoverSource = readSource("apps/frontend/src/components/ui/popover.tsx");
+    const standard = readSource("docs/standards/ui-interaction-scroll-standard.md");
 
     expect(buttonSource).toContain("inline-flex select-none");
     expect(selectSource).toContain("w-full select-none");
@@ -27,6 +28,10 @@ describe("interactive text selection guard", () => {
     expect(popoverSource).toContain("className={cn(\"select-none\", className)}");
     expect(buttonSource).toContain("hover:bg-primary/10 hover:text-foreground");
     expect(dropdownSource).toContain("focus:bg-primary/10 focus:text-foreground");
+    expect(standard).toContain("Shared `Button`, `SelectTrigger`, `DropdownMenuTrigger`, `PopoverTrigger`");
+    expect(standard).toContain("tidak boleh membuka aksi dari `pointerdown`/`touchstart`");
+    expect(standard).toContain('data-touch-scroll-click-target="true"');
+    expect(standard).toContain("touch-action: pan-x pan-y");
   });
 
   it("keeps global interactive roles non-selectable while text fields remain selectable", () => {

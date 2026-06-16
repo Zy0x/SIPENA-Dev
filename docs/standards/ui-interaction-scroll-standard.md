@@ -8,8 +8,19 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Label tombol, tab, select, menu item, switch, checkbox, radio, command item, dan semua turunannya wajib `user-select: none`.
 - Input, textarea, textbox, dan contenteditable wajib tetap `user-select: text`.
 - Touch target minimal 44x44 px. Icon-only button wajib punya `aria-label`.
+- Shared `Button`, `SelectTrigger`, `DropdownMenuTrigger`, `PopoverTrigger`, tab, command item, dan menu item adalah standar utama. Komponen custom hanya boleh dibuat jika primitive ini tidak cukup, dan harus mengikuti kontrak select-none, focus ring, disabled state, dan target minimal 44px.
 - Toolbar horizontal wajib membedakan drag dan tap. Drag melewati threshold membatalkan klik, tetapi container toolbar tidak boleh memakai `setPointerCapture` karena akan mengambil event dari tombol anak.
 - Dropdown yang berada di toolbar horizontal boleh menunda aktivasi touch/pen sampai `pointerup`; mouse dan keyboard harus tetap memakai perilaku primitive normal.
+- Dropdown, select, popover, dan tombol di dalam area yang bisa di-scroll tidak boleh membuka aksi dari `pointerdown`/`touchstart`. Aktivasi touch harus terjadi setelah tap final (`click`/`pointerup`) dan batal jika pointer bergerak melewati threshold scroll global.
+- Semua trigger custom di dalam kontainer scroll wajib memakai semantic target (`button`, `role="combobox"`, `aria-haspopup="menu/listbox"`) atau `data-touch-scroll-click-target="true"` agar `useTouchScrollClickGuard()` dapat membatalkan accidental click setelah gesture scroll.
+- Pada device touchscreen, tombol/dropdown yang berada di toolbar atau area scroll padat harus memakai `touch-action: pan-x pan-y` jika user diharapkan dapat melakukan scroll melewati kontrol tersebut. Gunakan `touch-manipulation` hanya untuk tombol tap murni yang tidak menjadi jalur scroll utama.
+
+## Sidebar dan Navigasi Responsif
+
+- Sidebar mobile/tablet wajib memakai drawer overlay dengan lebar dinamis (`min()`/`calc(100vw - safe area)`) dan menyisakan area gelap yang cukup untuk menutup menu.
+- State collapsed desktop tidak boleh diterapkan ke mobile/tablet. Pada viewport di bawah `lg`, menu harus menampilkan label agar tidak berubah menjadi kolom ikon kosong yang membingungkan.
+- Drawer navigasi harus memakai tinggi dynamic viewport (`100dvh` atau variabel visual viewport) dan membuat area daftar menu scrollable, sementara header dan logout tetap terlihat.
+- Breakpoint sidebar wajib berbasis perilaku: desktop rail/collapsed mulai `lg`, sedangkan semua viewport di bawahnya memakai overlay. Jangan memakai width statis seperti `260px` untuk seluruh mobile tanpa guard `max-width`.
 
 ## Kontras dan State Warna
 

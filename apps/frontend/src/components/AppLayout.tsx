@@ -45,7 +45,6 @@
    isBeta?: boolean;
    children?: NavItem[];
  }
-
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/classes", label: "Kelas & Siswa", icon: School },
@@ -88,6 +87,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
     return false;
   });
+  const [isDesktopSidebar, setIsDesktopSidebar] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showMiniProfile, setShowMiniProfile] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
@@ -110,6 +115,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Sidebar width constants
   const SIDEBAR_EXPANDED_WIDTH = 260;
   const SIDEBAR_COLLAPSED_WIDTH = 72;
+  const effectiveSidebarCollapsed = isDesktopSidebar && sidebarCollapsed;
+
+  useEffect(() => {
+    const syncSidebarMode = () => {
+      setIsDesktopSidebar(window.innerWidth >= 1024);
+    };
+
+    syncSidebarMode();
+    window.addEventListener("resize", syncSidebarMode);
+    window.visualViewport?.addEventListener("resize", syncSidebarMode);
+
+    return () => {
+      window.removeEventListener("resize", syncSidebarMode);
+      window.visualViewport?.removeEventListener("resize", syncSidebarMode);
+    };
+  }, []);
 
   // Persist collapse state + GSAP animations
   useEffect(() => {
@@ -117,9 +138,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     if (logoTextRef.current) {
       gsap.to(logoTextRef.current, {
-        opacity: sidebarCollapsed ? 0 : 1,
-        x: sidebarCollapsed ? -10 : 0,
-        width: sidebarCollapsed ? 0 : "auto",
+        opacity: effectiveSidebarCollapsed ? 0 : 1,
+        x: effectiveSidebarCollapsed ? -10 : 0,
+        width: effectiveSidebarCollapsed ? 0 : "auto",
         duration: 0.25,
         ease: "power2.out",
         overwrite: "auto",
@@ -128,10 +149,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     if (yearBadgeRef.current) {
       gsap.to(yearBadgeRef.current, {
-        opacity: sidebarCollapsed ? 0 : 1,
-        height: sidebarCollapsed ? 0 : "auto",
-        paddingTop: sidebarCollapsed ? 0 : 8,
-        paddingBottom: sidebarCollapsed ? 0 : 8,
+        opacity: effectiveSidebarCollapsed ? 0 : 1,
+        height: effectiveSidebarCollapsed ? 0 : "auto",
+        paddingTop: effectiveSidebarCollapsed ? 0 : 8,
+        paddingBottom: effectiveSidebarCollapsed ? 0 : 8,
         duration: 0.25,
         ease: "power2.out",
         overwrite: "auto",
@@ -140,8 +161,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     if (logoutTextRef.current) {
       gsap.to(logoutTextRef.current, {
-        opacity: sidebarCollapsed ? 0 : 1,
-        width: sidebarCollapsed ? 0 : "auto",
+        opacity: effectiveSidebarCollapsed ? 0 : 1,
+        width: effectiveSidebarCollapsed ? 0 : "auto",
         duration: 0.2,
         ease: "power2.out",
         overwrite: "auto",
@@ -150,8 +171,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     if (ctrlHintRef.current) {
       gsap.to(ctrlHintRef.current, {
-        opacity: sidebarCollapsed ? 0 : 1,
-        height: sidebarCollapsed ? 0 : "auto",
+        opacity: effectiveSidebarCollapsed ? 0 : 1,
+        height: effectiveSidebarCollapsed ? 0 : "auto",
         duration: 0.2,
         ease: "power2.out",
         overwrite: "auto",
@@ -159,7 +180,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
 
     // Stagger nav items on collapse/expand (desktop only)
-    if (sidebarRef.current && window.innerWidth >= 1024) {
+    if (sidebarRef.current && isDesktopSidebar) {
       const items = Array.from(
         sidebarRef.current.querySelectorAll<HTMLElement>("[data-sidebar-nav-item='true']")
       );
@@ -168,7 +189,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         gsap.killTweensOf(items);
         gsap.fromTo(
           items,
-          { opacity: 0, x: sidebarCollapsed ? -8 : 8 },
+          { opacity: 0, x: effectiveSidebarCollapsed ? -8 : 8 },
           {
             opacity: 1,
             x: 0,
@@ -181,7 +202,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         );
       }
     }
-  }, [sidebarCollapsed]);
+  }, [sidebarCollapsed, effectiveSidebarCollapsed, isDesktopSidebar]);
  
    // GSAP: Mobile overlay animation
    useEffect(() => {
@@ -212,9 +233,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
    useEffect(() => {
      if (!sidebarRef.current) return;
  
-     const isDesktop = window.innerWidth >= 1024;
- 
-     if (isDesktop) {
+     if (isDesktopSidebar) {
        gsap.set(sidebarRef.current, { x: 0 });
      } else {
        if (sidebarOpen) {
@@ -231,26 +250,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
          });
        }
      }
-   }, [sidebarOpen]);
+   }, [sidebarOpen, isDesktopSidebar]);
  
-   // Handle window resize for sidebar visibility
+   // Keep transform stable when switching between mobile overlay and desktop rail.
    useEffect(() => {
-     const handleResize = () => {
-       if (!sidebarRef.current) return;
-       const isDesktop = window.innerWidth >= 1024;
-       
-       if (isDesktop) {
-         gsap.set(sidebarRef.current, { x: 0 });
-       } else if (!sidebarOpen) {
-         gsap.set(sidebarRef.current, { x: "-100%" });
-       }
-     };
- 
-     window.addEventListener("resize", handleResize);
-     handleResize();
- 
-     return () => window.removeEventListener("resize", handleResize);
-   }, [sidebarOpen]);
+     if (!sidebarRef.current) return;
+
+     if (isDesktopSidebar) {
+       gsap.set(sidebarRef.current, { x: 0 });
+     } else if (!sidebarOpen) {
+       gsap.set(sidebarRef.current, { x: "-100%" });
+     }
+   }, [isDesktopSidebar, sidebarOpen]);
 
   // Auto-expand menu if child is active (supports hash fragments)
   useEffect(() => {
@@ -317,7 +328,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     if (isOnThisPage || isOnChildPage) {
       // Already on this page or child page → toggle sidebar collapse (desktop)
-      if (window.innerWidth >= 1024) {
+      if (isDesktopSidebar) {
         e.preventDefault();
         setSidebarCollapsed(prev => !prev);
         return;
@@ -329,10 +340,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
       setExpandedMenus(prev => [...prev, href]);
     }
     
-    if (window.innerWidth < 1024) {
+    if (!isDesktopSidebar) {
       setSidebarOpen(false);
     }
-  }, [location.pathname, expandedMenus]);
+  }, [location.pathname, expandedMenus, isDesktopSidebar]);
 
    const closeMobileSidebar = useCallback(() => {
      setSidebarOpen(false);
@@ -417,26 +428,32 @@ export default function AppLayout({ children }: AppLayoutProps) {
          ref={sidebarRef}
          className={cn(
            "fixed inset-y-0 left-0 z-50 flex flex-col",
+           "sipena-app-sidebar",
             "lg:bg-card lg:border-r lg:border-border",
             "bg-card/95 backdrop-blur-xl border-r border-border",
             "shadow-2xl shadow-black/10",
            "lg:translate-x-0 transition-[width] duration-300 ease-out",
-           sidebarCollapsed ? "lg:w-[72px]" : "lg:w-[260px]",
-           "w-[260px]"
+           effectiveSidebarCollapsed ? "lg:w-[72px]" : "lg:w-[260px]"
          )}
-         style={{ transform: "translateX(-100%)" }}
+         style={{
+           transform: "translateX(-100%)",
+           "--sipena-sidebar-expanded-width": `${SIDEBAR_EXPANDED_WIDTH}px`,
+           "--sipena-sidebar-collapsed-width": `${SIDEBAR_COLLAPSED_WIDTH}px`,
+         } as React.CSSProperties}
+         data-sidebar-collapsed={effectiveSidebarCollapsed ? "true" : "false"}
+         data-sidebar-state={sidebarOpen ? "open" : "closed"}
          aria-label="Navigasi utama"
          role="navigation"
        >
          {/* Logo section */}
          <div className={cn(
            "border-b border-border/50 flex items-center shrink-0 relative bg-card/80",
-           sidebarCollapsed ? "p-3 justify-center h-16" : "px-4 py-3 gap-3 h-16"
+           effectiveSidebarCollapsed ? "p-3 justify-center h-16" : "px-4 py-3 gap-3 h-16"
          )}>
             <div
               className={cn(
                 "hidden lg:flex items-center min-w-0",
-                sidebarCollapsed ? "justify-center" : "gap-3 flex-1"
+                effectiveSidebarCollapsed ? "justify-center" : "gap-3 flex-1"
               )}
             >
              <Tooltip delayDuration={0}>
@@ -451,11 +468,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
                    className={cn(
                      "relative flex items-center justify-center rounded-xl transition-colors touch-manipulation",
                      "hover:bg-primary/10 active:bg-primary/20",
-                     sidebarCollapsed ? "w-12 h-12 mx-auto" : "w-10 h-10 -ml-1"
+                     effectiveSidebarCollapsed ? "w-12 h-12 mx-auto" : "w-10 h-10 -ml-1"
                    )}
-                   aria-label={sidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
+                   aria-label={effectiveSidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
                  >
-                   <SipenaLogoIcon size={sidebarCollapsed ? "sm" : "md"} />
+                   <SipenaLogoIcon size={effectiveSidebarCollapsed ? "sm" : "md"} />
                    <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
                      <span className="w-1 h-1 rounded-full bg-primary/50" />
                      <span className="w-1 h-1 rounded-full bg-primary/30" />
@@ -464,14 +481,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                  </button>
                </TooltipTrigger>
                <TooltipContent side="right" sideOffset={8} className="font-medium">
-                 {sidebarCollapsed ? "Buka sidebar (Ctrl+B)" : "Tutup sidebar (Ctrl+B)"}
+                 {effectiveSidebarCollapsed ? "Buka sidebar (Ctrl+B)" : "Tutup sidebar (Ctrl+B)"}
                </TooltipContent>
              </Tooltip>
              
              <div
                ref={logoTextRef}
                className="overflow-hidden min-w-0"
-               style={{ opacity: sidebarCollapsed ? 0 : 1 }}
+               style={{ opacity: effectiveSidebarCollapsed ? 0 : 1 }}
              >
                <Link to="/dashboard" className="block">
                   <h1 className="font-bold text-lg text-foreground whitespace-nowrap hover:text-primary transition-colors">SIPENA</h1>
@@ -517,7 +534,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
          <div
            ref={yearBadgeRef}
            className="px-4 border-b border-border/30 shrink-0 overflow-hidden"
-           style={{ opacity: sidebarCollapsed ? 0 : 1, height: sidebarCollapsed ? 0 : "auto" }}
+           style={{ opacity: effectiveSidebarCollapsed ? 0 : 1, height: effectiveSidebarCollapsed ? 0 : "auto" }}
          >
            <ActiveYearBadge variant="minimal" showSemester={true} />
          </div>
@@ -527,7 +544,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           className={cn(
             "flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain",
             "scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
-            sidebarCollapsed ? "p-2 pt-3" : "p-3"
+            effectiveSidebarCollapsed ? "p-2 pt-3" : "p-3"
           )} 
           aria-label="Menu navigasi"
           onWheel={(e) => {
@@ -549,7 +566,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                
                return (
                  <li key={item.href}>
-                   {sidebarCollapsed ? (
+                   {effectiveSidebarCollapsed ? (
                      <CollapsedNavItem 
                        item={item} 
                        isActive={!!isActive}
@@ -575,9 +592,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
          {/* Logout section */}
          <div className={cn(
            "shrink-0 mt-auto border-t border-border/40 bg-card/50",
-           sidebarCollapsed ? "p-2" : "px-3 py-1.5"
+           effectiveSidebarCollapsed ? "p-2" : "px-3 py-1.5"
          )}>
-           {sidebarCollapsed ? (
+           {effectiveSidebarCollapsed ? (
              <Tooltip delayDuration={0}>
                <TooltipTrigger asChild>
                  <button
@@ -629,7 +646,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
        <div
          className={cn(
            "hidden lg:block shrink-0 transition-all duration-300 ease-out",
-           sidebarCollapsed ? "w-[72px]" : "w-[260px]"
+           effectiveSidebarCollapsed ? "w-[72px]" : "w-[260px]"
          )}
        />
  
@@ -705,7 +722,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                  // On desktop, point triggerRef to this button
                  // On mobile the ref is set above. The last one rendered wins,
                  // but we handle it via a callback to set the ref correctly.
-                 if (el && window.innerWidth >= 1024) {
+                 if (el && isDesktopSidebar) {
                    (avatarTriggerRef as React.MutableRefObject<HTMLButtonElement | null>).current = el;
                  }
                }}
