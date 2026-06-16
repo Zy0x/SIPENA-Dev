@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
-import type { ExportConfig } from "../reportExportLayout";
+import type { ExportColumn, ExportConfig } from "../reportExportLayout";
+import { buildCompactRankingDocumentStyle, createDefaultRankingDocumentStyle } from "../rankingExportLayout";
 import { buildReportPdfDocumentResult } from "./pdfEngine";
 
 function buildRankingConfig(rowCount = 8): ExportConfig {
@@ -124,6 +125,70 @@ function buildWideRankingConfig(rowCount = 29): ExportConfig {
   };
 }
 
+function buildCompactSevenSubjectRankingConfig(): ExportConfig {
+  const columns: ExportColumn[] = [
+    { key: "Rank", label: "Rank", type: "index" },
+    { key: "Nama", label: "Nama Siswa", type: "name" },
+    { key: "NISN", label: "NISN", type: "nisn" },
+    { key: "B. Indo", label: "B. Indo", type: "assignment" },
+    { key: "B. Ing", label: "B. Ing", type: "assignment" },
+    { key: "IPAS", label: "IPAS", type: "assignment" },
+    { key: "MTK", label: "MTK", type: "assignment" },
+    { key: "Mulok", label: "Mulok", type: "assignment" },
+    { key: "PPKn", label: "PPKn", type: "assignment" },
+    { key: "Tes", label: "Tes", type: "assignment" },
+    { key: "Rata-rata", label: "Rata-rata", type: "grandAvg" },
+    { key: "Status", label: "Status", type: "status" },
+  ];
+  const names = [
+    "Selvia Andini",
+    "Murda Almira Hikmah",
+    "Abdul Hamid",
+    "Iradati Ni'mala Kamila",
+    "Atikah Nur Amalina",
+    "Abdul Razak",
+    "M. Rafi",
+    "Siti Khadizah",
+    "Ahmad Yoga Firdaus",
+    "Hana Humaira",
+    "Sami Al-Hasani",
+    "M. Davin",
+    "Eka Puspita",
+    "Farida Azzahra",
+    "Faisal",
+    "Rizka Aulia Syafitri",
+    "M. Razak Abdillah",
+    "Siti Marhamah",
+    "Albakiya Yunus A",
+    "Fahmi Hidayat",
+  ];
+  const data = names.map((name, index) => ({
+    Rank: index + 1,
+    Nama: name,
+    NISN: index + 1,
+    "B. Indo": 65,
+    "B. Ing": 40,
+    IPAS: 45.8,
+    MTK: 40,
+    Mulok: 35,
+    PPKn: 32.5,
+    Tes: 0,
+    "Rata-rata": 38.3 - index * 0.5,
+    Status: "Belum Lulus",
+  }));
+
+  return {
+    ...buildRankingConfig(data.length),
+    className: "VI-B",
+    columns,
+    headerGroups: [{ label: "Ranking Keseluruhan", colSpan: columns.length }],
+    data,
+    studentCount: data.length,
+    assignmentCount: 7,
+    documentStyle: buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4", data),
+  };
+}
+
 describe("report PDF engine", () => {
   it("anchors default signature directly after the rendered ranking table", () => {
     const built = buildReportPdfDocumentResult(buildRankingConfig());
@@ -175,11 +240,35 @@ describe("report PDF engine", () => {
           .join(" ");
         rowCounts.push((pageText.match(/Siswa Panjang \d+/g) || []).length);
       }
-
       expect(rowCounts[0]).toBeGreaterThan(0);
       for (let index = 1; index < rowCounts.length - 1; index += 1) {
         expect(rowCounts[index]).toBeGreaterThanOrEqual(6);
       }
+    } finally {
+      await pdf.destroy();
+    }
+  });
+
+  it("continues compact ranking rows before moving signature to the next page", async () => {
+    const built = buildReportPdfDocumentResult(buildCompactSevenSubjectRankingConfig());
+    const pdf = await getDocument({ data: built.doc.output("arraybuffer") }).promise;
+
+    try {
+      expect(built.layoutPlan.pages[0]?.rows).toHaveLength(20);
+      expect(built.layoutPlan.pages[1]?.pageType).toBe("signature");
+
+      const rowCounts: number[] = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item) => ("str" in item ? item.str : ""))
+          .join(" ");
+        rowCounts.push((pageText.match(/Belum Lulus/g) || []).length);
+      }
+
+      expect(rowCounts[0]).toBe(20);
+      expect(rowCounts.slice(1).reduce((sum, count) => sum + count, 0)).toBe(0);
     } finally {
       await pdf.destroy();
     }

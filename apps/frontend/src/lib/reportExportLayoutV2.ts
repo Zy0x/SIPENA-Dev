@@ -1,6 +1,6 @@
 // TESTING
 import { computeSignatureHeight, type SignatureData } from "./exportSignature";
-import { pdfBodyRowHeightMm, pdfEffectiveFontSize, pdfHeaderRowHeightMm } from "./exportEngine/sharedMetrics";
+import { CELL_PADDING, pdfBodyRowHeightMm, pdfEffectiveFontSize, pdfHeaderRowHeightMm } from "./exportEngine/sharedMetrics";
 import { ATTENDANCE_SHELL_MM } from "./exportEngine/attendanceShellMetrics";
 import type { ExportColumn, ExportConfig, HeaderGroup, ReportPaperSize } from "./reportExportLayout";
 import { resolveSignatureSignerBlockWidthMm } from "./signatureLayout";
@@ -533,8 +533,114 @@ function getBodyHeightMm(style: ReportDocumentStyle) {
 
 function getPaginationBodyHeightMm(style: ReportDocumentStyle) {
   const minBodyHeight = getBodyHeightMm(style);
-  const readableLineHeight = pdfEffectiveFontSize(style.tableBodyFontSize) * 0.62 + 1.8;
-  return Math.max(minBodyHeight, readableLineHeight);
+  const oneLineHeight = pdfEffectiveFontSize(style.tableBodyFontSize) * 0.405 + CELL_PADDING.bodyDefault * 2;
+  if (style.experimentalColumnLayoutEnabled || style.experimentalColumnTypographyEnabled) {
+    return Math.max(minBodyHeight, oneLineHeight);
+  }
+
+  const conservativeGenericHeight = pdfEffectiveFontSize(style.tableBodyFontSize) * 0.62 + 1.8;
+  return Math.max(minBodyHeight, conservativeGenericHeight);
+}
+
+function getBodyCellPaddingY(column: ExportColumn) {
+  const padding = column.type === "name" ? CELL_PADDING.bodyName : CELL_PADDING.bodyDefault;
+  return typeof padding === "number" ? padding * 2 : padding.top + padding.bottom;
+}
+
+function getBodyCellPaddingX(column: ExportColumn) {
+  const padding = column.type === "name" ? CELL_PADDING.bodyName : CELL_PADDING.bodyDefault;
+  return typeof padding === "number" ? padding * 2 : padding.left + padding.right;
+}
+
+function estimateWrappedLineCount(text: string, fontPt: number, widthMm: number, paddingXMm: number) {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  if (!normalized) return 1;
+
+  const usableWidthMm = Math.max(4, widthMm - paddingXMm);
+  const averageCharWidthMm = Math.max(0.72, fontPt * 0.14);
+  const charsPerLine = Math.max(4, Math.floor(usableWidthMm / averageCharWidthMm));
+  const words = normalized.split(" ");
+  let lines = 1;
+  let currentLineLength = 0;
+
+  words.forEach((word) => {
+    const wordLength = word.length;
+    if (currentLineLength === 0) {
+      currentLineLength = Math.min(wordLength, charsPerLine);
+      lines += Math.max(0, Math.ceil(wordLength / charsPerLine) - 1);
+      return;
+    }
+
+    const nextLength = currentLineLength + 1 + wordLength;
+    if (nextLength <= charsPerLine) {
+      currentLineLength = nextLength;
+      return;
+    }
+
+    lines += 1;
+    currentLineLength = Math.min(wordLength, charsPerLine);
+    lines += Math.max(0, Math.ceil(wordLength / charsPerLine) - 1);
+  });
+
+  return Math.max(1, lines);
+}
+
+function estimateBodyRowHeightMm(
+  row: Record<string, string | number>,
+  columns: ExportColumn[],
+  columnWidthsMm: number[],
+  style: ReportDocumentStyle,
+) {
+  const defaultMinHeight = getPaginationBodyHeightMm(style);
+
+  return columns.reduce((height, column, index) => {
+    const typography = getColumnTypography(style, column.key);
+    const effectiveFontPt = pdfEffectiveFontSize(typography.bodyFontSize);
+    const paddingY = getBodyCellPaddingY(column);
+    const paddingX = getBodyCellPaddingX(column);
+    const widthMm = columnWidthsMm[index] ?? getColumnWidthMmV2(column, style);
+    const value = row[column.key];
+    const lineCount = column.type === "name"
+      ? estimateWrappedLineCount(value === undefined || value === null ? "" : String(value), effectiveFontPt, widthMm, paddingX)
+      : 1;
+    const cellMinHeight = pdfBodyRowHeightMm(typography.bodyFontSize, style.tableSizing.bodyRowHeightMm);
+    const contentHeight = lineCount * effectiveFontPt * 0.405 + paddingY;
+    return Math.max(height, cellMinHeight, contentHeight);
+  }, defaultMinHeight);
+}
+
+function estimateRowsHeightMm(rowHeightsMm: number[], start = 0, end = rowHeightsMm.length) {
+  return rowHeightsMm.slice(start, end).reduce((sum, height) => sum + height, 0);
+}
+
+function getAvailableBodyHeightMm(
+  metrics: ReportLayoutMetrics,
+  tableStartY: number,
+  headerHeightMm: number,
+  reserveSignatureMm: number,
+) {
+  return Math.max(0, metrics.pageHeightMm
+    - metrics.marginBottomMm
+    - metrics.footerHeightMm
+    - tableStartY
+    - headerHeightMm
+    - 2
+    - reserveSignatureMm);
+}
+
+function findRowsEndForAvailableHeight(rowHeightsMm: number[], start: number, availableHeightMm: number) {
+  let end = start;
+  let usedHeight = 0;
+
+  while (end < rowHeightsMm.length) {
+    const nextHeight = rowHeightsMm[end] ?? 0;
+    if (end > start && usedHeight + nextHeight > availableHeightMm) break;
+    usedHeight += nextHeight;
+    end += 1;
+    if (usedHeight > availableHeightMm) break;
+  }
+
+  return Math.max(start + 1, end);
 }
 
 function estimateSignatureBlockMetrics(signature: SignatureData | null | undefined): SignatureBlockMetrics | null {
@@ -767,8 +873,8 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
 
   if (config.paperSize === "full-page") {
     const headerHeight = getHeaderHeightMm(documentStyle, config.headerGroups.length);
-    const bodyHeight = getPaginationBodyHeightMm(documentStyle);
-    const estimatedTableHeightMm = headerHeight + config.data.length * bodyHeight;
+    const rowHeightsMm = config.data.map((row) => estimateBodyRowHeightMm(row, config.columns, allWidths, documentStyle));
+    const estimatedTableHeightMm = headerHeight + estimateRowsHeightMm(rowHeightsMm);
     const estimatedTableEndY = metrics.firstPageTableStartY + estimatedTableHeightMm;
     const resolvedFullPagePaper = resolveReportPaperSize("full-page", {
       orientation: "landscape",
@@ -861,15 +967,12 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
 
   segments.forEach((segment, segmentIndex) => {
     const firstStartY = pages.length === 0 ? metrics.firstPageTableStartY : metrics.nextPageTableStartY;
-    const firstCapacityWithSignature = getCapacity(metrics, firstStartY, segment.headerGroups.length, documentStyle, segmentIndex === segments.length - 1 ? signatureReserve : 0);
-    const firstCapacity = getCapacity(metrics, firstStartY, segment.headerGroups.length, documentStyle, 0);
-    const nextCapacity = getCapacity(metrics, metrics.nextPageTableStartY, segment.headerGroups.length, documentStyle, 0);
-    const lastCapacity = getCapacity(metrics, metrics.nextPageTableStartY, segment.headerGroups.length, documentStyle, segmentIndex === segments.length - 1 ? signatureReserve : 0);
     const headerHeight = getHeaderHeightMm(documentStyle, segment.headerGroups.length);
-    const bodyHeight = getPaginationBodyHeightMm(documentStyle);
     const rows = [...config.data];
+    const rowHeightsMm = rows.map((row) => estimateBodyRowHeightMm(row, segment.columns, segment.columnWidthsMm, documentStyle));
+    let cursor = 0;
 
-    if (rows.length <= firstCapacityWithSignature) {
+    if (rows.length === 0) {
       pages.push({
         index: pages.length,
         number: 0,
@@ -878,47 +981,42 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
         segmentNumber: segmentIndex + 1,
         totalSegments: segments.length,
         tableStartY: firstStartY,
-        rows,
+        rows: [],
         columns: segment.columns,
         headerGroups: segment.headerGroups,
         columnWidthsMm: segment.columnWidthsMm,
         bodyStartIndex: 0,
-        bodyEndIndex: Math.max(0, rows.length - 1),
+        bodyEndIndex: -1,
         isLastPage: false,
         isFirstPageOverall: pages.length === 0,
         isFirstPageInSegment: true,
-        estimatedTableHeightMm: headerHeight + rows.length * bodyHeight,
-        estimatedTableEndY: firstStartY + headerHeight + rows.length * bodyHeight,
+        estimatedTableHeightMm: headerHeight,
+        estimatedTableEndY: firstStartY + headerHeight,
       });
       return;
     }
 
-    let cursor = 0;
-    const firstRows = rows.slice(0, firstCapacity);
-    pages.push({
-      index: pages.length,
-      number: 0,
-      pageType: "table",
-      segmentIndex,
-      segmentNumber: segmentIndex + 1,
-      totalSegments: segments.length,
-      tableStartY: firstStartY,
-      rows: firstRows,
-      columns: segment.columns,
-      headerGroups: segment.headerGroups,
-      columnWidthsMm: segment.columnWidthsMm,
-      bodyStartIndex: 0,
-      bodyEndIndex: Math.max(0, firstRows.length - 1),
-      isLastPage: false,
-      isFirstPageOverall: pages.length === 0,
-      isFirstPageInSegment: true,
-      estimatedTableHeightMm: headerHeight + firstRows.length * bodyHeight,
-      estimatedTableEndY: firstStartY + headerHeight + firstRows.length * bodyHeight,
-    });
-    cursor += firstRows.length;
+    while (cursor < rows.length) {
+      const tableStartY = cursor === 0 ? firstStartY : metrics.nextPageTableStartY;
+      const isLastSegment = segmentIndex === segments.length - 1;
+      const remainingRowsHeightMm = estimateRowsHeightMm(rowHeightsMm, cursor);
+      const availableWithSignatureMm = getAvailableBodyHeightMm(
+        metrics,
+        tableStartY,
+        headerHeight,
+        isLastSegment ? signatureReserve : 0,
+      );
+      const allRemainingRowsFitWithSignature = remainingRowsHeightMm <= availableWithSignatureMm;
+      const end = allRemainingRowsFitWithSignature
+        ? rows.length
+        : findRowsEndForAvailableHeight(
+            rowHeightsMm,
+            cursor,
+            getAvailableBodyHeightMm(metrics, tableStartY, headerHeight, 0),
+          );
+      const pageRows = rows.slice(cursor, end);
+      const pageRowsHeightMm = estimateRowsHeightMm(rowHeightsMm, cursor, end);
 
-    while (rows.length - cursor > lastCapacity) {
-      const pageRows = rows.slice(cursor, cursor + nextCapacity);
       pages.push({
         index: pages.length,
         number: 0,
@@ -926,44 +1024,21 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
         segmentIndex,
         segmentNumber: segmentIndex + 1,
         totalSegments: segments.length,
-        tableStartY: metrics.nextPageTableStartY,
+        tableStartY,
         rows: pageRows,
         columns: segment.columns,
         headerGroups: segment.headerGroups,
         columnWidthsMm: segment.columnWidthsMm,
         bodyStartIndex: cursor,
-        bodyEndIndex: cursor + pageRows.length - 1,
+        bodyEndIndex: Math.max(cursor, end - 1),
         isLastPage: false,
-        isFirstPageOverall: false,
-        isFirstPageInSegment: false,
-        estimatedTableHeightMm: headerHeight + pageRows.length * bodyHeight,
-        estimatedTableEndY: metrics.nextPageTableStartY + headerHeight + pageRows.length * bodyHeight,
+        isFirstPageOverall: pages.length === 0,
+        isFirstPageInSegment: cursor === 0,
+        estimatedTableHeightMm: headerHeight + pageRowsHeightMm,
+        estimatedTableEndY: tableStartY + headerHeight + pageRowsHeightMm,
       });
-      cursor += pageRows.length;
-    }
 
-    const lastRows = rows.slice(cursor);
-    if (lastRows.length > 0) {
-      pages.push({
-        index: pages.length,
-        number: 0,
-        pageType: "table",
-        segmentIndex,
-        segmentNumber: segmentIndex + 1,
-        totalSegments: segments.length,
-        tableStartY: metrics.nextPageTableStartY,
-        rows: lastRows,
-        columns: segment.columns,
-        headerGroups: segment.headerGroups,
-        columnWidthsMm: segment.columnWidthsMm,
-        bodyStartIndex: cursor,
-        bodyEndIndex: cursor + lastRows.length - 1,
-        isLastPage: false,
-        isFirstPageOverall: false,
-        isFirstPageInSegment: false,
-        estimatedTableHeightMm: headerHeight + lastRows.length * bodyHeight,
-        estimatedTableEndY: metrics.nextPageTableStartY + headerHeight + lastRows.length * bodyHeight,
-      });
+      cursor = end;
     }
   });
 
