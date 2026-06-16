@@ -445,6 +445,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");
     expect(spreadsheetSource).toContain("frozenTouchLayerRef");
     expect(spreadsheetSource).toContain("originatedInFrozenLayer");
+    expect(spreadsheetSource).toContain("pointerEvents: 'none'");
     expect(spreadsheetSource).toContain("const tableTouchAction");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar");
     expect(spreadsheetSource).toContain("sipena-grade-toolbar-extra");

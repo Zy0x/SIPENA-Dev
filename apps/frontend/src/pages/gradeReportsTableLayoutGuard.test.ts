@@ -27,6 +27,10 @@ describe("grade reports table layout guard", () => {
     expect(source).toContain("reportFullscreenMode");
     expect(source).toContain("openReportAppFullscreen");
     expect(source).toContain("openReportBrowserFullscreen");
+    expect(source).toContain('aria-label="Tutup fullscreen"');
+    expect(source).toContain("sipena-grade-close-button ml-auto h-10 w-10 shadow-lg sm:hidden");
+    expect(source).toContain("sipena-grade-close-button hidden h-9 sm:flex");
+    expect(source).toContain("sipena-grade-close-icon");
     expect(source).toContain("requestFullscreen");
     expect(source).toContain("exitFullscreen");
     expect(source).toContain("fullscreenchange");
@@ -47,6 +51,8 @@ describe("grade reports table layout guard", () => {
     expect(source).toContain("handleReportFrozenWheel");
     expect(source).toContain("handleReportFrozenTouchStart");
     expect(source).toContain("handleReportFrozenTouchMove");
+    expect(source).toContain('pointerEvents: "none"');
+    expect(source).toContain('touchAction: "pan-x pan-y"');
     expect(source).toContain("isVerticalScrollBoundary");
     expect(source).toContain("scrollPageBy(deltaY)");
     expect(source).toContain("sipena-grade-scroll sipena-scroll-chain-page");

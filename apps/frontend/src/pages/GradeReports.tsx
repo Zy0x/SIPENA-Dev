@@ -50,11 +50,11 @@ import {
   Layers,
   RefreshCw,
   Maximize2,
-  Minimize2,
   ZoomIn,
   ZoomOut,
   RotateCcw,
   ChevronDown,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
@@ -1794,6 +1794,18 @@ export default function GradeReports() {
                 <Badge variant="outline" className="text-[10px] sm:text-xs">{studentGrades.length} siswa</Badge>
                 <Badge variant="secondary" className="text-[10px] sm:text-xs">{allChapters.length} BAB</Badge>
                 <Badge variant="secondary" className="text-[10px] sm:text-xs">{allAssignments.length} tugas</Badge>
+                {isReportFullscreen && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    aria-label="Tutup fullscreen"
+                    className="sipena-grade-close-button ml-auto h-10 w-10 shadow-lg sm:hidden"
+                    onClick={() => void closeReportFullscreen()}
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                )}
               </div>
               <div className="sipena-grade-toolbar-view flex min-w-0 flex-wrap items-center justify-start gap-1.5 sm:justify-end sm:gap-2">
                   <div className="ml-0 flex h-9 items-center overflow-hidden rounded-xl border border-border bg-background sm:ml-1">
@@ -1837,13 +1849,13 @@ export default function GradeReports() {
                   {isReportFullscreen ? (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="destructive"
                       size="sm"
-                      className="h-9 gap-1.5 rounded-xl px-2 text-xs sm:px-3"
+                      className="sipena-grade-close-button hidden h-9 sm:flex"
                       onClick={() => void closeReportFullscreen()}
                     >
-                      <Minimize2 className="h-3.5 w-3.5" />
-                      <span>Tutup</span>
+                      <X className="sipena-grade-close-icon w-4 h-4 mr-1" />
+                      <span className="sipena-grade-close-text">Tutup</span>
                     </Button>
                   ) : (
                     <DropdownMenu>
@@ -2035,7 +2047,8 @@ export default function GradeReports() {
                     top: reportHeaderHeight,
                     bottom: 0,
                     width: reportFrozenWidth,
-                    touchAction: "none",
+                    pointerEvents: "none",
+                    touchAction: "pan-x pan-y",
                   }}
                 >
                   <div

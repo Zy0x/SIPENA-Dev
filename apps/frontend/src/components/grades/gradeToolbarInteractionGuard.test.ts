@@ -63,6 +63,8 @@ describe("grade toolbar interaction guard", () => {
     expect(globalStyles).toContain("touch-action: pan-x pan-y !important");
     expect(spreadsheetSource).toContain("const shouldReleaseToPage = isVerticalWheel &&");
     expect(spreadsheetSource).toContain("const shouldReleaseToPage = isMostlyVertical &&");
+    expect(spreadsheetSource).toContain("pointerEvents: 'none'");
+    expect(spreadsheetSource).toContain("touchAction: 'pan-x pan-y'");
     expect(spreadsheetSource).not.toContain("!isFullscreen && isVerticalWheel");
     expect(spreadsheetSource).not.toContain("!isFullscreen && isMostlyVertical");
   });

@@ -2265,8 +2265,8 @@ export function SpreadsheetTable({
               overflow: 'hidden',
               borderRight: '2px solid hsl(var(--primary))',
               boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
-              pointerEvents: 'auto',
-              touchAction: 'none',
+              pointerEvents: 'none',
+              touchAction: 'pan-x pan-y',
             }}
           >
             <div

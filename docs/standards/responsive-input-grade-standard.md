@@ -61,6 +61,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Di luar fullscreen, scroll halaman hanya boleh mengambil alih setelah tabel benar-benar berada di batas atas/bawah dan interaksi memang dimaksudkan keluar dari tabel.
 - Scroll chaining harus dua arah: saat tabel sudah mentok atas/bawah, gesture berikutnya boleh meneruskan scroll ke body; saat body kembali ke area tabel, gesture di atas tabel harus kembali menguasai scroll tabel.
 - Touch scroll pada kolom frozen seperti `No` dan `Nama Siswa` wajib diarahkan ke scroll container tabel, bukan langsung ke body halaman.
+- Overlay visual kolom frozen tidak boleh menangkap pointer/wheel/touch pada body tabel; biarkan event jatuh ke scroll container asli agar scroll tetap native dan smooth seperti kolom non-freeze.
 - Di fullscreen, body belakang harus terkunci agar scroll tidak berpindah ke halaman di belakang.
 - Back gesture/browser back saat fullscreen aktif harus menutup fullscreen terlebih dahulu, bukan langsung menavigasi ke halaman sebelumnya.
 - `overscroll-behavior` wajib digunakan untuk mencegah scroll chaining liar pada touch device.
