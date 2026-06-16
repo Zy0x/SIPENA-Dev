@@ -34,6 +34,9 @@ describe("class management UX guard", () => {
     const cardSource = readSource("apps/frontend/src/components/classes/ClassCard.tsx");
 
     expect(cardSource).toContain('data-tour="class-card-menu"');
+    expect(cardSource).toContain("sm:h-20 sm:w-20");
+    expect(cardSource).toContain("text-2xl font-bold");
+    expect(cardSource).toContain("line-clamp-2");
     expect(cardSource).toContain("rounded-full border border-border/70");
     expect(cardSource).toContain("Edit Kelas");
     expect(cardSource).toContain("Duplikasi");
@@ -49,6 +52,9 @@ describe("class management UX guard", () => {
     expect(detailSource).toContain('data-tour="class-detail-summary"');
     expect(detailSource).toContain("Deskripsi Kelas");
     expect(detailSource).toContain("Belum ada deskripsi kelas.");
+    expect(detailSource).toContain("isDescriptionExpanded");
+    expect(detailSource).toContain("line-clamp-3");
+    expect(detailSource).toContain("Lihat selengkapnya...");
     expect(detailSource).toContain("onOpenAutoFocus");
     expect(detailSource).toContain("event.preventDefault()");
     expect(detailSource).toContain("titleRef.current?.focus()");
@@ -56,11 +62,17 @@ describe("class management UX guard", () => {
 
   it("documents the main class management actions in product tour", () => {
     const classesSource = readSource("apps/frontend/src/pages/Classes.tsx");
+    const tourSource = readSource("apps/frontend/src/components/ui/product-tour.tsx");
 
     expect(classesSource).toContain("class-import-menu");
     expect(classesSource).toContain("class-kkm-alert");
     expect(classesSource).toContain("class-card-actions");
     expect(classesSource).toContain("class-card-menu");
     expect(classesSource).toContain("Menu Lanjutan");
+    expect(classesSource).toContain("tourDummyClass");
+    expect(classesSource).toContain("Contoh Kelas VIIA");
+    expect(classesSource).toContain("onBeforeStart={prepareClassesTour}");
+    expect(classesSource).toContain("onComplete={cleanupClassesTour}");
+    expect(tourSource).toContain("onBeforeStart?: () => void | Promise<void>");
   });
 });

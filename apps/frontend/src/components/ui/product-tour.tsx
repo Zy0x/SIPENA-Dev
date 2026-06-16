@@ -383,10 +383,27 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
 }
 
 // Tour button component - triggers tour without page refresh
-export function TourButton({ tourKey, className }: { tourKey: string; className?: string }) {
-  const startTour = () => {
-    localStorage.removeItem(`tour_completed_${tourKey}`);
-    triggerTour(tourKey);
+export function TourButton({
+  tourKey,
+  className,
+  onBeforeStart,
+}: {
+  tourKey: string;
+  className?: string;
+  onBeforeStart?: () => void | Promise<void>;
+}) {
+  const [isStarting, setIsStarting] = useState(false);
+
+  const startTour = async () => {
+    if (isStarting) return;
+    setIsStarting(true);
+    try {
+      await onBeforeStart?.();
+      localStorage.removeItem(`tour_completed_${tourKey}`);
+      triggerTour(tourKey);
+    } finally {
+      setIsStarting(false);
+    }
   };
 
   return (
@@ -394,6 +411,7 @@ export function TourButton({ tourKey, className }: { tourKey: string; className?
       variant="outline"
       size="sm"
       onClick={startTour}
+      disabled={isStarting}
       className={cn("gap-2 border-primary/30 hover:bg-primary/5", className)}
       title="Lihat panduan"
     >

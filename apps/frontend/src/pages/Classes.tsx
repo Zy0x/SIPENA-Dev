@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useClasses } from "@/hooks/useClasses";
+import type { Class } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import AddClassDialog from "@/components/classes/AddClassDialog";
 import ClassCard from "@/components/classes/ClassCard";
@@ -75,6 +76,7 @@ export default function Classes() {
   const { classes, isLoading } = useClasses();
   const { allSubjects, isLoading: subjectsLoading } = useSubjects();
   const [searchQuery, setSearchQuery] = useState("");
+  const [tourDummyClass, setTourDummyClass] = useState<Class | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [showOCRImport, setShowOCRImport] = useState(false);
   const [showClassKkmGuide, setShowClassKkmGuide] = useState(false);
@@ -86,19 +88,24 @@ export default function Classes() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { success: showSuccess, error: showError } = useEnhancedToast();
 
+  const displayClasses = useMemo(() => {
+    if (classes.length > 0 || !tourDummyClass) return classes;
+    return [tourDummyClass];
+  }, [classes, tourDummyClass]);
+
   const filteredClasses = useMemo(() => {
-    if (!searchQuery.trim()) return classes;
+    if (!searchQuery.trim()) return displayClasses;
     const query = searchQuery.toLowerCase();
-    return classes.filter(
+    return displayClasses.filter(
       (cls) =>
         cls.name.toLowerCase().includes(query) ||
         cls.description?.toLowerCase().includes(query)
     );
-  }, [classes, searchQuery]);
+  }, [displayClasses, searchQuery]);
 
   const classesWithoutKkm = useMemo(() => (
-    classes.filter((cls) => cls.class_kkm === null)
-  ), [classes]);
+    displayClasses.filter((cls) => cls.class_kkm === null)
+  ), [displayClasses]);
 
   const subjectCountByClassId = useMemo(() => {
     const counts = new Map<string, number>();
@@ -125,6 +132,29 @@ export default function Classes() {
       setSelectedClassForImport(classData);
       setImportDialogOpen(true);
     }
+  };
+
+  const prepareClassesTour = () => {
+    if (classes.length > 0 || tourDummyClass) return;
+
+    const now = new Date().toISOString();
+    setSearchQuery("");
+    setTourDummyClass({
+      id: "tour-dummy-class",
+      user_id: "tour-preview",
+      academic_year_id: null,
+      semester_id: null,
+      name: "Contoh Kelas VIIA",
+      description: "Kelas contoh untuk panduan. Gunakan kartu ini untuk melihat posisi tombol Detail, Siswa, Mapel, Nilai, dan menu lanjutan.",
+      class_kkm: 75,
+      created_at: now,
+      updated_at: now,
+      student_count: 24,
+    });
+  };
+
+  const cleanupClassesTour = () => {
+    setTourDummyClass(null);
   };
 
   return (
@@ -156,7 +186,7 @@ export default function Classes() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => {
-                  if (classes.length > 0) {
+                  if (displayClasses.length > 0 && classes.length > 0) {
                     handleOpenImport({ id: classes[0].id, name: classes[0].name });
                   }
                 }} className="gap-2 min-h-[44px]">
@@ -169,7 +199,7 @@ export default function Classes() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <TourButton tourKey="classes-tour" />
+            <TourButton tourKey="classes-tour" onBeforeStart={prepareClassesTour} />
             <div data-tour="add-class-btn">
               <AddClassDialog />
             </div>
@@ -204,7 +234,7 @@ export default function Classes() {
         )}
 
         {/* Empty State */}
-        {!isLoading && classes.length === 0 && (
+        {!isLoading && displayClasses.length === 0 && (
           <div className="rounded-2xl bg-card border border-border/60 overflow-hidden">
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-16 h-16 rounded-[20px] bg-primary/10 flex items-center justify-center mb-4">
@@ -229,7 +259,7 @@ export default function Classes() {
         )}
 
         {/* Info hint */}
-        {!isLoading && classes.length > 0 && (
+        {!isLoading && displayClasses.length > 0 && (
           <div className="flex items-center gap-2 px-1 text-[10px] sm:text-xs text-muted-foreground">
             <Users className="w-3 h-3 flex-shrink-0" />
             <span>Ketuk kartu kelas untuk melihat dan mengelola siswa di dalamnya.</span>
@@ -272,7 +302,7 @@ export default function Classes() {
         )}
 
         {/* No Search Results */}
-        {!isLoading && classes.length > 0 && filteredClasses.length === 0 && (
+        {!isLoading && displayClasses.length > 0 && filteredClasses.length === 0 && (
           <div className="rounded-2xl bg-card border border-border/60 overflow-hidden">
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <Search className="w-10 h-10 text-muted-foreground mb-3" />
@@ -343,7 +373,7 @@ export default function Classes() {
       />
 
       {/* Product Tour */}
-      <ProductTour steps={classesTourSteps} tourKey="classes-tour" />
+      <ProductTour steps={classesTourSteps} tourKey="classes-tour" onComplete={cleanupClassesTour} />
       <ClassKkmSetupDialog
         classes={classesWithoutKkm}
         open={showClassKkmGuide && classesWithoutKkm.length > 0}

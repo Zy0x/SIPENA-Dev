@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -50,8 +50,16 @@ export default function ClassDetailDialog({
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const classDescription = classData.description?.trim() || "Belum ada deskripsi kelas.";
+  const shouldCollapseDescription = classDescription.length > 180;
+
+  useEffect(() => {
+    if (open) {
+      setIsDescriptionExpanded(false);
+    }
+  }, [classData.id, open]);
 
   const filteredAndSortedStudents = useMemo(() => {
     let result = [...students];
@@ -151,9 +159,20 @@ export default function ClassDetailDialog({
                   <NotebookText className="h-3.5 w-3.5" />
                   Deskripsi Kelas
                 </div>
-                <p className="break-words text-sm leading-6 text-foreground">
+                <p className={`break-words text-sm leading-6 text-foreground ${shouldCollapseDescription && !isDescriptionExpanded ? "line-clamp-3" : ""}`}>
                   {classDescription}
                 </p>
+                {shouldCollapseDescription && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="mt-1 h-auto px-0 py-0 text-xs font-semibold"
+                    onClick={() => setIsDescriptionExpanded((value) => !value)}
+                  >
+                    {isDescriptionExpanded ? "Tampilkan lebih sedikit" : "Lihat selengkapnya..."}
+                  </Button>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-2 sm:min-w-44 sm:grid-cols-1">
                 <div className="rounded-xl border border-border/70 bg-background px-3 py-2">

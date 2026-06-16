@@ -80,41 +80,16 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
   return (
     <>
       <Card className="group overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
-        <CardContent className="flex h-full flex-col gap-4 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/10">
-                <School className="w-6 h-6 text-primary" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="truncate text-lg font-semibold leading-7 text-foreground">
-                  {classData.name}
-                </h3>
-                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                  <Users className="h-4 w-4 shrink-0" />
-                  <span className="text-sm">
-                    {classData.student_count || 0} siswa
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                  {classData.class_kkm !== null ? (
-                    <>
-                      <Target className="h-4 w-4 shrink-0" />
-                      <span className="text-sm">KKM Kelas: {classData.class_kkm}</span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="h-4 w-4 shrink-0 text-grade-warning" />
-                      <span className="text-sm text-grade-warning">KKM kelas belum diisi</span>
-                    </>
-                  )}
-                </div>
-                {classData.description && (
-                  <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted-foreground">
-                    {classData.description}
-                  </p>
-                )}
-              </div>
+        <CardContent className="flex h-full flex-col gap-4 p-4 sm:p-5">
+          <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-primary/10 ring-1 ring-primary/10 sm:h-20 sm:w-20">
+              <School className="h-8 w-8 text-primary sm:h-10 sm:w-10" />
+            </div>
+
+            <div className="flex min-h-16 min-w-0 items-center sm:min-h-20">
+              <h3 className="truncate text-2xl font-bold leading-tight text-foreground sm:text-3xl">
+                {classData.name}
+              </h3>
             </div>
 
             <DropdownMenu>
@@ -148,6 +123,33 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-foreground">
+              <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="text-sm font-semibold sm:text-base">
+                {classData.student_count || 0} siswa
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-foreground">
+              {classData.class_kkm !== null ? (
+                <>
+                  <Target className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-sm font-semibold sm:text-base">KKM Kelas: {classData.class_kkm}</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-4 w-4 shrink-0 text-grade-warning" />
+                  <span className="text-sm font-semibold text-grade-warning sm:text-base">KKM kelas belum diisi</span>
+                </>
+              )}
+            </div>
+            {classData.description && (
+              <p className="line-clamp-2 break-words text-sm font-medium leading-6 text-muted-foreground sm:text-base">
+                {classData.description}
+              </p>
+            )}
           </div>
 
           <div className="mt-auto grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2" data-tour="class-card-actions">
