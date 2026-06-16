@@ -28,6 +28,8 @@ describe("global search layout guard", () => {
     expect(source).toContain("Ctrl/Cmd K");
     expect(source).toContain("Up/Down");
     expect(source).toContain("[&>button[aria-label='Tutup_dialog']]:right-3");
+    expect(source).toContain("[&>button[aria-label='Tutup_dialog']]:h-8");
+    expect(source).not.toContain("[&>button[aria-label='Tutup_dialog']]:h-10");
     expect(source).not.toContain("max-h-[min(58dvh,430px)]");
   });
 });

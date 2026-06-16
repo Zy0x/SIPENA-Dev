@@ -4431,8 +4431,8 @@
     }
 
     .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
-      width: 2.5rem;
-      min-width: 2.5rem;
+      width: 2.25rem;
+      min-width: 2.25rem;
       padding-inline: 0;
       justify-content: center;
     }

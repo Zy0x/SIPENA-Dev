@@ -137,13 +137,13 @@ export default function ClassDetailDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="flex h-[min(calc(100dvh-1rem),44rem)] w-[calc(100vw-1rem)] max-w-3xl max-h-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:h-[min(calc(100dvh-3rem),46rem)] sm:w-[calc(100vw-3rem)]"
+          className="flex h-[min(calc(100dvh-0.75rem),44.5rem)] w-[calc(100vw-0.75rem)] max-w-4xl max-h-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:h-[min(calc(100dvh-2rem),47rem)] sm:w-[calc(100vw-2rem)]"
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             requestAnimationFrame(() => titleRef.current?.focus());
           }}
         >
-          <DialogHeader className="shrink-0 border-b border-border px-4 pb-2.5 pr-16 pt-3.5 sm:px-5 sm:pr-16">
+          <DialogHeader className="shrink-0 border-b border-border px-3.5 pb-2 pr-12 pt-3 sm:px-4 sm:pr-14">
             <DialogTitle ref={titleRef} tabIndex={-1} className="text-sm outline-none sm:text-base">
               Detail Kelas - {classData.name}
             </DialogTitle>
@@ -152,7 +152,7 @@ export default function ClassDetailDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <section className="shrink-0 border-b border-border bg-muted/20 px-4 py-2.5 sm:px-5" data-tour="class-detail-summary">
+          <section className="shrink-0 border-b border-border bg-muted/20 px-3.5 py-2.5 sm:px-4" data-tour="class-detail-summary">
             <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div className="min-w-0">
                 <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -197,7 +197,7 @@ export default function ClassDetailDialog({
             </div>
           </section>
 
-          <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-2.5 sm:flex-row sm:px-5" data-tour="class-detail-tools">
+          <div className="flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5 sm:flex-row sm:px-4" data-tour="class-detail-tools">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -229,7 +229,7 @@ export default function ClassDetailDialog({
           </div>
 
           <div
-            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-auto overscroll-auto px-4 pb-4 scrollbar-thin sm:px-5"
+            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-auto overscroll-auto px-3.5 pb-3.5 scrollbar-thin sm:px-4"
             aria-label={`Daftar siswa kelas ${classData.name}`}
           >
             {isLoading ? (
@@ -254,19 +254,19 @@ export default function ClassDetailDialog({
                       No
                     </th>
                     <th
-                      className="h-11 cursor-pointer px-2 text-left align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
+                      className="h-11 cursor-pointer px-2 text-center align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
                       onClick={() => handleSort('name')}
                     >
-                      <div className="flex items-center text-xs sm:text-sm">
+                      <div className="flex items-center justify-center text-xs sm:text-sm">
                         Nama
                         <SortIcon field="name" />
                       </div>
                     </th>
                     <th
-                      className="h-11 cursor-pointer px-2 text-left align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
+                      className="h-11 cursor-pointer px-2 text-center align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
                       onClick={() => handleSort('nisn')}
                     >
-                      <div className="flex items-center text-xs sm:text-sm">
+                      <div className="flex items-center justify-center text-xs sm:text-sm">
                         NISN
                         <SortIcon field="nisn" />
                       </div>

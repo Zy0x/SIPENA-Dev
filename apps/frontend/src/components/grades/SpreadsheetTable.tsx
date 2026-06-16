@@ -1954,10 +1954,10 @@ export function SpreadsheetTable({
               size="icon"
               onClick={onClose}
               aria-label="Tutup fullscreen"
-              className="sipena-grade-close-button ml-auto h-10 w-10 shadow-lg sm:hidden"
+              className="sipena-grade-close-button ml-auto h-9 w-9 shadow-md sm:hidden"
               style={{ touchAction: 'manipulation' }}
             >
-              <X className="w-5 h-5" />
+              <X className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -2066,8 +2066,8 @@ export function SpreadsheetTable({
 
           {/* Desktop close button for fullscreen */}
           {isFullscreen && (
-            <Button variant="destructive" size="sm" onClick={onClose} className="sipena-grade-close-button hidden h-9 sm:flex">
-              <X className="sipena-grade-close-icon w-4 h-4 mr-1" />
+            <Button variant="destructive" size="sm" onClick={onClose} className="sipena-grade-close-button hidden h-8 sm:flex">
+              <X className="sipena-grade-close-icon h-3.5 w-3.5 mr-1" />
               <span className="sipena-grade-close-text">Tutup</span>
             </Button>
           )}

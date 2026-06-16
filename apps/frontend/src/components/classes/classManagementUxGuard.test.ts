@@ -20,8 +20,12 @@ describe("class management UX guard", () => {
 
     expect(limitsSource).toContain("CLASS_NAME_MAX_LENGTH = 50");
     expect(limitsSource).toContain("CLASS_DESCRIPTION_MAX_LENGTH = 500");
+    expect(addSource).toContain("onOpenAutoFocus");
+    expect(addSource).toContain("event.preventDefault()");
+    expect(addSource).toContain("titleRef.current?.focus()");
     expect(addSource).toContain("maxLength={CLASS_NAME_MAX_LENGTH}");
     expect(addSource).toContain("maxLength={CLASS_DESCRIPTION_MAX_LENGTH}");
+    expect(addSource).not.toContain("autoFocus");
     expect(addSource).toContain("{name.length}/{CLASS_NAME_MAX_LENGTH}");
     expect(addSource).toContain("{description.length}/{CLASS_DESCRIPTION_MAX_LENGTH}");
     expect(editSource).toContain("maxLength={CLASS_NAME_MAX_LENGTH}");
@@ -36,6 +40,7 @@ describe("class management UX guard", () => {
     expect(cardSource).toContain('data-tour="class-card-menu"');
     expect(cardSource).toContain("sm:h-11 sm:w-11");
     expect(cardSource).toContain("text-base font-bold");
+    expect(cardSource).toContain("space-y-1 px-1.5 sm:px-2");
     expect(cardSource).toContain("line-clamp-2");
     expect(cardSource).toContain("text-justify");
     expect(cardSource).toContain("rounded-full border border-border/70");
@@ -61,6 +66,9 @@ describe("class management UX guard", () => {
     expect(detailSource).toContain("line-clamp-2");
     expect(detailSource).toContain("text-justify");
     expect(detailSource).toContain("py-2.5");
+    expect(detailSource).toContain("max-w-4xl");
+    expect(detailSource).toContain("w-[calc(100vw-0.75rem)]");
+    expect(detailSource).toContain("justify-center text-xs sm:text-sm");
     expect(detailSource).toContain("overflow-auto");
     expect(detailSource).toContain('min-w-[40rem]');
     expect(detailSource).toContain('w-[17rem]');

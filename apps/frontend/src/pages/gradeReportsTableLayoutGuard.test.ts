@@ -28,8 +28,8 @@ describe("grade reports table layout guard", () => {
     expect(source).toContain("openReportAppFullscreen");
     expect(source).toContain("openReportBrowserFullscreen");
     expect(source).toContain('aria-label="Tutup fullscreen"');
-    expect(source).toContain("sipena-grade-close-button ml-auto h-10 w-10 shadow-lg sm:hidden");
-    expect(source).toContain("sipena-grade-close-button hidden h-9 sm:flex");
+    expect(source).toContain("sipena-grade-close-button ml-auto h-9 w-9 shadow-md sm:hidden");
+    expect(source).toContain("sipena-grade-close-button hidden h-8 sm:flex");
     expect(source).toContain("sipena-grade-close-icon");
     expect(source).toContain("requestFullscreen");
     expect(source).toContain("exitFullscreen");

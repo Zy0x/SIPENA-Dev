@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +25,7 @@ export default function AddClassDialog({ trigger }: AddClassDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [classKkm, setClassKkm] = useState("75");
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const { createClass } = useClasses();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,10 +58,18 @@ export default function AddClassDialog({ trigger }: AddClassDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          requestAnimationFrame(() => titleRef.current?.focus());
+        }}
+      >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Tambah Kelas Baru</DialogTitle>
+            <DialogTitle ref={titleRef} tabIndex={-1} className="outline-none">
+              Tambah Kelas Baru
+            </DialogTitle>
             <DialogDescription>
               Isi identitas kelas. KKM kelas menjadi acuan awal untuk ranking dan mapel baru.
             </DialogDescription>
@@ -79,7 +88,6 @@ export default function AddClassDialog({ trigger }: AddClassDialogProps) {
                 value={name}
                 onChange={(e) => setName(limitClassName(e.target.value))}
                 maxLength={CLASS_NAME_MAX_LENGTH}
-                autoFocus
               />
             </div>
             <div className="grid gap-2">

@@ -125,7 +125,7 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
             </DropdownMenu>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 px-1.5 sm:px-2">
             <div className="flex items-center gap-2 text-foreground">
               <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <span className="text-xs font-semibold sm:text-sm">

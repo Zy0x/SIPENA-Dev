@@ -159,7 +159,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       <DialogContent
         className={cn(
           "sipena-global-search-dialog flex h-[min(calc(100dvh-1rem),720px)] w-[min(calc(100vw-1rem),42rem)] max-w-none max-h-none flex-col gap-0 overflow-hidden rounded-[1.5rem] border-border/80 bg-background p-0 shadow-2xl sm:h-[min(calc(100dvh-3rem),720px)] sm:w-[min(calc(100vw-3rem),42rem)]",
-          "[&>button[aria-label='Tutup_dialog']]:right-3 [&>button[aria-label='Tutup_dialog']]:top-3 [&>button[aria-label='Tutup_dialog']]:h-10 [&>button[aria-label='Tutup_dialog']]:w-10",
+          "[&>button[aria-label='Tutup_dialog']]:right-3 [&>button[aria-label='Tutup_dialog']]:top-3 [&>button[aria-label='Tutup_dialog']]:h-8 [&>button[aria-label='Tutup_dialog']]:w-8",
           "[&>button[aria-label='Tutup_dialog']]:!border-border [&>button[aria-label='Tutup_dialog']]:!bg-background [&>button[aria-label='Tutup_dialog']]:!text-muted-foreground [&>button[aria-label='Tutup_dialog']]:shadow-sm",
           "[&>button[aria-label='Tutup_dialog']]:hover:!bg-muted [&>button[aria-label='Tutup_dialog']]:hover:!text-foreground",
         )}
