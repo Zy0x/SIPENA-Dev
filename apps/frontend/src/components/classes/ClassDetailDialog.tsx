@@ -229,7 +229,7 @@ export default function ClassDetailDialog({
           </div>
 
           <div
-            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-y-auto overscroll-auto px-4 pb-4 scrollbar-thin sm:px-5"
+            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-auto overscroll-auto px-4 pb-4 scrollbar-thin sm:px-5"
             aria-label={`Daftar siswa kelas ${classData.name}`}
           >
             {isLoading ? (
@@ -241,11 +241,11 @@ export default function ClassDetailDialog({
                 {students.length === 0 ? "Belum ada siswa" : "Tidak ditemukan"}
               </div>
             ) : (
-              <table className="w-full table-fixed caption-bottom text-sm">
+              <table className="min-w-[40rem] w-full table-fixed caption-bottom text-sm">
                 <colgroup>
                   <col className="w-12" />
-                  <col />
-                  <col className="w-24 sm:w-32" />
+                  <col className="w-[17rem]" />
+                  <col className="w-32" />
                   <col className="w-28" />
                 </colgroup>
                 <thead className="sticky top-0 z-10 bg-background shadow-[0_1px_0_hsl(var(--border))]">
@@ -280,7 +280,7 @@ export default function ClassDetailDialog({
                   {filteredAndSortedStudents.map((student, index) => (
                     <tr key={student.id} className="border-b transition-colors hover:bg-muted/50">
                       <td className="px-2 py-3 text-center align-middle sm:px-4">{index + 1}</td>
-                      <td className="min-w-0 px-2 py-3 align-middle font-medium sm:px-4">
+                      <td className="min-w-0 px-2 py-3 pr-3 align-middle font-medium sm:px-4 sm:pr-5">
                         <div className="flex min-w-0 items-center gap-2">
                           {student.is_bookmarked && (
                             <Star className="h-4 w-4 shrink-0 fill-grade-warning text-grade-warning" />
@@ -288,8 +288,8 @@ export default function ClassDetailDialog({
                           <span className="break-words leading-snug">{student.name}</span>
                         </div>
                       </td>
-                      <td className="px-2 py-3 align-middle text-xs text-muted-foreground sm:px-4">
-                        <span className="block break-words leading-snug">{student.nisn}</span>
+                      <td className="px-2 py-3 align-middle text-center text-xs text-muted-foreground sm:px-4">
+                        <span className="block break-all leading-snug">{student.nisn}</span>
                       </td>
                       <td className="px-2 py-3 align-middle sm:px-4">
                         <div className="flex justify-center gap-1">
