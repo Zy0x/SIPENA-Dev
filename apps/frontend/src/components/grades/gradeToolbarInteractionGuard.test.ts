@@ -25,9 +25,20 @@ describe("grade toolbar interaction guard", () => {
 
   it("keeps dropdown guard touch-only so mouse and keyboard use Radix normally", () => {
     const spreadsheetSource = readSource("apps/frontend/src/components/grades/SpreadsheetTable.tsx");
+    const gradesPageSource = readSource("apps/frontend/src/pages/Grades.tsx");
+    const tapGuardSource = readSource("apps/frontend/src/hooks/useCoarsePointerTapGuard.ts");
 
-    expect(spreadsheetSource).toContain('e.pointerType !== "touch" && e.pointerType !== "pen"');
-    expect(spreadsheetSource).toContain("suppressCoarseDropdownClickUntilRef");
+    expect(tapGuardSource).toContain('event.pointerType === "touch" || event.pointerType === "pen"');
+    expect(tapGuardSource).toContain("markMovedIfNeeded(event, state)");
+    expect(tapGuardSource).toContain("state.cancelled");
+    expect(tapGuardSource).toContain("onPointerMove");
+    expect(tapGuardSource).toContain("onPointerCancel");
+    expect(spreadsheetSource).toContain("useCoarsePointerTapGuard<HTMLButtonElement>");
+    expect(spreadsheetSource).toContain("protectionDropdownTapGuard.onPointerMove");
+    expect(spreadsheetSource).toContain("fullscreenDropdownTapGuard.onPointerCancel");
+    expect(gradesPageSource).toContain("showGradeManageMenu");
+    expect(gradesPageSource).toContain("gradeManageDropdownTapGuard.onPointerMove");
+    expect(gradesPageSource).toContain("gradeManageDropdownTapGuard.onPointerCancel");
     expect(spreadsheetSource).not.toContain("pointerActive || isToolbarActivationSuppressed()");
   });
 

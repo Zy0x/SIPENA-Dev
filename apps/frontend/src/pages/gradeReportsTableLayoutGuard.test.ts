@@ -17,7 +17,12 @@ describe("grade reports table layout guard", () => {
     const source = readSource("apps/frontend/src/pages/GradeReports.tsx");
 
     expect(source).toContain("sipena-report-grade-table-shell sipena-scroll-chain-page");
-    expect(source).toContain("relative h-[70dvh] min-h-[420px] overflow-hidden bg-background");
+    expect(source).toContain("ReportFullscreenPortal");
+    expect(source).toContain("createPortal(children, document.body)");
+    expect(source).toContain("z-[12000] flex flex-col rounded-none");
+    expect(source).toContain("relative overflow-hidden bg-background");
+    expect(source).toContain('isReportFullscreen ? "h-full min-h-0" : "h-[70dvh] min-h-[420px]"');
+    expect(source).not.toContain("calc(${reportFullscreenViewportHeight} - 5.25rem)");
     expect(source).toContain("isReportFullscreen");
     expect(source).toContain("reportFullscreenMode");
     expect(source).toContain("openReportAppFullscreen");

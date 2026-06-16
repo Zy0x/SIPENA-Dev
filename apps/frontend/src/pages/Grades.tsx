@@ -38,6 +38,7 @@ import type { Subject } from "@/hooks/useSubjects";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEnhancedToast } from "@/contexts/ToastContext";
+import { useCoarsePointerTapGuard } from "@/hooks/useCoarsePointerTapGuard";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useGradeTableColorScheme } from "@/hooks/useGradeTableColorScheme";
 import { fuzzySearchStudents } from "@/lib/fuzzySearch";
@@ -340,6 +341,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [showGradeBackupRestore, setShowGradeBackupRestore] = useState(false);
   const [showGradeBackupOptions, setShowGradeBackupOptions] = useState(false);
   const [protectGradeBackupMetadata, setProtectGradeBackupMetadata] = useState(false);
+  const [showGradeManageMenu, setShowGradeManageMenu] = useState(false);
   const [showReportRoundingSettings, setShowReportRoundingSettings] = useState(false);
   const [isDownloadingOfficialTemplate, setIsDownloadingOfficialTemplate] = useState(false);
   const [isExportingCurrentGrades, setIsExportingCurrentGrades] = useState(false);
@@ -1301,11 +1303,26 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     />
   );
 
+  const gradeManageDropdownTapGuard = useCoarsePointerTapGuard<HTMLButtonElement>({
+    onValidTap: () => setShowGradeManageMenu((current) => !current),
+  });
+
   const ownerToolbarActions = classId && subjectId ? (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={showGradeManageMenu} onOpenChange={setShowGradeManageMenu}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 min-w-[44px] select-none gap-1.5 text-xs" aria-label="Kelola file nilai">
+          <Button
+            variant="outline"
+            size="sm"
+            className="sipena-grade-action-button h-9 min-w-[44px] select-none gap-1.5 text-xs"
+            aria-label="Kelola file nilai"
+            onPointerDown={gradeManageDropdownTapGuard.onPointerDown}
+            onPointerMove={gradeManageDropdownTapGuard.onPointerMove}
+            onPointerCancel={gradeManageDropdownTapGuard.onPointerCancel}
+            onPointerUp={gradeManageDropdownTapGuard.onPointerUp}
+            onClick={gradeManageDropdownTapGuard.onClick}
+            style={{ touchAction: "pan-x pan-y" }}
+          >
             <Upload className="w-3.5 h-3.5" />
             <span className="sipena-grade-action-text hidden sm:inline">Kelola Nilai</span>
             <ChevronDown className="w-3 h-3 opacity-60" />

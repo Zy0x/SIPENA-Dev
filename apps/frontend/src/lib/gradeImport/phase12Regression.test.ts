@@ -432,7 +432,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(spreadsheetSource).toContain("overlayPanRef");
     expect(spreadsheetSource).toContain("toolbarDragRef");
     expect(spreadsheetSource).toContain("handleToolbarPointerDownCapture");
-    expect(spreadsheetSource).toContain("handleGuardedDropdownPointerDown");
+    expect(spreadsheetSource).toContain("useCoarsePointerTapGuard");
+    expect(spreadsheetSource).toContain("protectionDropdownTapGuard.onPointerMove");
+    expect(spreadsheetSource).toContain("fullscreenDropdownTapGuard.onPointerCancel");
     expect(spreadsheetSource).toContain("handleToolbarDropdownOpenChange");
     expect(spreadsheetSource).toContain("handleToolbarClickCapture");
     expect(spreadsheetSource).toContain("onWheel={handleWheel}");
@@ -493,6 +495,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(searchSource).toContain("data-student-search-count");
     expect(searchSource).not.toContain("Sparkles");
     expect(gradesPageSource).toContain("ReportRoundingSettingsDialog");
+    expect(gradesPageSource).toContain("showGradeManageMenu");
+    expect(gradesPageSource).toContain("gradeManageDropdownTapGuard.onPointerMove");
+    expect(gradesPageSource).toContain("gradeManageDropdownTapGuard.onPointerCancel");
     expect(gradesPageSource).toContain("sipena-grade-rounding-badge");
     expect(gradesPageSource).toContain("showReportRoundingSettings");
     expect(gradesPageSource).toContain("toolbarExtra={gradeToolbarActions}");

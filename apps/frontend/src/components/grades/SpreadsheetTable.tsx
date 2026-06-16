@@ -45,6 +45,7 @@ import {
   clearViewportCssVariables,
 } from "@/lib/viewportTelemetry";
 import { isVerticalScrollBoundary, scrollPageBy } from "@/lib/scrollChaining";
+import { useCoarsePointerTapGuard } from "@/hooks/useCoarsePointerTapGuard";
 
 // Types
 interface Chapter {
@@ -273,7 +274,6 @@ export function SpreadsheetTable({
     suppressClickUntil: 0,
     resetTimer: null,
   });
-  const suppressCoarseDropdownClickUntilRef = useRef(0);
   const resizingRef = useRef<{ colIndex: number; startX: number; startWidth: number } | null>(null);
   const overlayPanRef = useRef<{ x: number; y: number; time: number; velocityX: number; velocityY: number } | null>(null);
   const overlayMomentumRef = useRef<number | null>(null);
@@ -1158,37 +1158,21 @@ export function SpreadsheetTable({
     setOpen(nextOpen);
   }, [isToolbarActivationSuppressed]);
 
-  const handleGuardedDropdownPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
-    e.currentTarget.focus({ preventScroll: true });
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
+  const protectionDropdownTapGuard = useCoarsePointerTapGuard<HTMLButtonElement>({
+    moveThresholdX: TOOLBAR_DRAG_THRESHOLD_X,
+    moveThresholdY: TOOLBAR_DRAG_THRESHOLD_Y,
+    suppressMs: TOOLBAR_DRAG_SUPPRESS_MS,
+    isSuppressed: isToolbarActivationSuppressed,
+    onValidTap: () => setShowProtectionMenu((current) => !current),
+  });
 
-  const handleGuardedDropdownClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    if (e.detail === 0) return;
-    if (Date.now() >= suppressCoarseDropdownClickUntilRef.current) return;
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleProtectionDropdownPointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
-    e.preventDefault();
-    e.stopPropagation();
-    suppressCoarseDropdownClickUntilRef.current = Date.now() + TOOLBAR_DRAG_SUPPRESS_MS;
-    if (isToolbarActivationSuppressed()) return;
-    setShowProtectionMenu((current) => !current);
-  }, [isToolbarActivationSuppressed]);
-
-  const handleFullscreenDropdownPointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.pointerType !== "touch" && e.pointerType !== "pen") return;
-    e.preventDefault();
-    e.stopPropagation();
-    suppressCoarseDropdownClickUntilRef.current = Date.now() + TOOLBAR_DRAG_SUPPRESS_MS;
-    if (isToolbarActivationSuppressed()) return;
-    setShowFullscreenMenu((current) => !current);
-  }, [isToolbarActivationSuppressed]);
+  const fullscreenDropdownTapGuard = useCoarsePointerTapGuard<HTMLButtonElement>({
+    moveThresholdX: TOOLBAR_DRAG_THRESHOLD_X,
+    moveThresholdY: TOOLBAR_DRAG_THRESHOLD_Y,
+    suppressMs: TOOLBAR_DRAG_SUPPRESS_MS,
+    isSuppressed: isToolbarActivationSuppressed,
+    onValidTap: () => setShowFullscreenMenu((current) => !current),
+  });
 
   const handleCellTouchEnd = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -1887,10 +1871,12 @@ export function SpreadsheetTable({
                   size="sm"
                   className="h-9 sm:h-10 w-9 sm:w-10 rounded-none border-0 border-l border-border/50 px-0"
                   title="Pilih mode proteksi spreadsheet"
-                  onPointerDown={handleGuardedDropdownPointerDown}
-                  onPointerUp={handleProtectionDropdownPointerUp}
-                  onClick={handleGuardedDropdownClick}
-                  style={{ touchAction: 'pan-x' }}
+                  onPointerDown={protectionDropdownTapGuard.onPointerDown}
+                  onPointerMove={protectionDropdownTapGuard.onPointerMove}
+                  onPointerCancel={protectionDropdownTapGuard.onPointerCancel}
+                  onPointerUp={protectionDropdownTapGuard.onPointerUp}
+                  onClick={protectionDropdownTapGuard.onClick}
+                  style={{ touchAction: 'pan-x pan-y' }}
                 >
                   <ChevronDown className="w-4 h-4" />
                 </Button>
@@ -2035,10 +2021,12 @@ export function SpreadsheetTable({
                     variant="outline"
                     size="sm"
                     className="sipena-grade-fullscreen-trigger h-9 gap-1 px-2.5 sm:px-3"
-                    onPointerDown={handleGuardedDropdownPointerDown}
-                    onPointerUp={handleFullscreenDropdownPointerUp}
-                    onClick={handleGuardedDropdownClick}
-                    style={{ touchAction: 'pan-x' }}
+                    onPointerDown={fullscreenDropdownTapGuard.onPointerDown}
+                    onPointerMove={fullscreenDropdownTapGuard.onPointerMove}
+                    onPointerCancel={fullscreenDropdownTapGuard.onPointerCancel}
+                    onPointerUp={fullscreenDropdownTapGuard.onPointerUp}
+                    onClick={fullscreenDropdownTapGuard.onClick}
+                    style={{ touchAction: 'pan-x pan-y' }}
                   >
                     <Maximize2 className="w-4 h-4" />
                     <span className="sipena-grade-fullscreen-label hidden sm:inline">Fullscreen</span>

@@ -7,7 +7,9 @@ import {
   type TouchEvent as ReactTouchEvent,
   type UIEvent as ReactUIEvent,
   type WheelEvent as ReactWheelEvent,
+  type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -211,6 +213,14 @@ const REPORT_ZOOM_STEP = 5;
 const REPORT_SOLID_HEADER_SURFACE = "bg-background";
 const REPORT_SOLID_FROZEN_SURFACE =
   "bg-background dark:bg-background";
+
+function ReportFullscreenPortal({ enabled, children }: { enabled: boolean; children: ReactNode }) {
+  if (!enabled || typeof document === "undefined") {
+    return <>{children}</>;
+  }
+
+  return createPortal(children, document.body);
+}
 
 function isReportFrozenColumn(column: ReportVisibleColumn) {
   return column.type === "index" || column.type === "name";
@@ -1765,24 +1775,27 @@ export default function GradeReports() {
 
         {/* Report Table with Dynamic Columns */}
         {hasData && (
+          <ReportFullscreenPortal enabled={isReportFullscreen}>
           <Card className={cn(
-            "animate-fade-in-up overflow-hidden",
-            isReportFullscreen && "fixed inset-0 z-[9998] flex flex-col rounded-none border-0 bg-background",
+            "overflow-hidden",
+            !isReportFullscreen && "animate-fade-in-up",
+            isReportFullscreen && "fixed inset-0 z-[12000] flex flex-col rounded-none border-0 bg-background shadow-none",
             reportFullscreenMode === "browser" && "sipena-grade-browser-fullscreen",
           )} style={isReportFullscreen ? { height: reportFullscreenViewportHeight, maxHeight: reportFullscreenViewportHeight } : undefined}>
-            <CardHeader className={cn(
-              "pb-2 sm:pb-3",
-              isReportFullscreen && "sipena-grade-toolbar sipena-grade-toolbar--fullscreen shrink-0 overflow-x-auto border-b bg-background/95 backdrop-blur",
-            )}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <CardTitle className="text-sm sm:text-base truncate">
+            <CardHeader className={isReportFullscreen
+              ? "sipena-grade-toolbar sipena-grade-toolbar--fullscreen shrink-0 overflow-x-auto border-b bg-card p-2 sm:p-3"
+              : "pb-2 sm:pb-3"
+            }>
+              <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
+                <CardTitle className="min-w-0 flex-[1_1_14rem] truncate text-sm sm:text-base">
                   {selectedClass?.name} - {selectedSubject?.name}
                   <span className="font-normal text-muted-foreground ml-2 text-xs sm:text-sm">KKM: {kkm}</span>
                 </CardTitle>
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-[10px] sm:text-xs">{studentGrades.length} siswa</Badge>
-                  <Badge variant="secondary" className="text-[10px] sm:text-xs">{allChapters.length} BAB</Badge>
-                  <Badge variant="secondary" className="text-[10px] sm:text-xs">{allAssignments.length} tugas</Badge>
+                <Badge variant="outline" className="text-[10px] sm:text-xs">{studentGrades.length} siswa</Badge>
+                <Badge variant="secondary" className="text-[10px] sm:text-xs">{allChapters.length} BAB</Badge>
+                <Badge variant="secondary" className="text-[10px] sm:text-xs">{allAssignments.length} tugas</Badge>
+              </div>
+              <div className="sipena-grade-toolbar-view flex min-w-0 flex-wrap items-center justify-start gap-1.5 sm:justify-end sm:gap-2">
                   <div className="ml-0 flex h-9 items-center overflow-hidden rounded-xl border border-border bg-background sm:ml-1">
                     <Button
                       type="button"
@@ -1864,14 +1877,13 @@ export default function GradeReports() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
-                </div>
               </div>
             </CardHeader>
             <CardContent className={cn("p-0", isReportFullscreen && "min-h-0 flex-1")}>
               <div className={cn(
-                "sipena-report-grade-table-shell sipena-scroll-chain-page relative h-[70dvh] min-h-[420px] overflow-hidden bg-background",
-                isReportFullscreen && "h-[calc(100dvh-5.25rem)] min-h-0",
-              )} style={isReportFullscreen ? { height: `calc(${reportFullscreenViewportHeight} - 5.25rem)` } : undefined}>
+                "sipena-report-grade-table-shell sipena-scroll-chain-page relative overflow-hidden bg-background",
+                isReportFullscreen ? "h-full min-h-0" : "h-[70dvh] min-h-[420px]",
+              )}>
                 {reportHasGroupHeader && (
                   <div className="absolute inset-x-0 top-0 z-50 bg-background" style={{ height: reportGroupHeaderHeight }}>
                     {reportGroupLayouts
@@ -2062,6 +2074,7 @@ export default function GradeReports() {
               </div>
             </CardContent>
           </Card>
+          </ReportFullscreenPortal>
         )}
       </div>
 
