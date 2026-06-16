@@ -285,6 +285,7 @@ const EXPERIMENTAL_WINDOW_DEFAULT_RECT = {
 const DESKTOP_STUDIO_PANEL_MIN_WIDTH = 380;
 const DESKTOP_STUDIO_PANEL_MAX_WIDTH = 640;
 const DESKTOP_STUDIO_PREVIEW_MIN_WIDTH = 440;
+const DESKTOP_PREVIEW_DEFAULT_ZOOM = 80;
 const STUDIO_TOP_TRAY_AUTO_COLLAPSE_DELAY_MS = 3000;
 
 type MobileOverlayFrame = typeof MOBILE_OVERLAY_DEFAULT_FRAME;
@@ -2815,7 +2816,7 @@ export function ExportStudioDialog({
     setActiveMobileSection("panel");
     setMobileStep("format");
     setMobileSetupSection("document");
-    setPreviewZoom(100);
+    setPreviewZoom(isCompactLayout ? 100 : DESKTOP_PREVIEW_DEFAULT_ZOOM);
     setLiveEditMode(false);
     setHoverHighlightTarget(null);
     setSelectedHighlightTarget(null);
@@ -2828,7 +2829,7 @@ export function ExportStudioDialog({
       setMobileOverlayZoom(34);
       setMobileOverlayFrame(getDefaultMobileOverlayFrame());
     });
-  }, [getDefaultDesktopPanelWidth, getDefaultMobileOverlayFrame]);
+  }, [getDefaultDesktopPanelWidth, getDefaultMobileOverlayFrame, isCompactLayout]);
   const handleResetLayoutOnly = useCallback(() => {
     resetStudioLayoutState();
     setResetLayoutConfirmOpen(false);
@@ -3086,6 +3087,7 @@ export function ExportStudioDialog({
     const paddedViewportWidth = Math.max(previewViewportWidth - 24, 120);
     return clamp(Math.floor((paddedViewportWidth / previewContentWidth) * 100), 38, 100);
   }, [isCompactLayout, previewContentWidth, previewViewportWidth]);
+  const defaultPreviewZoom = isCompactLayout ? autoPreviewZoom : DESKTOP_PREVIEW_DEFAULT_ZOOM;
   const effectivePreviewZoom = isCompactLayout
     ? Math.min(previewZoom, autoPreviewZoom)
     : previewZoom;
@@ -3745,7 +3747,7 @@ export function ExportStudioDialog({
             <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, previewZoomMax))}>
               <ZoomIn className="h-3.5 w-3.5" />
             </Button>
-            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)}>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(defaultPreviewZoom)}>
               <Maximize2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -4593,7 +4595,7 @@ export function ExportStudioDialog({
                     <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom((prev) => clamp(prev + 10, 25, previewZoomMax))} title="Perbesar zoom live preview 10 persen.">
                       <ZoomIn className="h-3.5 w-3.5" />
                     </Button>
-                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(isCompactLayout ? autoPreviewZoom : 100)} title="Kembalikan zoom preview ke posisi fit atau 100 persen.">
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => setPreviewZoom(defaultPreviewZoom)} title="Kembalikan zoom preview ke posisi fit awal.">
                       <Maximize2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
