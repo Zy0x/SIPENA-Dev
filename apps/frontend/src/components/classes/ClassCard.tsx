@@ -79,19 +79,19 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
 
   return (
     <>
-      <Card className="group hover:shadow-lg transition-all duration-300">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+      <Card className="group overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+        <CardContent className="flex h-full flex-col gap-4 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/10">
                 <School className="w-6 h-6 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground text-lg">
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-lg font-semibold leading-7 text-foreground">
                   {classData.name}
                 </h3>
                 <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                  <Users className="w-4 h-4" />
+                  <Users className="h-4 w-4 shrink-0" />
                   <span className="text-sm">
                     {classData.student_count || 0} siswa
                   </span>
@@ -99,18 +99,18 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
                 <div className="flex items-center gap-2 mt-1 text-muted-foreground">
                   {classData.class_kkm !== null ? (
                     <>
-                      <Target className="w-4 h-4" />
+                      <Target className="h-4 w-4 shrink-0" />
                       <span className="text-sm">KKM Kelas: {classData.class_kkm}</span>
                     </>
                   ) : (
                     <>
-                      <AlertCircle className="w-4 h-4 text-grade-warning" />
+                      <AlertCircle className="h-4 w-4 shrink-0 text-grade-warning" />
                       <span className="text-sm text-grade-warning">KKM kelas belum diisi</span>
                     </>
                   )}
                 </div>
                 {classData.description && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                  <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted-foreground">
                     {classData.description}
                   </p>
                 )}
@@ -122,21 +122,14 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Menu aksi"
+                  className="h-9 w-9 shrink-0 rounded-full border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label={`Menu aksi kelas ${classData.name}`}
+                  data-tour="class-card-menu"
                 >
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-popover">
-                <DropdownMenuItem onClick={() => setShowDetailDialog(true)}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  Lihat Detail
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowAddStudentDialog(true)}>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Tambah Siswa
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Kelas
@@ -157,7 +150,7 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
             </DropdownMenu>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
+          <div className="mt-auto grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2" data-tour="class-card-actions">
             <Button
               variant="outline"
               size="sm"

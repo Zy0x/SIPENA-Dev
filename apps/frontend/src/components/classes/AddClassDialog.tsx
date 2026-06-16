@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Loader2 } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
+import { CLASS_DESCRIPTION_MAX_LENGTH, CLASS_NAME_MAX_LENGTH, limitClassDescription, limitClassName } from "./classFormLimits";
 
 interface AddClassDialogProps {
   trigger?: React.ReactNode;
@@ -30,11 +31,13 @@ export default function AddClassDialog({ trigger }: AddClassDialogProps) {
     e.preventDefault();
     
     const parsedClassKkm = parseInt(classKkm, 10);
-    if (!name.trim() || Number.isNaN(parsedClassKkm) || parsedClassKkm < 0 || parsedClassKkm > 100) return;
+    const trimmedName = limitClassName(name.trim());
+    const trimmedDescription = limitClassDescription(description.trim());
+    if (!trimmedName || Number.isNaN(parsedClassKkm) || parsedClassKkm < 0 || parsedClassKkm > 100) return;
 
     await createClass.mutateAsync({
-      name: name.trim(),
-      description: description.trim() || undefined,
+      name: trimmedName,
+      description: trimmedDescription || undefined,
       class_kkm: parsedClassKkm,
     });
 
@@ -59,28 +62,40 @@ export default function AddClassDialog({ trigger }: AddClassDialogProps) {
           <DialogHeader>
             <DialogTitle>Tambah Kelas Baru</DialogTitle>
             <DialogDescription>
-              Masukkan nama kelas dan KKM kelas. KKM kelas akan dipakai sebagai default saat membuat KKM mapel, tetapi tetap bisa diubah per mapel nanti.
+              Isi identitas kelas. KKM kelas menjadi acuan awal untuk ranking dan mapel baru.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="class-name">Nama Kelas *</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="class-name">Nama Kelas *</Label>
+                <span className="text-[11px] text-muted-foreground tabular-nums">
+                  {name.length}/{CLASS_NAME_MAX_LENGTH}
+                </span>
+              </div>
               <Input
                 id="class-name"
                 placeholder="Contoh: V-A"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(limitClassName(e.target.value))}
+                maxLength={CLASS_NAME_MAX_LENGTH}
                 autoFocus
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="class-desc">Deskripsi (opsional)</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="class-desc">Deskripsi (opsional)</Label>
+                <span className="text-[11px] text-muted-foreground tabular-nums">
+                  {description.length}/{CLASS_DESCRIPTION_MAX_LENGTH}
+                </span>
+              </div>
               <Textarea
                 id="class-desc"
                 placeholder="Catatan tentang kelas ini..."
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
+                onChange={(e) => setDescription(limitClassDescription(e.target.value))}
+                maxLength={CLASS_DESCRIPTION_MAX_LENGTH}
+                rows={3}
               />
             </div>
             <div className="grid gap-2">

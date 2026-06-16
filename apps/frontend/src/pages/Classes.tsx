@@ -37,17 +37,37 @@ const classesTourSteps: TourStep[] = [
   {
     target: "[data-tour='add-class-btn']",
     title: "Tambah Kelas Baru",
-    description: "Klik tombol ini untuk membuat kelas baru. Isi nama kelas dan deskripsi singkat.",
+    description: "Buat kelas baru dengan nama maksimal 50 karakter, deskripsi singkat, dan KKM kelas sebagai acuan awal.",
+  },
+  {
+    target: "[data-tour='class-import-menu']",
+    title: "Import Data Siswa",
+    description: "Gunakan menu ini untuk mengisi siswa dari Excel atau foto daftar siswa. Pilih kelas tujuan dengan cermat sebelum import.",
   },
   {
     target: "[data-tour='class-search']",
     title: "Cari Kelas",
-    description: "Gunakan pencarian ini untuk menemukan kelas dengan cepat berdasarkan nama.",
+    description: "Temukan kelas berdasarkan nama atau deskripsi tanpa perlu menggulir daftar panjang.",
+  },
+  {
+    target: "[data-tour='class-kkm-alert']",
+    title: "Peringatan KKM",
+    description: "Jika ada kelas tanpa KKM, SIPENA menampilkan pengingat agar ranking dan mapel baru punya acuan nilai yang benar.",
   },
   {
     target: "[data-tour='class-card']",
     title: "Kartu Kelas",
-    description: "Setiap kartu menampilkan info kelas, jumlah siswa, dan opsi untuk mengelola siswa.",
+    description: "Kartu menampilkan nama, jumlah siswa, KKM, dan deskripsi singkat agar kelas mudah dibedakan.",
+  },
+  {
+    target: "[data-tour='class-card-actions']",
+    title: "Aksi Utama",
+    description: "Tombol Detail, Siswa, Mapel, dan Nilai langsung membuka alur kerja utama untuk kelas tersebut.",
+  },
+  {
+    target: "[data-tour='class-card-menu']",
+    title: "Menu Lanjutan",
+    description: "Tombol titik tiga selalu terlihat dan hanya berisi aksi lanjutan: edit, duplikasi, dan hapus kelas.",
   },
 ];
 
@@ -128,7 +148,7 @@ export default function Classes() {
           <div className="flex items-center gap-1.5">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px]">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px]" data-tour="class-import-menu">
                   <Upload className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Import</span>
                   <ChevronDown className="w-3 h-3 opacity-60" />
@@ -217,7 +237,7 @@ export default function Classes() {
         )}
 
         {!isLoading && classesWithoutKkm.length > 0 && (
-          <div className="rounded-2xl border border-grade-warning/30 bg-grade-warning/5 p-3 sm:p-4">
+          <div className="rounded-2xl border border-grade-warning/30 bg-grade-warning/5 p-3 sm:p-4" data-tour="class-kkm-alert">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-xl bg-grade-warning/15 flex items-center justify-center flex-shrink-0">
                 <AlertCircle className="w-4 h-4 text-grade-warning" />

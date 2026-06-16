@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { Class, useClasses } from "@/hooks/useClasses";
+import { CLASS_DESCRIPTION_MAX_LENGTH, CLASS_NAME_MAX_LENGTH, limitClassDescription, limitClassName } from "./classFormLimits";
 
 interface EditClassDialogProps {
   classData: Class;
@@ -32,8 +33,8 @@ export default function EditClassDialog({
 
   useEffect(() => {
     if (open) {
-      setName(classData.name);
-      setDescription(classData.description || "");
+      setName(limitClassName(classData.name));
+      setDescription(limitClassDescription(classData.description || ""));
       setClassKkm(classData.class_kkm?.toString() || "75");
     }
   }, [open, classData]);
@@ -42,12 +43,14 @@ export default function EditClassDialog({
     e.preventDefault();
     
     const parsedClassKkm = parseInt(classKkm, 10);
-    if (!name.trim() || Number.isNaN(parsedClassKkm) || parsedClassKkm < 0 || parsedClassKkm > 100) return;
+    const trimmedName = limitClassName(name.trim());
+    const trimmedDescription = limitClassDescription(description.trim());
+    if (!trimmedName || Number.isNaN(parsedClassKkm) || parsedClassKkm < 0 || parsedClassKkm > 100) return;
 
     await updateClass.mutateAsync({
       id: classData.id,
-      name: name.trim(),
-      description: description.trim() || undefined,
+      name: trimmedName,
+      description: trimmedDescription || undefined,
       class_kkm: parsedClassKkm,
     });
 
@@ -61,28 +64,40 @@ export default function EditClassDialog({
           <DialogHeader>
             <DialogTitle>Edit Kelas</DialogTitle>
             <DialogDescription>
-              Perbarui informasi kelas dan KKM kelas. KKM kelas dipakai untuk acuan ranking keseluruhan dan default KKM mapel baru.
+              Perbarui identitas kelas, deskripsi, dan KKM kelas.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-class-name">Nama Kelas *</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="edit-class-name">Nama Kelas *</Label>
+                <span className="text-[11px] text-muted-foreground tabular-nums">
+                  {name.length}/{CLASS_NAME_MAX_LENGTH}
+                </span>
+              </div>
               <Input
                 id="edit-class-name"
                 placeholder="Contoh: V-A"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(limitClassName(e.target.value))}
+                maxLength={CLASS_NAME_MAX_LENGTH}
                 autoFocus
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-class-desc">Deskripsi (opsional)</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="edit-class-desc">Deskripsi (opsional)</Label>
+                <span className="text-[11px] text-muted-foreground tabular-nums">
+                  {description.length}/{CLASS_DESCRIPTION_MAX_LENGTH}
+                </span>
+              </div>
               <Textarea
                 id="edit-class-desc"
                 placeholder="Catatan tentang kelas ini..."
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
+                onChange={(e) => setDescription(limitClassDescription(e.target.value))}
+                maxLength={CLASS_DESCRIPTION_MAX_LENGTH}
+                rows={3}
               />
             </div>
             <div className="grid gap-2">

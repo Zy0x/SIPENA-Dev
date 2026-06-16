@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Star, Edit, Trash2, Loader2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, Star, Edit, Trash2, Loader2, ArrowUpDown, ArrowUp, ArrowDown, NotebookText, Target, Users } from "lucide-react";
 import { Class } from "@/hooks/useClasses";
 import { useStudents, Student } from "@/hooks/useStudents";
 import EditStudentDialog from "./EditStudentDialog";
@@ -50,6 +50,8 @@ export default function ClassDetailDialog({
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const classDescription = classData.description?.trim() || "Belum ada deskripsi kelas.";
 
   const filteredAndSortedStudents = useMemo(() => {
     let result = [...students];
@@ -126,9 +128,15 @@ export default function ClassDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[min(calc(100dvh-1rem),44rem)] w-[calc(100vw-1rem)] max-w-3xl max-h-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:h-[min(calc(100dvh-3rem),46rem)] sm:w-[calc(100vw-3rem)]">
+        <DialogContent
+          className="flex h-[min(calc(100dvh-1rem),44rem)] w-[calc(100vw-1rem)] max-w-3xl max-h-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:h-[min(calc(100dvh-3rem),46rem)] sm:w-[calc(100vw-3rem)]"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            requestAnimationFrame(() => titleRef.current?.focus());
+          }}
+        >
           <DialogHeader className="shrink-0 border-b border-border px-4 pb-3 pr-16 pt-4 sm:px-5 sm:pr-16">
-            <DialogTitle className="text-sm sm:text-base">
+            <DialogTitle ref={titleRef} tabIndex={-1} className="text-sm outline-none sm:text-base">
               Detail Kelas - {classData.name}
             </DialogTitle>
             <DialogDescription className="text-xs">
@@ -136,7 +144,41 @@ export default function ClassDetailDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-3 sm:flex-row sm:px-5">
+          <section className="shrink-0 border-b border-border bg-muted/20 px-4 py-3 sm:px-5" data-tour="class-detail-summary">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+              <div className="min-w-0">
+                <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <NotebookText className="h-3.5 w-3.5" />
+                  Deskripsi Kelas
+                </div>
+                <p className="break-words text-sm leading-6 text-foreground">
+                  {classDescription}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:min-w-44 sm:grid-cols-1">
+                <div className="rounded-xl border border-border/70 bg-background px-3 py-2">
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <Target className="h-3.5 w-3.5" />
+                    KKM Kelas
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {classData.class_kkm ?? "Belum diisi"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background px-3 py-2">
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <Users className="h-3.5 w-3.5" />
+                    Siswa
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {students.length} terdaftar
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-3 sm:flex-row sm:px-5" data-tour="class-detail-tools">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
