@@ -52,12 +52,18 @@ export default function ClassDetailDialog({
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
   const classDescription = classData.description?.trim() || "Belum ada deskripsi kelas.";
   const shouldCollapseDescription = classDescription.length > 110;
 
   useEffect(() => {
     if (open) {
       setIsDescriptionExpanded(false);
+      requestAnimationFrame(() => {
+        if (tableScrollRef.current && tableScrollRef.current.scrollWidth > tableScrollRef.current.clientWidth) {
+          tableScrollRef.current.scrollLeft = 1;
+        }
+      });
     }
   }, [classData.id, open]);
 
@@ -198,11 +204,11 @@ export default function ClassDetailDialog({
           </section>
 
           <div className="flex shrink-0 flex-col gap-2 border-b border-border px-3.5 py-2.5 sm:flex-row sm:px-4" data-tour="class-detail-tools">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="sipena-search-field min-h-11 flex-1 rounded-xl px-3 py-1.5">
+              <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Cari nama atau NISN..."
-                className="pl-9"
+                className="sipena-search-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -229,7 +235,8 @@ export default function ClassDetailDialog({
           </div>
 
           <div
-            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-auto overscroll-auto px-3.5 pb-3.5 scrollbar-thin sm:px-4"
+            ref={tableScrollRef}
+            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-x-scroll overflow-y-auto overscroll-auto px-3.5 pb-3.5 scrollbar-thin sm:px-4"
             aria-label={`Daftar siswa kelas ${classData.name}`}
           >
             {isLoading ? (
@@ -241,20 +248,20 @@ export default function ClassDetailDialog({
                 {students.length === 0 ? "Belum ada siswa" : "Tidak ditemukan"}
               </div>
             ) : (
-              <table className="min-w-[40rem] w-full table-fixed caption-bottom text-sm">
+              <table className="w-full min-w-[40rem] table-fixed border-separate border-spacing-0 caption-bottom text-sm">
                 <colgroup>
                   <col className="w-12" />
                   <col className="w-[17rem]" />
                   <col className="w-32" />
                   <col className="w-28" />
                 </colgroup>
-                <thead className="sticky top-0 z-10 bg-background shadow-[0_1px_0_hsl(var(--border))]">
-                  <tr>
-                    <th className="h-11 px-2 text-center align-middle text-xs font-medium text-muted-foreground sm:px-4">
+                <thead className="sticky top-0 z-20 bg-background shadow-[0_1px_0_hsl(var(--border))]">
+                  <tr className="bg-background">
+                    <th className="h-11 border-b px-2 text-center align-middle text-xs font-medium text-muted-foreground sm:px-4">
                       No
                     </th>
                     <th
-                      className="h-11 cursor-pointer px-2 text-center align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
+                      className="h-11 cursor-pointer border-b px-2 text-center align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
                       onClick={() => handleSort('name')}
                     >
                       <div className="flex items-center justify-center text-xs sm:text-sm">
@@ -263,7 +270,7 @@ export default function ClassDetailDialog({
                       </div>
                     </th>
                     <th
-                      className="h-11 cursor-pointer px-2 text-center align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
+                      className="h-11 cursor-pointer border-b px-2 text-center align-middle text-xs font-medium text-muted-foreground hover:bg-muted/50 sm:px-4 sm:text-sm"
                       onClick={() => handleSort('nisn')}
                     >
                       <div className="flex items-center justify-center text-xs sm:text-sm">
@@ -271,16 +278,16 @@ export default function ClassDetailDialog({
                         <SortIcon field="nisn" />
                       </div>
                     </th>
-                    <th className="h-11 px-2 text-center align-middle text-xs font-medium text-muted-foreground sm:px-4 sm:text-sm">
+                    <th className="sticky right-0 z-30 h-11 border-b bg-background px-2 text-center align-middle text-xs font-medium text-muted-foreground shadow-[-1px_0_0_hsl(var(--border))] sm:px-4 sm:text-sm">
                       Aksi
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredAndSortedStudents.map((student, index) => (
-                    <tr key={student.id} className="border-b transition-colors hover:bg-muted/50">
-                      <td className="px-2 py-3 text-center align-middle sm:px-4">{index + 1}</td>
-                      <td className="min-w-0 px-2 py-3 pr-3 align-middle font-medium sm:px-4 sm:pr-5">
+                    <tr key={student.id} className="group border-b transition-colors hover:bg-muted/50">
+                      <td className="border-b px-2 py-3 text-center align-middle sm:px-4">{index + 1}</td>
+                      <td className="min-w-0 border-b px-2 py-3 pr-3 align-middle font-medium sm:px-4 sm:pr-5">
                         <div className="flex min-w-0 items-center gap-2">
                           {student.is_bookmarked && (
                             <Star className="h-4 w-4 shrink-0 fill-grade-warning text-grade-warning" />
@@ -288,10 +295,10 @@ export default function ClassDetailDialog({
                           <span className="break-words leading-snug">{student.name}</span>
                         </div>
                       </td>
-                      <td className="px-2 py-3 align-middle text-center text-xs text-muted-foreground sm:px-4">
+                      <td className="border-b px-2 py-3 text-center align-middle text-xs text-muted-foreground sm:px-4">
                         <span className="block break-all leading-snug">{student.nisn}</span>
                       </td>
-                      <td className="px-2 py-3 align-middle sm:px-4">
+                      <td className="sticky right-0 z-10 border-b bg-background px-2 py-3 align-middle shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted sm:px-4">
                         <div className="flex justify-center gap-1">
                           <Button
                             type="button"

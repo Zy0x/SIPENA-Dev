@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,8 +25,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { 
   Plus, 
   Loader2, 
@@ -34,7 +32,6 @@ import {
   Upload, 
   AlertTriangle, 
   Users, 
-  X, 
   CheckCircle2, 
   XCircle, 
   Edit3,
@@ -145,6 +142,7 @@ export default function AddStudentDialog({
   // Real-time validation state for single student
   const [nameWarning, setNameWarning] = useState<string | null>(null);
   const [nisnWarning, setNisnWarning] = useState<string | null>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   
   const { students, createStudent, createStudentsBatch } = useStudents(classId);
   const { toast } = useEnhancedToast();
@@ -154,7 +152,11 @@ export default function AddStudentDialog({
     if (name.trim().length >= 3) {
       const duplicate = students.find(s => normalizeString(s.name) === normalizeString(name));
       if (duplicate) {
-        setNameWarning(`Nama "${duplicate.name}" sudah terdaftar`);
+        if (nisn.trim() && duplicate.nisn.trim() !== nisn.trim()) {
+          setNameWarning(`Nama sama dengan "${duplicate.name}", tetapi NISN berbeda. Konfirmasi akan diminta.`);
+        } else {
+          setNameWarning(`Nama "${duplicate.name}" sudah terdaftar`);
+        }
       } else {
         const similar = students.find(s => calculateSimilarity(name, s.name) >= 0.75);
         if (similar) {
@@ -166,7 +168,7 @@ export default function AddStudentDialog({
     } else {
       setNameWarning(null);
     }
-  }, [name, students]);
+  }, [name, nisn, students]);
 
   useEffect(() => {
     if (nisn.trim().length >= 5) {
@@ -504,7 +506,7 @@ export default function AddStudentDialog({
       case 'nisn':
         return `NISN "${duplicateInfo.existingStudent.nisn}" sudah digunakan oleh siswa "${duplicateInfo.existingStudent.name}".`;
       case 'name':
-        return `Siswa dengan nama "${duplicateInfo.existingStudent.name}" sudah terdaftar dengan NISN "${duplicateInfo.existingStudent.nisn}".`;
+        return `Nama "${duplicateInfo.existingStudent.name}" sudah terdaftar dengan NISN "${duplicateInfo.existingStudent.nisn}". Jika ini siswa berbeda karena NISN baru, periksa datanya lalu konfirmasi.`;
       case 'similar':
         return `Ditemukan siswa dengan nama mirip (${duplicateInfo.similarity}% kecocokan): "${duplicateInfo.existingStudent.name}" (NISN: ${duplicateInfo.existingStudent.nisn}).`;
       default:
@@ -518,11 +520,19 @@ export default function AddStudentDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Tambah Siswa ke {className}</DialogTitle>
+        <DialogContent
+          className="w-[calc(100vw-1rem)] max-w-[500px] p-4 pt-5 sm:p-6 [&>button[aria-label='Tutup_dialog']]:right-3 [&>button[aria-label='Tutup_dialog']]:top-3"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            requestAnimationFrame(() => titleRef.current?.focus());
+          }}
+        >
+          <DialogHeader className="pr-10">
+            <DialogTitle ref={titleRef} tabIndex={-1} className="text-base leading-snug outline-none sm:text-lg">
+              Tambah Siswa ke {className}
+            </DialogTitle>
             <DialogDescription>
-              Tambahkan siswa satu per satu atau masukkan data batch
+              Isi satu siswa atau tempel data batch. Duplikat akan diperiksa otomatis.
             </DialogDescription>
           </DialogHeader>
 
@@ -548,7 +558,7 @@ export default function AddStudentDialog({
                       placeholder="Nama lengkap siswa"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      autoFocus
+                      autoComplete="off"
                       className={nameWarning ? 'border-amber-500 focus-visible:ring-amber-500' : ''}
                     />
                     {nameWarning && (
@@ -565,6 +575,7 @@ export default function AddStudentDialog({
                       placeholder="Nomor Induk Siswa Nasional"
                       value={nisn}
                       onChange={(e) => setNisn(e.target.value)}
+                      autoComplete="off"
                       className={nisnWarning ? 'border-destructive focus-visible:ring-destructive' : ''}
                     />
                     {nisnWarning && (
@@ -609,7 +620,7 @@ export default function AddStudentDialog({
                   <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
                     <AlertDescription className="text-amber-800 dark:text-amber-200">
-                      Sistem akan memeriksa duplikat berdasarkan nama dan NISN secara otomatis.
+                      Cek duplikat nama dan NISN aktif otomatis.
                     </AlertDescription>
                   </Alert>
                   <div className="grid gap-2">
@@ -701,8 +712,8 @@ export default function AddStudentDialog({
 
       {/* Batch Duplicates Professional Dialog */}
       <Dialog open={showBatchDuplicateDialog} onOpenChange={setShowBatchDuplicateDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="flex h-[min(calc(100dvh-1rem),44rem)] w-[calc(100vw-1rem)] max-w-2xl max-h-none flex-col gap-0 overflow-hidden p-0 sm:h-[min(calc(100dvh-2rem),46rem)] sm:w-[calc(100vw-2rem)]">
+          <DialogHeader className="shrink-0 border-b border-border px-4 pb-3 pr-12 pt-4 sm:px-5 sm:pr-14">
             <DialogTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-amber-500" />
               Verifikasi Data Siswa
@@ -712,49 +723,52 @@ export default function AddStudentDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {/* Summary Stats */}
-          <div className="grid grid-cols-3 gap-2 p-3 bg-muted rounded-lg">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">{nonDuplicatesCount}</p>
-              <p className="text-xs text-muted-foreground">Siswa Baru</p>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-thin sm:px-5">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-2 rounded-xl bg-muted p-3">
+              <div className="text-center">
+                <p className="text-xl font-bold text-green-600 sm:text-2xl">{nonDuplicatesCount}</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">Siswa Baru</p>
+              </div>
+              <div className="border-x text-center">
+                <p className="text-xl font-bold text-amber-600 sm:text-2xl">{batchDuplicates.length}</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">Duplikat</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-bold text-red-600 sm:text-2xl">{selectedDuplicatesCount}</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">Dilewati</p>
+              </div>
             </div>
-            <div className="text-center border-x">
-              <p className="text-2xl font-bold text-amber-600">{batchDuplicates.length}</p>
-              <p className="text-xs text-muted-foreground">Duplikat Terdeteksi</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">{selectedDuplicatesCount}</p>
-              <p className="text-xs text-muted-foreground">Akan Dilewati</p>
-            </div>
-          </div>
 
-          {/* Quick Actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleSelectAllDuplicates(true)}
-              className="text-xs"
-            >
-              <XCircle className="w-3 h-3 mr-1" />
-              Lewati Semua Duplikat
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleSelectAllDuplicates(false)}
-              className="text-xs"
-            >
-              <CheckCircle2 className="w-3 h-3 mr-1" />
-              Tambahkan Semua Duplikat
-            </Button>
-          </div>
+            {/* Quick Actions */}
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleSelectAllDuplicates(true)}
+                className="justify-start text-xs"
+              >
+                <XCircle className="w-3 h-3 mr-1" />
+                Lewati Semua Duplikat
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleSelectAllDuplicates(false)}
+                className="justify-start text-xs"
+              >
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                Tambahkan Semua Duplikat
+              </Button>
+            </div>
 
-          {/* Duplicates List */}
-          <div className="flex-1 min-h-0">
-            <p className="text-sm font-medium mb-2">Daftar Duplikat Terdeteksi:</p>
-            <ScrollArea className="h-[280px] border rounded-lg">
-              <div className="p-2 space-y-2">
+            {/* Duplicates List */}
+            <div className="mt-3 min-h-0">
+              <p className="text-sm font-medium mb-2">Daftar Duplikat Terdeteksi:</p>
+              <div className="max-h-[45dvh] overflow-y-auto rounded-lg border p-2 scrollbar-thin sm:max-h-[22rem]">
+                <div className="space-y-2">
                 {batchDuplicates.map((item, index) => (
                   <div 
                     key={index}
@@ -791,6 +805,7 @@ export default function AddStudentDialog({
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
+                            type="button"
                             size="sm"
                             onClick={() => handleBatchDuplicateSaveEdit(index)}
                             className="h-7 text-xs"
@@ -799,6 +814,7 @@ export default function AddStudentDialog({
                             Cek Ulang & Simpan
                           </Button>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => setBatchDuplicates(prev => 
@@ -837,6 +853,7 @@ export default function AddStudentDialog({
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <Button
+                            type="button"
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-primary"
@@ -846,6 +863,7 @@ export default function AddStudentDialog({
                             <Edit3 className="w-4 h-4" />
                           </Button>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -874,34 +892,41 @@ export default function AddStudentDialog({
                     )}
                   </div>
                 ))}
+                </div>
               </div>
-            </ScrollArea>
+
+              <Alert className="mt-3 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-xs text-blue-800 dark:text-blue-200">
+                  Centang siswa yang ingin dilewati, atau edit nama/NISN agar tidak duplikat.
+                </AlertDescription>
+              </Alert>
+            </div>
           </div>
 
-          <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-xs text-blue-800 dark:text-blue-200">
-              <strong>Tips:</strong> Centang siswa yang ingin dilewati. Klik ikon edit untuk mengubah nama/NISN agar tidak duplikat.
-            </AlertDescription>
-          </Alert>
-
-          <DialogFooter className="flex-wrap gap-2">
+          <DialogFooter className="shrink-0 gap-2 border-t border-border bg-background px-4 py-3 sm:flex-row sm:px-5">
             <Button
+              type="button"
               variant="outline"
               onClick={handleBatchDuplicateCancel}
+              className="w-full sm:w-auto"
             >
               Batal
             </Button>
             <Button
+              type="button"
               variant="destructive"
               onClick={handleBatchAddAll}
               disabled={createStudentsBatch.isPending}
+              className="w-full sm:w-auto"
             >
               Tambahkan Semua ({pendingBatchStudents.length})
             </Button>
             <Button
+              type="button"
               onClick={handleBatchDuplicateConfirm}
               disabled={createStudentsBatch.isPending || pendingBatchStudents.length - selectedDuplicatesCount === 0}
+              className="w-full sm:w-auto"
             >
               {createStudentsBatch.isPending ? (
                 <>

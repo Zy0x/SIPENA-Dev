@@ -34,6 +34,23 @@ describe("class management UX guard", () => {
     expect(editSource).toContain("limitClassDescription(description.trim())");
   });
 
+  it("keeps class page mobile header and search layout usable", () => {
+    const classesSource = readSource("apps/frontend/src/pages/Classes.tsx");
+    const cssSource = readSource("apps/frontend/src/index.css");
+    const docsSource = readSource("docs/standards/ui-interaction-scroll-standard.md");
+
+    expect(classesSource).toContain("flex flex-col gap-3 sm:flex-row");
+    expect(classesSource).toContain("grid grid-cols-[auto_auto_minmax(0,1fr)]");
+    expect(classesSource).toContain("sipena-search-field");
+    expect(classesSource).toContain("sipena-search-input");
+    expect(classesSource).toContain('align="start"');
+    expect(cssSource).toContain(".sipena-search-field");
+    expect(cssSource).toContain(".sipena-search-field:focus-within");
+    expect(cssSource).toContain(".sipena-search-field .sipena-search-input");
+    expect(docsSource).toContain("Kotak pencarian wajib menggambar border/focus ring di wrapper luar");
+    expect(docsSource).toContain("Dropdown menu wajib collision-aware");
+  });
+
   it("keeps class cards discoverable without hover-only menu actions", () => {
     const cardSource = readSource("apps/frontend/src/components/classes/ClassCard.tsx");
 
@@ -58,6 +75,7 @@ describe("class management UX guard", () => {
 
   it("shows class detail summary before search without focusing mobile keyboard", () => {
     const detailSource = readSource("apps/frontend/src/components/classes/ClassDetailDialog.tsx");
+    const alertDialogSource = readSource("apps/frontend/src/components/ui/alert-dialog.tsx");
 
     expect(detailSource).toContain('data-tour="class-detail-summary"');
     expect(detailSource).toContain("Deskripsi Kelas");
@@ -69,14 +87,41 @@ describe("class management UX guard", () => {
     expect(detailSource).toContain("max-w-4xl");
     expect(detailSource).toContain("w-[calc(100vw-0.75rem)]");
     expect(detailSource).toContain("justify-center text-xs sm:text-sm");
-    expect(detailSource).toContain("overflow-auto");
+    expect(detailSource).toContain("overflow-x-scroll overflow-y-auto");
     expect(detailSource).toContain('min-w-[40rem]');
     expect(detailSource).toContain('w-[17rem]');
     expect(detailSource).toContain("break-all");
+    expect(detailSource).toContain("border-separate border-spacing-0");
+    expect(detailSource).toContain("sticky right-0");
+    expect(detailSource).toContain("tableScrollRef.current.scrollLeft = 1");
+    expect(detailSource).toContain("sipena-search-field min-h-11");
     expect(detailSource).toContain("Lihat selengkapnya...");
     expect(detailSource).toContain("onOpenAutoFocus");
     expect(detailSource).toContain("event.preventDefault()");
     expect(detailSource).toContain("titleRef.current?.focus()");
+    expect(alertDialogSource).toContain("z-[10070]");
+    expect(alertDialogSource).toContain("z-[10080]");
+  });
+
+  it("keeps add student modal touch-safe and duplicate verification responsive", () => {
+    const addStudentSource = readSource("apps/frontend/src/components/classes/AddStudentDialog.tsx");
+    const tabsSource = readSource("apps/frontend/src/components/ui/tabs.tsx");
+    const dropdownSource = readSource("apps/frontend/src/components/ui/dropdown-menu.tsx");
+    const tourSource = readSource("apps/frontend/src/components/ui/product-tour.tsx");
+
+    expect(addStudentSource).toContain("onOpenAutoFocus");
+    expect(addStudentSource).toContain("titleRef.current?.focus()");
+    expect(addStudentSource).not.toContain("autoFocus");
+    expect(addStudentSource).toContain('autoComplete="off"');
+    expect(addStudentSource).toContain("Nama sama dengan");
+    expect(addStudentSource).toContain("h-[min(calc(100dvh-1rem),44rem)]");
+    expect(addStudentSource).toContain("min-h-0 flex-1 overflow-y-auto");
+    expect(addStudentSource).toContain("shrink-0 gap-2 border-t border-border");
+    expect(tabsSource).toContain("rounded-xl border border-border/70");
+    expect(tabsSource).toContain("data-[state=active]:bg-background");
+    expect(dropdownSource).toContain("collisionPadding = 12");
+    expect(dropdownSource).toContain("max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))]");
+    expect(tourSource).toContain("bg-primary text-primary-foreground");
   });
 
   it("documents the main class management actions in product tour", () => {

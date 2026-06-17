@@ -362,7 +362,11 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
                 Kembali
               </Button>
             )}
-            <Button size="sm" onClick={handleNext} className="min-w-[90px]">
+            <Button
+              size="sm"
+              onClick={handleNext}
+              className="min-w-[90px] bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+            >
               {isLastStep ? (
                 <>
                   <Check className="w-4 h-4 mr-1" />

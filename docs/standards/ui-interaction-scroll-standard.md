@@ -15,6 +15,14 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Semua trigger custom di dalam kontainer scroll wajib memakai semantic target (`button`, `role="combobox"`, `aria-haspopup="menu/listbox"`) atau `data-touch-scroll-click-target="true"` agar `useTouchScrollClickGuard()` dapat membatalkan accidental click setelah gesture scroll.
 - Pada device touchscreen, tombol/dropdown yang berada di toolbar atau area scroll padat harus memakai `touch-action: pan-x pan-y` jika user diharapkan dapat melakukan scroll melewati kontrol tersebut. Gunakan `touch-manipulation` hanya untuk tombol tap murni yang tidak menjadi jalur scroll utama.
 
+## Search Input dan Dropdown
+
+- Kotak pencarian wajib menggambar border/focus ring di wrapper luar, bukan di input anak. Gunakan pola `.sipena-search-field` untuk container dan `.sipena-search-input` untuk input di dalamnya.
+- Input anak pada search field harus borderless (`border-0`, `shadow-none`) hanya karena wrapper sudah memegang state visual; jangan membuat border focus di dalam kotak pencarian.
+- Focus state search field wajib memakai `:focus-within` pada wrapper agar ring tetap mengikuti bentuk luar kotak dan tidak terlihat seperti border kecil di dalam card.
+- Dropdown menu wajib collision-aware: gunakan `DropdownMenuContent` shared dengan `collisionPadding`, `max-height` berbasis `--radix-dropdown-menu-content-available-height`, dan `max-width: calc(100vw - safe margin)` agar menu tidak terpotong di mobile, tablet, PID, atau viewport sempit.
+- Dropdown yang muncul dekat sisi layar harus memakai alignment yang memberi ruang baca paling besar. Untuk toolbar mobile yang berada di kiri/kanan, pilih `align="start"` atau `align="end"` secara eksplisit sesuai posisi trigger.
+
 ## Sidebar dan Navigasi Responsif
 
 - Sidebar mobile/tablet wajib memakai drawer overlay dengan lebar dinamis (`min()`/`calc(100vw - safe area)`) dan menyisakan area gelap yang cukup untuk menutup menu.

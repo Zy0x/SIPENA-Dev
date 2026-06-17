@@ -161,30 +161,30 @@ export default function Classes() {
     <>
       <div ref={containerRef} className="app-page">
         {/* iOS-style Header */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2.5">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-[12px] bg-primary/10 flex items-center justify-center flex-shrink-0">
               <School className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold text-foreground truncate">
+              <h1 className="text-base sm:text-lg font-bold text-foreground">
                 Kelas & Siswa
               </h1>
-              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Kelola daftar kelas dan data siswa
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-1.5 sm:flex sm:justify-end">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 min-w-[44px]" data-tour="class-import-menu">
+                <Button variant="outline" size="sm" className="h-9 min-w-[44px] gap-1.5 text-xs" data-tour="class-import-menu">
                   <Upload className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Import</span>
                   <ChevronDown className="w-3 h-3 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="start" className="w-[min(15rem,calc(100vw-1.5rem))]">
                 <DropdownMenuItem onClick={() => {
                   if (displayClasses.length > 0 && classes.length > 0) {
                     handleOpenImport({ id: classes[0].id, name: classes[0].name });
@@ -200,30 +200,33 @@ export default function Classes() {
               </DropdownMenuContent>
             </DropdownMenu>
             <TourButton tourKey="classes-tour" onBeforeStart={prepareClassesTour} />
-            <div data-tour="add-class-btn">
-              <AddClassDialog />
+            <div className="min-w-0" data-tour="add-class-btn">
+              <AddClassDialog
+                trigger={
+                  <Button className="h-9 w-full min-w-0 gap-1.5 px-3 text-xs sm:w-auto sm:px-4 sm:text-sm">
+                    <Plus className="h-4 w-4" />
+                    <span className="truncate">Tambah Kelas</span>
+                  </Button>
+                }
+              />
             </div>
           </div>
         </div>
 
         {/* Search - iOS grouped card */}
-        <div className="rounded-2xl bg-card border border-border/60 overflow-hidden" data-tour="class-search">
-          <div className="flex items-center gap-3 p-3 sm:p-3.5">
-            <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <Input
-                placeholder="Cari kelas berdasarkan nama..."
-                className="h-8 border-0 p-0 shadow-none text-sm font-medium focus-visible:ring-0"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            {searchQuery && (
-              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                {filteredClasses.length} hasil
-              </span>
-            )}
-          </div>
+        <div className="sipena-search-field" data-tour="class-search">
+          <Search className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          <Input
+            placeholder="Cari kelas berdasarkan nama..."
+            className="sipena-search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+              {filteredClasses.length} hasil
+            </span>
+          )}
         </div>
 
         {/* Loading State */}
