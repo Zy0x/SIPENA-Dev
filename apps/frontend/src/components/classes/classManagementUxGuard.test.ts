@@ -43,6 +43,7 @@ describe("class management UX guard", () => {
     expect(classesSource).toContain("grid grid-cols-[auto_auto_minmax(0,1fr)]");
     expect(classesSource).toContain("sipena-search-field");
     expect(classesSource).toContain("sipena-search-input");
+    expect(classesSource).toContain("Gunakan tombol di kartu kelas untuk membuka detail, siswa, mapel, atau nilai.");
     expect(classesSource).toContain('align="start"');
     expect(cssSource).toContain(".sipena-search-field");
     expect(cssSource).toContain(".sipena-search-field:focus-within");
@@ -108,6 +109,9 @@ describe("class management UX guard", () => {
     expect(editStudentSource).not.toContain("autoFocus");
     expect(dialogSource).toContain("z-[10080]");
     expect(dialogSource).toContain("z-[10090]");
+    expect(dialogSource).toContain("DialogStackDepthContext");
+    expect(dialogSource).toContain("10080 + stackOffset");
+    expect(dialogSource).toContain("10090 + stackOffset");
     expect(alertDialogSource).toContain("z-[10100]");
     expect(alertDialogSource).toContain("z-[10110]");
     expect(toastSource).toContain("z-[10130]");
@@ -134,7 +138,9 @@ describe("class management UX guard", () => {
     expect(addStudentSource).toContain("Tandai Semua untuk Dilewati");
     expect(addStudentSource).toContain("Izinkan Semua Ditambahkan");
     expect(tabsSource).toContain("rounded-xl border border-border/70");
+    expect(tabsSource).toContain("touch-manipulation");
     expect(tabsSource).toContain("data-[state=active]:bg-primary");
+    expect(tabsSource).toContain("active:bg-primary active:text-primary-foreground");
     expect(dropdownSource).toContain("collisionPadding = 12");
     expect(dropdownSource).toContain("max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))]");
     expect(dropdownSource).toContain("z-[10120]");
@@ -142,7 +148,9 @@ describe("class management UX guard", () => {
     expect(cssSource).toContain(':where(.app-page table thead, [role="dialog"] table thead, .sipena-table-header)');
     expect(cssSource).toContain(':where(.app-page table thead th, [role="dialog"] table thead th)');
     expect(tourSource).toContain("bg-emerald-600 text-white");
+    expect(tourSource).toContain("active:bg-emerald-700 active:text-white");
     expect(tourSource).toContain("bg-primary text-primary-foreground");
+    expect(tourSource).toContain("active:bg-primary active:text-primary-foreground");
   });
 
   it("documents the main class management actions in product tour", () => {

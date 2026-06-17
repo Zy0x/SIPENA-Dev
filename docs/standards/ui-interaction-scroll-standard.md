@@ -26,6 +26,7 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 ## Modal, Toast, dan Table Header
 
 - Dialog nested wajib tetap menampilkan overlay blur di atas dialog parent. Gunakan layer shared: dialog overlay/content, alert dialog, popover/select, lalu toast sebagai lapisan tertinggi.
+- Dialog normal wajib menaikkan z-index overlay/content berdasarkan kedalaman stack agar modal anak tetap menggelapkan dan memburamkan modal parent.
 - Toast sukses/error yang muncul dari aksi di dalam modal harus berada di atas modal agar feedback tidak tertutup.
 - Semua header tabel pada halaman dan dialog wajib punya pembeda visual minimal berupa shadow/border bawah dan background solid agar tidak terlihat transparan saat scroll atau saat ada kolom sticky/freeze.
 
@@ -40,6 +41,7 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 
 - Pasangan background/foreground harus memakai token semantic yang cocok: `background/foreground`, `card/card-foreground`, `popover/popover-foreground`, `primary/primary-foreground`, dan setara.
 - Hover/focus/active pada menu, select, popover, tab, dan tombol outline/ghost tidak boleh memakai background penuh dengan foreground yang membuat teks menyatu.
+- Tab dan tombol tour wajib punya warna aktif/pressed eksplisit di touchscreen agar indikator pilihan tidak hilang saat tap atau saat berpindah langkah.
 - Tint ringan seperti `primary/10` harus memakai `foreground`, bukan `primary-foreground`.
 - Target minimal: teks normal WCAG AA 4.5:1; teks besar, icon, border, dan affordance kontrol minimal 3:1.
 - Light mode dan dark mode wajib dicek untuk modal, dropdown, kartu, tab, dan tombol destructive.

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const dialogStack: Array<{ id: number; close: () => void }> = [];
 let dialogCounter = 0;
 let globalPopstateHandler: ((e: PopStateEvent) => void) | null = null;
+const DialogStackDepthContext = React.createContext(1);
 
 function ensureGlobalPopstateHandler() {
   if (globalPopstateHandler) return;
@@ -28,13 +29,16 @@ export function getDialogStack() {
 const Dialog = ({ open, onOpenChange, ...props }: DialogPrimitive.DialogProps) => {
   const dialogIdRef = React.useRef<number | null>(null);
   const closedByPopstateRef = React.useRef(false);
+  const [stackDepth, setStackDepth] = React.useState(() => (open ? dialogStack.length + 1 : 1));
 
   React.useEffect(() => {
     if (open) {
       ensureGlobalPopstateHandler();
       
       const myId = ++dialogCounter;
+      const myDepth = dialogStack.length + 1;
       dialogIdRef.current = myId;
+      setStackDepth(myDepth);
       window.history.pushState({ dialogId: myId }, "");
 
       const entry = {
@@ -82,7 +86,11 @@ const Dialog = ({ open, onOpenChange, ...props }: DialogPrimitive.DialogProps) =
     }
   }, [open]);
 
-  return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />;
+  return (
+    <DialogStackDepthContext.Provider value={stackDepth}>
+      <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />
+    </DialogStackDepthContext.Provider>
+  );
 };
 
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -94,43 +102,55 @@ const DialogClose = DialogPrimitive.Close;
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Overlay
-    ref={ref}
-    className={cn(
-      "fixed inset-0 z-[10080] bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, style, ...props }, ref) => {
+  const stackDepth = React.useContext(DialogStackDepthContext);
+  const stackOffset = Math.max(stackDepth - 1, 0) * 20;
+
+  return (
+    <DialogPrimitive.Overlay
+      ref={ref}
+      className={cn(
+        "fixed inset-0 z-[10080] bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        className,
+      )}
+      style={{ zIndex: 10080 + stackOffset, ...style }}
+      {...props}
+    />
+  );
+});
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "sipena-scroll-isolated fixed left-[50%] top-[50%] z-[10090] grid w-[calc(100vw-1.5rem)] max-w-lg max-h-[calc(100dvh-1.5rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto scrollbar-thin border border-border bg-background text-foreground p-5 shadow-lg duration-200 rounded-2xl sm:w-[calc(100vw-3rem)] sm:p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close
-        aria-label="Tutup dialog"
-        className="sipena-danger-icon-button absolute right-2 top-2 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+>(({ className, children, style, ...props }, ref) => {
+  const stackDepth = React.useContext(DialogStackDepthContext);
+  const stackOffset = Math.max(stackDepth - 1, 0) * 20;
+
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "sipena-scroll-isolated fixed left-[50%] top-[50%] z-[10090] grid w-[calc(100vw-1.5rem)] max-w-lg max-h-[calc(100dvh-1.5rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto scrollbar-thin border border-border bg-background text-foreground p-5 shadow-lg duration-200 rounded-2xl sm:w-[calc(100vw-3rem)] sm:p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+          className,
+        )}
+        style={{ zIndex: 10090 + stackOffset, ...style }}
+        {...props}
       >
-        <X className="h-3.5 w-3.5" />
-        <span className="sr-only">Tutup</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+        {children}
+        <DialogPrimitive.Close
+          aria-label="Tutup dialog"
+          className="sipena-danger-icon-button absolute right-2 top-2 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+        >
+          <X className="h-3.5 w-3.5" />
+          <span className="sr-only">Tutup</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

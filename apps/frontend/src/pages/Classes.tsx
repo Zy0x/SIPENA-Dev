@@ -265,7 +265,7 @@ export default function Classes() {
         {!isLoading && displayClasses.length > 0 && (
           <div className="flex items-center gap-2 px-1 text-[10px] sm:text-xs text-muted-foreground">
             <Users className="w-3 h-3 flex-shrink-0" />
-            <span>Ketuk kartu kelas untuk melihat dan mengelola siswa di dalamnya.</span>
+            <span>Gunakan tombol di kartu kelas untuk membuka detail, siswa, mapel, atau nilai.</span>
           </div>
         )}
 
