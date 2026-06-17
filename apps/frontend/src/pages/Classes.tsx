@@ -26,7 +26,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import AddClassDialog from "@/components/classes/AddClassDialog";
 import ClassCard from "@/components/classes/ClassCard";
 import ClassKkmSetupDialog from "@/components/classes/ClassKkmSetupDialog";
-import ImportStudentsDialog from "@/components/classes/ImportStudentsDialog";
+import ImportClassesStudentsDialog from "@/components/classes/ImportClassesStudentsDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 import { ProductTour, TourButton, TourStep } from "@/components/ui/product-tour";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -42,8 +42,8 @@ const classesTourSteps: TourStep[] = [
   },
   {
     target: "[data-tour='class-import-menu']",
-    title: "Import Data Siswa",
-    description: "Gunakan menu ini untuk mengisi siswa dari Excel atau foto daftar siswa. Pilih kelas tujuan dengan cermat sebelum import.",
+    title: "Import Kelas & Siswa",
+    description: "Gunakan menu ini untuk membuat banyak kelas dan siswa dari template Excel resmi. Import foto tetap tersedia untuk input siswa dari gambar.",
   },
   {
     target: "[data-tour='class-search']",
@@ -77,13 +77,9 @@ export default function Classes() {
   const { allSubjects, isLoading: subjectsLoading } = useSubjects();
   const [searchQuery, setSearchQuery] = useState("");
   const [tourDummyClass, setTourDummyClass] = useState<Class | null>(null);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [classImportDialogOpen, setClassImportDialogOpen] = useState(false);
   const [showOCRImport, setShowOCRImport] = useState(false);
   const [showClassKkmGuide, setShowClassKkmGuide] = useState(false);
-  const [selectedClassForImport, setSelectedClassForImport] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const { success: showSuccess, error: showError } = useEnhancedToast();
@@ -126,13 +122,6 @@ export default function Classes() {
       setShowClassKkmGuide(true);
     }
   }, [classesWithoutKkm.length, isLoading]);
-
-  const handleOpenImport = (classData?: { id: string; name: string }) => {
-    if (classData) {
-      setSelectedClassForImport(classData);
-      setImportDialogOpen(true);
-    }
-  };
 
   const prepareClassesTour = () => {
     if (classes.length > 0 || tourDummyClass) return;
@@ -185,17 +174,13 @@ export default function Classes() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-[min(15rem,calc(100vw-1.5rem))]">
-                <DropdownMenuItem onClick={() => {
-                  if (displayClasses.length > 0 && classes.length > 0) {
-                    handleOpenImport({ id: classes[0].id, name: classes[0].name });
-                  }
-                }} className="gap-2 min-h-[44px]">
+                <DropdownMenuItem onClick={() => setClassImportDialogOpen(true)} className="gap-2 min-h-[44px]">
                   <Upload className="w-4 h-4" />
-                  Import dari Excel
+                  Import Kelas & Siswa
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowOCRImport(true)} className="gap-2 min-h-[44px]">
                   <Camera className="w-4 h-4" />
-                  Import dari Foto (OCR)
+                  Import Siswa dari Foto (OCR)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -320,15 +305,11 @@ export default function Classes() {
         )}
       </div>
 
-      {/* Import Dialog */}
-      {selectedClassForImport && (
-        <ImportStudentsDialog
-          classId={selectedClassForImport.id}
-          className={selectedClassForImport.name}
-          open={importDialogOpen}
-          onOpenChange={setImportDialogOpen}
-        />
-      )}
+      <ImportClassesStudentsDialog
+        open={classImportDialogOpen}
+        onOpenChange={setClassImportDialogOpen}
+        existingClasses={classes}
+      />
 
       {/* OCR Import Dialog */}
       <OCRImportDialog

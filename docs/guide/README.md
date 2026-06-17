@@ -208,6 +208,7 @@ sipena/
 | Komponen | Fungsi |
 |---|---|
 | `grades/GradeImportExportDialog.tsx` | Smart Import/Ekspor nilai |
+| `classes/ImportClassesStudentsDialog.tsx` | Import kelas dan siswa dari template Excel multi-sheet dasar |
 | `import/ImportStudentsDialog.tsx` | Import siswa dari file Excel |
 | `import/ImportAttendanceDialog.tsx` | Import presensi dari file Excel |
 | `import/OCRImportDialog.tsx` | Import data dari foto (Beta OCR) |
@@ -348,6 +349,9 @@ sipena/
 | Import Excel per halaman | Kelas, Nilai, Presensi | Upload .xlsx, auto-detect kolom, preview |
 | Import OCR (Beta) | Kelas, Nilai, Presensi | Foto dokumen → manual text extraction |
 | Import Batch Multi-Sheet | Settings | Satu file .xlsx multi-sheet untuk seluruh ekosistem |
+
+### Import Kelas & Siswa
+Lihat `docs/guide/class-student-import.md` untuk standar workbook, aturan duplikat, dan perbedaan dengan Import Siswa ke Kelas Ini.
 
 ### Batch Import Flow
 1. Download template Excel (7 sheet)
