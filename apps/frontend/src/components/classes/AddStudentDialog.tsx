@@ -516,6 +516,7 @@ export default function AddStudentDialog({
 
   const selectedDuplicatesCount = batchDuplicates.filter(d => d.selected).length;
   const nonDuplicatesCount = pendingBatchStudents.length - batchDuplicates.length;
+  const studentsToAddCount = pendingBatchStudents.length - selectedDuplicatesCount;
 
   return (
     <>
@@ -750,7 +751,7 @@ export default function AddStudentDialog({
                 className="justify-start text-xs"
               >
                 <XCircle className="w-3 h-3 mr-1" />
-                Lewati Semua Duplikat
+                Tandai Semua untuk Dilewati
               </Button>
               <Button
                 type="button"
@@ -760,7 +761,7 @@ export default function AddStudentDialog({
                 className="justify-start text-xs"
               >
                 <CheckCircle2 className="w-3 h-3 mr-1" />
-                Tambahkan Semua Duplikat
+                Izinkan Semua Ditambahkan
               </Button>
             </div>
 
@@ -898,7 +899,7 @@ export default function AddStudentDialog({
               <Alert className="mt-3 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-xs text-blue-800 dark:text-blue-200">
-                  Centang siswa yang ingin dilewati, atau edit nama/NISN agar tidak duplikat.
+                  Centang berarti siswa akan dilewati. Hapus centang jika data itu tetap ingin ditambahkan.
                 </AlertDescription>
               </Alert>
             </div>
@@ -915,17 +916,17 @@ export default function AddStudentDialog({
             </Button>
             <Button
               type="button"
-              variant="destructive"
+              variant="outline"
               onClick={handleBatchAddAll}
               disabled={createStudentsBatch.isPending}
-              className="w-full sm:w-auto"
+              className="w-full border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200 dark:hover:bg-amber-950/50 sm:w-auto"
             >
-              Tambahkan Semua ({pendingBatchStudents.length})
+              Paksa Tambah Semua ({pendingBatchStudents.length})
             </Button>
             <Button
               type="button"
               onClick={handleBatchDuplicateConfirm}
-              disabled={createStudentsBatch.isPending || pendingBatchStudents.length - selectedDuplicatesCount === 0}
+              disabled={createStudentsBatch.isPending}
               className="w-full sm:w-auto"
             >
               {createStudentsBatch.isPending ? (
@@ -935,8 +936,8 @@ export default function AddStudentDialog({
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Tambahkan {pendingBatchStudents.length - selectedDuplicatesCount} Siswa
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Simpan Pilihan ({studentsToAddCount} tambah, {selectedDuplicatesCount} lewati)
                 </>
               )}
             </Button>

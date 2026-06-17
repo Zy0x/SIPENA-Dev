@@ -76,6 +76,9 @@ describe("class management UX guard", () => {
   it("shows class detail summary before search without focusing mobile keyboard", () => {
     const detailSource = readSource("apps/frontend/src/components/classes/ClassDetailDialog.tsx");
     const alertDialogSource = readSource("apps/frontend/src/components/ui/alert-dialog.tsx");
+    const editStudentSource = readSource("apps/frontend/src/components/classes/EditStudentDialog.tsx");
+    const dialogSource = readSource("apps/frontend/src/components/ui/dialog.tsx");
+    const toastSource = readSource("apps/frontend/src/components/ui/enhanced-toast.tsx");
 
     expect(detailSource).toContain('data-tour="class-detail-summary"');
     expect(detailSource).toContain("Deskripsi Kelas");
@@ -92,22 +95,31 @@ describe("class management UX guard", () => {
     expect(detailSource).toContain('w-[17rem]');
     expect(detailSource).toContain("break-all");
     expect(detailSource).toContain("border-separate border-spacing-0");
+    expect(detailSource).toContain("isolate min-h-0 flex-1 overflow-x-scroll");
     expect(detailSource).toContain("sticky right-0");
-    expect(detailSource).toContain("tableScrollRef.current.scrollLeft = 1");
+    expect(detailSource).toContain("tableScrollRef.current?.scrollTo({ left: 0 })");
     expect(detailSource).toContain("sipena-search-field min-h-11");
     expect(detailSource).toContain("Lihat selengkapnya...");
     expect(detailSource).toContain("onOpenAutoFocus");
     expect(detailSource).toContain("event.preventDefault()");
     expect(detailSource).toContain("titleRef.current?.focus()");
-    expect(alertDialogSource).toContain("z-[10070]");
-    expect(alertDialogSource).toContain("z-[10080]");
+    expect(editStudentSource).toContain("onOpenAutoFocus");
+    expect(editStudentSource).toContain("titleRef.current?.focus()");
+    expect(editStudentSource).not.toContain("autoFocus");
+    expect(dialogSource).toContain("z-[10080]");
+    expect(dialogSource).toContain("z-[10090]");
+    expect(alertDialogSource).toContain("z-[10100]");
+    expect(alertDialogSource).toContain("z-[10110]");
+    expect(toastSource).toContain("z-[10130]");
   });
 
   it("keeps add student modal touch-safe and duplicate verification responsive", () => {
     const addStudentSource = readSource("apps/frontend/src/components/classes/AddStudentDialog.tsx");
     const tabsSource = readSource("apps/frontend/src/components/ui/tabs.tsx");
     const dropdownSource = readSource("apps/frontend/src/components/ui/dropdown-menu.tsx");
+    const selectSource = readSource("apps/frontend/src/components/ui/select.tsx");
     const tourSource = readSource("apps/frontend/src/components/ui/product-tour.tsx");
+    const cssSource = readSource("apps/frontend/src/index.css");
 
     expect(addStudentSource).toContain("onOpenAutoFocus");
     expect(addStudentSource).toContain("titleRef.current?.focus()");
@@ -117,10 +129,19 @@ describe("class management UX guard", () => {
     expect(addStudentSource).toContain("h-[min(calc(100dvh-1rem),44rem)]");
     expect(addStudentSource).toContain("min-h-0 flex-1 overflow-y-auto");
     expect(addStudentSource).toContain("shrink-0 gap-2 border-t border-border");
+    expect(addStudentSource).toContain("Simpan Pilihan");
+    expect(addStudentSource).toContain("Paksa Tambah Semua");
+    expect(addStudentSource).toContain("Tandai Semua untuk Dilewati");
+    expect(addStudentSource).toContain("Izinkan Semua Ditambahkan");
     expect(tabsSource).toContain("rounded-xl border border-border/70");
-    expect(tabsSource).toContain("data-[state=active]:bg-background");
+    expect(tabsSource).toContain("data-[state=active]:bg-primary");
     expect(dropdownSource).toContain("collisionPadding = 12");
     expect(dropdownSource).toContain("max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))]");
+    expect(dropdownSource).toContain("z-[10120]");
+    expect(selectSource).toContain("z-[10120]");
+    expect(cssSource).toContain(':where(.app-page table thead, [role="dialog"] table thead, .sipena-table-header)');
+    expect(cssSource).toContain(':where(.app-page table thead th, [role="dialog"] table thead th)');
+    expect(tourSource).toContain("bg-emerald-600 text-white");
     expect(tourSource).toContain("bg-primary text-primary-foreground");
   });
 

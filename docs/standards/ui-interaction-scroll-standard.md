@@ -23,6 +23,12 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Dropdown menu wajib collision-aware: gunakan `DropdownMenuContent` shared dengan `collisionPadding`, `max-height` berbasis `--radix-dropdown-menu-content-available-height`, dan `max-width: calc(100vw - safe margin)` agar menu tidak terpotong di mobile, tablet, PID, atau viewport sempit.
 - Dropdown yang muncul dekat sisi layar harus memakai alignment yang memberi ruang baca paling besar. Untuk toolbar mobile yang berada di kiri/kanan, pilih `align="start"` atau `align="end"` secara eksplisit sesuai posisi trigger.
 
+## Modal, Toast, dan Table Header
+
+- Dialog nested wajib tetap menampilkan overlay blur di atas dialog parent. Gunakan layer shared: dialog overlay/content, alert dialog, popover/select, lalu toast sebagai lapisan tertinggi.
+- Toast sukses/error yang muncul dari aksi di dalam modal harus berada di atas modal agar feedback tidak tertutup.
+- Semua header tabel pada halaman dan dialog wajib punya pembeda visual minimal berupa shadow/border bawah dan background solid agar tidak terlihat transparan saat scroll atau saat ada kolom sticky/freeze.
+
 ## Sidebar dan Navigasi Responsif
 
 - Sidebar mobile/tablet wajib memakai drawer overlay dengan lebar dinamis (`min()`/`calc(100vw - safe area)`) dan menyisakan area gelap yang cukup untuk menutup menu.

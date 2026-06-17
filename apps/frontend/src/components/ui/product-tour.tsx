@@ -365,7 +365,12 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
             <Button
               size="sm"
               onClick={handleNext}
-              className="min-w-[90px] bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+              className={cn(
+                "min-w-[90px] shadow-md",
+                isLastStep
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90",
+              )}
             >
               {isLastStep ? (
                 <>

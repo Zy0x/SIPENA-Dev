@@ -394,7 +394,7 @@ export function EnhancedToastContainer({
   return (
     <div 
       className={cn(
-        "fixed z-[100] flex flex-col gap-2 pointer-events-none",
+        "fixed z-[10130] flex flex-col gap-2 pointer-events-none",
         "left-1/2 -translate-x-1/2",
         "w-full max-w-[380px] px-3",
         position === "top" 

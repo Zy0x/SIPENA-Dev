@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +26,7 @@ export default function EditStudentDialog({
 }: EditStudentDialogProps) {
   const [name, setName] = useState("");
   const [nisn, setNisn] = useState("");
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const { updateStudent } = useStudents(student?.class_id);
 
   useEffect(() => {
@@ -51,9 +52,17 @@ export default function EditStudentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit Siswa</DialogTitle>
+      <DialogContent
+        className="w-[calc(100vw-1rem)] max-w-[425px] p-4 pt-5 sm:p-6 [&>button[aria-label='Tutup_dialog']]:right-3 [&>button[aria-label='Tutup_dialog']]:top-3"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          requestAnimationFrame(() => titleRef.current?.focus());
+        }}
+      >
+        <DialogHeader className="pr-10">
+          <DialogTitle ref={titleRef} tabIndex={-1} className="outline-none">
+            Edit Siswa
+          </DialogTitle>
           <DialogDescription>
             Perbarui informasi siswa di bawah ini
           </DialogDescription>
@@ -68,7 +77,7 @@ export default function EditStudentDialog({
                 placeholder="Nama lengkap siswa"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                autoFocus
+                autoComplete="off"
               />
             </div>
             <div className="grid gap-2">
@@ -78,6 +87,7 @@ export default function EditStudentDialog({
                 placeholder="Nomor Induk Siswa Nasional"
                 value={nisn}
                 onChange={(e) => setNisn(e.target.value)}
+                autoComplete="off"
               />
             </div>
           </div>

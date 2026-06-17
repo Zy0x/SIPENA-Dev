@@ -59,11 +59,7 @@ export default function ClassDetailDialog({
   useEffect(() => {
     if (open) {
       setIsDescriptionExpanded(false);
-      requestAnimationFrame(() => {
-        if (tableScrollRef.current && tableScrollRef.current.scrollWidth > tableScrollRef.current.clientWidth) {
-          tableScrollRef.current.scrollLeft = 1;
-        }
-      });
+      requestAnimationFrame(() => tableScrollRef.current?.scrollTo({ left: 0 }));
     }
   }, [classData.id, open]);
 
@@ -236,7 +232,7 @@ export default function ClassDetailDialog({
 
           <div
             ref={tableScrollRef}
-            className="sipena-class-detail-scroll sipena-scroll-chain-page min-h-0 flex-1 overflow-x-scroll overflow-y-auto overscroll-auto px-3.5 pb-3.5 scrollbar-thin sm:px-4"
+            className="sipena-class-detail-scroll sipena-scroll-chain-page isolate min-h-0 flex-1 overflow-x-scroll overflow-y-auto overscroll-auto pb-3.5 scrollbar-thin sm:px-4"
             aria-label={`Daftar siswa kelas ${classData.name}`}
           >
             {isLoading ? (
@@ -255,7 +251,7 @@ export default function ClassDetailDialog({
                   <col className="w-32" />
                   <col className="w-28" />
                 </colgroup>
-                <thead className="sticky top-0 z-20 bg-background shadow-[0_1px_0_hsl(var(--border))]">
+                <thead className="sticky top-0 z-20 bg-background shadow-[0_1px_0_hsl(var(--border)),0_2px_8px_-6px_hsl(var(--foreground)/0.35)]">
                   <tr className="bg-background">
                     <th className="h-11 border-b px-2 text-center align-middle text-xs font-medium text-muted-foreground sm:px-4">
                       No
@@ -278,7 +274,7 @@ export default function ClassDetailDialog({
                         <SortIcon field="nisn" />
                       </div>
                     </th>
-                    <th className="sticky right-0 z-30 h-11 border-b bg-background px-2 text-center align-middle text-xs font-medium text-muted-foreground shadow-[-1px_0_0_hsl(var(--border))] sm:px-4 sm:text-sm">
+                    <th className="sticky right-0 z-30 h-11 border-b bg-background bg-clip-padding px-2 text-center align-middle text-xs font-medium text-muted-foreground shadow-[-12px_0_16px_-16px_hsl(var(--foreground)/0.65),-1px_0_0_hsl(var(--border))] sm:px-4 sm:text-sm">
                       Aksi
                     </th>
                   </tr>
@@ -298,7 +294,7 @@ export default function ClassDetailDialog({
                       <td className="border-b px-2 py-3 text-center align-middle text-xs text-muted-foreground sm:px-4">
                         <span className="block break-all leading-snug">{student.nisn}</span>
                       </td>
-                      <td className="sticky right-0 z-10 border-b bg-background px-2 py-3 align-middle shadow-[-1px_0_0_hsl(var(--border))] group-hover:bg-muted sm:px-4">
+                      <td className="sticky right-0 z-10 border-b bg-background bg-clip-padding px-2 py-3 align-middle shadow-[-12px_0_16px_-16px_hsl(var(--foreground)/0.65),-1px_0_0_hsl(var(--border))] group-hover:bg-muted sm:px-4">
                         <div className="flex justify-center gap-1">
                           <Button
                             type="button"
