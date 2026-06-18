@@ -216,6 +216,11 @@ export function ResponsiveDataPreview<Row>({
     startX: 0,
     startY: 0,
     scrollLeft: 0,
+    pendingScrollLeft: 0,
+    rafId: 0,
+    lastX: 0,
+    lastTime: 0,
+    velocityX: 0,
   });
 
   if (rows.length === 0) {
@@ -252,12 +257,21 @@ export function ResponsiveDataPreview<Row>({
 
   const handleTablePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" || !tableScrollRef.current) return;
+    if (tableDragRef.current.rafId !== 0) {
+      window.cancelAnimationFrame(tableDragRef.current.rafId);
+    }
+    const now = performance.now();
     tableDragRef.current = {
       active: true,
       dragging: false,
       startX: event.clientX,
       startY: event.clientY,
       scrollLeft: tableScrollRef.current.scrollLeft,
+      pendingScrollLeft: tableScrollRef.current.scrollLeft,
+      rafId: 0,
+      lastX: event.clientX,
+      lastTime: now,
+      velocityX: 0,
     };
   };
 
@@ -273,14 +287,54 @@ export function ResponsiveDataPreview<Row>({
     }
     if (!state.dragging) return;
 
-    target.scrollLeft = state.scrollLeft - deltaX;
-    event.preventDefault();
+    const now = performance.now();
+    const elapsed = Math.max(1, now - state.lastTime);
+    state.velocityX = (event.clientX - state.lastX) / elapsed;
+    state.lastX = event.clientX;
+    state.lastTime = now;
+    state.pendingScrollLeft = state.scrollLeft - deltaX;
+    if (state.rafId === 0) {
+      state.rafId = window.requestAnimationFrame(() => {
+        state.rafId = 0;
+        const scrollTarget = tableScrollRef.current;
+        if (scrollTarget) {
+          scrollTarget.scrollLeft = state.pendingScrollLeft;
+        }
+      });
+    }
+    if (event.cancelable) event.preventDefault();
   };
 
   const handleTablePointerEnd = () => {
-    tableDragRef.current.active = false;
+    const state = tableDragRef.current;
+    if (state.rafId !== 0) {
+      window.cancelAnimationFrame(state.rafId);
+      state.rafId = 0;
+      if (tableScrollRef.current) {
+        tableScrollRef.current.scrollLeft = state.pendingScrollLeft;
+      }
+    }
+    const shouldContinue = state.dragging && Math.abs(state.velocityX) > 0.06;
+    if (shouldContinue) {
+      let previousTime = performance.now();
+      const runMomentum = (timestamp: number) => {
+        const target = tableScrollRef.current;
+        if (!target) return;
+        const elapsed = Math.min(32, Math.max(1, timestamp - previousTime));
+        previousTime = timestamp;
+        target.scrollLeft -= state.velocityX * elapsed;
+        state.velocityX *= Math.pow(0.92, elapsed / 16);
+        if (Math.abs(state.velocityX) > 0.012) {
+          state.rafId = window.requestAnimationFrame(runMomentum);
+        } else {
+          state.rafId = 0;
+        }
+      };
+      state.rafId = window.requestAnimationFrame(runMomentum);
+    }
+    state.active = false;
     window.setTimeout(() => {
-      tableDragRef.current.dragging = false;
+      state.dragging = false;
     }, 120);
   };
 

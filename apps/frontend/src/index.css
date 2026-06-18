@@ -3480,10 +3480,13 @@
   .sipena-responsive-data-table-scroll {
     overflow-x: scroll !important;
     overflow-y: hidden;
-    touch-action: pan-x pan-y;
+    touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+    contain: layout paint;
+    scroll-behavior: auto;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
+    will-change: scroll-position;
   }
 
   .sipena-responsive-data-table-scroll > div {

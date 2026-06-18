@@ -57,12 +57,16 @@ describe("class student import guard", () => {
     expect(studioSource).toContain("overflow-x-scroll overscroll-x-contain");
     expect(studioSource).toContain('min-w-[46rem]');
     expect(studioSource).toContain("handleTablePointerMove");
-    expect(studioSource).toContain("target.scrollLeft = state.scrollLeft - deltaX");
+    expect(studioSource).toContain("window.requestAnimationFrame");
+    expect(studioSource).toContain("state.pendingScrollLeft = state.scrollLeft - deltaX");
+    expect(studioSource).toContain("state.velocityX");
+    expect(studioSource).toContain("runMomentum");
     expect(studioSource).toContain("}, 120)");
 
     const cssSource = readSource("apps/frontend/src/index.css");
     expect(cssSource).toContain('[role="checkbox"][data-state="checked"]');
     expect(cssSource).toContain(".sipena-import-class-include-checkbox");
+    expect(cssSource).toContain("touch-action: pan-y");
     expect(cssSource).toContain("touch-action: pan-x pan-y");
 
     expect(docsSource).toContain("Import Kelas & Siswa");
