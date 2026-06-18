@@ -542,6 +542,10 @@ function getPaginationBodyHeightMm(style: ReportDocumentStyle) {
   return Math.max(minBodyHeight, conservativeGenericHeight);
 }
 
+function getAutoTablePaginationGuardMm(style: ReportDocumentStyle) {
+  return Math.max(8, getPaginationBodyHeightMm(style) * 1.15);
+}
+
 function getBodyCellPaddingY(column: ExportColumn) {
   const padding = column.type === "name" ? CELL_PADDING.bodyName : CELL_PADDING.bodyDefault;
   return typeof padding === "number" ? padding * 2 : padding.top + padding.bottom;
@@ -652,7 +656,13 @@ function rebalanceTablePagesToAvailableHeight(
       }
 
       const headerHeight = getHeaderHeightMm(style, page.headerGroups.length);
-      const availableHeight = getAvailableBodyHeightMm(metrics, page.tableStartY, headerHeight, 0);
+      const availableHeight = getAvailableBodyHeightMm(
+        metrics,
+        page.tableStartY,
+        headerHeight,
+        0,
+        getAutoTablePaginationGuardMm(style),
+      );
       let usedHeight = estimatePageRowsHeightMm(page, style);
 
       while (nextPage.rows.length > 0) {
@@ -686,6 +696,7 @@ function getAvailableBodyHeightMm(
   tableStartY: number,
   headerHeightMm: number,
   reserveSignatureMm: number,
+  paginationGuardMm = 0,
 ) {
   return Math.max(0, metrics.pageHeightMm
     - metrics.marginBottomMm
@@ -693,7 +704,8 @@ function getAvailableBodyHeightMm(
     - tableStartY
     - headerHeightMm
     - 2
-    - reserveSignatureMm);
+    - reserveSignatureMm
+    - paginationGuardMm);
 }
 
 function findRowsEndForAvailableHeight(rowHeightsMm: number[], start: number, availableHeightMm: number) {
@@ -845,7 +857,8 @@ function getCapacity(metrics: ReportLayoutMetrics, tableStartY: number, groupCou
     - tableStartY
     - getHeaderHeightMm(style, groupCount)
     - 2
-    - reserveSignature;
+    - reserveSignature
+    - getAutoTablePaginationGuardMm(style);
   return Math.max(1, Math.floor(usableHeight / getPaginationBodyHeightMm(style)));
 }
 /**
@@ -1068,11 +1081,13 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
       const tableStartY = cursor === 0 ? firstStartY : metrics.nextPageTableStartY;
       const isLastSegment = segmentIndex === segments.length - 1;
       const remainingRowsHeightMm = estimateRowsHeightMm(rowHeightsMm, cursor);
+      const paginationGuardMm = getAutoTablePaginationGuardMm(documentStyle);
       const availableWithSignatureMm = getAvailableBodyHeightMm(
         metrics,
         tableStartY,
         headerHeight,
         isLastSegment ? signatureReserve : 0,
+        paginationGuardMm,
       );
       const allRemainingRowsFitWithSignature = remainingRowsHeightMm <= availableWithSignatureMm;
       const end = allRemainingRowsFitWithSignature
@@ -1080,7 +1095,7 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
         : findRowsEndForAvailableHeight(
             rowHeightsMm,
             cursor,
-            getAvailableBodyHeightMm(metrics, tableStartY, headerHeight, 0),
+            getAvailableBodyHeightMm(metrics, tableStartY, headerHeight, 0, paginationGuardMm),
           );
       const pageRows = rows.slice(cursor, end);
       const pageRowsHeightMm = estimateRowsHeightMm(rowHeightsMm, cursor, end);

@@ -351,7 +351,9 @@ describe("report PDF engine", () => {
     const pdf = await getDocument({ data: built.doc.output("arraybuffer") }).promise;
 
     try {
+      expect(pdf.numPages).toBe(built.layoutPlan.pages.length);
       expect(plannedDataPageCounts).not.toContain(1);
+      expect(plannedDataPageCounts[0]).toBeLessThanOrEqual(19);
       for (let index = 1; index < plannedDataPageCounts.length - 1; index += 1) {
         expect(plannedDataPageCounts[index]).toBeGreaterThanOrEqual(6);
       }
