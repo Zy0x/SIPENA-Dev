@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 
 export const CLASS_STUDENT_IMPORT_TEMPLATE_VERSION = "1.0.0";
 export const CLASS_IMPORT_MAX_NAME_LENGTH = 50;
@@ -80,6 +80,22 @@ export interface ClassStudentImportPlan {
 }
 
 type SheetRows = Array<Array<string | number>>;
+type SheetStyle = Record<string, unknown>;
+
+const TEMPLATE_COLORS = {
+  blue: "2563EB",
+  blueSoft: "DBEAFE",
+  skySoft: "E0F2FE",
+  green: "16A34A",
+  greenSoft: "DCFCE7",
+  amber: "F59E0B",
+  amberSoft: "FEF3C7",
+  redSoft: "FEE2E2",
+  slate: "0F172A",
+  muted: "64748B",
+  border: "CBD5E1",
+  white: "FFFFFF",
+};
 
 function normalizeKey(value: string) {
   return value
@@ -157,67 +173,158 @@ function makeSheet(rows: SheetRows, widths: number[]) {
   return sheet;
 }
 
+function styleCell(sheet: XLSX.WorkSheet, address: string, style: SheetStyle) {
+  const cell = sheet[address] ?? { t: "s", v: "" };
+  cell.s = { ...(cell.s ?? {}), ...style };
+  sheet[address] = cell;
+}
+
+function styleRange(sheet: XLSX.WorkSheet, rangeAddress: string, style: SheetStyle) {
+  const range = XLSX.utils.decode_range(rangeAddress);
+  for (let row = range.s.r; row <= range.e.r; row += 1) {
+    for (let col = range.s.c; col <= range.e.c; col += 1) {
+      styleCell(sheet, XLSX.utils.encode_cell({ r: row, c: col }), style);
+    }
+  }
+}
+
+function mergeRange(sheet: XLSX.WorkSheet, rangeAddress: string) {
+  sheet["!merges"] = [...(sheet["!merges"] ?? []), XLSX.utils.decode_range(rangeAddress)];
+}
+
+function applyGuideSheetStyle(sheet: XLSX.WorkSheet) {
+  sheet["!cols"] = [{ wch: 28 }, { wch: 92 }];
+  sheet["!rows"] = [
+    { hpt: 30 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 18 },
+    { hpt: 24 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 22 },
+    { hpt: 18 },
+    { hpt: 24 },
+  ];
+  mergeRange(sheet, "A1:B1");
+  styleCell(sheet, "A1", {
+    fill: { fgColor: { rgb: TEMPLATE_COLORS.blue } },
+    font: { bold: true, color: { rgb: TEMPLATE_COLORS.white }, sz: 16 },
+    alignment: { horizontal: "center", vertical: "center" },
+  });
+  styleRange(sheet, "A1:B1", {
+    fill: { fgColor: { rgb: TEMPLATE_COLORS.blue } },
+    border: { bottom: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } } },
+  });
+  styleRange(sheet, "A3:B44", {
+    alignment: { vertical: "top", wrapText: true },
+    border: { bottom: { style: "thin", color: { rgb: "E2E8F0" } } },
+  });
+
+  ["A3", "A7", "A13", "A20", "A27", "A34", "A40"].forEach((cell) => {
+    styleCell(sheet, cell, {
+      fill: { fgColor: { rgb: TEMPLATE_COLORS.blueSoft } },
+      font: { bold: true, color: { rgb: TEMPLATE_COLORS.slate } },
+      alignment: { vertical: "center", wrapText: true },
+    });
+  });
+  ["A4", "A5", "A8", "A9", "A10", "A11", "A12", "A14", "A15", "A16", "A17", "A18", "A21", "A22", "A23", "A24", "A25", "A28", "A29", "A30", "A31", "A35", "A36", "A37", "A41", "A42"].forEach((cell) => {
+    styleCell(sheet, cell, {
+      font: { bold: true, color: { rgb: TEMPLATE_COLORS.slate } },
+      alignment: { vertical: "top", wrapText: true },
+    });
+  });
+  ["B10", "B11", "B12", "B23", "B24", "B28", "B29", "B30"].forEach((cell) => {
+    styleCell(sheet, cell, {
+      fill: { fgColor: { rgb: TEMPLATE_COLORS.amberSoft } },
+      font: { color: { rgb: TEMPLATE_COLORS.slate } },
+      alignment: { vertical: "top", wrapText: true },
+    });
+  });
+}
+
+function applyTableSheetStyle(sheet: XLSX.WorkSheet, rangeAddress: string, requiredCols: string[] = []) {
+  const range = XLSX.utils.decode_range(rangeAddress);
+  sheet["!autofilter"] = { ref: rangeAddress };
+  sheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+  styleRange(sheet, rangeAddress, {
+    alignment: { vertical: "center", wrapText: true },
+    border: {
+      top: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } },
+      bottom: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } },
+      left: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } },
+      right: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } },
+    },
+  });
+  for (let col = range.s.c; col <= range.e.c; col += 1) {
+    const address = XLSX.utils.encode_cell({ r: range.s.r, c: col });
+    const value = normalizeImportText(sheet[address]?.v);
+    const required = requiredCols.some((item) => value.includes(item));
+    styleCell(sheet, address, {
+      fill: { fgColor: { rgb: required ? TEMPLATE_COLORS.blue : TEMPLATE_COLORS.skySoft } },
+      font: { bold: true, color: { rgb: required ? TEMPLATE_COLORS.white : TEMPLATE_COLORS.slate } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+    });
+  }
+}
+
 export function buildClassStudentImportTemplateWorkbook() {
   const workbook = XLSX.utils.book_new();
+  const guideSheet = makeSheet([
+    ["PANDUAN IMPORT KELAS & SISWA SIPENA", ""],
+    ["", ""],
+    ["Tujuan template", "Gunakan file ini untuk menambahkan banyak kelas dan banyak siswa sekaligus. Import ini hanya untuk data dasar: nama kelas, KKM, deskripsi, nama siswa, dan NISN."],
+    ["Yang perlu diisi", "1. Sheet Kelas: isi daftar kelas.\n2. Sheet Siswa - VIIA, Siswa - VIIB, dan seterusnya: isi daftar siswa sesuai kelas.\n3. Sheet Ringkasan hanya membantu memeriksa contoh, bukan tempat utama pengisian."],
+    ["Yang tidak perlu diubah", "Jangan menghapus sheet Panduan, Ringkasan, atau Kelas. Jangan mengganti tulisan header yang memakai tanda bintang (*)."],
+    ["", ""],
+    ["Langkah cepat", ""],
+    ["1", "Buka sheet Kelas, lalu isi satu baris untuk setiap kelas."],
+    ["2", "Isi Nama Kelas, KKM Kelas, Deskripsi bila perlu, dan nama Sheet Siswa."],
+    ["3", "Buka sheet siswa yang sesuai. Contoh: untuk kelas VIIA, buka sheet Siswa - VIIA."],
+    ["4", "Isi Nama Siswa dan NISN. Kolom No hanya membantu urutan dan boleh kosong."],
+    ["5", "Jika ingin menambah kelas baru, duplikasi sheet siswa contoh, ubah nama sheet, lalu tambahkan baris kelas di sheet Kelas."],
+    ["", ""],
+    ["Aturan penting", ""],
+    ["Nama Kelas", "Wajib diisi dan maksimal 50 karakter."],
+    ["KKM Kelas", "Wajib angka 0 sampai 100. Contoh: 70, 75, 80."],
+    ["Deskripsi", "Opsional dan maksimal 500 karakter. Gunakan untuk catatan singkat tentang kelas."],
+    ["Nama Siswa", "Wajib diisi. Tulis nama lengkap sesuai data sekolah."],
+    ["NISN", "Wajib diisi dan maksimal 17 karakter. Jika NISN kurang dari 10 karakter, SIPENA akan memberi peringatan agar dicek ulang."],
+    ["", ""],
+    ["Contoh 3 kelas", "Sheet Kelas berisi VIIA, VIIB, dan VIIC. Workbook harus memiliki sheet siswa dengan nama yang sama seperti kolom Sheet Siswa: Siswa - VIIA, Siswa - VIIB, dan Siswa - VIIC."],
+    ["Kelas tanpa siswa", "Jika satu kelas belum punya siswa, sheet siswa boleh dibiarkan kosong setelah header. Kelas tetap bisa dibuat."],
+    ["", ""],
+    ["Cara SIPENA membaca duplikat", ""],
+    ["Kelas sudah ada", "SIPENA memakai kelas yang sudah ada pada tahun ajaran aktif dan tidak membuat kelas dobel."],
+    ["Siswa sudah ada", "Jika Nama dan NISN sama di kelas tersebut, data siswa akan dilewati agar tidak dobel."],
+    ["Nama sama, NISN beda", "SIPENA memberi peringatan. Periksa apakah siswa tersebut memang orang berbeda sebelum melanjutkan."],
+    ["NISN sama, nama beda", "SIPENA memblokir import untuk data itu. Perbaiki workbook atau keluarkan kelas tersebut dari import."],
+    ["", ""],
+    ["Saat preview di SIPENA", ""],
+    ["Centang kelas", "Anda bisa mencentang kelas yang ingin diimport dan menghapus centang untuk kelas yang belum ingin dipakai."],
+    ["Error", "Harus diperbaiki sebelum kelas tersebut bisa diimport."],
+    ["Warning", "Boleh dilanjutkan setelah diperiksa dan dikonfirmasi."],
+    ["Tidak diimport", "Kelas yang tidak dicentang tidak akan dibuat dan siswanya tidak akan masuk."],
+    ["", ""],
+    ["Checklist sebelum upload", ""],
+    ["Sheet siswa", "Nama sheet siswa harus sama persis dengan kolom Sheet Siswa di sheet Kelas."],
+    ["Data wajib", "Nama Kelas, KKM Kelas, Nama Siswa, dan NISN tidak boleh kosong."],
+    ["Format", "Simpan sebagai .xlsx. Hindari spasi tambahan di awal/akhir nama kelas, nama siswa, dan NISN."],
+    ["Review", "Setelah upload, baca tabel preview. Jika data sudah benar, tekan Import Kelas & Siswa."],
+    ["", ""],
+    ["Jika import gagal sebagian", "Perbaiki error yang tampil, lalu upload ulang file yang sama. SIPENA akan melewati data yang sudah ada agar tidak membuat duplikat."],
+  ], [28, 92]);
+  applyGuideSheetStyle(guideSheet);
 
-  XLSX.utils.book_append_sheet(
-    workbook,
-    makeSheet([
-      ["PANDUAN IMPORT KELAS & SISWA SIPENA"],
-      [""],
-      ["Template ini digunakan untuk menambahkan banyak kelas dan siswa sekaligus."],
-      ["Import ini hanya mencakup data dasar: kelas, KKM, deskripsi, nama siswa, dan NISN."],
-      [""],
-      ["Aturan utama"],
-      ["1. Jangan menghapus sheet Panduan, Ringkasan, atau Kelas."],
-      ["2. Isi sheet Kelas terlebih dahulu. Setiap baris kelas dapat menunjuk ke satu sheet siswa."],
-      ["3. Untuk setiap kelas, gunakan sheet bernama Siswa - <Nama Kelas>. Jika nama kelas panjang, isi kolom Sheet Siswa pada sheet Kelas."],
-      ["4. Nama kelas wajib, maksimal 50 karakter. Deskripsi maksimal 500 karakter. KKM harus 0 sampai 100."],
-      ["5. Nama siswa dan NISN wajib. NISN maksimal 17 karakter; NISN kurang dari 10 karakter akan diberi peringatan."],
-      ["6. Kelas yang sudah ada pada tahun ajaran aktif tidak dibuat ulang. Siswa duplikat akan ditandai saat preview."],
-      ["7. Perbaiki semua error di preview sebelum menekan Import."],
-      [""],
-      ["Langkah pengisian untuk pengguna baru"],
-      ["1. Buka sheet Kelas, lalu isi satu baris untuk setiap kelas yang ingin dibuat atau diperbarui."],
-      ["2. Kolom Sheet Siswa boleh mengikuti contoh, misalnya Siswa - VIIA. Nama ini harus sama persis dengan nama sheet siswa."],
-      ["3. Buka sheet siswa yang sesuai, lalu isi satu baris per siswa. Kolom No hanya membantu urutan dan boleh kosong."],
-      ["4. Jika butuh kelas tambahan, duplikasi sheet Siswa - VIIA, ubah nama sheet, lalu tambahkan baris kelas di sheet Kelas."],
-      ["5. Simpan file sebagai .xlsx, upload di SIPENA, baca Preview & Validasi, lalu import hanya jika data sudah sesuai."],
-      [""],
-      ["Contoh struktur 3 kelas"],
-      ["Sheet Kelas berisi VIIA, VIIB, dan VIIC. Workbook harus memiliki sheet Siswa - VIIA, Siswa - VIIB, dan Siswa - VIIC."],
-      ["Jika satu kelas belum punya siswa, sheet siswa boleh kosong setelah header. Kelas tetap bisa dibuat."],
-      [""],
-      ["Duplikat dan keputusan preview"],
-      ["Kelas existing: kelas sudah ada pada tahun ajaran aktif, SIPENA akan memakai kelas itu dan tidak membuat duplikat."],
-      ["Siswa existing: Nama dan NISN sama di kelas tersebut, SIPENA akan melewati data itu."],
-      ["Warning nama sama: Nama siswa sama tetapi NISN berbeda. Periksa apakah itu orang berbeda sebelum mengizinkan import."],
-      ["Error NISN sama: NISN dipakai oleh nama berbeda di kelas yang sama. Perbaiki workbook atau lewati baris tersebut."],
-      [""],
-      ["Checklist sebelum upload"],
-      ["- Tidak ada nama sheet siswa yang berbeda dari kolom Sheet Siswa."],
-      ["- Nama kelas tidak lebih dari 50 karakter dan deskripsi tidak lebih dari 500 karakter."],
-      ["- KKM kelas berupa angka 0-100, bukan teks panjang."],
-      ["- NISN ditulis sebagai teks/angka tanpa spasi tambahan. Panjang maksimal 17 karakter."],
-      ["- Jangan mengubah nama header yang diberi tanda bintang."],
-      [""],
-      ["Cara membaca hasil preview"],
-      ["Error: harus diperbaiki di file sebelum import."],
-      ["Warning: boleh dilanjutkan setelah dikonfirmasi, misalnya nama siswa sama tetapi NISN berbeda."],
-      ["Info: data tidak akan dibuat ulang, misalnya siswa sudah ada."],
-      [""],
-      ["Setelah import"],
-      ["Jika ada kegagalan sebagian, upload ulang file yang sama setelah memperbaiki error. Data yang sudah ada tidak akan dibuat dobel."],
-    ], [110]),
-    GUIDE_SHEET,
-  );
+  XLSX.utils.book_append_sheet(workbook, guideSheet, GUIDE_SHEET);
 
-  XLSX.utils.book_append_sheet(
-    workbook,
-    makeSheet([
+  const summarySheet = makeSheet([
       ["Ringkasan Template Import Kelas & Siswa SIPENA"],
       [""],
-      ["Sheet ini hanya contoh ringkasan. Data utama tetap dibaca dari sheet Kelas dan sheet Siswa - <Nama Kelas>."],
+      ["Sheet ini membantu memahami isi template. Data utama tetap diisi dari sheet Kelas dan sheet siswa per kelas."],
       [""],
       ["Sheet Siswa", "Nama Kelas", "Jumlah Siswa", "Status", "Catatan"],
       ["Siswa - VIIA", "VIIA", 3, "Contoh", "Contoh sheet siswa untuk kelas VIIA"],
@@ -227,40 +334,54 @@ export function buildClassStudentImportTemplateWorkbook() {
       ["1. Tambahkan baris baru di sheet Kelas."],
       ["2. Buat atau duplikasi sheet siswa baru."],
       ["3. Pastikan kolom Sheet Siswa di sheet Kelas sama persis dengan nama sheet siswa."],
-    ], [24, 24, 14, 16, 58]),
-    SUMMARY_SHEET,
-  );
+    ], [24, 24, 14, 16, 58]);
+  mergeRange(summarySheet, "A1:E1");
+  styleRange(summarySheet, "A1:E1", {
+    fill: { fgColor: { rgb: TEMPLATE_COLORS.green } },
+    font: { bold: true, color: { rgb: TEMPLATE_COLORS.white }, sz: 14 },
+    alignment: { horizontal: "center", vertical: "center" },
+  });
+  styleRange(summarySheet, "A5:E7", {
+    alignment: { vertical: "center", wrapText: true },
+    border: {
+      top: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } },
+      bottom: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } },
+      left: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } },
+      right: { style: "thin", color: { rgb: TEMPLATE_COLORS.border } },
+    },
+  });
+  styleRange(summarySheet, "A5:E5", {
+    fill: { fgColor: { rgb: TEMPLATE_COLORS.greenSoft } },
+    font: { bold: true, color: { rgb: TEMPLATE_COLORS.slate } },
+    alignment: { horizontal: "center", vertical: "center" },
+  });
+  XLSX.utils.book_append_sheet(workbook, summarySheet, SUMMARY_SHEET);
 
-  XLSX.utils.book_append_sheet(
-    workbook,
-    makeSheet([
+  const classSheet = makeSheet([
       ["Nama Kelas *", "KKM Kelas *", "Deskripsi", "Sheet Siswa"],
       ["VIIA", 75, "Kelas contoh untuk import data dasar.", "Siswa - VIIA"],
       ["VIIB", 70, "Kelas kedua dengan sheet siswa terpisah.", "Siswa - VIIB"],
-    ], [24, 14, 52, 24]),
-    CLASS_SHEET,
-  );
+    ], [24, 14, 52, 24]);
+  applyTableSheetStyle(classSheet, "A1:D3", ["Nama Kelas", "KKM Kelas"]);
+  styleRange(classSheet, "C2:C3", { alignment: { vertical: "top", wrapText: true } });
+  XLSX.utils.book_append_sheet(workbook, classSheet, CLASS_SHEET);
 
-  XLSX.utils.book_append_sheet(
-    workbook,
-    makeSheet([
+  const viiASheet = makeSheet([
       ["No", "Nama Siswa *", "NISN *"],
       [1, "Ahmad Fauzi", "0012345678"],
       [2, "Siti Rahma", "0012345679"],
       [3, "Citra Dewi", "0012345680"],
-    ], [8, 36, 20]),
-    "Siswa - VIIA",
-  );
+    ], [8, 36, 20]);
+  applyTableSheetStyle(viiASheet, "A1:C4", ["Nama Siswa", "NISN"]);
+  XLSX.utils.book_append_sheet(workbook, viiASheet, "Siswa - VIIA");
 
-  XLSX.utils.book_append_sheet(
-    workbook,
-    makeSheet([
+  const viiBSheet = makeSheet([
       ["No", "Nama Siswa *", "NISN *"],
       [1, "Budi Santoso", "0012345681"],
       [2, "Dewi Lestari", "0012345682"],
-    ], [8, 36, 20]),
-    "Siswa - VIIB",
-  );
+    ], [8, 36, 20]);
+  applyTableSheetStyle(viiBSheet, "A1:C3", ["Nama Siswa", "NISN"]);
+  XLSX.utils.book_append_sheet(workbook, viiBSheet, "Siswa - VIIB");
 
   workbook.Props = {
     ...(workbook.Props ?? {}),

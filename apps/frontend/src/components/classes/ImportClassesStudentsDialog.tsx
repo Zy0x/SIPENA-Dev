@@ -71,7 +71,7 @@ function issueTone(severity: "error" | "warning" | "info") {
 }
 
 function classStatusLabel(item: ParsedImportClass) {
-  if (item.existingClassId) return "Kelas existing";
+  if (item.existingClassId) return "Sudah ada";
   return "Kelas baru";
 }
 
@@ -373,7 +373,7 @@ export default function ImportClassesStudentsDialog({
         included,
         className: item.name,
         sheetName: item.sheetName,
-        status: included ? classStatusLabel(item) : "Tidak diimport",
+        status: included ? classStatusLabel(item) : "Tidak dipilih",
         students: item.students.length,
         newStudents: item.students.filter((student) => student.status === "new").length,
         warnings: item.students.filter((student) => student.status === "warning-name-conflict").length + item.issues.filter((issue) => issue.severity === "warning").length,
@@ -397,7 +397,7 @@ export default function ImportClassesStudentsDialog({
             Import Kelas & Siswa
           </DialogTitle>
           <DialogDescription className="text-center sm:text-left">
-            Upload workbook resmi SIPENA untuk membuat banyak kelas dan daftar siswa sekaligus.
+            Tambahkan banyak kelas dan siswa dari satu file Excel resmi SIPENA.
           </DialogDescription>
         </DialogHeader>
 
@@ -406,8 +406,8 @@ export default function ImportClassesStudentsDialog({
             <div className="space-y-4">
               <StudioStepHeader
                 steps={[
-                  { id: "upload", label: "Upload File" },
-                  { id: "preview", label: "Preview & Validasi" },
+                  { id: "upload", label: "Pilih File" },
+                  { id: "preview", label: "Cek Data" },
                   { id: "importing", label: "Import" },
                   { id: "done", label: "Selesai" },
                 ]}
@@ -430,9 +430,9 @@ export default function ImportClassesStudentsDialog({
                         className="hidden"
                       />
                       <FileSpreadsheet className="mb-3 h-11 w-11 text-muted-foreground" />
-                      <p className="text-sm font-semibold text-foreground">{fileName || "Pilih workbook Excel"}</p>
+                      <p className="text-sm font-semibold text-foreground">{fileName || "Pilih file Excel"}</p>
                       <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
-                        Gunakan template resmi agar SIPENA dapat membaca sheet Kelas dan sheet siswa per kelas dengan akurat.
+                        Pakai template resmi agar kelas dan siswa terbaca rapi sesuai format SIPENA.
                       </p>
                     </button>
 
@@ -448,7 +448,7 @@ export default function ImportClassesStudentsDialog({
                     <div>
                       <p className="text-sm font-semibold text-foreground">Template resmi</p>
                       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        Berisi Panduan, Ringkasan, sheet Kelas, dan contoh sheet siswa. Isi workbook ini dahulu agar import dapat membaca banyak kelas sekaligus.
+                        Unduh template, isi daftar kelas dan siswa, lalu upload kembali di sini.
                       </p>
                     </div>
                     <Button type="button" variant="outline" className="h-11 w-full gap-2" onClick={downloadClassStudentImportTemplate}>
@@ -457,15 +457,15 @@ export default function ImportClassesStudentsDialog({
                     </Button>
                     <StudioInfoCollapsible
                       title="Aturan import"
-                      description="Baca ringkasan struktur workbook sebelum mengunggah file."
+                      description="Ringkasan singkat agar file mudah dibaca SIPENA."
                       defaultOpen
                     >
                       <ul className="space-y-1.5 text-xs leading-relaxed text-muted-foreground">
-                        <li>Isi sheet Kelas untuk menentukan nama kelas, KKM, deskripsi, dan nama sheet siswa yang dipakai.</li>
-                        <li>Buat satu sheet siswa untuk setiap kelas, misalnya Siswa - VIIA dan Siswa - VIIB.</li>
-                        <li>Kolom wajib: Nama Kelas, KKM Kelas, Nama Siswa, dan NISN. Baris kosong akan diabaikan.</li>
-                        <li>Kelas existing tidak dibuat ulang; siswa yang sudah ada akan ditandai pada preview.</li>
-                        <li>Error wajib diperbaiki di workbook. Warning boleh dilanjutkan setelah dicek dan dikonfirmasi.</li>
+                        <li>Isi sheet Kelas untuk nama kelas, KKM, deskripsi, dan nama sheet siswa.</li>
+                        <li>Isi satu sheet siswa untuk setiap kelas, misalnya Siswa - VIIA dan Siswa - VIIB.</li>
+                        <li>Kolom wajib: Nama Kelas, KKM Kelas, Nama Siswa, dan NISN.</li>
+                        <li>Kelas atau siswa yang sudah ada tidak akan dibuat dobel.</li>
+                        <li>Catatan merah harus diperbaiki sebelum import. Catatan kuning boleh dilanjutkan setelah dicek.</li>
                       </ul>
                     </StudioInfoCollapsible>
                   </div>
@@ -474,34 +474,11 @@ export default function ImportClassesStudentsDialog({
 
               {step === "preview" && plan && (
                 <div className="space-y-4">
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-2xl border border-border bg-muted/20 p-3">
-                      <p className="text-[11px] text-muted-foreground">Kelas dipilih</p>
-                      <p className="mt-1 text-xl font-bold">{selectedTotals.classCount}</p>
-                      <p className="text-[11px] text-muted-foreground">{selectedTotals.newClassCount} baru, {selectedTotals.existingClassCount} existing</p>
-                    </div>
-                    <div className="rounded-2xl border border-border bg-muted/20 p-3">
-                      <p className="text-[11px] text-muted-foreground">Siswa dipilih</p>
-                      <p className="mt-1 text-xl font-bold">{selectedTotals.studentCount}</p>
-                      <p className="text-[11px] text-muted-foreground">{selectedTotals.newStudentCount} siap, {selectedTotals.skippedStudentCount} dilewati</p>
-                    </div>
-                    <div className="rounded-2xl border border-border bg-muted/20 p-3">
-                      <p className="text-[11px] text-muted-foreground">Warning</p>
-                      <p className="mt-1 text-xl font-bold text-amber-600">{selectedTotals.warningCount}</p>
-                      <p className="text-[11px] text-muted-foreground">Dari kelas terpilih</p>
-                    </div>
-                    <div className="rounded-2xl border border-border bg-muted/20 p-3">
-                      <p className="text-[11px] text-muted-foreground">Error</p>
-                      <p className="mt-1 text-xl font-bold text-destructive">{selectedTotals.errorCount}</p>
-                      <p className="text-[11px] text-muted-foreground">Dari kelas terpilih</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-3 rounded-2xl border border-primary/15 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">Pilih kelas yang akan diimport</p>
+                      <p className="text-sm font-semibold text-foreground">Pilih kelas yang ingin dimasukkan</p>
                       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        {selectedTotals.classCount} dari {plan.totals.classCount} kelas dipilih. {selectedTotals.excludedClassCount} kelas dan {selectedTotals.excludedStudentCount} siswa tidak akan diimport.
+                        {selectedTotals.classCount} dari {plan.totals.classCount} kelas dipilih, berisi {selectedTotals.studentCount} siswa. Geser tabel ke samping bila kolom belum terlihat penuh.
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
@@ -509,7 +486,7 @@ export default function ImportClassesStudentsDialog({
                         Pilih Semua
                       </Button>
                       <Button type="button" variant="outline" size="sm" className="h-9 text-xs" onClick={() => setAllClassesIncluded(false)}>
-                        Kosongkan
+                        Hapus Pilihan
                       </Button>
                     </div>
                   </div>
@@ -517,8 +494,9 @@ export default function ImportClassesStudentsDialog({
                   <ResponsiveDataPreview
                     rows={previewRows}
                     profile={viewport.profile}
+                    mode="table"
                     getRowKey={(row) => row.key}
-                    detailLabel="Lihat ringkasan kelas"
+                    detailLabel="Lihat tabel kelas"
                     columns={[
                       {
                         id: "include",
@@ -547,7 +525,11 @@ export default function ImportClassesStudentsDialog({
                       {
                         id: "status",
                         label: "Status",
-                        render: (row) => row.status,
+                        render: (row) => (
+                          <Badge variant={row.included ? "outline" : "secondary"} className="whitespace-nowrap">
+                            {row.status}
+                          </Badge>
+                        ),
                       },
                       {
                         id: "students",
@@ -557,7 +539,7 @@ export default function ImportClassesStudentsDialog({
                       {
                         id: "issues",
                         label: "Catatan",
-                        render: (row) => `${row.errors} error, ${row.warnings} warning`,
+                        render: (row) => row.errors || row.warnings ? `${row.errors} perlu diperbaiki, ${row.warnings} perlu dicek` : "Aman",
                       },
                     ]}
                   />
@@ -567,7 +549,7 @@ export default function ImportClassesStudentsDialog({
                       <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
                         <div className="flex items-center gap-2">
                           <AlertTriangle className="h-4 w-4 text-amber-600" />
-                          <p className="text-sm font-semibold">Daftar validasi kelas terpilih</p>
+                          <p className="text-sm font-semibold">Catatan kelas terpilih</p>
                         </div>
                         <Badge variant="outline">{selectedTotals.issues.length} catatan</Badge>
                       </div>
@@ -586,7 +568,7 @@ export default function ImportClassesStudentsDialog({
                   ) : (
                     <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
                       <CheckCircle2 className="h-4 w-4" />
-                      Kelas terpilih siap diimpor tanpa catatan validasi.
+                      Kelas terpilih siap diimpor tanpa catatan.
                     </div>
                   )}
 
@@ -598,7 +580,7 @@ export default function ImportClassesStudentsDialog({
                         className="mt-0.5"
                       />
                       <span className="leading-relaxed">
-                        Saya sudah memeriksa warning dan ingin melanjutkan. Siswa dengan nama sama tetapi NISN berbeda akan tetap ditambahkan sebagai siswa baru.
+                        Saya sudah memeriksa catatan kuning dan ingin melanjutkan. Nama siswa yang sama dengan NISN berbeda akan tetap ditambahkan sebagai siswa baru.
                       </span>
                     </label>
                   ) : null}
@@ -661,8 +643,8 @@ export default function ImportClassesStudentsDialog({
           sticky
           helperText={(
             step === "preview"
-              ? "Import tidak menulis data sebelum preview bebas error dan tombol Import ditekan."
-              : "Gunakan template resmi agar struktur sheet dan validasi tetap konsisten."
+              ? "Data baru akan disimpan hanya untuk kelas yang dicentang."
+              : "Gunakan template resmi agar daftar kelas dan siswa mudah dicek."
           )}
           actions={(
             <>

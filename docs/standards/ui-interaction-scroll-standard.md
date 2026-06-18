@@ -15,6 +15,15 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Semua trigger custom di dalam kontainer scroll wajib memakai semantic target (`button`, `role="combobox"`, `aria-haspopup="menu/listbox"`) atau `data-touch-scroll-click-target="true"` agar `useTouchScrollClickGuard()` dapat membatalkan accidental click setelah gesture scroll.
 - Pada device touchscreen, tombol/dropdown yang berada di toolbar atau area scroll padat harus memakai `touch-action: pan-x pan-y` jika user diharapkan dapat melakukan scroll melewati kontrol tersebut. Gunakan `touch-manipulation` hanya untuk tombol tap murni yang tidak menjadi jalur scroll utama.
 - Kontrol selected seperti tab aktif, segmented control aktif, dan tombol langkah tour wajib mendefinisikan state `hover`, `active`, dan `focus-visible` secara eksplisit pada state selected. Jangan memakai `active:bg-primary` global untuk semua tab, karena tab inactive dapat terlihat selected saat disentuh di mobile. Semua tab shared wajib membawa kelas `sipena-tab-trigger` agar CSS standar menjaga warna selected pada `data-state="active"`, `aria-selected="true"`, touch `:active`, dan focus.
+- Tombol utama di tour guide wajib membawa kelas `sipena-tour-action`. Tombol langkah biasa memakai warna `primary/primary-foreground`, sedangkan tombol selesai memakai hijau semantik. Warna tombol tidak boleh hilang saat ditekan di perangkat touch, saat focus-visible, atau saat pointer masih berada di atas tombol.
+
+### Standar Tab dan Tombol Tour
+
+- Gunakan `TabsTrigger` shared dari `components/ui/tabs.tsx` untuk semua tab aplikasi. Komponen ini otomatis membawa `sipena-tab-trigger`, `touch-manipulation`, dan state selected yang stabil.
+- Jangan membuat tab custom yang hanya mengandalkan `hover` atau `active` lokal. Jika perlu tab custom, tambahkan kontrak yang sama: `data-state="active"` atau `aria-selected="true"`, warna selected eksplisit, `-webkit-tap-highlight-color: transparent`, dan icon mengikuti `currentColor`.
+- Untuk segmented control yang secara perilaku sama dengan tab, pakai `sipena-tab-trigger` atau buat kelas semantic setara yang menjaga warna selected pada `:active`, `:focus`, dan `:focus-visible`.
+- Tombol `Lanjut` dan `Selesai` pada product tour wajib memakai `sipena-tour-action` plus atribut `data-tour-final`. Tombol `Selesai` harus tetap hijau ketika disentuh agar pengguna memahami bahwa langkah terakhir siap ditutup.
+- Source guard UI wajib memeriksa keberadaan `sipena-tab-trigger` dan `sipena-tour-action` ketika primitive tab atau tour diubah.
 
 ## Search Input dan Dropdown
 

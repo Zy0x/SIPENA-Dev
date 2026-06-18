@@ -1,14 +1,14 @@
 # Import Kelas & Siswa
 
-Import Kelas & Siswa adalah alur untuk membuat banyak kelas dan siswa dari satu workbook Excel resmi SIPENA. Fitur ini berbeda dari **Import Siswa ke Kelas Ini**, yang hanya menambahkan siswa ke satu kelas yang sudah dipilih.
+Import Kelas & Siswa adalah alur untuk membuat banyak kelas dan siswa dari satu file Excel resmi SIPENA. Fitur ini berbeda dari **Import Siswa ke Kelas Ini**, yang hanya menambahkan siswa ke satu kelas yang sudah dipilih.
 
 ## Struktur Workbook
 
-Gunakan tombol **Download Template** pada dialog Import Kelas & Siswa. Workbook resmi berisi:
+Gunakan tombol **Download Template** pada dialog Import Kelas & Siswa. File resmi berisi:
 
 | Sheet | Fungsi |
 | --- | --- |
-| `Panduan` | Instruksi pengisian, aturan validasi, dan cara membaca error preview. |
+| `Panduan` | Instruksi pengisian dengan warna, teks tebal, bagian penting, contoh, dan cara membaca catatan saat cek data. |
 | `Ringkasan` | Contoh ringkasan jumlah siswa per sheet kelas. |
 | `Kelas` | Daftar kelas yang akan dibuat atau digunakan ulang. |
 | `Siswa - <Nama Kelas>` | Daftar siswa untuk satu kelas. Buat satu sheet siswa untuk setiap kelas. |
@@ -22,7 +22,7 @@ Gunakan tombol **Download Template** pada dialog Import Kelas & Siswa. Workbook 
 5. Isi `Sheet Siswa` dengan nama sheet siswa untuk kelas tersebut, misalnya `Siswa - VIIA`.
 6. Buka sheet siswa yang sesuai, lalu isi `Nama Siswa *` dan `NISN *` satu siswa per baris.
 7. Jika menambah kelas baru, duplikasi salah satu sheet siswa contoh, ubah nama sheet, lalu pastikan nama itu sama persis dengan kolom `Sheet Siswa`.
-8. Simpan sebagai `.xlsx`, upload di SIPENA, lalu baca tahap **Preview & Validasi** sebelum menekan import.
+8. Simpan sebagai `.xlsx`, upload di SIPENA, lalu baca tahap **Cek Data** sebelum menekan import.
 
 Kolom utama pada sheet `Kelas`:
 
@@ -41,16 +41,18 @@ Kolom utama pada sheet `Siswa - <Nama Kelas>`:
 | `Nama Siswa *` | Ya | Nama lengkap siswa. |
 | `NISN *` | Ya | Maksimal 17 karakter. Kurang dari 10 karakter akan tampil sebagai warning. |
 
-## Validasi Preview
+## Cek Data Sebelum Import
 
-Import selalu berhenti di tahap preview sebelum ada data yang disimpan. Preview menampilkan:
+Import selalu berhenti di tahap cek data sebelum ada data yang disimpan. Bagian ini dibuat sebagai tabel agar guru dapat langsung melihat kelas mana yang akan dipakai.
 
-- total kelas yang terdeteksi,
-- pilihan kelas yang akan diikutkan atau dikeluarkan dari import,
-- jumlah kelas baru dan kelas existing,
-- jumlah siswa per sheet,
-- jumlah siswa baru, siswa dilewati, warning, dan error,
-- daftar error/warning per sheet dan baris.
+Tabel cek data menampilkan:
+
+- kotak centang **Ikut** untuk memasukkan atau mengeluarkan kelas dari import,
+- nama kelas,
+- nama sheet siswa,
+- status kelas, misalnya `Kelas baru`, `Sudah ada`, atau `Tidak dipilih`,
+- jumlah siswa,
+- catatan yang perlu diperbaiki atau dicek.
 
 Tombol import tidak aktif selama masih ada error pada kelas yang dipilih. Kelas yang tidak dicentang tidak ikut dibuat, siswanya tidak dimasukkan, dan error/warning milik kelas tersebut tidak memblokir import kelas lain. Warning boleh dilanjutkan hanya setelah pengguna mencentang konfirmasi.
 

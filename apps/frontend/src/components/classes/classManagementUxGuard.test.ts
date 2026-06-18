@@ -160,10 +160,15 @@ describe("class management UX guard", () => {
     expect(cssSource).toContain(':where(.app-page table thead, [role="dialog"] table thead, .sipena-table-header)');
     expect(cssSource).toContain(':where(.app-page table thead th, [role="dialog"] table thead th)');
     expect(tourSource).toContain("bg-emerald-600 text-white");
+    expect(tourSource).toContain("sipena-tour-action");
+    expect(tourSource).toContain("data-tour-final");
     expect(tourSource).toContain("active:bg-emerald-700 active:text-white");
     expect(tourSource).toContain("bg-primary text-primary-foreground");
     expect(tourSource).toContain("active:bg-primary active:text-primary-foreground");
     expect(tourSource).toContain("hover:text-primary-foreground");
+    expect(cssSource).toContain(".sipena-tour-action[data-tour-final=\"false\"]");
+    expect(cssSource).toContain(".sipena-tour-action[data-tour-final=\"true\"]");
+    expect(cssSource).toContain("-webkit-tap-highlight-color: transparent");
   });
 
   it("documents the main class management actions in product tour", () => {

@@ -28,25 +28,28 @@ describe("class student import guard", () => {
 
     expect(dialogSource).toContain("downloadClassStudentImportTemplate");
     expect(dialogSource).toContain("buildClassStudentImportPlan");
-    expect(dialogSource).toContain("Preview & Validasi");
-    expect(dialogSource).toContain("Saya sudah memeriksa warning");
+    expect(dialogSource).toContain("Cek Data");
+    expect(dialogSource).toContain("Saya sudah memeriksa catatan kuning");
     expect(dialogSource).toContain("Import Kelas & Siswa");
-    expect(dialogSource).toContain("Kolom wajib: Nama Kelas, KKM Kelas, Nama Siswa, dan NISN");
+    expect(dialogSource).toContain("Pilih kelas yang ingin dimasukkan");
     expect(dialogSource).toContain("includedClassKeys");
-    expect(dialogSource).toContain("Pilih kelas yang akan diimport");
     expect(dialogSource).toContain("setAllClassesIncluded");
     expect(dialogSource).toContain("toggleClassIncluded");
+    expect(dialogSource).toContain('mode="table"');
     expect(dialogSource).toContain("selectedTotals.errorCount");
     expect(dialogSource).toContain("classesExcluded");
     expect(dialogSource).toContain("studentsExcluded");
 
     expect(parserSource).toContain("Siswa - ");
+    expect(parserSource).toContain("xlsx-js-style");
     expect(parserSource).toContain("Sheet Kelas wajib ada");
     expect(parserSource).toContain("Nama kelas maksimal");
     expect(parserSource).toContain("NISN wajib diisi");
     expect(parserSource).toContain("NISN sudah dipakai");
-    expect(parserSource).toContain("Langkah pengisian untuk pengguna baru");
+    expect(parserSource).toContain("Langkah cepat");
     expect(parserSource).toContain("Checklist sebelum upload");
+    expect(parserSource).toContain("TEMPLATE_COLORS");
+    expect(parserSource).toContain("applyGuideSheetStyle");
 
     expect(studioSource).toContain("overflow-x-auto overscroll-x-contain");
     expect(studioSource).toContain('min-w-[42rem]');
@@ -56,7 +59,7 @@ describe("class student import guard", () => {
     expect(docsSource).toContain("Import Siswa ke Kelas Ini");
     expect(docsSource).toContain("Cara Mengisi Template");
     expect(docsSource).toContain("Cara Membaca Error dan Warning");
-    expect(docsSource).toContain("pilihan kelas yang akan diikutkan atau dikeluarkan dari import");
+    expect(docsSource).toContain("kotak centang **Ikut**");
     expect(docsSource).toContain("error/warning milik kelas tersebut tidak memblokir import kelas lain");
   });
 });
