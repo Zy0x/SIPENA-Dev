@@ -1,4 +1,4 @@
-import { useRef, type ComponentType, type MouseEvent, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, type ComponentType, type ReactNode } from "react";
 import { ChevronDown, Eye, PanelLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -221,7 +221,150 @@ export function ResponsiveDataPreview<Row>({
     lastX: 0,
     lastTime: 0,
     velocityX: 0,
+    pointerId: -1,
+    captured: false,
   });
+
+  useEffect(() => {
+    const element = tableScrollRef.current;
+    if (!element || rows.length === 0) return undefined;
+
+    const scheduleScroll = () => {
+      const state = tableDragRef.current;
+      if (state.rafId !== 0) return;
+      state.rafId = window.requestAnimationFrame(() => {
+        state.rafId = 0;
+        const scrollTarget = tableScrollRef.current;
+        if (scrollTarget) {
+          scrollTarget.scrollLeft = state.pendingScrollLeft;
+        }
+      });
+    };
+
+    const cancelFrame = () => {
+      const state = tableDragRef.current;
+      if (state.rafId !== 0) {
+        window.cancelAnimationFrame(state.rafId);
+        state.rafId = 0;
+      }
+    };
+
+    const onPointerDown = (event: globalThis.PointerEvent) => {
+      if (event.pointerType === "mouse" || !tableScrollRef.current) return;
+      cancelFrame();
+      const now = performance.now();
+      tableDragRef.current = {
+        active: true,
+        dragging: false,
+        startX: event.clientX,
+        startY: event.clientY,
+        scrollLeft: tableScrollRef.current.scrollLeft,
+        pendingScrollLeft: tableScrollRef.current.scrollLeft,
+        rafId: 0,
+        lastX: event.clientX,
+        lastTime: now,
+        velocityX: 0,
+        pointerId: event.pointerId,
+        captured: false,
+      };
+    };
+
+    const onPointerMove = (event: globalThis.PointerEvent) => {
+      const state = tableDragRef.current;
+      const target = tableScrollRef.current;
+      if (!state.active || !target || state.pointerId !== event.pointerId) return;
+
+      const coalesced = typeof event.getCoalescedEvents === "function" ? event.getCoalescedEvents() : [];
+      const point = coalesced.length > 0 ? coalesced[coalesced.length - 1] : event;
+      const deltaX = point.clientX - state.startX;
+      const deltaY = point.clientY - state.startY;
+
+      if (!state.dragging && Math.abs(deltaX) > 6 && Math.abs(deltaX) > Math.abs(deltaY)) {
+        state.dragging = true;
+        if (!state.captured) {
+          try {
+            element.setPointerCapture(event.pointerId);
+            state.captured = true;
+          } catch {
+            state.captured = false;
+          }
+        }
+      }
+      if (!state.dragging) return;
+
+      const now = performance.now();
+      const elapsed = Math.max(1, now - state.lastTime);
+      state.velocityX = (point.clientX - state.lastX) / elapsed;
+      state.lastX = point.clientX;
+      state.lastTime = now;
+      state.pendingScrollLeft = state.scrollLeft - deltaX;
+      scheduleScroll();
+      if (event.cancelable) event.preventDefault();
+    };
+
+    const onPointerEnd = (event: globalThis.PointerEvent) => {
+      const state = tableDragRef.current;
+      if (!state.active || state.pointerId !== event.pointerId) return;
+
+      cancelFrame();
+      if (tableScrollRef.current) {
+        tableScrollRef.current.scrollLeft = state.pendingScrollLeft;
+      }
+      if (state.captured) {
+        try {
+          element.releasePointerCapture(event.pointerId);
+        } catch {
+          // Pointer capture may already be released by the browser.
+        }
+        state.captured = false;
+      }
+
+      const shouldContinue = state.dragging && Math.abs(state.velocityX) > 0.06;
+      if (shouldContinue) {
+        let previousTime = performance.now();
+        const runMomentum = (timestamp: number) => {
+          const target = tableScrollRef.current;
+          if (!target) return;
+          const elapsed = Math.min(32, Math.max(1, timestamp - previousTime));
+          previousTime = timestamp;
+          target.scrollLeft -= state.velocityX * elapsed;
+          state.velocityX *= Math.pow(0.92, elapsed / 16);
+          if (Math.abs(state.velocityX) > 0.012) {
+            state.rafId = window.requestAnimationFrame(runMomentum);
+          } else {
+            state.rafId = 0;
+          }
+        };
+        state.rafId = window.requestAnimationFrame(runMomentum);
+      }
+
+      state.active = false;
+      window.setTimeout(() => {
+        state.dragging = false;
+      }, 120);
+    };
+
+    const onClickCapture = (event: MouseEvent) => {
+      if (!tableDragRef.current.dragging) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    element.addEventListener("pointerdown", onPointerDown, { passive: true });
+    element.addEventListener("pointermove", onPointerMove, { passive: false });
+    element.addEventListener("pointerup", onPointerEnd, { passive: true });
+    element.addEventListener("pointercancel", onPointerEnd, { passive: true });
+    element.addEventListener("click", onClickCapture, true);
+
+    return () => {
+      cancelFrame();
+      element.removeEventListener("pointerdown", onPointerDown);
+      element.removeEventListener("pointermove", onPointerMove);
+      element.removeEventListener("pointerup", onPointerEnd);
+      element.removeEventListener("pointercancel", onPointerEnd);
+      element.removeEventListener("click", onClickCapture, true);
+    };
+  }, [rows.length]);
 
   if (rows.length === 0) {
     return (
@@ -255,104 +398,10 @@ export function ResponsiveDataPreview<Row>({
     </div>
   );
 
-  const handleTablePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse" || !tableScrollRef.current) return;
-    if (tableDragRef.current.rafId !== 0) {
-      window.cancelAnimationFrame(tableDragRef.current.rafId);
-    }
-    const now = performance.now();
-    tableDragRef.current = {
-      active: true,
-      dragging: false,
-      startX: event.clientX,
-      startY: event.clientY,
-      scrollLeft: tableScrollRef.current.scrollLeft,
-      pendingScrollLeft: tableScrollRef.current.scrollLeft,
-      rafId: 0,
-      lastX: event.clientX,
-      lastTime: now,
-      velocityX: 0,
-    };
-  };
-
-  const handleTablePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const state = tableDragRef.current;
-    const target = tableScrollRef.current;
-    if (!state.active || !target) return;
-
-    const deltaX = event.clientX - state.startX;
-    const deltaY = event.clientY - state.startY;
-    if (!state.dragging && Math.abs(deltaX) > 6 && Math.abs(deltaX) > Math.abs(deltaY)) {
-      state.dragging = true;
-    }
-    if (!state.dragging) return;
-
-    const now = performance.now();
-    const elapsed = Math.max(1, now - state.lastTime);
-    state.velocityX = (event.clientX - state.lastX) / elapsed;
-    state.lastX = event.clientX;
-    state.lastTime = now;
-    state.pendingScrollLeft = state.scrollLeft - deltaX;
-    if (state.rafId === 0) {
-      state.rafId = window.requestAnimationFrame(() => {
-        state.rafId = 0;
-        const scrollTarget = tableScrollRef.current;
-        if (scrollTarget) {
-          scrollTarget.scrollLeft = state.pendingScrollLeft;
-        }
-      });
-    }
-    if (event.cancelable) event.preventDefault();
-  };
-
-  const handleTablePointerEnd = () => {
-    const state = tableDragRef.current;
-    if (state.rafId !== 0) {
-      window.cancelAnimationFrame(state.rafId);
-      state.rafId = 0;
-      if (tableScrollRef.current) {
-        tableScrollRef.current.scrollLeft = state.pendingScrollLeft;
-      }
-    }
-    const shouldContinue = state.dragging && Math.abs(state.velocityX) > 0.06;
-    if (shouldContinue) {
-      let previousTime = performance.now();
-      const runMomentum = (timestamp: number) => {
-        const target = tableScrollRef.current;
-        if (!target) return;
-        const elapsed = Math.min(32, Math.max(1, timestamp - previousTime));
-        previousTime = timestamp;
-        target.scrollLeft -= state.velocityX * elapsed;
-        state.velocityX *= Math.pow(0.92, elapsed / 16);
-        if (Math.abs(state.velocityX) > 0.012) {
-          state.rafId = window.requestAnimationFrame(runMomentum);
-        } else {
-          state.rafId = 0;
-        }
-      };
-      state.rafId = window.requestAnimationFrame(runMomentum);
-    }
-    state.active = false;
-    window.setTimeout(() => {
-      state.dragging = false;
-    }, 120);
-  };
-
-  const handleTableClickCapture = (event: MouseEvent<HTMLDivElement>) => {
-    if (!tableDragRef.current.dragging) return;
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
   const renderTable = () => (
     <div
       ref={tableScrollRef}
       className="sipena-responsive-data-table-scroll w-full overflow-x-scroll overscroll-x-contain rounded-2xl border border-border bg-background pb-1"
-      onPointerDown={handleTablePointerDown}
-      onPointerMove={handleTablePointerMove}
-      onPointerUp={handleTablePointerEnd}
-      onPointerCancel={handleTablePointerEnd}
-      onClickCapture={handleTableClickCapture}
     >
       <div className="min-w-[46rem]">
         <Table>

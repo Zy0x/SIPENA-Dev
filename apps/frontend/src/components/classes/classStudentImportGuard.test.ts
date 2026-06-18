@@ -56,7 +56,8 @@ describe("class student import guard", () => {
     expect(studioSource).toContain("sipena-responsive-data-table-scroll");
     expect(studioSource).toContain("overflow-x-scroll overscroll-x-contain");
     expect(studioSource).toContain('min-w-[46rem]');
-    expect(studioSource).toContain("handleTablePointerMove");
+    expect(studioSource).toContain('addEventListener("pointermove"');
+    expect(studioSource).toContain("getCoalescedEvents");
     expect(studioSource).toContain("window.requestAnimationFrame");
     expect(studioSource).toContain("state.pendingScrollLeft = state.scrollLeft - deltaX");
     expect(studioSource).toContain("state.velocityX");
