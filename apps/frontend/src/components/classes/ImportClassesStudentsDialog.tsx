@@ -508,6 +508,7 @@ export default function ImportClassesStudentsDialog({
                             checked={row.included}
                             onCheckedChange={(value) => toggleClassIncluded(row.key, value === true)}
                             aria-label={`Ikutkan kelas ${row.className}`}
+                            className="sipena-import-class-include-checkbox h-5 w-5 rounded-full touch-pan-x"
                           />
                         ),
                       },

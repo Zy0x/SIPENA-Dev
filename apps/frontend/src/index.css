@@ -3490,6 +3490,10 @@
     width: max-content;
   }
 
+  .sipena-import-class-include-checkbox {
+    touch-action: pan-x pan-y;
+  }
+
   .sipena-scroll-isolated,
   .sipena-scroll-isolated .overflow-auto,
   .sipena-scroll-isolated .overflow-scroll,
@@ -3513,6 +3517,22 @@
     border-color: inherit !important;
     box-shadow: inherit !important;
     transform: none !important;
+  }
+
+  [role="checkbox"][data-state="checked"],
+  [role="checkbox"][aria-checked="true"] {
+    background-color: hsl(var(--primary)) !important;
+    border-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  [role="checkbox"][data-state="checked"]:active,
+  [role="checkbox"][aria-checked="true"]:active,
+  [role="checkbox"][data-state="checked"]:focus-visible,
+  [role="checkbox"][aria-checked="true"]:focus-visible {
+    background-color: hsl(var(--primary)) !important;
+    border-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
   }
 
   .sipena-grade-toolbar button,

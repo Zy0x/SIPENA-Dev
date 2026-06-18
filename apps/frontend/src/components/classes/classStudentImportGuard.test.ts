@@ -35,6 +35,7 @@ describe("class student import guard", () => {
     expect(dialogSource).toContain("includedClassKeys");
     expect(dialogSource).toContain("setAllClassesIncluded");
     expect(dialogSource).toContain("toggleClassIncluded");
+    expect(dialogSource).toContain("sipena-import-class-include-checkbox");
     expect(dialogSource).toContain('mode="table"');
     expect(dialogSource).toContain("selectedTotals.errorCount");
     expect(dialogSource).toContain("classesExcluded");
@@ -55,6 +56,14 @@ describe("class student import guard", () => {
     expect(studioSource).toContain("sipena-responsive-data-table-scroll");
     expect(studioSource).toContain("overflow-x-scroll overscroll-x-contain");
     expect(studioSource).toContain('min-w-[46rem]');
+    expect(studioSource).toContain("handleTablePointerMove");
+    expect(studioSource).toContain("target.scrollLeft = state.scrollLeft - deltaX");
+    expect(studioSource).toContain("}, 120)");
+
+    const cssSource = readSource("apps/frontend/src/index.css");
+    expect(cssSource).toContain('[role="checkbox"][data-state="checked"]');
+    expect(cssSource).toContain(".sipena-import-class-include-checkbox");
+    expect(cssSource).toContain("touch-action: pan-x pan-y");
 
     expect(docsSource).toContain("Import Kelas & Siswa");
     expect(docsSource).toContain("Siswa - <Nama Kelas>");

@@ -1,4 +1,4 @@
-import { type ComponentType, type ReactNode } from "react";
+import { useRef, type ComponentType, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { ChevronDown, Eye, PanelLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -209,6 +209,14 @@ export function ResponsiveDataPreview<Row>({
   const resolvedMode = mode ?? getResponsivePreviewMode(profile);
   const primaryColumn = columns.find((column) => column.primary) ?? columns[0];
   const secondaryColumns = columns.filter((column) => column.id !== primaryColumn?.id);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const tableDragRef = useRef({
+    active: false,
+    dragging: false,
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0,
+  });
 
   if (rows.length === 0) {
     return (
@@ -242,8 +250,56 @@ export function ResponsiveDataPreview<Row>({
     </div>
   );
 
+  const handleTablePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" || !tableScrollRef.current) return;
+    tableDragRef.current = {
+      active: true,
+      dragging: false,
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: tableScrollRef.current.scrollLeft,
+    };
+  };
+
+  const handleTablePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const state = tableDragRef.current;
+    const target = tableScrollRef.current;
+    if (!state.active || !target) return;
+
+    const deltaX = event.clientX - state.startX;
+    const deltaY = event.clientY - state.startY;
+    if (!state.dragging && Math.abs(deltaX) > 6 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      state.dragging = true;
+    }
+    if (!state.dragging) return;
+
+    target.scrollLeft = state.scrollLeft - deltaX;
+    event.preventDefault();
+  };
+
+  const handleTablePointerEnd = () => {
+    tableDragRef.current.active = false;
+    window.setTimeout(() => {
+      tableDragRef.current.dragging = false;
+    }, 120);
+  };
+
+  const handleTableClickCapture = (event: MouseEvent<HTMLDivElement>) => {
+    if (!tableDragRef.current.dragging) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   const renderTable = () => (
-    <div className="sipena-responsive-data-table-scroll w-full overflow-x-scroll overscroll-x-contain rounded-2xl border border-border bg-background pb-1">
+    <div
+      ref={tableScrollRef}
+      className="sipena-responsive-data-table-scroll w-full overflow-x-scroll overscroll-x-contain rounded-2xl border border-border bg-background pb-1"
+      onPointerDown={handleTablePointerDown}
+      onPointerMove={handleTablePointerMove}
+      onPointerUp={handleTablePointerEnd}
+      onPointerCancel={handleTablePointerEnd}
+      onClickCapture={handleTableClickCapture}
+    >
       <div className="min-w-[46rem]">
         <Table>
           <TableHeader>
