@@ -8,7 +8,7 @@ Gunakan tombol **Download Template** pada dialog Import Kelas & Siswa. File resm
 
 | Sheet | Fungsi |
 | --- | --- |
-| `Panduan` | Instruksi pengisian dengan warna, teks tebal, bagian penting, contoh, dan cara membaca catatan saat cek data. |
+| `Panduan` | Panduan singkat berisi urutan pengisian, aturan wajib, dan arti catatan saat cek data. |
 | `Ringkasan` | Contoh ringkasan jumlah siswa per sheet kelas. |
 | `Kelas` | Daftar kelas yang akan dibuat atau digunakan ulang. |
 | `Siswa - <Nama Kelas>` | Daftar siswa untuk satu kelas. Buat satu sheet siswa untuk setiap kelas. |
@@ -23,6 +23,8 @@ Gunakan tombol **Download Template** pada dialog Import Kelas & Siswa. File resm
 6. Buka sheet siswa yang sesuai, lalu isi `Nama Siswa *` dan `NISN *` satu siswa per baris.
 7. Jika menambah kelas baru, duplikasi salah satu sheet siswa contoh, ubah nama sheet, lalu pastikan nama itu sama persis dengan kolom `Sheet Siswa`.
 8. Simpan sebagai `.xlsx`, upload di SIPENA, lalu baca tahap **Cek Data** sebelum menekan import.
+
+Template sengaja dibuat ringkas. Kolom teks panjang memakai wrap dan tinggi baris otomatis agar isi panduan tidak terpotong saat dibuka di Excel atau aplikasi spreadsheet lain.
 
 Kolom utama pada sheet `Kelas`:
 
@@ -53,6 +55,8 @@ Tabel cek data menampilkan:
 - status kelas, misalnya `Kelas baru`, `Sudah ada`, atau `Tidak dipilih`,
 - jumlah siswa,
 - catatan yang perlu diperbaiki atau dicek.
+
+Tabel cek data bisa digeser ke samping pada layar kecil. Geser area tabel untuk melihat kolom status, jumlah siswa, dan catatan lengkap.
 
 Tombol import tidak aktif selama masih ada error pada kelas yang dipilih. Kelas yang tidak dicentang tidak ikut dibuat, siswanya tidak dimasukkan, dan error/warning milik kelas tersebut tidak memblokir import kelas lain. Warning boleh dilanjutkan hanya setelah pengguna mencentang konfirmasi.
 

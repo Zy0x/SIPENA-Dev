@@ -243,8 +243,8 @@ export function ResponsiveDataPreview<Row>({
   );
 
   const renderTable = () => (
-    <div className="w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-border bg-background">
-      <div className="min-w-[42rem]">
+    <div className="sipena-responsive-data-table-scroll w-full overflow-x-scroll overscroll-x-contain rounded-2xl border border-border bg-background pb-1">
+      <div className="min-w-[46rem]">
         <Table>
           <TableHeader>
             <TableRow>

@@ -46,20 +46,24 @@ describe("class student import guard", () => {
     expect(parserSource).toContain("Nama kelas maksimal");
     expect(parserSource).toContain("NISN wajib diisi");
     expect(parserSource).toContain("NISN sudah dipakai");
-    expect(parserSource).toContain("Langkah cepat");
+    expect(parserSource).toContain("Cara isi cepat");
     expect(parserSource).toContain("Checklist sebelum upload");
     expect(parserSource).toContain("TEMPLATE_COLORS");
     expect(parserSource).toContain("applyGuideSheetStyle");
+    expect(parserSource).toContain("estimateWrappedRowHeight");
 
-    expect(studioSource).toContain("overflow-x-auto overscroll-x-contain");
-    expect(studioSource).toContain('min-w-[42rem]');
+    expect(studioSource).toContain("sipena-responsive-data-table-scroll");
+    expect(studioSource).toContain("overflow-x-scroll overscroll-x-contain");
+    expect(studioSource).toContain('min-w-[46rem]');
 
     expect(docsSource).toContain("Import Kelas & Siswa");
     expect(docsSource).toContain("Siswa - <Nama Kelas>");
     expect(docsSource).toContain("Import Siswa ke Kelas Ini");
     expect(docsSource).toContain("Cara Mengisi Template");
+    expect(docsSource).toContain("tinggi baris otomatis");
     expect(docsSource).toContain("Cara Membaca Error dan Warning");
     expect(docsSource).toContain("kotak centang **Ikut**");
+    expect(docsSource).toContain("Tabel cek data bisa digeser ke samping");
     expect(docsSource).toContain("error/warning milik kelas tersebut tidak memblokir import kelas lain");
   });
 });
