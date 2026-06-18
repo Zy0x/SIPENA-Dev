@@ -14,7 +14,7 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Dropdown, select, popover, dan tombol di dalam area yang bisa di-scroll tidak boleh membuka aksi dari `pointerdown`/`touchstart`. Aktivasi touch harus terjadi setelah tap final (`click`/`pointerup`) dan batal jika pointer bergerak melewati threshold scroll global.
 - Semua trigger custom di dalam kontainer scroll wajib memakai semantic target (`button`, `role="combobox"`, `aria-haspopup="menu/listbox"`) atau `data-touch-scroll-click-target="true"` agar `useTouchScrollClickGuard()` dapat membatalkan accidental click setelah gesture scroll.
 - Pada device touchscreen, tombol/dropdown yang berada di toolbar atau area scroll padat harus memakai `touch-action: pan-x pan-y` jika user diharapkan dapat melakukan scroll melewati kontrol tersebut. Gunakan `touch-manipulation` hanya untuk tombol tap murni yang tidak menjadi jalur scroll utama.
-- Kontrol selected seperti tab aktif, segmented control aktif, dan tombol langkah tour wajib mendefinisikan state `hover`, `active`, dan `focus-visible` secara eksplisit pada state selected. Jangan memakai `active:bg-primary` global untuk semua tab, karena tab inactive dapat terlihat selected saat disentuh di mobile.
+- Kontrol selected seperti tab aktif, segmented control aktif, dan tombol langkah tour wajib mendefinisikan state `hover`, `active`, dan `focus-visible` secara eksplisit pada state selected. Jangan memakai `active:bg-primary` global untuk semua tab, karena tab inactive dapat terlihat selected saat disentuh di mobile. Semua tab shared wajib membawa kelas `sipena-tab-trigger` agar CSS standar menjaga warna selected pada `data-state="active"`, `aria-selected="true"`, touch `:active`, dan focus.
 
 ## Search Input dan Dropdown
 

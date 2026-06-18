@@ -52,9 +52,13 @@ describe("class management UX guard", () => {
     expect(cssSource).toContain(".sipena-search-field");
     expect(cssSource).toContain(".sipena-search-field:focus-within");
     expect(cssSource).toContain(".sipena-search-field .sipena-search-input");
+    expect(cssSource).toContain(".sipena-tab-trigger[data-state=\"active\"]");
+    expect(cssSource).toContain(".sipena-tab-trigger[aria-selected=\"true\"]");
+    expect(cssSource).toContain("-webkit-tap-highlight-color: transparent");
     expect(docsSource).toContain("Kotak pencarian wajib menggambar border/focus ring di wrapper luar");
     expect(docsSource).toContain("Dropdown menu wajib collision-aware");
     expect(docsSource).toContain("Jangan memakai `active:bg-primary` global untuk semua tab");
+    expect(docsSource).toContain("kelas `sipena-tab-trigger`");
     expect(docsSource).toContain("overflow horizontal native");
   });
 
@@ -144,6 +148,7 @@ describe("class management UX guard", () => {
     expect(addStudentSource).toContain("Tandai Semua untuk Dilewati");
     expect(addStudentSource).toContain("Izinkan Semua Ditambahkan");
     expect(tabsSource).toContain("rounded-xl border border-border/70");
+    expect(tabsSource).toContain("sipena-tab-trigger");
     expect(tabsSource).toContain("touch-manipulation");
     expect(tabsSource).toContain("data-[state=active]:bg-primary");
     expect(tabsSource).toContain("data-[state=active]:active:bg-primary");

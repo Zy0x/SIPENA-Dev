@@ -57,8 +57,10 @@ type ImportStep = "upload" | "preview" | "importing" | "done";
 interface ImportResult {
   classesCreated: number;
   classesReused: number;
+  classesExcluded: number;
   studentsCreated: number;
   studentsSkipped: number;
+  studentsExcluded: number;
   errors: string[];
 }
 
@@ -71,6 +73,10 @@ function issueTone(severity: "error" | "warning" | "info") {
 function classStatusLabel(item: ParsedImportClass) {
   if (item.existingClassId) return "Kelas existing";
   return "Kelas baru";
+}
+
+function importClassKey(item: ParsedImportClass) {
+  return `${item.rowNumber}:${item.normalizedName || item.name}:${item.sheetName}`;
 }
 
 export default function ImportClassesStudentsDialog({
@@ -94,6 +100,7 @@ export default function ImportClassesStudentsDialog({
   const [confirmWarnings, setConfirmWarnings] = useState(false);
   const [progress, setProgress] = useState({ value: 0, label: "" });
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [includedClassKeys, setIncludedClassKeys] = useState<Set<string>>(new Set());
 
   const resetState = useCallback(() => {
     setFileName("");
@@ -103,6 +110,7 @@ export default function ImportClassesStudentsDialog({
     setConfirmWarnings(false);
     setProgress({ value: 0, label: "" });
     setResult(null);
+    setIncludedClassKeys(new Set());
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
@@ -166,6 +174,7 @@ export default function ImportClassesStudentsDialog({
       const workbook = readClassStudentImportWorkbook(buffer);
       const parsedPlan = buildClassStudentImportPlan(workbook, existing);
       setPlan(parsedPlan);
+      setIncludedClassKeys(new Set(parsedPlan.classes.map(importClassKey)));
       setStep("preview");
     } catch (err: any) {
       setError(err?.message || "Gagal membaca workbook. Pastikan file berasal dari template Import Kelas & Siswa SIPENA.");
@@ -175,19 +184,63 @@ export default function ImportClassesStudentsDialog({
     }
   }, [loadExistingClassesWithStudents]);
 
+  const includedClasses = useMemo(() => {
+    if (!plan) return [];
+    return plan.classes.filter((item) => includedClassKeys.has(importClassKey(item)));
+  }, [includedClassKeys, plan]);
+
+  const selectedTotals = useMemo(() => {
+    const students = includedClasses.flatMap((item) => item.students);
+    const issues = includedClasses.flatMap((item) => [
+      ...item.issues,
+      ...item.students.flatMap((student) => student.issues),
+    ]);
+    const excludedClasses = plan ? plan.classes.filter((item) => !includedClassKeys.has(importClassKey(item))) : [];
+    return {
+      classCount: includedClasses.length,
+      newClassCount: includedClasses.filter((item) => !item.existingClassId).length,
+      existingClassCount: includedClasses.filter((item) => item.existingClassId).length,
+      studentCount: students.length,
+      newStudentCount: students.filter((item) => item.status === "new").length,
+      skippedStudentCount: students.filter((item) => item.status === "skip-existing").length,
+      warningStudentCount: students.filter((item) => item.status === "warning-name-conflict").length,
+      blockedStudentCount: students.filter((item) => item.status === "blocked-nisn-conflict" || item.status === "invalid").length,
+      errorCount: issues.filter((item) => item.severity === "error").length,
+      warningCount: issues.filter((item) => item.severity === "warning").length,
+      excludedClassCount: excludedClasses.length,
+      excludedStudentCount: excludedClasses.reduce((total, item) => total + item.students.length, 0),
+      issues,
+    };
+  }, [includedClassKeys, includedClasses, plan]);
+
   const canImport = useMemo(() => {
     if (!plan || step !== "preview") return false;
-    if (plan.totals.errorCount > 0) return false;
-    if (plan.totals.warningCount > 0 && !confirmWarnings) return false;
-    return plan.totals.classCount > 0;
-  }, [confirmWarnings, plan, step]);
+    if (selectedTotals.errorCount > 0) return false;
+    if (selectedTotals.warningCount > 0 && !confirmWarnings) return false;
+    return selectedTotals.classCount > 0;
+  }, [confirmWarnings, plan, selectedTotals.classCount, selectedTotals.errorCount, selectedTotals.warningCount, step]);
 
   const importableStudentsCount = useMemo(() => {
-    if (!plan) return 0;
-    return plan.classes.reduce((total, item) => (
+    return includedClasses.reduce((total, item) => (
       total + item.students.filter((student) => student.status === "new" || student.status === "warning-name-conflict").length
     ), 0);
+  }, [includedClasses]);
+
+  const setAllClassesIncluded = useCallback((included: boolean) => {
+    if (!plan) return;
+    setIncludedClassKeys(included ? new Set(plan.classes.map(importClassKey)) : new Set());
+    setConfirmWarnings(false);
   }, [plan]);
+
+  const toggleClassIncluded = useCallback((key: string, included: boolean) => {
+    setIncludedClassKeys((current) => {
+      const next = new Set(current);
+      if (included) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+    setConfirmWarnings(false);
+  }, []);
 
   const handleImport = useCallback(async () => {
     if (!user || !activeYearId || !plan || !canImport) {
@@ -203,8 +256,8 @@ export default function ImportClassesStudentsDialog({
     let classesCreated = 0;
     let classesReused = 0;
     let studentsCreated = 0;
-    let studentsSkipped = plan.totals.skippedStudentCount;
-    const totalWork = Math.max(plan.totals.newClassCount + importableStudentsCount, 1);
+    let studentsSkipped = selectedTotals.skippedStudentCount;
+    const totalWork = Math.max(selectedTotals.newClassCount + importableStudentsCount, 1);
     let completed = 0;
 
     const updateProgress = (label: string) => {
@@ -213,7 +266,7 @@ export default function ImportClassesStudentsDialog({
     };
 
     try {
-      for (const item of plan.classes) {
+      for (const item of includedClasses) {
         if (item.existingClassId) {
           classIdMap.set(item.normalizedName, item.existingClassId);
           classesReused += 1;
@@ -243,7 +296,7 @@ export default function ImportClassesStudentsDialog({
         updateProgress(`Membuat kelas ${item.name}`);
       }
 
-      for (const item of plan.classes) {
+      for (const item of includedClasses) {
         const classId = classIdMap.get(item.normalizedName);
         if (!classId) {
           const skipped = item.students.filter((student) => student.status === "new" || student.status === "warning-name-conflict").length;
@@ -286,7 +339,15 @@ export default function ImportClassesStudentsDialog({
       queryClient.invalidateQueries({ queryKey: ["student-rankings"] }),
     ]);
 
-    const finalResult = { classesCreated, classesReused, studentsCreated, studentsSkipped, errors };
+    const finalResult = {
+      classesCreated,
+      classesReused,
+      classesExcluded: selectedTotals.excludedClassCount,
+      studentsCreated,
+      studentsSkipped,
+      studentsExcluded: selectedTotals.excludedStudentCount,
+      errors,
+    };
     setResult(finalResult);
     setProgress({ value: 100, label: "Import selesai." });
     setStep("done");
@@ -300,20 +361,26 @@ export default function ImportClassesStudentsDialog({
     } else {
       showSuccess("Import berhasil", `${classesCreated} kelas baru dan ${studentsCreated} siswa berhasil ditambahkan.`);
     }
-  }, [activeYearId, canImport, importableStudentsCount, plan, queryClient, showError, showSuccess, toast, user]);
+  }, [activeYearId, canImport, importableStudentsCount, includedClasses, plan, queryClient, selectedTotals.excludedClassCount, selectedTotals.excludedStudentCount, selectedTotals.newClassCount, selectedTotals.skippedStudentCount, showError, showSuccess, toast, user]);
 
   const previewRows = useMemo(() => {
     if (!plan) return [];
-    return plan.classes.map((item) => ({
-      className: item.name,
-      sheetName: item.sheetName,
-      status: classStatusLabel(item),
-      students: item.students.length,
-      newStudents: item.students.filter((student) => student.status === "new").length,
-      warnings: item.students.filter((student) => student.status === "warning-name-conflict").length + item.issues.filter((issue) => issue.severity === "warning").length,
-      errors: item.students.filter((student) => student.status === "invalid" || student.status === "blocked-nisn-conflict").length + item.issues.filter((issue) => issue.severity === "error").length,
-    }));
-  }, [plan]);
+    return plan.classes.map((item) => {
+      const key = importClassKey(item);
+      const included = includedClassKeys.has(key);
+      return {
+        key,
+        included,
+        className: item.name,
+        sheetName: item.sheetName,
+        status: included ? classStatusLabel(item) : "Tidak diimport",
+        students: item.students.length,
+        newStudents: item.students.filter((student) => student.status === "new").length,
+        warnings: item.students.filter((student) => student.status === "warning-name-conflict").length + item.issues.filter((issue) => issue.severity === "warning").length,
+        errors: item.students.filter((student) => student.status === "invalid" || student.status === "blocked-nisn-conflict").length + item.issues.filter((issue) => issue.severity === "error").length,
+      };
+    });
+  }, [includedClassKeys, plan]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -409,33 +476,63 @@ export default function ImportClassesStudentsDialog({
                 <div className="space-y-4">
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="rounded-2xl border border-border bg-muted/20 p-3">
-                      <p className="text-[11px] text-muted-foreground">Kelas terdeteksi</p>
-                      <p className="mt-1 text-xl font-bold">{plan.totals.classCount}</p>
-                      <p className="text-[11px] text-muted-foreground">{plan.totals.newClassCount} baru, {plan.totals.existingClassCount} existing</p>
+                      <p className="text-[11px] text-muted-foreground">Kelas dipilih</p>
+                      <p className="mt-1 text-xl font-bold">{selectedTotals.classCount}</p>
+                      <p className="text-[11px] text-muted-foreground">{selectedTotals.newClassCount} baru, {selectedTotals.existingClassCount} existing</p>
                     </div>
                     <div className="rounded-2xl border border-border bg-muted/20 p-3">
-                      <p className="text-[11px] text-muted-foreground">Siswa terdeteksi</p>
-                      <p className="mt-1 text-xl font-bold">{plan.totals.studentCount}</p>
-                      <p className="text-[11px] text-muted-foreground">{plan.totals.newStudentCount} siap ditambahkan</p>
+                      <p className="text-[11px] text-muted-foreground">Siswa dipilih</p>
+                      <p className="mt-1 text-xl font-bold">{selectedTotals.studentCount}</p>
+                      <p className="text-[11px] text-muted-foreground">{selectedTotals.newStudentCount} siap, {selectedTotals.skippedStudentCount} dilewati</p>
                     </div>
                     <div className="rounded-2xl border border-border bg-muted/20 p-3">
                       <p className="text-[11px] text-muted-foreground">Warning</p>
-                      <p className="mt-1 text-xl font-bold text-amber-600">{plan.totals.warningCount}</p>
-                      <p className="text-[11px] text-muted-foreground">Perlu konfirmasi pengguna</p>
+                      <p className="mt-1 text-xl font-bold text-amber-600">{selectedTotals.warningCount}</p>
+                      <p className="text-[11px] text-muted-foreground">Dari kelas terpilih</p>
                     </div>
                     <div className="rounded-2xl border border-border bg-muted/20 p-3">
                       <p className="text-[11px] text-muted-foreground">Error</p>
-                      <p className="mt-1 text-xl font-bold text-destructive">{plan.totals.errorCount}</p>
-                      <p className="text-[11px] text-muted-foreground">Harus diperbaiki di workbook</p>
+                      <p className="mt-1 text-xl font-bold text-destructive">{selectedTotals.errorCount}</p>
+                      <p className="text-[11px] text-muted-foreground">Dari kelas terpilih</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">Pilih kelas yang akan diimport</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {selectedTotals.classCount} dari {plan.totals.classCount} kelas dipilih. {selectedTotals.excludedClassCount} kelas dan {selectedTotals.excludedStudentCount} siswa tidak akan diimport.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                      <Button type="button" variant="outline" size="sm" className="h-9 text-xs" onClick={() => setAllClassesIncluded(true)}>
+                        Pilih Semua
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-9 text-xs" onClick={() => setAllClassesIncluded(false)}>
+                        Kosongkan
+                      </Button>
                     </div>
                   </div>
 
                   <ResponsiveDataPreview
                     rows={previewRows}
                     profile={viewport.profile}
-                    getRowKey={(row) => `${row.sheetName}-${row.className}`}
+                    getRowKey={(row) => row.key}
                     detailLabel="Lihat ringkasan kelas"
                     columns={[
+                      {
+                        id: "include",
+                        label: "Ikut",
+                        className: "w-20 text-center",
+                        cellClassName: "text-center",
+                        render: (row) => (
+                          <Checkbox
+                            checked={row.included}
+                            onCheckedChange={(value) => toggleClassIncluded(row.key, value === true)}
+                            aria-label={`Ikutkan kelas ${row.className}`}
+                          />
+                        ),
+                      },
                       {
                         id: "className",
                         label: "Kelas",
@@ -465,18 +562,18 @@ export default function ImportClassesStudentsDialog({
                     ]}
                   />
 
-                  {plan.issues.length > 0 ? (
+                  {selectedTotals.issues.length > 0 ? (
                     <div className="rounded-2xl border border-border bg-background/70">
                       <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
                         <div className="flex items-center gap-2">
                           <AlertTriangle className="h-4 w-4 text-amber-600" />
-                          <p className="text-sm font-semibold">Daftar validasi</p>
+                          <p className="text-sm font-semibold">Daftar validasi kelas terpilih</p>
                         </div>
-                        <Badge variant="outline">{plan.issues.length} catatan</Badge>
+                        <Badge variant="outline">{selectedTotals.issues.length} catatan</Badge>
                       </div>
                       <ScrollArea className="max-h-56">
                         <div className="space-y-2 p-3">
-                          {plan.issues.map((item, index) => (
+                          {selectedTotals.issues.map((item, index) => (
                             <div key={`${item.sheetName}-${item.rowNumber}-${index}`} className={`rounded-xl border px-3 py-2 text-xs ${issueTone(item.severity)}`}>
                               <span className="font-semibold uppercase">{item.severity}</span>
                               <span className="mx-1.5">-</span>
@@ -489,11 +586,11 @@ export default function ImportClassesStudentsDialog({
                   ) : (
                     <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
                       <CheckCircle2 className="h-4 w-4" />
-                      Workbook siap diimpor tanpa catatan validasi.
+                      Kelas terpilih siap diimpor tanpa catatan validasi.
                     </div>
                   )}
 
-                  {plan.totals.warningCount > 0 ? (
+                  {selectedTotals.warningCount > 0 ? (
                     <label className="flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm">
                       <Checkbox
                         checked={confirmWarnings}
@@ -504,6 +601,13 @@ export default function ImportClassesStudentsDialog({
                         Saya sudah memeriksa warning dan ingin melanjutkan. Siswa dengan nama sama tetapi NISN berbeda akan tetap ditambahkan sebagai siswa baru.
                       </span>
                     </label>
+                  ) : null}
+
+                  {selectedTotals.classCount === 0 ? (
+                    <div className="flex items-start gap-2 rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      Pilih minimal satu kelas agar import dapat dijalankan.
+                    </div>
                   ) : null}
                 </div>
               )}
@@ -533,6 +637,7 @@ export default function ImportClassesStudentsDialog({
                       <Badge variant="outline" className="justify-center py-2">{result.classesReused} kelas existing</Badge>
                       <Badge variant="outline" className="justify-center py-2">{result.studentsCreated} siswa dibuat</Badge>
                       <Badge variant="outline" className="justify-center py-2">{result.studentsSkipped} siswa dilewati</Badge>
+                      <Badge variant="outline" className="justify-center py-2 sm:col-span-2 lg:col-span-4">{result.classesExcluded} kelas tidak diimport, {result.studentsExcluded} siswa tidak diimport</Badge>
                     </div>
                   </div>
 

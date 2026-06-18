@@ -46,12 +46,13 @@ Kolom utama pada sheet `Siswa - <Nama Kelas>`:
 Import selalu berhenti di tahap preview sebelum ada data yang disimpan. Preview menampilkan:
 
 - total kelas yang terdeteksi,
+- pilihan kelas yang akan diikutkan atau dikeluarkan dari import,
 - jumlah kelas baru dan kelas existing,
 - jumlah siswa per sheet,
 - jumlah siswa baru, siswa dilewati, warning, dan error,
 - daftar error/warning per sheet dan baris.
 
-Tombol import tidak aktif selama masih ada error. Warning boleh dilanjutkan hanya setelah pengguna mencentang konfirmasi.
+Tombol import tidak aktif selama masih ada error pada kelas yang dipilih. Kelas yang tidak dicentang tidak ikut dibuat, siswanya tidak dimasukkan, dan error/warning milik kelas tersebut tidak memblokir import kelas lain. Warning boleh dilanjutkan hanya setelah pengguna mencentang konfirmasi.
 
 ## Cara Membaca Error dan Warning
 

@@ -32,6 +32,13 @@ describe("class student import guard", () => {
     expect(dialogSource).toContain("Saya sudah memeriksa warning");
     expect(dialogSource).toContain("Import Kelas & Siswa");
     expect(dialogSource).toContain("Kolom wajib: Nama Kelas, KKM Kelas, Nama Siswa, dan NISN");
+    expect(dialogSource).toContain("includedClassKeys");
+    expect(dialogSource).toContain("Pilih kelas yang akan diimport");
+    expect(dialogSource).toContain("setAllClassesIncluded");
+    expect(dialogSource).toContain("toggleClassIncluded");
+    expect(dialogSource).toContain("selectedTotals.errorCount");
+    expect(dialogSource).toContain("classesExcluded");
+    expect(dialogSource).toContain("studentsExcluded");
 
     expect(parserSource).toContain("Siswa - ");
     expect(parserSource).toContain("Sheet Kelas wajib ada");
@@ -49,5 +56,7 @@ describe("class student import guard", () => {
     expect(docsSource).toContain("Import Siswa ke Kelas Ini");
     expect(docsSource).toContain("Cara Mengisi Template");
     expect(docsSource).toContain("Cara Membaca Error dan Warning");
+    expect(docsSource).toContain("pilihan kelas yang akan diikutkan atau dikeluarkan dari import");
+    expect(docsSource).toContain("error/warning milik kelas tersebut tidak memblokir import kelas lain");
   });
 });
