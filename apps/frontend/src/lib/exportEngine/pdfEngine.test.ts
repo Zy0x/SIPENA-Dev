@@ -189,6 +189,75 @@ function buildCompactSevenSubjectRankingConfig(): ExportConfig {
   };
 }
 
+function buildSparseVaRankingRegressionConfig(): ExportConfig {
+  const columns: ExportColumn[] = [
+    { key: "Rank", label: "Rank", type: "index" },
+    { key: "Nama", label: "Nama Siswa", type: "name" },
+    { key: "NISN", label: "NISN", type: "nisn" },
+    { key: "B. Indonesia", label: "Bahasa Indonesia", type: "assignment" },
+    { key: "IPAS", label: "IPAS", type: "assignment" },
+    { key: "Matematika", label: "Matematika", type: "assignment" },
+    { key: "Pancasila", label: "Pendidikan Pancasila", type: "assignment" },
+    { key: "PJOK", label: "PJOK", type: "assignment" },
+    { key: "Rata-rata", label: "Rata-rata Keseluruhan", type: "grandAvg" },
+    { key: "Status", label: "Status", type: "status" },
+  ];
+  const names = [
+    "Syamsuddin",
+    "Azrian Gian Juniar",
+    "Nur Asilah",
+    "Nur Selena",
+    "Rikky Ahmad",
+    "Muhammad Akmal Zain Malik Firdaus",
+    "Bunga Vanesa",
+    "Nur Selin",
+    "Naysa Ramania Putri",
+    "Achmad Syawal Adyana Surya",
+    "Muhammad Rizky Hairy",
+    "Rifky Ramadhan",
+    "Siti Rum Siyeh",
+    "Aufa Rizal Rais",
+    "Bakri Yannor",
+    "Ahmad Furqon",
+    "Muhammad Akbar",
+    "Azkia Nurhaliza",
+    "Muhammad Nabil Nazmi",
+    "Al Mudtaqqin",
+    "Salsabila Oktavia",
+    "Ahmad Dhika Az Zabidi",
+    "Muhammad Adriani",
+    "Muhammad Busayri",
+    "Amellia",
+    "Nor Fadillah",
+    "Alvin Ramadhan",
+    "Zulpa Qayra",
+    "Muhammad Ali",
+  ];
+  const data = names.map((name, index) => ({
+    Rank: index + 1,
+    Nama: name,
+    NISN: index + 1,
+    "B. Indonesia": 89 - (index % 8),
+    IPAS: 96 - (index % 5),
+    Matematika: 97 - (index % 7),
+    Pancasila: 99 - (index % 6),
+    PJOK: 90 - (index % 5),
+    "Rata-rata": Number((94.2 - index * 0.7).toFixed(1)),
+    Status: index < 28 ? "Lulus" : "Belum Lulus",
+  }));
+
+  return {
+    ...buildRankingConfig(data.length),
+    className: "VA",
+    columns,
+    headerGroups: [{ label: "Ranking Keseluruhan", colSpan: columns.length }],
+    data,
+    studentCount: data.length,
+    assignmentCount: 5,
+    documentStyle: buildCompactRankingDocumentStyle(createDefaultRankingDocumentStyle(), columns, "a4", data),
+  };
+}
+
 describe("report PDF engine", () => {
   it("anchors default signature directly after the rendered ranking table", () => {
     const built = buildReportPdfDocumentResult(buildRankingConfig());
@@ -269,6 +338,40 @@ describe("report PDF engine", () => {
 
       expect(rowCounts[0]).toBe(20);
       expect(rowCounts.slice(1).reduce((sum, count) => sum + count, 0)).toBe(0);
+    } finally {
+      await pdf.destroy();
+    }
+  });
+
+  it("does not create a sparse middle page for 29-row overall ranking exports", async () => {
+    const built = buildReportPdfDocumentResult(buildSparseVaRankingRegressionConfig());
+    const plannedDataPageCounts = built.layoutPlan.pages
+      .filter((page) => page.pageType === "table" && page.rows.length > 0)
+      .map((page) => page.rows.length);
+    const pdf = await getDocument({ data: built.doc.output("arraybuffer") }).promise;
+
+    try {
+      expect(plannedDataPageCounts).not.toContain(1);
+      for (let index = 1; index < plannedDataPageCounts.length - 1; index += 1) {
+        expect(plannedDataPageCounts[index]).toBeGreaterThanOrEqual(6);
+      }
+
+      const rowCounts: number[] = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item) => ("str" in item ? item.str : ""))
+          .join(" ");
+        rowCounts.push((pageText.match(/\b(?:Lulus|Belum Lulus)\b/g) || []).length);
+      }
+
+      const dataPages = rowCounts.filter((count) => count > 0);
+      expect(dataPages.reduce((sum, count) => sum + count, 0)).toBe(29);
+      for (let index = 1; index < dataPages.length - 1; index += 1) {
+        expect(dataPages[index]).toBeGreaterThanOrEqual(6);
+      }
+      expect(dataPages).not.toContain(1);
     } finally {
       await pdf.destroy();
     }

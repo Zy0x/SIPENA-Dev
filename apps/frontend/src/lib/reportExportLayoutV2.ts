@@ -613,6 +613,74 @@ function estimateRowsHeightMm(rowHeightsMm: number[], start = 0, end = rowHeight
   return rowHeightsMm.slice(start, end).reduce((sum, height) => sum + height, 0);
 }
 
+function estimatePageRowsHeightMm(page: ReportLayoutPageV2, style: ReportDocumentStyle) {
+  return page.rows.reduce(
+    (sum, row) => sum + estimateBodyRowHeightMm(row, page.columns, page.columnWidthsMm, style),
+    0,
+  );
+}
+
+function refreshTablePageEstimate(page: ReportLayoutPageV2, style: ReportDocumentStyle) {
+  const headerHeight = getHeaderHeightMm(style, page.headerGroups.length);
+  const rowsHeight = estimatePageRowsHeightMm(page, style);
+  page.estimatedTableHeightMm = headerHeight + rowsHeight;
+  page.estimatedTableEndY = page.tableStartY + page.estimatedTableHeightMm;
+}
+
+function rebalanceTablePagesToAvailableHeight(
+  pages: ReportLayoutPageV2[],
+  metrics: ReportLayoutMetrics,
+  style: ReportDocumentStyle,
+) {
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    for (let index = 0; index < pages.length - 1; index += 1) {
+      const page = pages[index];
+      const nextPage = pages[index + 1];
+      if (
+        !page
+        || !nextPage
+        || page.pageType !== "table"
+        || nextPage.pageType !== "table"
+        || page.segmentIndex !== nextPage.segmentIndex
+        || nextPage.rows.length === 0
+      ) {
+        continue;
+      }
+
+      const headerHeight = getHeaderHeightMm(style, page.headerGroups.length);
+      const availableHeight = getAvailableBodyHeightMm(metrics, page.tableStartY, headerHeight, 0);
+      let usedHeight = estimatePageRowsHeightMm(page, style);
+
+      while (nextPage.rows.length > 0) {
+        const nextRow = nextPage.rows[0];
+        const nextRowHeight = estimateBodyRowHeightMm(nextRow, page.columns, page.columnWidthsMm, style);
+        if (page.rows.length > 0 && usedHeight + nextRowHeight > availableHeight + 0.2) break;
+
+        page.rows.push(nextRow);
+        nextPage.rows.shift();
+        page.bodyEndIndex += 1;
+        nextPage.bodyStartIndex += 1;
+        usedHeight += nextRowHeight;
+        changed = true;
+      }
+
+      refreshTablePageEstimate(page, style);
+
+      if (nextPage.rows.length === 0) {
+        pages.splice(index + 1, 1);
+        changed = true;
+        break;
+      }
+
+      refreshTablePageEstimate(nextPage, style);
+    }
+  }
+}
+
 function getAvailableBodyHeightMm(
   metrics: ReportLayoutMetrics,
   tableStartY: number,
@@ -1041,6 +1109,8 @@ export function buildReportLayoutPlanV2(config: ExportConfig): ReportExportLayou
       cursor = end;
     }
   });
+
+  rebalanceTablePagesToAvailableHeight(pages, metrics, documentStyle);
 
   let signaturePlacement: SignaturePlacement | null = null;
   if (config.includeSignature && config.signature && signatureMetrics && pages.length > 0) {
