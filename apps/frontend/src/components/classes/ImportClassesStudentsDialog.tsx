@@ -501,7 +501,7 @@ export default function ImportClassesStudentsDialog({
                       {
                         id: "include",
                         label: "Ikut",
-                        className: "w-20 text-center",
+                        className: "w-[4.75rem] text-center",
                         cellClassName: "text-center",
                         render: (row) => (
                           <Checkbox
@@ -516,16 +516,21 @@ export default function ImportClassesStudentsDialog({
                         id: "className",
                         label: "Kelas",
                         primary: true,
+                        className: "w-[18%]",
+                        cellClassName: "font-medium",
                         render: (row) => row.className,
                       },
                       {
                         id: "sheetName",
                         label: "Sheet",
+                        className: "w-[20%]",
                         render: (row) => row.sheetName,
                       },
                       {
                         id: "status",
                         label: "Status",
+                        className: "w-[15%]",
+                        cellClassName: "text-center",
                         render: (row) => (
                           <Badge variant={row.included ? "outline" : "secondary"} className="whitespace-nowrap">
                             {row.status}
@@ -535,11 +540,14 @@ export default function ImportClassesStudentsDialog({
                       {
                         id: "students",
                         label: "Siswa",
+                        className: "w-[11%]",
+                        cellClassName: "whitespace-nowrap text-center",
                         render: (row) => `${row.students} data`,
                       },
                       {
                         id: "issues",
                         label: "Catatan",
+                        className: "w-[24%]",
                         render: (row) => row.errors || row.warnings ? `${row.errors} perlu diperbaiki, ${row.warnings} perlu dicek` : "Aman",
                       },
                     ]}

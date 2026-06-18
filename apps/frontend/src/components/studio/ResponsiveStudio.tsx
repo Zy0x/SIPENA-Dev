@@ -403,12 +403,12 @@ export function ResponsiveDataPreview<Row>({
       ref={tableScrollRef}
       className="sipena-responsive-data-table-scroll w-full overflow-x-scroll overscroll-x-contain rounded-2xl border border-border bg-background pb-1"
     >
-      <div className="min-w-[46rem]">
-        <Table>
-          <TableHeader>
-            <TableRow>
+      <div className="min-w-[46rem] w-full">
+        <Table className="w-full table-fixed">
+          <TableHeader className="bg-muted/60 shadow-[0_10px_18px_-18px_rgba(15,23,42,0.65)] dark:shadow-[0_10px_18px_-18px_rgba(255,255,255,0.45)]">
+            <TableRow className="border-b border-border/80 hover:bg-transparent">
               {columns.map((column) => (
-                <TableHead key={column.id} className={cn("text-[10px]", column.className)}>
+                <TableHead key={column.id} className={cn("h-11 px-3 text-center text-[10px] align-middle font-semibold", column.className)}>
                   {column.label}
                 </TableHead>
               ))}

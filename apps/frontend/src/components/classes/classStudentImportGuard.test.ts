@@ -55,7 +55,10 @@ describe("class student import guard", () => {
 
     expect(studioSource).toContain("sipena-responsive-data-table-scroll");
     expect(studioSource).toContain("overflow-x-scroll overscroll-x-contain");
-    expect(studioSource).toContain('min-w-[46rem]');
+    expect(studioSource).toContain('min-w-[46rem] w-full');
+    expect(studioSource).toContain('className="w-full table-fixed"');
+    expect(studioSource).toContain("text-center text-[10px] align-middle font-semibold");
+    expect(studioSource).toContain("shadow-[0_10px_18px_-18px_rgba(15,23,42,0.65)]");
     expect(studioSource).toContain('addEventListener("pointermove"');
     expect(studioSource).toContain("getCoalescedEvents");
     expect(studioSource).toContain("window.requestAnimationFrame");
@@ -69,6 +72,9 @@ describe("class student import guard", () => {
     expect(cssSource).toContain(".sipena-import-class-include-checkbox");
     expect(cssSource).toContain("touch-action: pan-y");
     expect(cssSource).toContain("touch-action: pan-x pan-y");
+    expect(cssSource).toContain(".sipena-responsive-data-table-scroll > div");
+    expect(cssSource).toContain("width: 100%");
+    expect(cssSource).not.toMatch(/\.sipena-responsive-data-table-scroll\s*>\s*div\s*{[^}]*width:\s*max-content/);
 
     expect(docsSource).toContain("Import Kelas & Siswa");
     expect(docsSource).toContain("Siswa - <Nama Kelas>");

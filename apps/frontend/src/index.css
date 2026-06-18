@@ -3490,7 +3490,7 @@
   }
 
   .sipena-responsive-data-table-scroll > div {
-    width: max-content;
+    width: 100%;
   }
 
   .sipena-import-class-include-checkbox {

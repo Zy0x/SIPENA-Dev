@@ -63,7 +63,7 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Gunakan `.sipena-scroll-isolated` untuk modal, fullscreen, sheet, editor/canvas, atau overlay yang harus mengunci halaman belakang.
 - Jika perlu forwarding manual, gunakan helper `isVerticalScrollBoundary(...)` dan `scrollPageBy(...)` dari `apps/frontend/src/lib/scrollChaining.ts`.
 - Horizontal scroll pada tabel, toolbar, carousel, atau preview tetap boleh `overscroll-behavior-x: contain` agar swipe horizontal tidak bocor ke halaman.
-- Preview tabel yang masuk ke mode mobile/hybrid wajib memakai overflow horizontal native (`overflow-x-auto` atau `overflow-x-scroll`) pada wrapper luar dan min-width pada tabel agar pengguna dapat melakukan swipe langsung di atas tabel.
+- Preview tabel yang masuk ke mode mobile/hybrid wajib memakai overflow horizontal native (`overflow-x-auto` atau `overflow-x-scroll`) pada wrapper luar dan min-width pada tabel agar pengguna dapat melakukan swipe langsung di atas tabel. Inner wrapper/table tetap wajib `width: 100%` agar pada desktop tabel otomatis mengisi lebar panel jika kolom cukup muat, lalu baru scroll horizontal saat viewport lebih kecil dari batas minimum tabel.
 
 ## QA Wajib
 
