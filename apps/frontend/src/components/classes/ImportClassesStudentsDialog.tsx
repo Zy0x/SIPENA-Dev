@@ -381,7 +381,7 @@ export default function ImportClassesStudentsDialog({
                     <div>
                       <p className="text-sm font-semibold text-foreground">Template resmi</p>
                       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        Berisi Panduan, Ringkasan, Kelas, dan contoh sheet siswa per kelas.
+                        Berisi Panduan, Ringkasan, sheet Kelas, dan contoh sheet siswa. Isi workbook ini dahulu agar import dapat membaca banyak kelas sekaligus.
                       </p>
                     </div>
                     <Button type="button" variant="outline" className="h-11 w-full gap-2" onClick={downloadClassStudentImportTemplate}>
@@ -394,10 +394,11 @@ export default function ImportClassesStudentsDialog({
                       defaultOpen
                     >
                       <ul className="space-y-1.5 text-xs leading-relaxed text-muted-foreground">
-                        <li>Sheet Kelas wajib berisi Nama Kelas, KKM Kelas, Deskripsi, dan Sheet Siswa.</li>
-                        <li>Setiap sheet siswa memakai format No, Nama Siswa, NISN.</li>
-                        <li>Kelas existing tidak dibuat ulang pada tahun ajaran aktif.</li>
-                        <li>Error harus diperbaiki sebelum import bisa dijalankan.</li>
+                        <li>Isi sheet Kelas untuk menentukan nama kelas, KKM, deskripsi, dan nama sheet siswa yang dipakai.</li>
+                        <li>Buat satu sheet siswa untuk setiap kelas, misalnya Siswa - VIIA dan Siswa - VIIB.</li>
+                        <li>Kolom wajib: Nama Kelas, KKM Kelas, Nama Siswa, dan NISN. Baris kosong akan diabaikan.</li>
+                        <li>Kelas existing tidak dibuat ulang; siswa yang sudah ada akan ditandai pada preview.</li>
+                        <li>Error wajib diperbaiki di workbook. Warning boleh dilanjutkan setelah dicek dan dikonfirmasi.</li>
                       </ul>
                     </StudioInfoCollapsible>
                   </div>

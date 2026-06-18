@@ -32,6 +32,10 @@ describe("class management UX guard", () => {
     expect(editSource).toContain("maxLength={CLASS_DESCRIPTION_MAX_LENGTH}");
     expect(editSource).toContain("limitClassName(name.trim())");
     expect(editSource).toContain("limitClassDescription(description.trim())");
+    expect(editSource).toContain("onOpenAutoFocus");
+    expect(editSource).toContain("event.preventDefault()");
+    expect(editSource).toContain("titleRef.current?.focus()");
+    expect(editSource).not.toContain("autoFocus");
   });
 
   it("keeps class page mobile header and search layout usable", () => {
@@ -50,6 +54,8 @@ describe("class management UX guard", () => {
     expect(cssSource).toContain(".sipena-search-field .sipena-search-input");
     expect(docsSource).toContain("Kotak pencarian wajib menggambar border/focus ring di wrapper luar");
     expect(docsSource).toContain("Dropdown menu wajib collision-aware");
+    expect(docsSource).toContain("Jangan memakai `active:bg-primary` global untuk semua tab");
+    expect(docsSource).toContain("overflow horizontal native");
   });
 
   it("keeps class cards discoverable without hover-only menu actions", () => {
@@ -140,7 +146,8 @@ describe("class management UX guard", () => {
     expect(tabsSource).toContain("rounded-xl border border-border/70");
     expect(tabsSource).toContain("touch-manipulation");
     expect(tabsSource).toContain("data-[state=active]:bg-primary");
-    expect(tabsSource).toContain("active:bg-primary active:text-primary-foreground");
+    expect(tabsSource).toContain("data-[state=active]:active:bg-primary");
+    expect(tabsSource).toContain("data-[state=inactive]:active:bg-muted");
     expect(dropdownSource).toContain("collisionPadding = 12");
     expect(dropdownSource).toContain("max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))]");
     expect(dropdownSource).toContain("z-[10120]");
@@ -151,6 +158,7 @@ describe("class management UX guard", () => {
     expect(tourSource).toContain("active:bg-emerald-700 active:text-white");
     expect(tourSource).toContain("bg-primary text-primary-foreground");
     expect(tourSource).toContain("active:bg-primary active:text-primary-foreground");
+    expect(tourSource).toContain("hover:text-primary-foreground");
   });
 
   it("documents the main class management actions in product tour", () => {

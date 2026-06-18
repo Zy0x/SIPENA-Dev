@@ -3,7 +3,6 @@ import { ChevronDown, Eye, PanelLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { StudioViewportProfile } from "@/hooks/useStudioViewportProfile";
@@ -244,8 +243,8 @@ export function ResponsiveDataPreview<Row>({
   );
 
   const renderTable = () => (
-    <ScrollArea className="w-full rounded-2xl border border-border">
-      <div className="min-w-[34rem]">
+    <div className="w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-border bg-background">
+      <div className="min-w-[42rem]">
         <Table>
           <TableHeader>
             <TableRow>
@@ -269,7 +268,7 @@ export function ResponsiveDataPreview<Row>({
           </TableBody>
         </Table>
       </div>
-    </ScrollArea>
+    </div>
   );
 
   if (resolvedMode === "cards") {

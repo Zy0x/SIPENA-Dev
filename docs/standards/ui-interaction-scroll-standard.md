@@ -14,6 +14,7 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Dropdown, select, popover, dan tombol di dalam area yang bisa di-scroll tidak boleh membuka aksi dari `pointerdown`/`touchstart`. Aktivasi touch harus terjadi setelah tap final (`click`/`pointerup`) dan batal jika pointer bergerak melewati threshold scroll global.
 - Semua trigger custom di dalam kontainer scroll wajib memakai semantic target (`button`, `role="combobox"`, `aria-haspopup="menu/listbox"`) atau `data-touch-scroll-click-target="true"` agar `useTouchScrollClickGuard()` dapat membatalkan accidental click setelah gesture scroll.
 - Pada device touchscreen, tombol/dropdown yang berada di toolbar atau area scroll padat harus memakai `touch-action: pan-x pan-y` jika user diharapkan dapat melakukan scroll melewati kontrol tersebut. Gunakan `touch-manipulation` hanya untuk tombol tap murni yang tidak menjadi jalur scroll utama.
+- Kontrol selected seperti tab aktif, segmented control aktif, dan tombol langkah tour wajib mendefinisikan state `hover`, `active`, dan `focus-visible` secara eksplisit pada state selected. Jangan memakai `active:bg-primary` global untuk semua tab, karena tab inactive dapat terlihat selected saat disentuh di mobile.
 
 ## Search Input dan Dropdown
 
@@ -41,7 +42,7 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 
 - Pasangan background/foreground harus memakai token semantic yang cocok: `background/foreground`, `card/card-foreground`, `popover/popover-foreground`, `primary/primary-foreground`, dan setara.
 - Hover/focus/active pada menu, select, popover, tab, dan tombol outline/ghost tidak boleh memakai background penuh dengan foreground yang membuat teks menyatu.
-- Tab dan tombol tour wajib punya warna aktif/pressed eksplisit di touchscreen agar indikator pilihan tidak hilang saat tap atau saat berpindah langkah.
+- Tab dan tombol tour wajib punya warna aktif/pressed eksplisit di touchscreen agar indikator pilihan tidak hilang saat tap atau saat berpindah langkah. State selected harus tetap mempertahankan pasangan warna `primary/primary-foreground` atau warna semantik yang setara sampai state benar-benar berubah.
 - Tint ringan seperti `primary/10` harus memakai `foreground`, bukan `primary-foreground`.
 - Target minimal: teks normal WCAG AA 4.5:1; teks besar, icon, border, dan affordance kontrol minimal 3:1.
 - Light mode dan dark mode wajib dicek untuk modal, dropdown, kartu, tab, dan tombol destructive.
@@ -53,6 +54,7 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Gunakan `.sipena-scroll-isolated` untuk modal, fullscreen, sheet, editor/canvas, atau overlay yang harus mengunci halaman belakang.
 - Jika perlu forwarding manual, gunakan helper `isVerticalScrollBoundary(...)` dan `scrollPageBy(...)` dari `apps/frontend/src/lib/scrollChaining.ts`.
 - Horizontal scroll pada tabel, toolbar, carousel, atau preview tetap boleh `overscroll-behavior-x: contain` agar swipe horizontal tidak bocor ke halaman.
+- Preview tabel yang masuk ke mode mobile/hybrid wajib memakai overflow horizontal native (`overflow-x-auto` atau `overflow-x-scroll`) pada wrapper luar dan min-width pada tabel agar pengguna dapat melakukan swipe langsung di atas tabel.
 
 ## QA Wajib
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,6 +30,7 @@ export default function EditClassDialog({
   const [description, setDescription] = useState(classData.description || "");
   const [classKkm, setClassKkm] = useState(classData.class_kkm?.toString() || "75");
   const { updateClass } = useClasses();
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -59,10 +60,18 @@ export default function EditClassDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          titleRef.current?.focus();
+        }}
+      >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Edit Kelas</DialogTitle>
+            <DialogTitle ref={titleRef} tabIndex={-1} className="outline-none">
+              Edit Kelas
+            </DialogTitle>
             <DialogDescription>
               Perbarui identitas kelas, deskripsi, dan KKM kelas.
             </DialogDescription>
@@ -81,7 +90,6 @@ export default function EditClassDialog({
                 value={name}
                 onChange={(e) => setName(limitClassName(e.target.value))}
                 maxLength={CLASS_NAME_MAX_LENGTH}
-                autoFocus
               />
             </div>
             <div className="grid gap-2">

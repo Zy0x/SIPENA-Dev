@@ -366,10 +366,10 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
               size="sm"
               onClick={handleNext}
               className={cn(
-                "min-w-[90px] touch-manipulation shadow-md transition-colors",
+                "min-w-[90px] touch-manipulation select-none shadow-md transition-colors",
                 isLastStep
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-700 active:text-white focus-visible:bg-emerald-600 focus-visible:text-white"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary active:text-primary-foreground focus-visible:bg-primary focus-visible:text-primary-foreground",
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white active:bg-emerald-700 active:text-white focus-visible:bg-emerald-600 focus-visible:text-white"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary active:text-primary-foreground focus-visible:bg-primary focus-visible:text-primary-foreground",
               )}
             >
               {isLastStep ? (
