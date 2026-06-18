@@ -874,7 +874,7 @@ export function buildAttendancePdfDocument(args: {
         font: "helvetica",
         fontSize: plan.table.bodyFontPt,
         cellPadding: plan.table.bodyCellPaddingMm,
-        lineWidth: 0.1,
+        lineWidth: 0.2,
         lineColor: COLORS.border,
         textColor: COLORS.ink,
         minCellHeight: plan.table.bodyRowHeightMm,

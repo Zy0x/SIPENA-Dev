@@ -259,7 +259,7 @@ export function exportToPDF(config: ExportConfig): void {
           fontSize: Math.max(5, layoutPlan.documentStyle.tableBodyFontSize - 2),
           cellPadding: 1.2,
           lineColor: [200, 200, 200],
-          lineWidth: 0.1,
+          lineWidth: 0.2,
           minCellHeight: 5 + (layoutPlan.documentStyle.tableBodyFontSize - 10) * 0.8,
           overflow: "linebreak",
           valign: "middle",
@@ -278,7 +278,7 @@ export function exportToPDF(config: ExportConfig): void {
           fillColor: [250, 250, 250],
         },
         tableLineColor: [200, 200, 200],
-        tableLineWidth: 0.1,
+        tableLineWidth: 0.2,
       });
     }
 

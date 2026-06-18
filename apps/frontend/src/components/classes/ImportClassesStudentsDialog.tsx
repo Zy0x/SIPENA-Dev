@@ -461,8 +461,9 @@ export default function ImportClassesStudentsDialog({
                       defaultOpen
                     >
                       <ul className="space-y-1.5 text-xs leading-relaxed text-muted-foreground">
-                        <li>Isi sheet Kelas untuk nama kelas, KKM, deskripsi, dan nama sheet siswa.</li>
-                        <li>Isi satu sheet siswa untuk setiap kelas, misalnya Siswa - VIIA dan Siswa - VIIB.</li>
+                        <li>Isi sheet Kelas untuk nama kelas, KKM, deskripsi, dan nama sheet kelas.</li>
+                        <li>Isi satu sheet murid untuk setiap kelas, misalnya Kelas - VA dan Kelas - VB.</li>
+                        <li>Jika nama sheet berbeda, SIPENA tetap mencoba mengenali dari nama kelas dan header Nama Siswa/NISN.</li>
                         <li>Kolom wajib: Nama Kelas, KKM Kelas, Nama Siswa, dan NISN.</li>
                         <li>Kelas atau siswa yang sudah ada tidak akan dibuat dobel.</li>
                         <li>Catatan merah harus diperbaiki sebelum import. Catatan kuning boleh dilanjutkan setelah dicek.</li>

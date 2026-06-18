@@ -9,9 +9,11 @@ Gunakan tombol **Download Template** pada dialog Import Kelas & Siswa. File resm
 | Sheet | Fungsi |
 | --- | --- |
 | `Panduan` | Panduan singkat berisi urutan pengisian, aturan wajib, dan arti catatan saat cek data. |
-| `Ringkasan` | Contoh ringkasan jumlah siswa per sheet kelas. |
+| `Ringkasan` | Contoh ringkasan jumlah murid per sheet kelas. |
 | `Kelas` | Daftar kelas yang akan dibuat atau digunakan ulang. |
-| `Siswa - <Nama Kelas>` | Daftar siswa untuk satu kelas. Buat satu sheet siswa untuk setiap kelas. |
+| `Kelas - <Nama Kelas>` | Daftar siswa untuk satu kelas. Buat satu sheet kelas untuk setiap kelas. |
+
+Template baru memakai pola sheet `Kelas - <Nama Kelas>`, misalnya `Kelas - VA`. SIPENA tetap membaca file lama yang memakai `Siswa - <Nama Kelas>` dan juga bisa mengenali nama sheet kustom selama sheet tersebut memiliki header siswa dan namanya berkaitan dengan nama kelas.
 
 ## Cara Mengisi Template
 
@@ -19,12 +21,14 @@ Gunakan tombol **Download Template** pada dialog Import Kelas & Siswa. File resm
 2. Isi satu baris untuk setiap kelas yang ingin dibuat atau dipakai ulang, misalnya `VIIA`, `VIIB`, dan `IX-C`.
 3. Isi `KKM Kelas *` dengan angka 0-100. Nilai ini menjadi KKM awal kelas.
 4. Isi `Deskripsi` bila perlu. Batasi maksimal 500 karakter agar tetap rapi di tampilan kelas.
-5. Isi `Sheet Siswa` dengan nama sheet siswa untuk kelas tersebut, misalnya `Siswa - VIIA`.
-6. Buka sheet siswa yang sesuai, lalu isi `Nama Siswa *` dan `NISN *` satu siswa per baris.
-7. Jika menambah kelas baru, duplikasi salah satu sheet siswa contoh, ubah nama sheet, lalu pastikan nama itu sama persis dengan kolom `Sheet Siswa`.
+5. Isi `Nama Sheet Kelas` dengan nama sheet siswa untuk kelas tersebut, misalnya `Kelas - VA`.
+6. Buka sheet kelas yang sesuai, lalu isi `Nama Siswa *` dan `NISN *` satu siswa per baris.
+7. Jika menambah kelas baru, duplikasi salah satu sheet kelas contoh, ubah nama sheet, lalu pastikan nama itu sama dengan kolom `Nama Sheet Kelas`.
 8. Simpan sebagai `.xlsx`, upload di SIPENA, lalu baca tahap **Cek Data** sebelum menekan import.
 
 Template sengaja dibuat ringkas. Kolom teks panjang memakai wrap dan tinggi baris otomatis agar isi panduan tidak terpotong saat dibuka di Excel atau aplikasi spreadsheet lain.
+
+Header boleh memakai tanda `*` atau tanpa tanda `*`. Contoh `Nama Kelas *` dan `Nama Kelas` sama-sama dibaca sebagai kolom nama kelas. SIPENA juga menerima variasi header yang masih bermakna sama, seperti `Nama Murid` untuk `Nama Siswa`.
 
 Kolom utama pada sheet `Kelas`:
 
@@ -33,9 +37,9 @@ Kolom utama pada sheet `Kelas`:
 | `Nama Kelas *` | Ya | Maksimal 50 karakter. |
 | `KKM Kelas *` | Ya | Angka 0 sampai 100. |
 | `Deskripsi` | Tidak | Maksimal 500 karakter. |
-| `Sheet Siswa` | Disarankan | Nama sheet siswa. Wajib diisi jika nama kelas terlalu panjang untuk nama sheet Excel. |
+| `Nama Sheet Kelas` | Disarankan | Nama sheet kelas/siswa. Wajib diisi jika nama kelas terlalu panjang atau sheet memakai nama khusus. |
 
-Kolom utama pada sheet `Siswa - <Nama Kelas>`:
+Kolom utama pada sheet `Kelas - <Nama Kelas>`:
 
 | Kolom | Wajib | Aturan |
 | --- | --- | --- |
@@ -51,7 +55,7 @@ Tabel cek data menampilkan:
 
 - kotak centang **Ikut** untuk memasukkan atau mengeluarkan kelas dari import,
 - nama kelas,
-- nama sheet siswa,
+- nama sheet kelas/siswa,
 - status kelas, misalnya `Kelas baru`, `Sudah ada`, atau `Tidak dipilih`,
 - jumlah siswa,
 - catatan yang perlu diperbaiki atau dicek.
@@ -70,7 +74,7 @@ Tombol import tidak aktif selama masih ada error pada kelas yang dipilih. Kelas 
 
 Contoh kasus yang sering terjadi:
 
-- `Sheet siswa tidak ditemukan`: nama di kolom `Sheet Siswa` berbeda dengan nama tab sheet.
+- `Sheet siswa tidak ditemukan`: nama di kolom `Nama Sheet Kelas` berbeda dengan nama tab sheet dan SIPENA tidak menemukan sheet lain yang cocok.
 - `Nama kelas maksimal 50 karakter`: pendekkan nama kelas, pindahkan informasi tambahan ke `Deskripsi`.
 - `Deskripsi maksimal 500 karakter`: ringkas deskripsi kelas.
 - `NISN wajib diisi`: isi NISN sebelum import.
@@ -96,7 +100,7 @@ Contoh kasus yang sering terjadi:
 
 - Sheet `Kelas` masih ada dan headernya tidak diubah.
 - Setiap baris kelas punya `Nama Kelas *` dan `KKM Kelas *`.
-- Setiap kelas memiliki sheet siswa yang sesuai, atau memang sengaja dibuat tanpa siswa.
+- Setiap kelas memiliki sheet kelas/siswa yang sesuai, atau memang sengaja dibuat tanpa siswa.
 - Header `No`, `Nama Siswa *`, dan `NISN *` pada sheet siswa tidak dihapus.
 - Tidak ada NISN yang tertukar antar siswa dalam kelas yang sama.
 - File disimpan sebagai `.xlsx` atau `.xls`, bukan screenshot atau PDF.

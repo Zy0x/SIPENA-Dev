@@ -47,8 +47,9 @@ describe("class student import guard", () => {
     expect(parserSource).toContain("Nama kelas maksimal");
     expect(parserSource).toContain("NISN wajib diisi");
     expect(parserSource).toContain("NISN sudah dipakai");
-    expect(parserSource).toContain("Cara isi cepat");
-    expect(parserSource).toContain("Checklist sebelum upload");
+    expect(parserSource).toContain("LANGKAH PENGISIAN CEPAT");
+    expect(parserSource).toContain("CHECKLIST SEBELUM UPLOAD");
+    expect(parserSource).toContain("Nama Sheet Kelas");
     expect(parserSource).toContain("TEMPLATE_COLORS");
     expect(parserSource).toContain("applyGuideSheetStyle");
     expect(parserSource).toContain("estimateWrappedRowHeight");

@@ -56,7 +56,7 @@ export function pdfHeaderRowHeightMm(headerFontSize: number, overrideMm?: number
 
 export const TABLE_LINE = {
   color: [200, 200, 200] as [number, number, number],
-  width: 0.1,
+  width: 0.2,
 } as const;
 
 export const TABLE_COLORS = {

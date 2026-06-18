@@ -9,10 +9,10 @@ type Sheet = XLSX.WorkSheet & {
 };
 
 const BORDER: XLSX.CellStyle["border"] = {
-  top: { style: "thin", color: { rgb: "CBD5E1" } },
-  right: { style: "thin", color: { rgb: "CBD5E1" } },
-  bottom: { style: "thin", color: { rgb: "CBD5E1" } },
-  left: { style: "thin", color: { rgb: "CBD5E1" } },
+  top: { style: "medium", color: { rgb: "94A3B8" } },
+  right: { style: "medium", color: { rgb: "94A3B8" } },
+  bottom: { style: "medium", color: { rgb: "94A3B8" } },
+  left: { style: "medium", color: { rgb: "94A3B8" } },
 };
 
 const COLORS = {

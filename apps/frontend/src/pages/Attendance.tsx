@@ -123,10 +123,10 @@ function downloadBlobFile(blob: Blob, fileName: string) {
 }
 
 const EXCEL_BORDER = {
-  top: { style: "thin", color: { rgb: "CBD5E1" } },
-  right: { style: "thin", color: { rgb: "CBD5E1" } },
-  bottom: { style: "thin", color: { rgb: "CBD5E1" } },
-  left: { style: "thin", color: { rgb: "CBD5E1" } },
+  top: { style: "medium", color: { rgb: "94A3B8" } },
+  right: { style: "medium", color: { rgb: "94A3B8" } },
+  bottom: { style: "medium", color: { rgb: "94A3B8" } },
+  left: { style: "medium", color: { rgb: "94A3B8" } },
 } as const;
 
 function styleAttendanceCell(ws: XLSX.WorkSheet, row: number, col: number, style: XLSX.CellStyle) {
@@ -1596,7 +1596,7 @@ export default function Attendance() {
       body,
       startY: 28,
       margin: { left: 5, right: 5 },
-      styles: { fontSize: 5, cellPadding: 0.8, lineWidth: 0.1, lineColor: [200, 200, 200], halign: "center", valign: "middle" },
+      styles: { fontSize: 5, cellPadding: 0.8, lineWidth: 0.2, lineColor: [200, 200, 200], halign: "center", valign: "middle" },
       headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontSize: 5, fontStyle: "bold", halign: "center", valign: "middle" },
       columnStyles: {
         0: { cellWidth: 6, halign: "center", valign: "middle" },
@@ -2199,7 +2199,7 @@ export default function Attendance() {
         styles: {
           fontSize,
           cellPadding: 0.6,
-          lineWidth: 0.1,
+          lineWidth: 0.2,
           lineColor: [200, 200, 200],
           halign: "center",
           valign: "middle",
