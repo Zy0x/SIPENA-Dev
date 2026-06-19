@@ -1360,7 +1360,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowOCRGrades(true)} className="gap-2 min-h-[44px]">
             <Camera className="w-4 h-4" />
-            Import dari Foto (OCR)
+            Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">Backup / Restore</DropdownMenuLabel>
@@ -1852,25 +1852,50 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onOpenChange={setShowOCRGrades}
           type="grades"
           title="Import Nilai dari Foto"
-          description="Foto lembar nilai lalu ketik data untuk di-import"
-          onDataReady={async (rows) => {
-            if (!selectedSubjectId || !selectedClassId) return;
-            for (const row of rows) {
-              const studentName = (row[0] || "").trim().toLowerCase();
-              const matchedStudent = students.find(
-                (s) =>
-                  s.name.toLowerCase().includes(studentName) ||
-                  studentName.includes(s.name.toLowerCase())
-              );
-              if (!matchedStudent) continue;
-
-              for (let i = 1; i < row.length && i - 1 < allAssignments.length; i++) {
-                const val = parseFloat(row[i]);
-                if (Number.isNaN(val) || val < 0 || val > 100) continue;
-                await handleSaveGrade(matchedStudent.id, "assignment", val, allAssignments[i - 1].id);
-              }
-            }
-            queryClient.invalidateQueries({ queryKey: ["grades"] });
+          description="Baca tabel nilai dari maksimal 5 foto, petakan kolom tugas, lalu periksa setiap nilai sebelum disimpan."
+          context={{
+            kind: "grades",
+            targetClassId: selectedClassId,
+            targetClassName: selectedClass?.name,
+            targetSubjectId: selectedSubjectId,
+            targetSubjectName: selectedSubject?.name,
+            students: students.map((student) => ({ id: student.id, name: student.name, nisn: student.nisn })),
+            assignments: allAssignments.map((assignment) => ({ id: assignment.id, name: assignment.name })),
+            existingGrades: grades.flatMap((grade) => grade.assignment_id ? [{
+              studentId: grade.student_id,
+              assignmentId: grade.assignment_id,
+              value: grade.value,
+            }] : []),
+          }}
+          onConfirmImport={async (plan) => {
+            if (!selectedSubjectId || !selectedClassId) return { success: 0, skipped: plan.rows.length, failed: 0, message: "Pilih kelas dan mata pelajaran terlebih dahulu." };
+            const existing = new Set(grades.filter((grade) => grade.assignment_id && grade.value !== null).map((grade) => `${grade.student_id}:${grade.assignment_id}`));
+            const gradeColumns = plan.columns.flatMap((column, index) => column.semantic === "grade" && column.targetId ? [{ ...column, index }] : []);
+            const batch = plan.rows.flatMap((row) => {
+              if (!row.included || !row.targetStudentId || row.issues.some((issue) => issue.severity === "error")) return [];
+              return gradeColumns.flatMap((column) => {
+                const rawValue = row.values[column.index]?.trim();
+                if (!rawValue || existing.has(`${row.targetStudentId}:${column.targetId}`)) return [];
+                const value = Number(rawValue.replace(",", "."));
+                if (!Number.isFinite(value) || value < 0 || value > 100) return [];
+                return [{
+                  studentId: row.targetStudentId,
+                  gradeType: "assignment",
+                  assignmentId: column.targetId,
+                  academicYearId: activeYear?.id || null,
+                  semesterId: activeSemesterId || selectedClass?.semester_id || null,
+                  value,
+                }];
+              });
+            });
+            const result = await saveGradesBatchWithUndo(batch);
+            await queryClient.invalidateQueries({ queryKey: ["grades"] });
+            return {
+              success: result.savedCount,
+              skipped: Math.max(0, plan.rows.length * Math.max(gradeColumns.length, 1) - result.savedCount),
+              failed: 0,
+              message: `${result.savedCount} nilai disimpan sebagai satu riwayat undo.`,
+            };
           }}
         />
       )}

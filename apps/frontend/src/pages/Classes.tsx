@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   School,
@@ -23,6 +24,7 @@ import {
 import { useClasses } from "@/hooks/useClasses";
 import type { Class } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
+import { useStudents } from "@/hooks/useStudents";
 import AddClassDialog from "@/components/classes/AddClassDialog";
 import ClassCard from "@/components/classes/ClassCard";
 import ClassKkmSetupDialog from "@/components/classes/ClassKkmSetupDialog";
@@ -30,8 +32,6 @@ import ImportClassesStudentsDialog from "@/components/classes/ImportClassesStude
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 import { ProductTour, TourButton, TourStep } from "@/components/ui/product-tour";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { useEnhancedToast } from "@/contexts/ToastContext";
-import { supabaseExternal } from "@/core/repositories/supabase-compat.repository";
 import gsap from "gsap";
 
 const classesTourSteps: TourStep[] = [
@@ -79,10 +79,11 @@ export default function Classes() {
   const [tourDummyClass, setTourDummyClass] = useState<Class | null>(null);
   const [classImportDialogOpen, setClassImportDialogOpen] = useState(false);
   const [showOCRImport, setShowOCRImport] = useState(false);
+  const [ocrTargetClassId, setOcrTargetClassId] = useState("");
   const [showClassKkmGuide, setShowClassKkmGuide] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { success: showSuccess, error: showError } = useEnhancedToast();
+  const { students: ocrTargetStudents, createStudentsBatch } = useStudents(ocrTargetClassId);
 
   const displayClasses = useMemo(() => {
     if (classes.length > 0 || !tourDummyClass) return classes;
@@ -180,7 +181,7 @@ export default function Classes() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowOCRImport(true)} className="gap-2 min-h-[44px]">
                   <Camera className="w-4 h-4" />
-                  Import Siswa dari Foto (OCR)
+                  Import Siswa dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -317,42 +318,34 @@ export default function Classes() {
         onOpenChange={setShowOCRImport}
         type="students"
         title="Import Siswa dari Foto"
-        description="Foto daftar siswa lalu ketik data untuk di-import"
-        onDataReady={async (rows) => {
-          // Parse OCR rows into students and save
-          try {
-            const { data: { session } } = await supabaseExternal.auth.getSession();
-            if (!session?.user?.id) {
-              showError("Error", "Silakan login terlebih dahulu");
-              return;
-            }
+        description="Baca daftar siswa dari maksimal 5 foto, periksa hasilnya, lalu simpan ke kelas tujuan."
+        availableClasses={classes.map((item) => ({ id: item.id, name: item.name }))}
+        targetClassId={ocrTargetClassId}
+        onTargetClassIdChange={setOcrTargetClassId}
+        context={{
+          kind: "students",
+          targetClassId: ocrTargetClassId,
+          targetClassName: classes.find((item) => item.id === ocrTargetClassId)?.name,
+          students: ocrTargetStudents.map((student) => ({ id: student.id, name: student.name, nisn: student.nisn })),
+        }}
+        onConfirmImport={async (plan) => {
+          const nameIndex = plan.columns.findIndex((column) => column.semantic === "student_name");
+          const nisnIndex = plan.columns.findIndex((column) => column.semantic === "nisn");
+          const readyRows = plan.rows.filter((row) => row.included && !row.issues.some((issue) => issue.severity === "error" || issue.code === "STUDENT_EXISTS"));
+          const inputs = readyRows.map((row) => ({
+            class_id: ocrTargetClassId,
+            name: row.values[nameIndex]?.trim() || "",
+            nisn: row.values[nisnIndex]?.trim() || "",
+          })).filter((row) => row.class_id && row.name && row.nisn);
 
-            // If no classes exist, can't import
-            if (classes.length === 0) {
-              showError("Error", "Buat kelas terlebih dahulu sebelum import siswa");
-              return;
-            }
-
-            // Use first class as default target
-            const targetClass = classes[0];
-            let imported = 0;
-            for (const row of rows) {
-              const name = row[1] || row[0] || "";
-              const nisn = row[2] || row[1] || "";
-              if (!name.trim()) continue;
-              
-              const { error } = await supabaseExternal.from("students").insert({
-                class_id: targetClass.id,
-                name: name.trim(),
-                nisn: nisn.trim() || `OCR-${Date.now()}-${imported}`,
-                user_id: session.user.id,
-              });
-              if (!error) imported++;
-            }
-            showSuccess("Berhasil", `${imported} siswa berhasil diimport ke ${targetClass.name}`);
-          } catch (err) {
-            showError("Error", "Gagal mengimport data siswa");
-          }
+          if (inputs.length) await createStudentsBatch.mutateAsync(inputs);
+          const skipped = plan.rows.length - inputs.length;
+          return {
+            success: inputs.length,
+            skipped,
+            failed: 0,
+            message: `${inputs.length} siswa disimpan ke ${classes.find((item) => item.id === ocrTargetClassId)?.name || "kelas tujuan"}.`,
+          };
         }}
       />
 

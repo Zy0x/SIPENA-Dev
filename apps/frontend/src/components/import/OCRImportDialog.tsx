@@ -1,67 +1,107 @@
-import { useState, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
   Camera,
-  Upload,
-  Loader2,
   CheckCircle2,
+  ChevronDown,
+  FilePenLine,
   Image as ImageIcon,
+  Loader2,
+  RefreshCw,
   ScanLine,
-  Edit3,
+  ShieldCheck,
   Sparkles,
+  Trash2,
+  Upload,
 } from "lucide-react";
-import { useEnhancedToast } from "@/contexts/ToastContext";
-import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
-import {
-  ResponsiveDataPreview,
-  StudioActionFooter,
-  StudioInfoCollapsible,
-  StudioStepHeader,
-} from "@/components/studio/ResponsiveStudio";
 
-export type OCRImportType = "students" | "grades" | "attendance";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { StudioActionFooter, StudioInfoCollapsible, StudioStepHeader } from "@/components/studio/ResponsiveStudio";
+import { useEnhancedToast } from "@/contexts/ToastContext";
+import {
+  OCR_MAX_IMAGES,
+  hasBlockingOcrIssues,
+  hasOcrWarnings,
+  parseManualOcrText,
+  prepareOcrDraft,
+  prepareOcrImage,
+  requestOcrExtraction,
+  validateOcrDraft,
+  validateOcrImageFiles,
+  type OcrColumn,
+  type OcrDraftRow,
+  type OcrImportContext,
+  type OcrImportKind,
+  type OcrImportPlan,
+  type OcrImportResult,
+  type PreparedOcrImage,
+} from "@/lib/ocrImport";
+import { cn } from "@/lib/utils";
+
+type OcrStudioStep = "capture" | "processing" | "review" | "confirm" | "done";
+
+interface OcrClassOption {
+  id: string;
+  name: string;
+}
 
 interface OCRImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: OCRImportType;
+  type: OcrImportKind;
   title: string;
   description: string;
-  onDataReady: (rows: string[][]) => void;
+  context: OcrImportContext;
+  availableClasses?: OcrClassOption[];
+  targetClassId?: string;
+  onTargetClassIdChange?: (classId: string) => void;
+  onConfirmImport: (plan: OcrImportPlan) => Promise<OcrImportResult>;
 }
 
-const TYPE_HINTS: Record<OCRImportType, { columns: string[]; example: string; tips: string[] }> = {
+const STEP_LABELS = [
+  { id: "capture" as const, label: "Pilih Foto" },
+  { id: "processing" as const, label: "OCR & AI" },
+  { id: "review" as const, label: "Periksa/Edit" },
+  { id: "confirm" as const, label: "Konfirmasi" },
+  { id: "done" as const, label: "Hasil" },
+];
+
+const KIND_COPY: Record<OcrImportKind, { subject: string; manualExample: string }> = {
   students: {
-    columns: ["No", "Nama Siswa", "NISN"],
-    example: "1\tAhmad Fauzi\t1234567890\n2\tBudi Santoso\t1234567891",
-    tips: [
-      "Setiap baris mewakili 1 siswa.",
-      "Pisahkan kolom dengan Tab atau | (pipe).",
-      "Format: No | Nama | NISN.",
-    ],
+    subject: "siswa",
+    manualExample: "1\tAhmad Fauzi\t0012345678\n2\tBudi Santoso\t0012345679",
   },
   grades: {
-    columns: ["Nama Siswa", "Nilai 1", "Nilai 2", "..."],
-    example: "Ahmad Fauzi\t85\t90\t78\nBudi Santoso\t92\t88\t95",
-    tips: [
-      "Baris pertama boleh berupa header.",
-      "Pisahkan kolom dengan Tab atau | (pipe).",
-      "Nilai harus berupa angka 0-100.",
-    ],
+    subject: "nilai",
+    manualExample: "Ahmad Fauzi\t0012345678\t85\t90\nBudi Santoso\t0012345679\t88\t92",
   },
   attendance: {
-    columns: ["Nama Siswa", "Tanggal", "Status"],
-    example: "Ahmad Fauzi\t2026-03-04\tH\nBudi Santoso\t2026-03-04\tS",
-    tips: [
-      "Status: H, I, S, A, atau D.",
-      "Format tanggal: YYYY-MM-DD atau DD/MM/YYYY.",
-      "Pisahkan kolom dengan Tab atau | (pipe).",
-    ],
+    subject: "presensi",
+    manualExample: "Ahmad Fauzi\t0012345678\t19/06/2026\tH\nBudi Santoso\t0012345679\t19/06/2026\tS",
   },
 };
+
+function formatBytes(bytes: number) {
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function issueTone(row: OcrDraftRow) {
+  if (row.issues.some((issue) => issue.severity === "error")) return "border-destructive/35 bg-destructive/5";
+  if (row.issues.some((issue) => issue.severity === "warning")) return "border-amber-400/40 bg-amber-500/5";
+  return "border-border bg-background";
+}
 
 export default function OCRImportDialog({
   open,
@@ -69,266 +109,385 @@ export default function OCRImportDialog({
   type,
   title,
   description,
-  onDataReady,
+  context,
+  availableClasses = [],
+  targetClassId,
+  onTargetClassIdChange,
+  onConfirmImport,
 }: OCRImportDialogProps) {
-  const [step, setStep] = useState<"capture" | "edit" | "preview">("capture");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [step, setStep] = useState<OcrStudioStep>("capture");
+  const [images, setImages] = useState<PreparedOcrImage[]>([]);
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
+  const [isPreparingImages, setIsPreparingImages] = useState(false);
+  const [processStage, setProcessStage] = useState(0);
+  const [processError, setProcessError] = useState("");
   const [rawText, setRawText] = useState("");
-  const [parsedRows, setParsedRows] = useState<string[][]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [manualText, setManualText] = useState("");
+  const [columns, setColumns] = useState<OcrColumn[]>([]);
+  const [rows, setRows] = useState<OcrDraftRow[]>([]);
+  const [warningsAccepted, setWarningsAccepted] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<OcrImportResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const layoutViewportRef = useRef<HTMLDivElement>(null);
-  const { success: showSuccess } = useEnhancedToast();
-  const viewport = useStudioViewportProfile(layoutViewportRef, open);
-  const hints = TYPE_HINTS[type];
+  const { error: showError } = useEnhancedToast();
+  const copy = KIND_COPY[type];
 
   const resetState = useCallback(() => {
     setStep("capture");
-    setImagePreview(null);
+    setImages([]);
+    setActiveImageId(null);
+    setConsent(false);
+    setIsPreparingImages(false);
+    setProcessStage(0);
+    setProcessError("");
     setRawText("");
-    setParsedRows([]);
-    setIsProcessing(false);
+    setManualText("");
+    setColumns([]);
+    setRows([]);
+    setWarningsAccepted(false);
+    setIsImporting(false);
+    setImportResult(null);
   }, []);
 
-  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const activeImage = images.find((image) => image.id === activeImageId) || images[0];
+  const includedRows = rows.filter((row) => row.included);
+  const blocking = hasBlockingOcrIssues(rows);
+  const hasWarnings = hasOcrWarnings(rows);
+  const canContinueReview = includedRows.length > 0 && !blocking && (!hasWarnings || warningsAccepted);
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      setImagePreview(evt.target?.result as string);
-      setStep("edit");
-      setRawText("");
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  }, []);
+  const closeDialog = useCallback((nextOpen: boolean) => {
+    if (!nextOpen) resetState();
+    onOpenChange(nextOpen);
+  }, [onOpenChange, resetState]);
 
-  const parseText = useCallback(() => {
-    if (!rawText.trim()) return;
-    setIsProcessing(true);
-
+  const handleFiles = useCallback(async (files: File[]) => {
+    if (!files.length) return;
     try {
-      const lines = rawText.trim().split("\n").filter((line) => line.trim());
-      const rows: string[][] = [];
-
-      for (const line of lines) {
-        let cells: string[];
-        if (line.includes("\t")) {
-          cells = line.split("\t").map((cell) => cell.trim());
-        } else if (line.includes("|")) {
-          cells = line.split("|").map((cell) => cell.trim()).filter(Boolean);
-        } else {
-          cells = line.split(/\s{2,}/).map((cell) => cell.trim());
-        }
-
-        if (cells.length > 0 && cells.some(Boolean)) {
-          rows.push(cells);
-        }
+      validateOcrImageFiles(files, images.length);
+      setIsPreparingImages(true);
+      const prepared: PreparedOcrImage[] = [];
+      for (let index = 0; index < files.length; index += 1) {
+        prepared.push(await prepareOcrImage(files[index], images.length + index + 1));
       }
-
-      setParsedRows(rows);
-      setStep("preview");
+      setImages((current) => [...current, ...prepared]);
+      setActiveImageId((current) => current || prepared[0]?.id || null);
+      setProcessError("");
+    } catch (error) {
+      showError("Foto tidak dapat digunakan", error instanceof Error ? error.message : "Periksa kembali foto yang dipilih.");
     } finally {
-      setIsProcessing(false);
+      setIsPreparingImages(false);
     }
-  }, [rawText]);
+  }, [images.length, showError]);
 
-  const handleConfirm = useCallback(() => {
-    onDataReady(parsedRows);
-    showSuccess("Data siap", `${parsedRows.length} baris data berhasil diparsing`);
-    resetState();
-    onOpenChange(false);
-  }, [onDataReady, onOpenChange, parsedRows, resetState, showSuccess]);
+  const onFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    void handleFiles(Array.from(event.target.files || []));
+    event.target.value = "";
+  }, [handleFiles]);
+
+  const renumberImages = useCallback((nextImages: PreparedOcrImage[]) => (
+    nextImages.map((image, index) => ({ ...image, page: index + 1 }))
+  ), []);
+
+  const moveImage = useCallback((id: string, direction: -1 | 1) => {
+    setImages((current) => {
+      const index = current.findIndex((image) => image.id === id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return renumberImages(next);
+    });
+  }, [renumberImages]);
+
+  const removeImage = useCallback((id: string) => {
+    setImages((current) => {
+      const next = renumberImages(current.filter((image) => image.id !== id));
+      setActiveImageId((active) => active === id ? next[0]?.id || null : active);
+      return next;
+    });
+  }, [renumberImages]);
+
+  const applyExtraction = useCallback((result: ReturnType<typeof parseManualOcrText>) => {
+    const draft = prepareOcrDraft(result, context);
+    setColumns(draft.columns);
+    setRows(draft.rows);
+    setRawText(result.rawText);
+    setWarningsAccepted(false);
+  }, [context]);
+
+  const runOcr = useCallback(async () => {
+    if (!images.length || !consent || (type === "students" && !targetClassId)) return;
+    setStep("processing");
+    setProcessStage(1);
+    setProcessError("");
+    try {
+      const result = await requestOcrExtraction({
+        mode: "ocr_import",
+        kind: type,
+        images: images.map(({ name, mimeType, base64, page }) => ({ name, mimeType, base64, page })),
+      });
+      setProcessStage(2);
+      applyExtraction(result);
+      setProcessStage(3);
+      setStep("review");
+    } catch (error) {
+      setProcessError(error instanceof Error ? error.message : "OCR gagal memproses foto.");
+      setStep("review");
+    }
+  }, [applyExtraction, consent, images, targetClassId, type]);
+
+  const applyManualText = useCallback(() => {
+    if (!manualText.trim()) return;
+    applyExtraction(parseManualOcrText(manualText, type));
+    setProcessError("");
+  }, [applyExtraction, manualText, type]);
+
+  const revalidate = useCallback((nextRows: OcrDraftRow[], nextColumns = columns) => {
+    const validated = validateOcrDraft(nextRows, nextColumns, context);
+    setColumns(validated.columns);
+    setRows(validated.rows);
+    setWarningsAccepted(false);
+  }, [columns, context]);
+
+  const updateCell = useCallback((rowId: string, columnIndex: number, value: string) => {
+    revalidate(rows.map((row) => row.id === rowId
+      ? { ...row, values: row.values.map((cell, index) => index === columnIndex ? value : cell) }
+      : row));
+  }, [revalidate, rows]);
+
+  const toggleRow = useCallback((rowId: string, included: boolean) => {
+    revalidate(rows.map((row) => row.id === rowId ? { ...row, included } : row));
+  }, [revalidate, rows]);
+
+  const mapGradeColumn = useCallback((columnId: string, targetId: string) => {
+    const nextColumns = columns.map((column) => column.id === columnId ? { ...column, targetId } : column);
+    revalidate(rows, nextColumns);
+  }, [columns, revalidate, rows]);
+
+  const executeImport = useCallback(async () => {
+    if (!canContinueReview) return;
+    setIsImporting(true);
+    try {
+      const result = await onConfirmImport({
+        kind: type,
+        targetClassId: context.targetClassId,
+        columns,
+        rows,
+      });
+      setImportResult(result);
+      setStep("done");
+    } catch (error) {
+      showError("Import gagal", error instanceof Error ? error.message : "Data belum tersimpan. Coba kembali.");
+    } finally {
+      setIsImporting(false);
+    }
+  }, [canContinueReview, columns, context.targetClassId, onConfirmImport, rows, showError, type]);
+
+  const summary = useMemo(() => ({
+    included: includedRows.length,
+    excluded: rows.length - includedRows.length,
+    errors: rows.filter((row) => row.included && row.issues.some((issue) => issue.severity === "error")).length,
+    warnings: rows.filter((row) => row.included && row.issues.some((issue) => issue.severity === "warning")).length,
+  }), [includedRows.length, rows]);
 
   return (
-    <Dialog open={open} onOpenChange={(value) => { if (!value) resetState(); onOpenChange(value); }}>
-      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageSelect} />
+    <Dialog open={open} onOpenChange={closeDialog}>
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={onFileChange} />
+      <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={onFileChange} />
 
-      <DialogContent className="w-[calc(100vw-0.75rem)] max-w-3xl h-[min(100dvh-0.75rem,48rem)] overflow-hidden rounded-[24px] p-0 gap-0">
-        <DialogHeader className="border-b border-border px-4 pt-4 pb-3 sm:px-5">
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="flex h-[min(100dvh-0.75rem,56rem)] w-[calc(100vw-0.75rem)] max-w-6xl flex-col gap-0 overflow-hidden rounded-[20px] p-0">
+        <DialogHeader className="shrink-0 border-b border-border px-4 pb-3 pt-4 pr-14 sm:px-6 sm:pt-5">
+          <DialogTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
             <ScanLine className="h-5 w-5 text-primary" />
             {title}
-            <Badge variant="secondary" className="gap-1 text-[10px]">
-              <Sparkles className="h-2.5 w-2.5" /> Beta OCR
+            <Badge className="gap-1 bg-amber-500 text-amber-950 hover:bg-amber-500">
+              <Sparkles className="h-3 w-3" /> BETA
             </Badge>
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <div ref={layoutViewportRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
-            <div className="space-y-4">
-              <StudioStepHeader
-                steps={[
-                  { id: "capture", label: "Ambil Gambar" },
-                  { id: "edit", label: "Rapikan Teks" },
-                  { id: "preview", label: "Preview Hasil" },
-                ]}
-                currentStep={step}
-              />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-6 sm:py-4">
+          <div className="space-y-4">
+            <StudioStepHeader steps={STEP_LABELS} currentStep={step} />
 
-              {step === "capture" ? (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-6 text-center transition-colors hover:bg-muted/40"
-                    >
-                      <Camera className="h-10 w-10 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">Ambil Foto</p>
-                        <p className="text-[10px] text-muted-foreground">Gunakan kamera langsung dari perangkat</p>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-6 text-center transition-colors hover:bg-muted/40"
-                    >
-                      <ImageIcon className="h-10 w-10 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">Pilih Gambar</p>
-                        <p className="text-[10px] text-muted-foreground">Upload dari galeri atau file manager</p>
-                      </div>
-                    </button>
+            {step === "capture" ? (
+              <>
+                {type === "students" ? (
+                  <div className="rounded-xl border border-border bg-muted/20 p-3">
+                    <label className="mb-2 block text-xs font-semibold">Kelas tujuan *</label>
+                    <Select value={targetClassId || ""} onValueChange={onTargetClassIdChange}>
+                      <SelectTrigger className="min-h-11 bg-background"><SelectValue placeholder="Pilih kelas tujuan" /></SelectTrigger>
+                      <SelectContent>
+                        {availableClasses.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-2 text-[11px] text-muted-foreground">SIPENA tidak memilih kelas pertama secara otomatis.</p>
                   </div>
+                ) : null}
 
-                  <StudioInfoCollapsible
-                    title="Cara menggunakan Beta OCR"
-                    description="Buka panduan ini bila Anda ingin alur singkat yang aman di mobile."
-                    defaultOpen
-                  >
-                    <ol className="list-decimal space-y-1 pl-4 text-[11px] text-muted-foreground">
-                      <li>Ambil foto atau pilih gambar dokumen data.</li>
-                      <li>Gunakan gambar itu sebagai referensi visual.</li>
-                      <li>Ketik atau tempel ulang data ke area teks.</li>
-                      <li>Parse data lalu koreksi hasil sebelum dipakai.</li>
-                    </ol>
-                  </StudioInfoCollapsible>
-
-                  <StudioInfoCollapsible
-                    title="Kolom yang diharapkan"
-                    description="Kolom ini dipakai sebagai panduan saat Anda menyalin data dari gambar."
-                  >
-                    <div className="flex flex-wrap gap-1.5">
-                      {hints.columns.map((column, index) => (
-                        <Badge key={`${column}-${index}`} variant="outline" className="text-[10px]">
-                          {column}
-                        </Badge>
-                      ))}
-                    </div>
-                  </StudioInfoCollapsible>
-                </>
-              ) : null}
-
-              {step === "edit" ? (
-                <>
-                  {imagePreview ? (
-                    <div className="overflow-hidden rounded-2xl border border-border bg-muted/20">
-                      <img src={imagePreview} alt="Preview OCR" className="max-h-[17rem] w-full object-contain" />
-                    </div>
-                  ) : null}
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-1.5 text-sm font-medium">
-                        <Edit3 className="h-3.5 w-3.5" /> Ketik Data dari Gambar
-                      </label>
-                      <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-3 text-[10px]" onClick={() => setRawText(hints.example)}>
-                        Isi Contoh
-                      </Button>
-                    </div>
-                    <Textarea
-                      value={rawText}
-                      onChange={(e) => setRawText(e.target.value)}
-                      placeholder={`Ketik data di sini...\nPisahkan kolom dengan Tab atau | (pipe)\n\nContoh:\n${hints.example}`}
-                      className="min-h-[14rem] resize-y rounded-2xl font-mono text-xs"
-                    />
-                  </div>
-
-                  <StudioInfoCollapsible
-                    title="Tips pengetikan"
-                    description="Gunakan tips ini agar parser lebih mudah membaca data."
-                    defaultOpen={viewport.isPhone}
-                  >
-                    <div className="space-y-1 text-[11px] text-muted-foreground">
-                      {hints.tips.map((tip, index) => (
-                        <p key={`${tip}-${index}`} className="flex items-start gap-2">
-                          <span className="text-primary">•</span>
-                          <span>{tip}</span>
-                        </p>
-                      ))}
-                    </div>
-                  </StudioInfoCollapsible>
-                </>
-              ) : null}
-
-              {step === "preview" ? (
-                <>
-                  <Badge variant="outline" className="gap-1 text-xs">
-                    <CheckCircle2 className="h-3 w-3 text-green-500" /> {parsedRows.length} baris terdeteksi
-                  </Badge>
-                  <ResponsiveDataPreview
-                    rows={parsedRows}
-                    profile={viewport.profile}
-                    getRowKey={(row, index) => `${row.join("-")}-${index}`}
-                    detailLabel="Lihat tabel hasil OCR"
-                    columns={(parsedRows[0] ?? hints.columns).map((_, index) => ({
-                      id: `column-${index}`,
-                      label: hints.columns[index] || `Kolom ${index + 1}`,
-                      primary: index === 0,
-                      render: (row: string[]) => row[index] ?? "—",
-                    }))}
-                  />
-                </>
-              ) : null}
-
-              {isProcessing ? (
-                <div className="flex flex-col items-center justify-center gap-4 py-6">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Memproses data...</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={images.length >= OCR_MAX_IMAGES || isPreparingImages} className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center hover:bg-muted/40 disabled:opacity-50">
+                    <Camera className="h-8 w-8 text-primary" />
+                    <span><span className="block text-sm font-semibold">Ambil Foto</span><span className="text-[11px] text-muted-foreground">Kamera perangkat</span></span>
+                  </button>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={images.length >= OCR_MAX_IMAGES || isPreparingImages} className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center hover:bg-muted/40 disabled:opacity-50">
+                    {isPreparingImages ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <ImageIcon className="h-8 w-8 text-primary" />}
+                    <span><span className="block text-sm font-semibold">Pilih dari Galeri</span><span className="text-[11px] text-muted-foreground">JPG, PNG, WebP; maksimal 5 foto</span></span>
+                  </button>
                 </div>
-              ) : null}
-            </div>
+
+                {images.length ? (
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                    <div className="flex min-h-56 items-center justify-center overflow-hidden rounded-xl border border-border bg-black/5">
+                      {activeImage ? <img src={activeImage.previewUrl} alt={`Foto sumber halaman ${activeImage.page}`} className="max-h-[24rem] w-full object-contain" /> : null}
+                    </div>
+                    <div className="space-y-2">
+                      {images.map((image, index) => (
+                        <button key={image.id} type="button" onClick={() => setActiveImageId(image.id)} className={cn("flex w-full items-center gap-2 rounded-xl border p-2 text-left", activeImage?.id === image.id ? "border-primary bg-primary/5" : "border-border bg-background")}>
+                          <img src={image.previewUrl} alt="" className="h-12 w-12 shrink-0 rounded-md object-cover" />
+                          <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">Halaman {index + 1}: {image.name}</span><span className="text-[10px] text-muted-foreground">{formatBytes(image.processedSize)} setelah kompresi</span></span>
+                          <span className="flex shrink-0 items-center gap-1">
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveImage(image.id, -1); }} aria-label="Geser foto ke kiri"><ArrowLeft className="h-3.5 w-3.5" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={index === images.length - 1} onClick={(event) => { event.stopPropagation(); moveImage(image.id, 1); }} aria-label="Geser foto ke kanan"><ArrowRight className="h-3.5 w-3.5" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(event) => { event.stopPropagation(); removeImage(image.id); }} aria-label="Hapus foto"><Trash2 className="h-3.5 w-3.5" /></Button>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+                  <Checkbox checked={consent} onCheckedChange={(checked) => setConsent(checked === true)} className="mt-0.5 h-5 w-5" />
+                  <span className="text-xs leading-relaxed"><span className="block font-semibold">Saya setuju foto diproses oleh layanan AI untuk sesi ini.</span><span className="text-muted-foreground">Foto tidak disimpan oleh SIPENA. Foto dan base64 dibuang saat modal ditutup.</span></span>
+                </label>
+
+                <StudioInfoCollapsible title="Cara mendapat hasil yang lebih akurat" description="Foto tegak, terang, dan seluruh tabel terlihat." defaultOpen={false}>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    <li>Gunakan satu halaman dokumen per foto dan susun urutannya.</li>
+                    <li>Tulisan tangan diproses sebisa mungkin, tetapi wajib diperiksa ulang.</li>
+                    <li>AI hanya membaca dan merapikan data; AI tidak dapat menyimpan data.</li>
+                  </ul>
+                </StudioInfoCollapsible>
+              </>
+            ) : null}
+
+            {step === "processing" ? (
+              <div className="mx-auto flex min-h-[24rem] max-w-xl flex-col items-center justify-center gap-5 text-center">
+                <div className="relative"><ScanLine className="h-14 w-14 animate-pulse text-primary" /><Sparkles className="absolute -right-3 -top-2 h-6 w-6 animate-pulse text-amber-500" /></div>
+                <div><h3 className="text-lg font-semibold">OCR & AI BETA sedang bekerja</h3><p className="mt-1 text-sm text-muted-foreground">{processStage <= 1 ? "Membaca teks dan struktur dari foto..." : processStage === 2 ? "Merapikan data ke bentuk tabel..." : "Memeriksa aturan data SIPENA..."}</p></div>
+                <Progress value={processStage === 1 ? 35 : processStage === 2 ? 75 : 95} className="h-2" />
+                <p className="text-[11px] text-muted-foreground">Jangan tutup modal selama foto sedang diproses.</p>
+              </div>
+            ) : null}
+
+            {step === "review" ? (
+              <>
+                {processError ? (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" /><AlertTitle>OCR belum berhasil</AlertTitle><AlertDescription>{processError} Foto tetap tersedia. Coba lagi atau masukkan teks secara manual.</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap gap-2"><Badge variant="outline">{rows.length} baris</Badge><Badge variant="outline">{summary.errors} error</Badge><Badge variant="outline">{summary.warnings} peringatan</Badge></div>
+                  <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => void runOcr()} disabled={!images.length}><RefreshCw className="h-3.5 w-3.5" /> Coba OCR Lagi</Button>
+                </div>
+
+                {!rows.length || processError ? (
+                  <div className="space-y-2 rounded-xl border border-border p-3">
+                    <label className="flex items-center gap-2 text-xs font-semibold"><FilePenLine className="h-4 w-4" /> Editor manual</label>
+                    <Textarea value={manualText} onChange={(event) => setManualText(event.target.value)} placeholder={copy.manualExample} className="min-h-40 font-mono text-xs" />
+                    <Button type="button" variant="outline" onClick={applyManualText} disabled={!manualText.trim()}>Buat tabel dari teks</Button>
+                  </div>
+                ) : null}
+
+                {rows.length ? (
+                  <div className="overflow-hidden rounded-xl border border-border bg-background">
+                    <div className="sipena-native-horizontal-scroll max-w-full overflow-x-auto overscroll-x-contain touch-pan-x">
+                      <table className="w-full min-w-max border-collapse text-xs">
+                        <thead className="sticky top-0 z-10 bg-muted shadow-[0_2px_5px_rgba(15,23,42,0.16)]">
+                          <tr>
+                            <th className="min-w-16 border-b border-r border-border px-2 py-2 text-center">Ikut</th>
+                            <th className="min-w-20 border-b border-r border-border px-2 py-2 text-center">Sumber</th>
+                            {columns.map((column) => (
+                              <th key={column.id} className="min-w-36 border-b border-r border-border px-2 py-2 text-center">
+                                <span className="block font-semibold">{column.label}</span>
+                                {type === "grades" && (column.semantic === "grade" || column.semantic === "unknown") ? (
+                                  <Select value={column.targetId || ""} onValueChange={(value) => mapGradeColumn(column.id, value)}>
+                                    <SelectTrigger className="mt-1 h-8 min-w-40 bg-background text-[10px]"><SelectValue placeholder="Pilih tugas" /></SelectTrigger>
+                                    <SelectContent>{(context.assignments || []).map((assignment) => <SelectItem key={assignment.id} value={assignment.id}>{assignment.name}</SelectItem>)}</SelectContent>
+                                  </Select>
+                                ) : null}
+                              </th>
+                            ))}
+                            <th className="min-w-64 border-b border-border px-2 py-2 text-center">Pemeriksaan</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((row) => (
+                            <tr key={row.id} className={cn("border-b border-border", !row.included && "opacity-55")}>
+                              <td className="border-r border-border p-2 text-center"><Checkbox checked={row.included} onCheckedChange={(checked) => toggleRow(row.id, checked === true)} aria-label={`Sertakan baris halaman ${row.page}`} /></td>
+                              <td className="border-r border-border p-2 text-center"><button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={() => { setActiveImageId(images.find((image) => image.page === row.page)?.id || null); }}>Foto {row.page}</button><span className="mt-1 block text-[10px] text-muted-foreground">{Math.round(row.confidence * 100)}%</span></td>
+                              {columns.map((column, columnIndex) => (
+                                <td key={column.id} className="border-r border-border p-1.5"><Input value={row.values[columnIndex] || ""} onChange={(event) => updateCell(row.id, columnIndex, event.target.value)} disabled={!row.included} className="h-9 min-w-32 bg-background text-xs" /></td>
+                              ))}
+                              <td className="p-2 align-top"><div className={cn("rounded-lg border p-2", issueTone(row))}>{row.issues.length ? row.issues.map((issue, index) => <p key={`${issue.code}-${index}`} className={cn("text-[10px] leading-relaxed", issue.severity === "error" ? "text-destructive" : issue.severity === "warning" ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground")}>{issue.message}</p>) : <p className="flex items-center gap-1 text-[10px] text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="h-3 w-3" /> Siap</p>}</div></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
+
+                {images.length && activeImage ? (
+                  <StudioInfoCollapsible title={`Foto sumber halaman ${activeImage.page}`} description="Buka foto untuk mencocokkan isi tabel." defaultOpen={false}>
+                    <img src={activeImage.previewUrl} alt={`Foto sumber halaman ${activeImage.page}`} className="max-h-[28rem] w-full object-contain" />
+                  </StudioInfoCollapsible>
+                ) : null}
+                {rawText ? <StudioInfoCollapsible title="Teks OCR mentah" description="Dipakai untuk pemeriksaan lanjutan bila tabel tampak berbeda."><pre className="max-h-56 overflow-auto whitespace-pre-wrap text-[11px] text-muted-foreground">{rawText}</pre></StudioInfoCollapsible> : null}
+
+                {hasWarnings ? (
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-400/40 bg-amber-500/5 p-3"><Checkbox checked={warningsAccepted} onCheckedChange={(checked) => setWarningsAccepted(checked === true)} className="mt-0.5" /><span className="text-xs"><span className="block font-semibold">Saya sudah memeriksa baris yang memiliki peringatan.</span><span className="text-muted-foreground">Termasuk tulisan tangan, confidence rendah, data mirip, dan konflik data lama.</span></span></label>
+                ) : null}
+              </>
+            ) : null}
+
+            {step === "confirm" ? (
+              <div className="mx-auto max-w-2xl space-y-4">
+                <Alert><ShieldCheck className="h-4 w-4" /><AlertTitle>Konfirmasi import {copy.subject}</AlertTitle><AlertDescription>AI sudah selesai bekerja. Hanya baris yang dicentang dan telah lolos pemeriksaan yang akan disimpan.</AlertDescription></Alert>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border p-4 text-center"><p className="text-2xl font-semibold">{summary.included}</p><p className="text-xs text-muted-foreground">Akan disimpan</p></div>
+                  <div className="rounded-xl border p-4 text-center"><p className="text-2xl font-semibold">{summary.excluded}</p><p className="text-xs text-muted-foreground">Tidak disertakan</p></div>
+                  <div className="rounded-xl border p-4 text-center"><p className="text-2xl font-semibold">{images.length}</p><p className="text-xs text-muted-foreground">Foto sumber</p></div>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">Nilai dan presensi yang sudah ada tidak ditimpa secara default. Setelah tombol konfirmasi ditekan, SIPENA menjalankan penyimpanan melalui alur domain yang sama dengan input manual.</p>
+              </div>
+            ) : null}
+
+            {step === "done" && importResult ? (
+              <div className="mx-auto flex min-h-[22rem] max-w-xl flex-col items-center justify-center gap-5 text-center">
+                <CheckCircle2 className="h-16 w-16 text-emerald-500" /><div><h3 className="text-xl font-semibold">Import selesai</h3><p className="mt-1 text-sm text-muted-foreground">{importResult.message || "Hasil import sudah diproses."}</p></div>
+                <div className="grid w-full grid-cols-3 gap-2"><div className="rounded-xl border p-3"><strong className="block text-xl text-emerald-600">{importResult.success}</strong><span className="text-[10px] text-muted-foreground">Berhasil</span></div><div className="rounded-xl border p-3"><strong className="block text-xl text-amber-600">{importResult.skipped}</strong><span className="text-[10px] text-muted-foreground">Dilewati</span></div><div className="rounded-xl border p-3"><strong className="block text-xl text-destructive">{importResult.failed}</strong><span className="text-[10px] text-muted-foreground">Gagal</span></div></div>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <StudioActionFooter
           sticky
-          helperText="Pada mobile, gambar referensi, editor teks, dan preview dipisah per langkah agar layar kecil tetap nyaman dipakai."
+          helperText={step === "capture" ? "Foto hanya hidup selama modal ini terbuka dan tidak disimpan oleh SIPENA." : step === "review" ? "Geser tabel secara horizontal pada layar kecil. Keluarkan baris bermasalah atau perbaiki isinya." : "OCR BETA selalu memerlukan pemeriksaan manusia sebelum data disimpan."}
           actions={(
             <>
-              {step === "capture" ? (
-                <Button variant="outline" onClick={() => onOpenChange(false)} className="h-11 w-full text-xs sm:h-9 sm:w-auto">
-                  Tutup
-                </Button>
-              ) : null}
-              {step === "edit" ? (
-                <>
-                  <Button variant="outline" onClick={() => setStep("capture")} className="h-11 w-full text-xs sm:h-9 sm:w-auto">
-                    Kembali
-                  </Button>
-                  <Button onClick={parseText} disabled={!rawText.trim() || isProcessing} className="h-11 w-full gap-2 text-xs sm:h-9 sm:w-auto">
-                    <ScanLine className="h-4 w-4" /> Parse Data
-                  </Button>
-                </>
-              ) : null}
-              {step === "preview" ? (
-                <>
-                  <Button variant="outline" onClick={() => setStep("edit")} className="h-11 w-full text-xs sm:h-9 sm:w-auto">
-                    Koreksi
-                  </Button>
-                  <Button onClick={handleConfirm} disabled={parsedRows.length === 0} className="h-11 w-full gap-2 text-xs sm:h-9 sm:w-auto">
-                    <Upload className="h-4 w-4" /> Gunakan Data ({parsedRows.length})
-                  </Button>
-                </>
-              ) : null}
+              {step === "capture" ? <><Button variant="outline" onClick={() => closeDialog(false)}>Batal</Button><Button onClick={() => void runOcr()} disabled={!images.length || !consent || isPreparingImages || (type === "students" && !targetClassId)} className="gap-2"><ScanLine className="h-4 w-4" /> Proses OCR & AI</Button></> : null}
+              {step === "processing" ? <Button variant="outline" disabled><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sedang memproses</Button> : null}
+              {step === "review" ? <><Button variant="outline" onClick={() => setStep("capture")}>Kembali ke Foto</Button><Button onClick={() => setStep("confirm")} disabled={!canContinueReview}>Lanjut Konfirmasi ({includedRows.length})</Button></> : null}
+              {step === "confirm" ? <><Button variant="outline" onClick={() => setStep("review")}>Periksa Lagi</Button><Button onClick={() => void executeImport()} disabled={isImporting} className="gap-2">{isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Konfirmasi Import</Button></> : null}
+              {step === "done" ? <Button onClick={() => closeDialog(false)}>Selesai</Button> : null}
             </>
           )}
         />

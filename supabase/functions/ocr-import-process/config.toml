@@ -1,0 +1,2 @@
+[functions.ocr-import-process]
+verify_jwt = true

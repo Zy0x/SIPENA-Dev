@@ -347,7 +347,7 @@ sipena/
 | Jenis | Lokasi | Deskripsi |
 |---|---|---|
 | Import Excel per halaman | Kelas, Nilai, Presensi | Upload .xlsx, auto-detect kolom, preview |
-| Import OCR (Beta) | Kelas, Nilai, Presensi | Foto dokumen → manual text extraction |
+| Import OCR (BETA) | Siswa, Nilai, Presensi | Maksimal 5 foto → Groq Vision → normalisasi AI → tabel editable → konfirmasi |
 | Import Batch Multi-Sheet | Settings | Satu file .xlsx multi-sheet untuk seluruh ekosistem |
 
 ### Import Kelas & Siswa

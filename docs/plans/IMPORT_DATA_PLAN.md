@@ -9,5 +9,5 @@ Lihat `docs/plans/BATCH_IMPORT_PLAN.md` untuk rencana batch import multi-sheet.
 
 ## Teknologi
 - Library: XLSX (SheetJS)
-- OCR: Manual text extraction + AI vision (planned)
+- OCR BETA: Groq Vision dua tahap, tabel editable, validasi deterministik, dan konfirmasi sebelum penyimpanan.
 - Validasi: Cross-reference antar sheet, fuzzy matching nama

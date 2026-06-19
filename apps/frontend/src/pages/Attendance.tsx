@@ -48,6 +48,7 @@ import autoTable from "jspdf-autotable";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import ImportAttendanceDialog from "@/components/import/ImportAttendanceDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
+import { normalizeAttendanceStatus, normalizeOcrDate } from "@/lib/ocrImport";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { createDefaultSignatureConfig, useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { SignatureExportPanel } from "@/components/export/SignatureExportPanel";
@@ -3014,7 +3015,7 @@ export default function Attendance() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setShowOCRAttendance(true)} className="gap-2 min-h-[44px]">
                           <Camera className="w-4 h-4" />
-                          Import dari Foto (OCR)
+                          Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
                         </DropdownMenuItem>
                       </>
                     )}
@@ -3123,7 +3124,7 @@ export default function Attendance() {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setShowOCRAttendance(true)} className="gap-2">
                         <Camera className="w-4 h-4" />
-                        Import dari Foto (OCR)
+                        Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -4824,25 +4825,65 @@ export default function Attendance() {
         onOpenChange={setShowOCRAttendance}
         type="attendance"
         title="Import Presensi dari Foto"
-        description="Foto daftar presensi lalu ketik data untuk di-import"
-        onDataReady={async (rows) => {
-          if (!selectedClassId) return;
-          let imported = 0;
-          for (const row of rows) {
-            const studentName = (row[0] || "").trim().toLowerCase();
-            const dateStr = row[1] || "";
-            const status = (row[2] || "").trim().toUpperCase();
-            
-            const matchedStudent = students.find(s => 
-              s.name.toLowerCase().includes(studentName) || studentName.includes(s.name.toLowerCase())
-            );
-            if (!matchedStudent) continue;
-            if (!["H", "I", "S", "A", "D"].includes(status)) continue;
-            
-            await setAttendanceDb({ studentId: matchedStudent.id, date: dateStr, status: status as AttendanceStatusValue });
-            imported++;
+        description="Baca daftar presensi dari maksimal 5 foto, periksa tanggal dan status, lalu konfirmasi data yang akan disimpan."
+        context={{
+          kind: "attendance",
+          targetClassId: selectedClassId,
+          targetClassName: selectedClass?.name,
+          students: students.map((student) => ({ id: student.id, name: student.name, nisn: student.nisn })),
+          existingAttendance: attendanceRecords.map((record) => ({
+            studentId: record.student_id,
+            date: record.date,
+            status: record.status,
+          })),
+        }}
+        onConfirmImport={async (plan) => {
+          if (!selectedClassId) return { success: 0, skipped: plan.rows.length, failed: 0, message: "Pilih kelas terlebih dahulu." };
+          const dateIndex = plan.columns.findIndex((column) => column.semantic === "date");
+          const statusIndex = plan.columns.findIndex((column) => column.semantic === "attendance_status");
+          const existing = new Set(attendanceRecords.map((record) => `${record.student_id}:${record.date}`));
+          const candidateRows = plan.rows.filter((row) => row.included && row.targetStudentId && !row.issues.some((issue) => issue.severity === "error"));
+          const candidateStudentIds = [...new Set(candidateRows.map((row) => row.targetStudentId as string))];
+          const candidateDates = [...new Set(candidateRows.map((row) => normalizeOcrDate(row.values[dateIndex] || "")).filter(Boolean))];
+          if (candidateStudentIds.length && candidateDates.length) {
+            const { supabaseExternal } = await import("@/core/repositories/supabase-compat.repository");
+            const { data: persistedRows } = await (supabaseExternal as any)
+              .from("attendance_records")
+              .select("student_id,date")
+              .eq("class_id", selectedClassId)
+              .in("student_id", candidateStudentIds)
+              .in("date", candidateDates);
+            (persistedRows || []).forEach((record: { student_id: string; date: string }) => existing.add(`${record.student_id}:${record.date}`));
           }
-          if (imported > 0) showSuccess("Berhasil", `${imported} data presensi berhasil diimport`);
+          let successCount = 0;
+          let skippedCount = 0;
+          let failedCount = 0;
+
+          for (const row of plan.rows) {
+            if (!row.included || !row.targetStudentId || row.issues.some((issue) => issue.severity === "error")) {
+              skippedCount += 1;
+              continue;
+            }
+            const date = normalizeOcrDate(row.values[dateIndex] || "");
+            const status = normalizeAttendanceStatus(row.values[statusIndex] || "") as AttendanceStatusValue;
+            if (!date || !status || existing.has(`${row.targetStudentId}:${date}`)) {
+              skippedCount += 1;
+              continue;
+            }
+            try {
+              await setAttendanceDb({ studentId: row.targetStudentId, date, status });
+              existing.add(`${row.targetStudentId}:${date}`);
+              successCount += 1;
+            } catch {
+              failedCount += 1;
+            }
+          }
+          return {
+            success: successCount,
+            skipped: skippedCount,
+            failed: failedCount,
+            message: `${successCount} presensi disimpan; data lama tetap dipertahankan.`,
+          };
         }}
       />
     </>
