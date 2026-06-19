@@ -3635,6 +3635,36 @@
     color: hsl(var(--foreground)) !important;
   }
 
+  .sipena-collapsible-trigger,
+  .sipena-ocr-image-selector {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sipena-collapsible-trigger[data-state="open"],
+  .sipena-collapsible-trigger[data-state="open"]:hover,
+  .sipena-collapsible-trigger[data-state="open"]:active,
+  .sipena-collapsible-trigger[data-state="open"]:focus,
+  .sipena-collapsible-trigger[data-state="open"]:focus-visible {
+    background-color: hsl(var(--muted) / 0.72) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .sipena-collapsible-trigger[data-state="open"] .sipena-collapsible-chevron {
+    color: currentColor !important;
+    transform: rotate(180deg);
+  }
+
+  .sipena-ocr-image-selector[data-selected="true"],
+  .sipena-ocr-image-selector[aria-pressed="true"],
+  .sipena-ocr-image-selector[data-selected="true"]:hover,
+  .sipena-ocr-image-selector[data-selected="true"]:active,
+  .sipena-ocr-image-selector[data-selected="true"]:focus,
+  .sipena-ocr-image-selector[data-selected="true"]:focus-visible {
+    background-color: hsl(var(--primary) / 0.1) !important;
+    color: hsl(var(--foreground)) !important;
+    border-color: hsl(var(--primary) / 0.42) !important;
+  }
+
   .sipena-tour-action {
     -webkit-tap-highlight-color: transparent;
   }

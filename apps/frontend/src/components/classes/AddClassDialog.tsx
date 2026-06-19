@@ -13,20 +13,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Loader2 } from "lucide-react";
-import { useClasses } from "@/hooks/useClasses";
+import { useClasses, type Class } from "@/hooks/useClasses";
 import { CLASS_DESCRIPTION_MAX_LENGTH, CLASS_NAME_MAX_LENGTH, limitClassDescription, limitClassName } from "./classFormLimits";
 
 interface AddClassDialogProps {
-  trigger?: React.ReactNode;
+  trigger?: React.ReactNode | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onCreated?: (createdClass: Class) => void;
 }
 
-export default function AddClassDialog({ trigger }: AddClassDialogProps) {
-  const [open, setOpen] = useState(false);
+export default function AddClassDialog({ trigger, open, onOpenChange, onCreated }: AddClassDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [classKkm, setClassKkm] = useState("75");
   const titleRef = useRef<HTMLHeadingElement>(null);
   const { createClass } = useClasses();
+  const isControlled = open !== undefined;
+  const resolvedOpen = open ?? internalOpen;
+  const setDialogOpen = (nextOpen: boolean) => {
+    if (!isControlled) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +45,7 @@ export default function AddClassDialog({ trigger }: AddClassDialogProps) {
     const trimmedDescription = limitClassDescription(description.trim());
     if (!trimmedName || Number.isNaN(parsedClassKkm) || parsedClassKkm < 0 || parsedClassKkm > 100) return;
 
-    await createClass.mutateAsync({
+    const createdClass = await createClass.mutateAsync({
       name: trimmedName,
       description: trimmedDescription || undefined,
       class_kkm: parsedClassKkm,
@@ -45,19 +54,22 @@ export default function AddClassDialog({ trigger }: AddClassDialogProps) {
     setName("");
     setDescription("");
     setClassKkm("75");
-    setOpen(false);
+    onCreated?.(createdClass as Class);
+    setDialogOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Tambah Kelas
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog open={resolvedOpen} onOpenChange={setDialogOpen}>
+      {trigger !== null ? (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah Kelas
+            </Button>
+          )}
+        </DialogTrigger>
+      ) : null}
       <DialogContent
         className="sm:max-w-[425px]"
         onOpenAutoFocus={(event) => {
@@ -126,7 +138,7 @@ export default function AddClassDialog({ trigger }: AddClassDialogProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => setDialogOpen(false)}
             >
               Batal
             </Button>

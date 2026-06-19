@@ -6,6 +6,7 @@ import {
   parseManualOcrText,
   prepareOcrDraft,
   sanitizeOcrExtractionResult,
+  normalizeStudentOcrShape,
   validateOcrDraft,
 } from "./validation";
 import { validateOcrImageFiles } from "./imagePreprocessor";
@@ -100,6 +101,49 @@ describe("OCR import validation", () => {
 
     expect(draft.rows[0].included).toBe(false);
     expect(draft.rows[0].issues.some((item) => item.code === "STUDENT_EXISTS")).toBe(true);
+  });
+
+  it("always creates canonical student name and NISN columns", () => {
+    const sanitized = sanitizeOcrExtractionResult({
+      kind: "students",
+      columns: [{ id: "detected-name", label: "Nama", semantic: "unknown", confidence: 0.9 }],
+      rows: [{ id: "row-1", page: 1, values: ["Budi Santoso"], confidence: 0.9 }],
+    }, "students");
+
+    expect(sanitized.columns.map((column) => column.semantic)).toEqual(["student_name", "nisn"]);
+    expect(sanitized.columns.map((column) => column.label)).toEqual(["Nama Siswa", "NISN"]);
+    expect(sanitized.rows[0].values).toEqual(["Budi Santoso", "-"]);
+  });
+
+  it("replaces only missing NISN cells and preserves detected values", () => {
+    const canonical = normalizeStudentOcrShape(
+      [
+        { id: "name", label: "Nama Siswa", semantic: "student_name", confidence: 0.9 },
+        { id: "nisn", label: "NISN", semantic: "nisn", confidence: 0.9 },
+        { id: "room", label: "Ruang", semantic: "unknown", confidence: 0.8 },
+      ],
+      [
+        { id: "row-1", page: 1, values: ["Budi", "", "A"], confidence: 0.9, handwritten: false },
+        { id: "row-2", page: 1, values: ["Dewi", "0012345682", "B"], confidence: 0.9, handwritten: false },
+      ],
+    );
+
+    expect(canonical.rows[0].values).toEqual(["Budi", "-", "A"]);
+    expect(canonical.rows[1].values).toEqual(["Dewi", "0012345682", "B"]);
+    expect(canonical.columns.map((column) => column.label)).toEqual(["Nama Siswa", "NISN", "Ruang"]);
+  });
+
+  it("allows different students to share the missing-NISN placeholder", () => {
+    const extraction = result("students");
+    extraction.rows = [
+      { id: "row-1", page: 1, values: ["Siswa Tanpa NISN A", "-", ""], confidence: 0.95, handwritten: false },
+      { id: "row-2", page: 1, values: ["Siswa Tanpa NISN B", "-", ""], confidence: 0.95, handwritten: false },
+    ];
+    const draft = prepareOcrDraft(extraction, { kind: "students", targetClassId: "class-1", students });
+
+    expect(hasBlockingOcrIssues(draft.rows)).toBe(false);
+    expect(draft.rows.every((row) => row.issues.some((item) => item.code === "NISN_PLACEHOLDER"))).toBe(true);
+    expect(draft.rows.some((row) => row.issues.some((item) => item.code === "NISN_DUPLICATE_DRAFT"))).toBe(false);
   });
 
   it("blocks repeated NISN values inside one OCR draft", () => {

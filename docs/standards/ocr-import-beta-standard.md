@@ -28,7 +28,12 @@ Import OCR BETA membaca foto daftar siswa, nilai, atau presensi. OCR membantu me
 ### Siswa
 
 - Kelas tujuan wajib dipilih secara eksplisit.
-- NISN wajib berasal dari foto atau koreksi pengguna. Sistem tidak boleh membuat NISN palsu.
+- Pemilih kelas menyediakan `Tambah Kelas Baru`. Kelas yang berhasil dibuat langsung menjadi kelas tujuan tanpa mereset foto atau hasil OCR pada sesi aktif.
+- Tabel pemeriksaan selalu memiliki kolom canonical `Nama Siswa` dan `NISN`, meskipun salah satunya tidak terdeteksi oleh OCR.
+- Nama Siswa wajib diisi dan menjadi error pemblokir jika kosong.
+- NISN yang tidak terbaca ditampilkan dan disimpan sebagai tanda `-`. Placeholder ini tidak diperiksa panjangnya, tidak dianggap konflik NISN, dan boleh dipakai oleh lebih dari satu siswa.
+- Sistem tidak boleh membuat nomor NISN palsu. NISN valid dari foto atau koreksi pengguna tetap dipertahankan.
+- Kolom OCR selain Nama Siswa dan NISN hanya membantu pemeriksaan dan tidak ikut disimpan saat import siswa.
 - Nama dan NISN duplikat mengikuti aturan import siswa yang berlaku.
 
 ### Nilai
@@ -51,3 +56,7 @@ Import OCR BETA membaca foto daftar siswa, nilai, atau presensi. OCR membantu me
 - Foto sumber, nomor halaman, confidence, serta error atau warning wajib terlihat.
 - Tulisan tangan selalu diberi warning pemeriksaan meskipun confidence tinggi.
 - Bila OCR gagal, foto tetap tersedia dan pengguna dapat mencoba lagi atau memakai editor manual.
+- Preview gambar wajib dibatasi oleh lebar modal dan tidak boleh memperlebar dialog atau body pada foto yang sangat lebar.
+- Foto utama dan foto sumber dapat membuka viewer berlapis yang mendukung zoom 50-400%, pan, pinch, double tap, tombol reset, serta keyboard `+`, `-`, dan `0`.
+- Daftar foto memakai tombol pilihan dan tombol aksi yang terpisah, `aria-pressed` untuk halaman aktif, serta kontrol urutan atas/bawah. Struktur interactive nested dilarang.
+- Panduan foto, foto sumber, dan teks OCR mentah memakai `sipena-collapsible-trigger` agar state open, ikon arah, focus, dan touch konsisten.

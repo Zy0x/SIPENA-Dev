@@ -55,6 +55,58 @@ function fallbackColumns(kind: OcrImportKind): OcrColumn[] {
   return definitions.map(([id, label, semantic]) => ({ id, label, semantic: semantic as OcrColumnSemantic, confidence: 0 }));
 }
 
+function isStudentNameColumn(column: OcrColumn) {
+  const label = normalizeIdentity(column.label);
+  return column.semantic === "student_name" || label === "nama" || label === "nama siswa" || label === "siswa";
+}
+
+function isStudentNisnColumn(column: OcrColumn) {
+  const label = normalizeIdentity(column.label);
+  return column.semantic === "nisn" || label === "nisn" || label === "nomor induk siswa nasional";
+}
+
+export function normalizeStudentOcrShape(
+  columns: OcrColumn[],
+  rows: OcrExtractionResult["rows"],
+): Pick<OcrExtractionResult, "columns" | "rows"> {
+  const nameIndex = columns.findIndex(isStudentNameColumn);
+  const nisnIndex = columns.findIndex(isStudentNisnColumn);
+  const requiredIndexes = new Set([nameIndex, nisnIndex].filter((index) => index >= 0));
+  const optionalColumns = columns.filter((column, index) => (
+    !requiredIndexes.has(index) && !isStudentNameColumn(column) && !isStudentNisnColumn(column)
+  ));
+  const optionalIndexes = optionalColumns.map((column) => columns.indexOf(column));
+  const nameColumn = nameIndex >= 0 ? columns[nameIndex] : undefined;
+  const nisnColumn = nisnIndex >= 0 ? columns[nisnIndex] : undefined;
+  const canonicalColumns: OcrColumn[] = [
+    {
+      id: nameColumn?.id || "required-student-name",
+      label: "Nama Siswa",
+      semantic: "student_name",
+      confidence: nameColumn?.confidence || 0,
+    },
+    {
+      id: nisnColumn?.id || "required-student-nisn",
+      label: "NISN",
+      semantic: "nisn",
+      confidence: nisnColumn?.confidence || 0,
+    },
+    ...optionalColumns,
+  ];
+
+  return {
+    columns: canonicalColumns,
+    rows: rows.map((row) => ({
+      ...row,
+      values: [
+        nameIndex >= 0 ? cleanText(row.values[nameIndex]) : "",
+        nisnIndex >= 0 ? cleanText(row.values[nisnIndex]) || "-" : "-",
+        ...optionalIndexes.map((index) => cleanText(row.values[index])),
+      ],
+    })),
+  };
+}
+
 export function sanitizeOcrExtractionResult(raw: unknown, expectedKind: OcrImportKind): OcrExtractionResult {
   if (!raw || typeof raw !== "object") throw new Error("Hasil OCR tidak valid.");
   const root = raw as Record<string, unknown>;
@@ -95,12 +147,16 @@ export function sanitizeOcrExtractionResult(raw: unknown, expectedKind: OcrImpor
     }];
   });
 
+  const canonical = kind === "students"
+    ? normalizeStudentOcrShape(safeColumns, rows)
+    : { columns: safeColumns, rows };
+
   return {
     requestId: cleanText(root.requestId, 100) || crypto.randomUUID(),
     kind,
     rawText: cleanText(root.rawText, MAX_RAW_TEXT_LENGTH),
-    columns: safeColumns,
-    rows,
+    columns: canonical.columns,
+    rows: canonical.rows,
     warnings: Array.isArray(root.warnings)
       ? root.warnings.map((item) => cleanText(item, 240)).filter(Boolean).slice(0, 12)
       : [],
@@ -180,13 +236,19 @@ function mapGradeColumns(columns: OcrColumn[], context: OcrImportContext) {
 }
 
 export function prepareOcrDraft(result: OcrExtractionResult, context: OcrImportContext) {
-  const columns = mapGradeColumns(result.columns, context);
-  const rows: OcrDraftRow[] = result.rows.map((row) => ({ ...row, included: true, issues: [] }));
+  const canonical = context.kind === "students"
+    ? normalizeStudentOcrShape(result.columns, result.rows)
+    : { columns: result.columns, rows: result.rows };
+  const columns = mapGradeColumns(canonical.columns, context);
+  const rows: OcrDraftRow[] = canonical.rows.map((row) => ({ ...row, included: true, issues: [] }));
   return validateOcrDraft(rows, columns, context);
 }
 
 export function validateOcrDraft(rows: OcrDraftRow[], columns: OcrColumn[], context: OcrImportContext) {
-  const existingNisn = new Map(context.students.filter((student) => student.nisn).map((student) => [normalizeIdentity(student.nisn), student]));
+  const existingNisn = new Map(context.students.flatMap((student) => {
+    const normalizedNisn = normalizeIdentity(student.nisn);
+    return normalizedNisn ? [[normalizedNisn, student] as const] : [];
+  }));
   const existingName = new Map(context.students.map((student) => [normalizeIdentity(student.name), student]));
   const existingAttendance = new Set((context.existingAttendance || []).map((item) => `${item.studentId}:${item.date}`));
   const existingGrades = new Set((context.existingGrades || [])
@@ -194,12 +256,14 @@ export function validateOcrDraft(rows: OcrDraftRow[], columns: OcrColumn[], cont
     .map((item) => `${item.studentId}:${item.assignmentId}`));
   const draftNisnCounts = new Map<string, number>();
   const draftNameNisn = new Map<string, Set<string>>();
+  const draftNameCounts = new Map<string, number>();
   if (context.kind === "students") {
     rows.forEach((row) => {
       const draftNisn = normalizeIdentity(valueAt(row, columns, "nisn"));
       const draftName = normalizeIdentity(valueAt(row, columns, "student_name"));
       if (draftNisn) draftNisnCounts.set(draftNisn, (draftNisnCounts.get(draftNisn) || 0) + 1);
       if (draftName) {
+        draftNameCounts.set(draftName, (draftNameCounts.get(draftName) || 0) + 1);
         const nisnSet = draftNameNisn.get(draftName) || new Set<string>();
         if (draftNisn) nisnSet.add(draftNisn);
         draftNameNisn.set(draftName, nisnSet);
@@ -219,17 +283,18 @@ export function validateOcrDraft(rows: OcrDraftRow[], columns: OcrColumn[], cont
       if (!name) issues.push(issue("error", "NAME_REQUIRED", "Nama siswa wajib diisi."));
 
       if (context.kind === "students") {
+        const normalizedNisn = normalizeIdentity(nisn);
         if (!context.targetClassId) issues.push(issue("error", "CLASS_REQUIRED", "Pilih kelas tujuan terlebih dahulu."));
-        if (!nisn) issues.push(issue("error", "NISN_REQUIRED", "NISN wajib diisi. SIPENA tidak membuat NISN palsu."));
-        if (nisn.length > 17) issues.push(issue("error", "NISN_TOO_LONG", "NISN maksimal 17 karakter."));
-        if (nisn && nisn.length < 10) issues.push(issue("warning", "NISN_SHORT", "NISN kurang dari 10 karakter. Periksa kembali."));
-        if (nisn && (draftNisnCounts.get(normalizeIdentity(nisn)) || 0) > 1) {
+        if (!normalizedNisn) issues.push(issue("info", "NISN_PLACEHOLDER", "NISN tidak terdeteksi dan akan disimpan sebagai tanda -."));
+        if (normalizedNisn && nisn.length > 17) issues.push(issue("error", "NISN_TOO_LONG", "NISN maksimal 17 karakter."));
+        if (normalizedNisn && nisn.length < 10) issues.push(issue("warning", "NISN_SHORT", "NISN kurang dari 10 karakter. Periksa kembali."));
+        if (normalizedNisn && (draftNisnCounts.get(normalizedNisn) || 0) > 1) {
           issues.push(issue("error", "NISN_DUPLICATE_DRAFT", "NISN muncul lebih dari sekali pada hasil OCR. Perbaiki atau keluarkan salah satu baris."));
         }
-        if (name && (draftNameNisn.get(normalizeIdentity(name))?.size || 0) > 1) {
-          issues.push(issue("warning", "NAME_DUPLICATE_DRAFT", "Nama yang sama memiliki NISN berbeda. Pastikan ini memang dua siswa berbeda."));
+        if (name && ((draftNameNisn.get(normalizeIdentity(name))?.size || 0) > 1 || (draftNameCounts.get(normalizeIdentity(name)) || 0) > 1)) {
+          issues.push(issue("warning", "NAME_DUPLICATE_DRAFT", "Nama yang sama muncul lebih dari sekali. Pastikan ini memang siswa yang berbeda."));
         }
-        const sameNisn = existingNisn.get(normalizeIdentity(nisn));
+        const sameNisn = normalizedNisn ? existingNisn.get(normalizedNisn) : undefined;
         const sameName = existingName.get(normalizeIdentity(name));
         if (sameNisn && normalizeIdentity(sameNisn.name) !== normalizeIdentity(name)) {
           issues.push(issue("error", "NISN_CONFLICT", `NISN sudah dipakai oleh ${sameNisn.name}.`));

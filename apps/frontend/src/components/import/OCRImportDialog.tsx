@@ -1,14 +1,15 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
+  ArrowDown,
+  ArrowUp,
   Camera,
   CheckCircle2,
   ChevronDown,
   FilePenLine,
   Image as ImageIcon,
   Loader2,
+  Plus,
   RefreshCw,
   ScanLine,
   ShieldCheck,
@@ -24,7 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { StudioActionFooter, StudioInfoCollapsible, StudioStepHeader } from "@/components/studio/ResponsiveStudio";
 import { useEnhancedToast } from "@/contexts/ToastContext";
@@ -47,6 +48,7 @@ import {
   type PreparedOcrImage,
 } from "@/lib/ocrImport";
 import { cn } from "@/lib/utils";
+import OcrImageViewerDialog from "./OcrImageViewerDialog";
 
 type OcrStudioStep = "capture" | "processing" | "review" | "confirm" | "done";
 
@@ -65,8 +67,11 @@ interface OCRImportDialogProps {
   availableClasses?: OcrClassOption[];
   targetClassId?: string;
   onTargetClassIdChange?: (classId: string) => void;
+  onRequestCreateClass?: () => void;
   onConfirmImport: (plan: OcrImportPlan) => Promise<OcrImportResult>;
 }
+
+const CREATE_CLASS_OPTION = "__create-new-class__";
 
 const STEP_LABELS = [
   { id: "capture" as const, label: "Pilih Foto" },
@@ -113,11 +118,13 @@ export default function OCRImportDialog({
   availableClasses = [],
   targetClassId,
   onTargetClassIdChange,
+  onRequestCreateClass,
   onConfirmImport,
 }: OCRImportDialogProps) {
   const [step, setStep] = useState<OcrStudioStep>("capture");
   const [images, setImages] = useState<PreparedOcrImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [consent, setConsent] = useState(false);
   const [isPreparingImages, setIsPreparingImages] = useState(false);
   const [processStage, setProcessStage] = useState(0);
@@ -138,6 +145,7 @@ export default function OCRImportDialog({
     setStep("capture");
     setImages([]);
     setActiveImageId(null);
+    setImageViewerOpen(false);
     setConsent(false);
     setIsPreparingImages(false);
     setProcessStage(0);
@@ -161,6 +169,14 @@ export default function OCRImportDialog({
     if (!nextOpen) resetState();
     onOpenChange(nextOpen);
   }, [onOpenChange, resetState]);
+
+  const handleTargetClassChange = useCallback((value: string) => {
+    if (value === CREATE_CLASS_OPTION) {
+      onRequestCreateClass?.();
+      return;
+    }
+    onTargetClassIdChange?.(value);
+  }, [onRequestCreateClass, onTargetClassIdChange]);
 
   const handleFiles = useCallback(async (files: File[]) => {
     if (!files.length) return;
@@ -309,8 +325,8 @@ export default function OCRImportDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-6 sm:py-4">
-          <div className="space-y-4">
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-3 sm:px-6 sm:py-4">
+          <div className="min-w-0 max-w-full space-y-4">
             <StudioStepHeader steps={STEP_LABELS} currentStep={step} />
 
             {step === "capture" ? (
@@ -318,10 +334,18 @@ export default function OCRImportDialog({
                 {type === "students" ? (
                   <div className="rounded-xl border border-border bg-muted/20 p-3">
                     <label className="mb-2 block text-xs font-semibold">Kelas tujuan *</label>
-                    <Select value={targetClassId || ""} onValueChange={onTargetClassIdChange}>
+                    <Select value={targetClassId || ""} onValueChange={handleTargetClassChange}>
                       <SelectTrigger className="min-h-11 bg-background"><SelectValue placeholder="Pilih kelas tujuan" /></SelectTrigger>
                       <SelectContent>
                         {availableClasses.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                        {onRequestCreateClass ? (
+                          <>
+                            <SelectSeparator />
+                            <SelectItem value={CREATE_CLASS_OPTION} className="font-medium text-primary">
+                              <span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Tambah Kelas Baru</span>
+                            </SelectItem>
+                          </>
+                        ) : null}
                       </SelectContent>
                     </Select>
                     <p className="mt-2 text-[11px] text-muted-foreground">SIPENA tidak memilih kelas pertama secara otomatis.</p>
@@ -340,21 +364,35 @@ export default function OCRImportDialog({
                 </div>
 
                 {images.length ? (
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-                    <div className="flex min-h-56 items-center justify-center overflow-hidden rounded-xl border border-border bg-black/5">
-                      {activeImage ? <img src={activeImage.previewUrl} alt={`Foto sumber halaman ${activeImage.page}`} className="max-h-[24rem] w-full object-contain" /> : null}
-                    </div>
-                    <div className="space-y-2">
+                  <div className="grid min-w-0 max-w-full gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_18rem]">
+                    <button
+                      type="button"
+                      className="flex min-h-56 min-w-0 max-w-full touch-manipulation items-center justify-center overflow-hidden rounded-xl border border-border bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      onClick={() => setImageViewerOpen(true)}
+                      aria-label={`Buka foto sumber halaman ${activeImage?.page || 1} dalam viewer`}
+                    >
+                      {activeImage ? <img src={activeImage.previewUrl} alt={`Foto sumber halaman ${activeImage.page}`} className="block h-auto max-h-[24rem] w-auto max-w-full object-contain" /> : null}
+                    </button>
+                    <div className="min-w-0 max-w-full space-y-2 overflow-hidden">
                       {images.map((image, index) => (
-                        <button key={image.id} type="button" onClick={() => setActiveImageId(image.id)} className={cn("flex w-full items-center gap-2 rounded-xl border p-2 text-left", activeImage?.id === image.id ? "border-primary bg-primary/5" : "border-border bg-background")}>
-                          <img src={image.previewUrl} alt="" className="h-12 w-12 shrink-0 rounded-md object-cover" />
-                          <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">Halaman {index + 1}: {image.name}</span><span className="text-[10px] text-muted-foreground">{formatBytes(image.processedSize)} setelah kompresi</span></span>
-                          <span className="flex shrink-0 items-center gap-1">
-                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveImage(image.id, -1); }} aria-label="Geser foto ke kiri"><ArrowLeft className="h-3.5 w-3.5" /></Button>
-                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={index === images.length - 1} onClick={(event) => { event.stopPropagation(); moveImage(image.id, 1); }} aria-label="Geser foto ke kanan"><ArrowRight className="h-3.5 w-3.5" /></Button>
-                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(event) => { event.stopPropagation(); removeImage(image.id); }} aria-label="Hapus foto"><Trash2 className="h-3.5 w-3.5" /></Button>
-                          </span>
-                        </button>
+                        <div key={image.id} className="flex min-w-0 max-w-full items-center gap-1 rounded-xl border border-border bg-background p-1.5">
+                          <button
+                            type="button"
+                            aria-pressed={activeImage?.id === image.id}
+                            data-selected={activeImage?.id === image.id}
+                            data-touch-scroll-click-target="true"
+                            onClick={() => setActiveImageId(image.id)}
+                            className={cn("sipena-ocr-image-selector flex min-h-11 min-w-0 flex-1 touch-manipulation items-center gap-2 rounded-lg border border-transparent px-1.5 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", activeImage?.id === image.id ? "border-primary bg-primary/10 text-foreground" : "bg-transparent text-foreground")}
+                          >
+                            <img src={image.previewUrl} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" />
+                            <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">Halaman {index + 1}: {image.name}</span><span className="block truncate text-[10px] text-muted-foreground">{formatBytes(image.processedSize)} setelah kompresi</span></span>
+                          </button>
+                          <div className="flex shrink-0 items-center gap-0.5">
+                            <Button type="button" variant="ghost" size="icon" className="h-11 w-11 touch-manipulation" disabled={index === 0} onClick={() => moveImage(image.id, -1)} aria-label="Geser foto ke atas"><ArrowUp className="h-4 w-4" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-11 w-11 touch-manipulation" disabled={index === images.length - 1} onClick={() => moveImage(image.id, 1)} aria-label="Geser foto ke bawah"><ArrowDown className="h-4 w-4" /></Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-11 w-11 touch-manipulation text-destructive" onClick={() => removeImage(image.id)} aria-label="Hapus foto"><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -396,6 +434,14 @@ export default function OCRImportDialog({
                   <div className="flex flex-wrap gap-2"><Badge variant="outline">{rows.length} baris</Badge><Badge variant="outline">{summary.errors} error</Badge><Badge variant="outline">{summary.warnings} peringatan</Badge></div>
                   <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => void runOcr()} disabled={!images.length}><RefreshCw className="h-3.5 w-3.5" /> Coba OCR Lagi</Button>
                 </div>
+
+                {type === "students" ? (
+                  <Alert className="border-primary/25 bg-primary/5">
+                    <FilePenLine className="h-4 w-4 text-primary" />
+                    <AlertTitle>Kolom import siswa</AlertTitle>
+                    <AlertDescription>Hanya Nama Siswa dan NISN yang disimpan. NISN yang tidak terbaca ditulis sebagai tanda -, sedangkan kolom lain hanya membantu pemeriksaan.</AlertDescription>
+                  </Alert>
+                ) : null}
 
                 {!rows.length || processError ? (
                   <div className="space-y-2 rounded-xl border border-border p-3">
@@ -446,7 +492,9 @@ export default function OCRImportDialog({
 
                 {images.length && activeImage ? (
                   <StudioInfoCollapsible title={`Foto sumber halaman ${activeImage.page}`} description="Buka foto untuk mencocokkan isi tabel." defaultOpen={false}>
-                    <img src={activeImage.previewUrl} alt={`Foto sumber halaman ${activeImage.page}`} className="max-h-[28rem] w-full object-contain" />
+                    <button type="button" className="flex w-full touch-manipulation items-center justify-center overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => setImageViewerOpen(true)} aria-label={`Buka foto sumber halaman ${activeImage.page} dalam viewer`}>
+                      <img src={activeImage.previewUrl} alt={`Foto sumber halaman ${activeImage.page}`} className="block h-auto max-h-[28rem] w-auto max-w-full object-contain" />
+                    </button>
                   </StudioInfoCollapsible>
                 ) : null}
                 {rawText ? <StudioInfoCollapsible title="Teks OCR mentah" description="Dipakai untuk pemeriksaan lanjutan bila tabel tampak berbeda."><pre className="max-h-56 overflow-auto whitespace-pre-wrap text-[11px] text-muted-foreground">{rawText}</pre></StudioInfoCollapsible> : null}
@@ -490,6 +538,13 @@ export default function OCRImportDialog({
               {step === "done" ? <Button onClick={() => closeDialog(false)}>Selesai</Button> : null}
             </>
           )}
+        />
+        <OcrImageViewerDialog
+          open={imageViewerOpen}
+          onOpenChange={setImageViewerOpen}
+          imageUrl={activeImage?.previewUrl}
+          imageName={activeImage?.name}
+          page={activeImage?.page}
         />
       </DialogContent>
     </Dialog>

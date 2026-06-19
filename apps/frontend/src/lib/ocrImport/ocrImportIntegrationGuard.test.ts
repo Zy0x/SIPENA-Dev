@@ -13,6 +13,9 @@ describe("OCR BETA integration guard", () => {
   const classes = source("apps/frontend/src/pages/Classes.tsx");
   const grades = source("apps/frontend/src/pages/Grades.tsx");
   const attendance = source("apps/frontend/src/pages/Attendance.tsx");
+  const addClass = source("apps/frontend/src/components/classes/AddClassDialog.tsx");
+  const studio = source("apps/frontend/src/components/studio/ResponsiveStudio.tsx");
+  const viewer = source("apps/frontend/src/components/import/OcrImageViewerDialog.tsx");
 
   it("uses real OCR with consent, editable review, retry, and no legacy string matrix callback", () => {
     expect(dialog).toContain("requestOcrExtraction");
@@ -34,5 +37,34 @@ describe("OCR BETA integration guard", () => {
     expect(classes).not.toContain("OCR-${Date.now()}");
     expect(grades).toContain("existingGrades");
     expect(attendance).toContain("existingAttendance");
+  });
+
+  it("creates a class from the OCR selector and selects it after creation", () => {
+    expect(dialog).toContain("Tambah Kelas Baru");
+    expect(dialog).toContain("onRequestCreateClass");
+    expect(classes).toContain("setOcrTargetClassId(createdClass.id)");
+    expect(classes).toContain("ocrCreatedClass");
+    expect(addClass).toContain("onCreated?.(createdClass as Class)");
+    expect(addClass).toContain("trigger !== null");
+  });
+
+  it("uses touch-safe image selectors, vertical reorder controls, and the shared zoom viewer", () => {
+    expect(dialog).toContain('aria-pressed={activeImage?.id === image.id}');
+    expect(dialog).toContain("sipena-ocr-image-selector");
+    expect(dialog).toContain("ArrowUp");
+    expect(dialog).toContain("ArrowDown");
+    expect(dialog).not.toContain("ArrowLeft");
+    expect(dialog).not.toContain("<button key={image.id}");
+    expect(dialog.match(/setImageViewerOpen\(true\)/g)).toHaveLength(2);
+    expect(viewer).toContain("touch-none");
+    expect(viewer).toContain("onDoubleClick={toggleDoubleTapZoom}");
+    expect(viewer).toContain("pointersRef.current.size === 2");
+  });
+
+  it("keeps shared collapsibles stateful and accessible on touch", () => {
+    expect(studio).toContain("sipena-collapsible-trigger");
+    expect(studio).toContain("group-data-[state=open]:rotate-180");
+    expect(studio).toContain("touch-manipulation");
+    expect(studio).toContain('data-touch-scroll-click-target="true"');
   });
 });

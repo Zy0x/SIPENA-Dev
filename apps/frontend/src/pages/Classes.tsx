@@ -80,10 +80,23 @@ export default function Classes() {
   const [classImportDialogOpen, setClassImportDialogOpen] = useState(false);
   const [showOCRImport, setShowOCRImport] = useState(false);
   const [ocrTargetClassId, setOcrTargetClassId] = useState("");
+  const [ocrAddClassOpen, setOcrAddClassOpen] = useState(false);
+  const [ocrCreatedClass, setOcrCreatedClass] = useState<Class | null>(null);
   const [showClassKkmGuide, setShowClassKkmGuide] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const { students: ocrTargetStudents, createStudentsBatch } = useStudents(ocrTargetClassId);
+
+  const ocrClassOptions = useMemo(() => {
+    if (!ocrCreatedClass || classes.some((item) => item.id === ocrCreatedClass.id)) return classes;
+    return [...classes, ocrCreatedClass];
+  }, [classes, ocrCreatedClass]);
+
+  useEffect(() => {
+    if (ocrCreatedClass && classes.some((item) => item.id === ocrCreatedClass.id)) {
+      setOcrCreatedClass(null);
+    }
+  }, [classes, ocrCreatedClass]);
 
   const displayClasses = useMemo(() => {
     if (classes.length > 0 || !tourDummyClass) return classes;
@@ -319,13 +332,14 @@ export default function Classes() {
         type="students"
         title="Import Siswa dari Foto"
         description="Baca daftar siswa dari maksimal 5 foto, periksa hasilnya, lalu simpan ke kelas tujuan."
-        availableClasses={classes.map((item) => ({ id: item.id, name: item.name }))}
+        availableClasses={ocrClassOptions.map((item) => ({ id: item.id, name: item.name }))}
         targetClassId={ocrTargetClassId}
         onTargetClassIdChange={setOcrTargetClassId}
+        onRequestCreateClass={() => setOcrAddClassOpen(true)}
         context={{
           kind: "students",
           targetClassId: ocrTargetClassId,
-          targetClassName: classes.find((item) => item.id === ocrTargetClassId)?.name,
+          targetClassName: ocrClassOptions.find((item) => item.id === ocrTargetClassId)?.name,
           students: ocrTargetStudents.map((student) => ({ id: student.id, name: student.name, nisn: student.nisn })),
         }}
         onConfirmImport={async (plan) => {
@@ -344,8 +358,17 @@ export default function Classes() {
             success: inputs.length,
             skipped,
             failed: 0,
-            message: `${inputs.length} siswa disimpan ke ${classes.find((item) => item.id === ocrTargetClassId)?.name || "kelas tujuan"}.`,
+            message: `${inputs.length} siswa disimpan ke ${ocrClassOptions.find((item) => item.id === ocrTargetClassId)?.name || "kelas tujuan"}.`,
           };
+        }}
+      />
+      <AddClassDialog
+        trigger={null}
+        open={ocrAddClassOpen}
+        onOpenChange={setOcrAddClassOpen}
+        onCreated={(createdClass) => {
+          setOcrCreatedClass(createdClass);
+          setOcrTargetClassId(createdClass.id);
         }}
       />
 

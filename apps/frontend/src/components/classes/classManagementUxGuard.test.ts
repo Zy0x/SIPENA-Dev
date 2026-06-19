@@ -28,6 +28,10 @@ describe("class management UX guard", () => {
     expect(addSource).not.toContain("autoFocus");
     expect(addSource).toContain("{name.length}/{CLASS_NAME_MAX_LENGTH}");
     expect(addSource).toContain("{description.length}/{CLASS_DESCRIPTION_MAX_LENGTH}");
+    expect(addSource).toContain("onCreated?: (createdClass: Class) => void");
+    expect(addSource).toContain("open?: boolean");
+    expect(addSource).toContain("trigger !== null");
+    expect(addSource).toContain("onCreated?.(createdClass as Class)");
     expect(editSource).toContain("maxLength={CLASS_NAME_MAX_LENGTH}");
     expect(editSource).toContain("maxLength={CLASS_DESCRIPTION_MAX_LENGTH}");
     expect(editSource).toContain("limitClassName(name.trim())");

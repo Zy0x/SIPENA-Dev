@@ -178,7 +178,8 @@ export function StudioInfoCollapsible({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
+          data-touch-scroll-click-target="true"
+          className="sipena-collapsible-trigger group flex min-h-11 w-full touch-manipulation select-none items-center justify-between gap-3 rounded-xl px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <div className="min-w-0">
             <p className="text-[11px] font-semibold text-foreground">{title}</p>
@@ -186,10 +187,10 @@ export function StudioInfoCollapsible({
               <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{description}</p>
             ) : null}
           </div>
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+          <ChevronDown className="sipena-collapsible-chevron h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="border-t border-border px-3 py-3">
+      <CollapsibleContent className="min-w-0 max-w-full overflow-hidden border-t border-border px-3 py-3">
         {children}
       </CollapsibleContent>
     </Collapsible>

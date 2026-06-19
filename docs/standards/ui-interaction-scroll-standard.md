@@ -25,6 +25,15 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Tombol `Lanjut` dan `Selesai` pada product tour wajib memakai `sipena-tour-action` plus atribut `data-tour-final`. Tombol `Selesai` harus tetap hijau ketika disentuh agar pengguna memahami bahwa langkah terakhir siap ditutup.
 - Source guard UI wajib memeriksa keberadaan `sipena-tab-trigger` dan `sipena-tour-action` ketika primitive tab atau tour diubah.
 
+### Collapsible dan Kartu Pilihan Touch
+
+- Collapsible shared wajib memakai kelas `sipena-collapsible-trigger`. State terbuka harus berasal dari `data-state="open"` milik trigger, bukan state lokal pada ikon.
+- Ikon arah di dalam collapsible memakai parent `group` dan `group-data-[state=open]` agar arah ikon, warna trigger, dan `aria-expanded` selalu sesuai dengan isi yang terlihat.
+- Trigger collapsible wajib mempertahankan focus pada trigger setelah dibuka atau ditutup, memiliki focus ring, target minimal 44px, dan tidak memindahkan focus ke konten secara otomatis.
+- Kartu pilihan yang juga memiliki tombol aksi tidak boleh memakai struktur `<button>` di dalam `<button>`. Buat tombol pilihan dan tombol aksi sebagai sibling di dalam container non-interaktif.
+- Tombol pilihan gambar atau halaman wajib memakai `aria-pressed`, `data-selected`, kelas state permanen, dan `data-touch-scroll-click-target="true"`. Tap hanya memilih setelah gesture selesai; swipe untuk scroll tidak boleh berubah menjadi pilihan.
+- Kontrol urutan daftar vertikal wajib memakai ikon atas/bawah. Seluruh tombol pilih, urutkan, dan hapus tetap memiliki target minimal 44px pada mouse, pen, dan touchscreen.
+
 ## Search Input dan Dropdown
 
 - Kotak pencarian wajib menggambar border/focus ring di wrapper luar, bukan di input anak. Gunakan pola `.sipena-search-field` untuk container dan `.sipena-search-input` untuk input di dalamnya.
@@ -72,3 +81,4 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Uji modal/fullscreen: latar tidak boleh ikut bergerak saat isi modal mentok.
 - Uji light/dark mode untuk state normal, hover, focus, active, disabled, dan selected.
 - Untuk perubahan shared primitive, jalankan source guard, typecheck, test, lint, build, dan browser smoke pada route yang memakai primitive tersebut.
+- Untuk collapsible atau kartu pilihan gambar, uji tap, swipe melewati kartu, state terbuka, pemilihan aktif, dan fokus keyboard pada viewport mobile serta desktop.
