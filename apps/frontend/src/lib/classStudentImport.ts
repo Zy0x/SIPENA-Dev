@@ -98,6 +98,8 @@ export interface ClassStudentImportPlan {
   };
 }
 
+export const CLASS_STUDENT_IMPORT_TEMPLATE_PATH = "/templates/SIPENA_Template_Import_Kelas_dan_Siswa.xlsx";
+
 type SheetRows = Array<Array<string | number>>;
 type SheetStyle = Record<string, unknown>;
 
@@ -468,7 +470,12 @@ export function buildClassStudentImportTemplateWorkbook() {
 }
 
 export function downloadClassStudentImportTemplate() {
-  XLSX.writeFile(buildClassStudentImportTemplateWorkbook(), "SIPENA_Template_Import_Kelas_dan_Siswa.xlsx");
+  const link = document.createElement("a");
+  link.href = CLASS_STUDENT_IMPORT_TEMPLATE_PATH;
+  link.download = "SIPENA_Template_Import_Kelas_dan_Siswa.xlsx";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 function parseNumber(value: string) {

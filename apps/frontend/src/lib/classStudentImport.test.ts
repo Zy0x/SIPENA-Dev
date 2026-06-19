@@ -1,12 +1,26 @@
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import * as XLSX from "xlsx";
 import { describe, expect, it } from "vitest";
 
 import {
   buildClassStudentImportPlan,
-  buildClassStudentImportTemplateWorkbook,
   CLASS_IMPORT_MAX_DESCRIPTION_LENGTH,
   getStudentSheetName,
 } from "./classStudentImport";
+
+const OFFICIAL_TEMPLATE_SHA256 = "17F53B8F312DE22A51433055A0970CC7845B01A435A34C183548D25021CDE5D8";
+
+function officialTemplatePath() {
+  const direct = resolve(process.cwd(), "public/templates/SIPENA_Template_Import_Kelas_dan_Siswa.xlsx");
+  if (existsSync(direct)) return direct;
+  return resolve(process.cwd(), "apps/frontend/public/templates/SIPENA_Template_Import_Kelas_dan_Siswa.xlsx");
+}
+
+function loadOfficialTemplateWorkbook() {
+  return XLSX.read(readFileSync(officialTemplatePath()), { type: "buffer" });
+}
 
 function workbookFromSheets(sheets: Record<string, unknown[][]>) {
   const workbook = XLSX.utils.book_new();
@@ -17,8 +31,14 @@ function workbookFromSheets(sheets: Record<string, unknown[][]>) {
 }
 
 describe("class student import", () => {
-  it("parses the official hybrid workbook with two classes and per-class student sheets", () => {
-    const plan = buildClassStudentImportPlan(buildClassStudentImportTemplateWorkbook(), []);
+  it("keeps the checked-in download identical to the approved official template", () => {
+    const hash = createHash("sha256").update(readFileSync(officialTemplatePath())).digest("hex").toUpperCase();
+
+    expect(hash).toBe(OFFICIAL_TEMPLATE_SHA256);
+  });
+
+  it("parses the approved official workbook with two classes and per-class student sheets", () => {
+    const plan = buildClassStudentImportPlan(loadOfficialTemplateWorkbook(), []);
 
     expect(plan.totals.classCount).toBe(2);
     expect(plan.totals.newClassCount).toBe(2);
@@ -28,7 +48,7 @@ describe("class student import", () => {
   });
 
   it("marks an existing class and skips an existing student with the same name and NISN", () => {
-    const workbook = buildClassStudentImportTemplateWorkbook();
+    const workbook = loadOfficialTemplateWorkbook();
     const plan = buildClassStudentImportPlan(workbook, [
       {
         id: "class-vii-a",

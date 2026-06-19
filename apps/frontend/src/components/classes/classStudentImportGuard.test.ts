@@ -43,6 +43,10 @@ describe("class student import guard", () => {
 
     expect(parserSource).toContain("Siswa - ");
     expect(parserSource).toContain("xlsx-js-style");
+    expect(parserSource).toContain('CLASS_STUDENT_IMPORT_TEMPLATE_PATH = "/templates/SIPENA_Template_Import_Kelas_dan_Siswa.xlsx"');
+    expect(parserSource).toContain("link.href = CLASS_STUDENT_IMPORT_TEMPLATE_PATH");
+    expect(parserSource).not.toContain("XLSX.writeFile(buildClassStudentImportTemplateWorkbook()");
+    expect(existsSync(repoPath("apps/frontend/public/templates/SIPENA_Template_Import_Kelas_dan_Siswa.xlsx"))).toBe(true);
     expect(parserSource).toContain("Sheet Kelas wajib ada");
     expect(parserSource).toContain("Nama kelas maksimal");
     expect(parserSource).toContain("NISN wajib diisi");
