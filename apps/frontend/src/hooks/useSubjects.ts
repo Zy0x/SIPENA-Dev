@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { logActivity } from "@/lib/activityLogger";
+import { buildSubjectBatchPlan, getReadySubjectCandidates } from "@/lib/subjectBatch";
 
 export { DEFAULT_SUBJECT_GROUPS, DEFAULT_SUBJECTS } from "@/lib/defaultSubjects";
 
@@ -31,6 +32,40 @@ export interface UpdateSubjectInput {
   id: string;
   name?: string;
   kkm?: number;
+}
+
+export interface CreateSubjectsBatchInput {
+  class_id: string;
+  subjects: Array<{
+    name: string;
+    kkm: number;
+    is_custom?: boolean;
+  }>;
+  source?: "manual_batch" | "class_import";
+  source_class_id?: string;
+}
+
+export interface ImportSubjectsFromClassInput {
+  target_class_id: string;
+  source_class_id: string;
+  subject_ids: string[];
+  source_semester_id?: string | null;
+  target_semester_id?: string | null;
+  include_structure: boolean;
+}
+
+export interface ImportSubjectsFromClassResult {
+  created: number;
+  skipped: number;
+  chapters: number;
+  assignments: number;
+  formulas: number;
+  links: number;
+  subjects: Array<{
+    sourceSubjectId: string;
+    targetSubjectId: string;
+    name: string;
+  }>;
 }
 
 /**
@@ -147,6 +182,143 @@ export function useSubjects(classId?: string, filterByActiveYear: boolean = true
     },
   });
 
+  const createSubjectsBatch = useMutation({
+    mutationFn: async (input: CreateSubjectsBatchInput) => {
+      if (!user) throw new Error("User not authenticated");
+      if (input.subjects.length === 0) return { created: [] as Subject[], skipped: 0 };
+
+      const { data: existingRows, error: existingError } = await supabase
+        .from("subjects")
+        .select("name")
+        .eq("user_id", user.id)
+        .eq("class_id", input.class_id);
+      if (existingError) throw existingError;
+
+      const plan = buildSubjectBatchPlan(
+        input.subjects.map((subject, index) => ({
+          id: `batch-${index}`,
+          name: subject.name,
+          kkm: subject.kkm,
+          isCustom: subject.is_custom ?? false,
+        })),
+        (existingRows || []).map((subject) => subject.name),
+      );
+      const ready = getReadySubjectCandidates(plan);
+      const skipped = plan.length - ready.length;
+
+      if (ready.length === 0) return { created: [] as Subject[], skipped };
+      if (!activeYearId) throw new Error("Tidak ada tahun ajaran aktif.");
+
+      const { data, error } = await supabase
+        .from("subjects")
+        .insert(ready.map((subject) => ({
+          user_id: user.id,
+          class_id: input.class_id,
+          academic_year_id: activeYearId,
+          name: subject.name,
+          kkm: subject.kkm,
+          is_custom: subject.isCustom,
+        })))
+        .select();
+      if (error) throw error;
+
+      return { created: (data || []) as Subject[], skipped };
+    },
+    onSuccess: ({ created, skipped }, input) => {
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["all_subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["activity_logs"] });
+      queryClient.invalidateQueries({ queryKey: ["student-rankings"] });
+      success(
+        "Mapel Berhasil Ditambahkan",
+        skipped > 0
+          ? `${created.length} mapel ditambahkan dan ${skipped} duplikat/data tidak valid dilewati.`
+          : `${created.length} mapel ditambahkan ke kelas.`,
+      );
+      if (user && created.length > 0) {
+        void logActivity({
+          userId: user.id,
+          action: input.source === "class_import" ? "mengimpor mata pelajaran" : "menambahkan mata pelajaran batch",
+          entityType: "subject",
+          entityName: `${created.length} mata pelajaran`,
+          metadata: {
+            count: created.length,
+            skipped,
+            source: input.source || "manual_batch",
+            sourceClassId: input.source_class_id || null,
+          },
+        });
+      }
+    },
+    onError: (error: Error) => {
+      showError("Gagal menambahkan mata pelajaran", error.message);
+    },
+  });
+
+  const importSubjectsFromClass = useMutation({
+    mutationFn: async (input: ImportSubjectsFromClassInput) => {
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.rpc("import_subjects_from_class", {
+        p_target_class_id: input.target_class_id,
+        p_source_class_id: input.source_class_id,
+        p_subject_ids: input.subject_ids,
+        p_source_semester_id: input.source_semester_id || null,
+        p_target_semester_id: input.target_semester_id || null,
+        p_include_structure: input.include_structure,
+      });
+
+      if (error) throw error;
+      return data as unknown as ImportSubjectsFromClassResult;
+    },
+    onSuccess: (result, input) => {
+      [
+        "subjects",
+        "all_subjects",
+        "chapters",
+        "assignments",
+        "all_assignments",
+        "grade_formula_settings",
+        "shared_links",
+        "activity_logs",
+        "student-rankings",
+      ].forEach((queryKey) => queryClient.invalidateQueries({ queryKey: [queryKey] }));
+
+      success(
+        "Import Mapel Selesai",
+        result.skipped > 0
+          ? `${result.created} mapel ditambahkan dan ${result.skipped} mapel yang sudah ada dilewati.`
+          : `${result.created} mapel berhasil ditambahkan ke kelas tujuan.`,
+      );
+
+      void logActivity({
+        userId: user.id,
+        action: "mengimpor mata pelajaran dari kelas lain",
+        entityType: "subject",
+        entityName: `${result.created} mata pelajaran`,
+        metadata: {
+          sourceClassId: input.source_class_id,
+          targetClassId: input.target_class_id,
+          includeStructure: input.include_structure,
+          created: result.created,
+          skipped: result.skipped,
+          chapters: result.chapters,
+          assignments: result.assignments,
+          formulas: result.formulas,
+          links: result.links,
+        },
+      });
+    },
+    onError: (error: Error) => {
+      const friendlyMessage = error.message.includes("semester_required")
+        ? "Pilih semester sumber dan semester tujuan sebelum menyalin struktur."
+        : error.message.includes("class_not_found") || error.message.includes("forbidden")
+          ? "Kelas sumber atau tujuan tidak tersedia untuk akun ini."
+          : error.message;
+      showError("Import mapel gagal", friendlyMessage);
+    },
+  });
+
   const updateSubject = useMutation({
     mutationFn: async (input: UpdateSubjectInput) => {
       const { id, ...updates } = input;
@@ -197,6 +369,8 @@ export function useSubjects(classId?: string, filterByActiveYear: boolean = true
     isLoading: subjectsQuery.isLoading || allSubjectsQuery.isLoading,
     error: subjectsQuery.error || allSubjectsQuery.error,
     createSubject,
+    createSubjectsBatch,
+    importSubjectsFromClass,
     updateSubject,
     deleteSubject,
     // Helper

@@ -907,6 +907,17 @@ export type Database = {
           Args: { p_items: Json }
           Returns: Json
         }
+        import_subjects_from_class: {
+          Args: {
+            p_include_structure?: boolean
+            p_source_class_id: string
+            p_source_semester_id?: string | null
+            p_subject_ids: string[]
+            p_target_class_id: string
+            p_target_semester_id?: string | null
+          }
+          Returns: Json
+        }
         user_owns_shared_link: {
         Args: { p_class_id: string; p_subject_id: string; p_user_id: string }
         Returns: boolean

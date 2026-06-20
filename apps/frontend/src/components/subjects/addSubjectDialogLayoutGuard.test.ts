@@ -24,7 +24,14 @@ describe("add subject dialog layout guard", () => {
     expect(source).toContain('role="option"');
     expect(source).toContain("activeSubjectGroup");
     expect(source).toContain("handleSelectCustomSubject");
-    expect(source).toContain("max-h-[min(92dvh,46rem)] overflow-y-auto sm:max-w-[540px]");
+    expect(source).toContain("max-h-[min(94dvh,50rem)] overflow-y-auto sm:max-w-[620px]");
+    expect(source).toContain('<TabsTrigger value="single"');
+    expect(source).toContain('<TabsTrigger value="batch"');
+    expect(source).toContain("createSubjectsBatch.mutateAsync");
+    expect(source).toContain("Pilih Semua Hasil");
+    expect(source).toContain("Hapus Pilihan");
+    expect(source).toContain("onOpenAutoFocus");
+    expect(source).not.toContain("autoFocus");
     expect(source).not.toContain("SelectContent");
     expect(source).not.toContain("SelectItem");
   });

@@ -14,6 +14,7 @@ import {
   Loader2,
   ArrowUpDown,
   AlertCircle,
+  Copy,
   School,
   GraduationCap,
 } from "lucide-react";
@@ -24,6 +25,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import AddSubjectDialog from "@/components/subjects/AddSubjectDialog";
 import SubjectCard from "@/components/subjects/SubjectCard";
+import ImportSubjectsDialog from "@/components/subjects/ImportSubjectsDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ProductTour, TourButton } from "@/components/ui/product-tour";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -31,28 +33,11 @@ import gsap from "gsap";
 
 type SortOption = "name-asc" | "name-desc" | "kkm-asc" | "kkm-desc";
 
-const subjectsTourSteps = [
-  {
-    target: "[data-tour='class-select']",
-    title: "Pilih Kelas",
-    description: "Pilih kelas untuk melihat dan mengelola mata pelajaran di kelas tersebut.",
-  },
-  {
-    target: "[data-tour='add-subject']",
-    title: "Tambah Mata Pelajaran",
-    description: "Klik tombol ini untuk menambahkan mata pelajaran baru beserta KKM-nya.",
-  },
-  {
-    target: "[data-tour='search-subject']",
-    title: "Cari & Urutkan",
-    description: "Gunakan pencarian dan pengurutan untuk menemukan mata pelajaran dengan cepat.",
-  },
-];
-
 export default function Subjects() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { classes, isLoading: classesLoading } = useClasses();
+  const { classes: allClasses, isLoading: allClassesLoading } = useClasses(false);
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -60,6 +45,7 @@ export default function Subjects() {
   const [selectedClassId, setSelectedClassId] = useState<string>(initialClassId);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const { subjects, isLoading: subjectsLoading } = useSubjects(selectedClassId);
   const selectedClass = classes.find((c) => c.id === selectedClassId);
@@ -95,6 +81,78 @@ export default function Subjects() {
       ? `${selectedClassId}:add-subject`
       : undefined;
 
+  const subjectsTourSteps = useMemo(() => {
+    if (classes.length === 0) {
+      return [
+        {
+          target: "[data-tour='subjects-no-classes']",
+          title: "Buat Kelas Terlebih Dahulu",
+          description: "Mata pelajaran selalu terhubung ke kelas. Gunakan tombol ini untuk membuat kelas, lalu kembali ke halaman Mata Pelajaran.",
+        },
+      ];
+    }
+
+    const baseSteps = [
+      {
+        target: "[data-tour='class-select']",
+        title: "Pilih Kelas",
+        description: "Pilih kelas tujuan. Daftar mapel, KKM, pencarian, dan tindakan di bawah akan mengikuti kelas ini.",
+      },
+      {
+        target: "[data-tour='import-subject']",
+        title: "Ambil Mapel dari Kelas Lain",
+        description: "Salin mapel dan KKM dari kelas lain atau tahun ajaran terdahulu. Struktur BAB dan tugas dapat disertakan dengan konfirmasi terpisah.",
+      },
+      {
+        target: "[data-tour='add-subject']",
+        title: "Tambah Satuan atau Batch",
+        description: "Tambahkan satu mapel atau gunakan mode Batch untuk memilih banyak mapel sekaligus dan mengatur KKM masing-masing.",
+      },
+      {
+        target: "[data-tour='search-subject']",
+        title: "Cari dan Urutkan",
+        description: "Cari mapel berdasarkan nama, lalu urutkan berdasarkan nama atau KKM agar daftar lebih mudah diperiksa.",
+      },
+    ];
+
+    if (subjects.length === 0) {
+      return [
+        ...baseSteps,
+        {
+          target: "[data-tour='subjects-empty-cta']",
+          title: "Mulai Mengisi Mapel",
+          description: "Kelas ini belum memiliki mapel. Gunakan tombol ini untuk membuka katalog dan memilih mode Satuan atau Batch.",
+        },
+      ];
+    }
+
+    return [
+      ...baseSteps,
+      {
+        target: "[data-tour='subject-summary']",
+        title: "Ringkasan Kelas",
+        description: "Periksa jumlah mapel dan KKM dasar kelas sebelum mulai mengelola nilai.",
+      },
+      {
+        target: "[data-tour='subject-card']",
+        title: "Kartu Mata Pelajaran",
+        description: "Setiap kartu menampilkan nama, KKM, dan status custom. Tekan kartu atau Input Nilai untuk mulai mengisi nilai.",
+      },
+      {
+        target: "[data-tour='subject-card-actions']",
+        title: "Bagikan, Edit, dan Hapus",
+        description: "Gunakan tindakan ini untuk membuat link akses, memperbarui nama atau KKM, dan menghapus mapel dengan konfirmasi.",
+      },
+    ];
+  }, [classes.length, subjects.length]);
+
+  const prepareSubjectsTour = async () => {
+    if (!selectedClassId && classes.length > 0) {
+      setSelectedClassId(classes[0].id);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    }
+  };
+
   useEffect(() => {
     if (prefersReducedMotion || !containerRef.current) return;
     gsap.fromTo(containerRef.current, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" });
@@ -118,22 +176,29 @@ export default function Subjects() {
             </div>
           </div>
           <div className="flex items-center justify-end gap-1.5">
-            <TourButton tourKey="subjects" />
+            <TourButton tourKey="subjects" onBeforeStart={prepareSubjectsTour} />
             {selectedClassId && selectedClass && (
-              <div data-tour="add-subject">
-                <AddSubjectDialog
-                  classId={selectedClassId}
-                  className={selectedClass.name}
-                  defaultKkm={selectedClass.class_kkm}
-                  openOnMountKey={addSubjectIntentKey}
-                />
-              </div>
+              <>
+                <Button type="button" variant="outline" className="h-9 gap-2" data-tour="import-subject" disabled={allClassesLoading} onClick={() => setImportDialogOpen(true)}>
+                  <Copy className="h-4 w-4" />
+                  <span className="hidden min-[390px]:inline">Import Mapel</span>
+                  <span className="min-[390px]:hidden">Import</span>
+                </Button>
+                <div data-tour="add-subject">
+                  <AddSubjectDialog
+                    classId={selectedClassId}
+                    className={selectedClass.name}
+                    defaultKkm={selectedClass.class_kkm}
+                    openOnMountKey={addSubjectIntentKey}
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>
 
         {!classesLoading && classes.length === 0 && (
-          <div className="flex items-start gap-2.5 rounded-2xl border border-grade-warning/20 bg-grade-warning/5 p-3">
+          <div data-tour="subjects-no-classes" className="flex items-start gap-2.5 rounded-2xl border border-grade-warning/20 bg-grade-warning/5 p-3">
             <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-grade-warning" />
             <div className="text-xs">
               <p className="font-medium text-grade-warning">Belum Ada Kelas</p>
@@ -212,7 +277,7 @@ export default function Subjects() {
             </div>
 
             {selectedClassId && selectedClass && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
+              <div data-tour="subject-summary" className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
                 <Badge variant="outline" className="rounded-full px-2.5 py-1">{selectedClass.name}</Badge>
                 <Badge variant="secondary" className="rounded-full px-2.5 py-1">{subjects.length} mapel</Badge>
                 <Badge variant="secondary" className="rounded-full px-2.5 py-1">KKM kelas {selectedClass.class_kkm}</Badge>
@@ -239,7 +304,7 @@ export default function Subjects() {
 
         {!isLoading && selectedClassId && subjects.length === 0 && (
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
-            <div className="flex flex-col items-center justify-center px-4 py-16">
+            <div data-tour="subjects-empty-cta" className="flex flex-col items-center justify-center px-4 py-16">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-[20px] bg-primary/10">
                 <BookOpen className="h-8 w-8 text-primary" />
               </div>
@@ -289,6 +354,15 @@ export default function Subjects() {
       </div>
 
       <ProductTour steps={subjectsTourSteps} tourKey="subjects" />
+      {selectedClass && (
+        <ImportSubjectsDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          targetClass={selectedClass}
+          targetSubjects={subjects}
+          allClasses={allClasses}
+        />
+      )}
     </>
   );
 }

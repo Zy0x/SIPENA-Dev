@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +27,7 @@ export default function EditSubjectDialog({
   const [name, setName] = useState(subject.name);
   const [kkm, setKkm] = useState(subject.kkm.toString());
   const { updateSubject } = useSubjects(subject.class_id);
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,10 +48,16 @@ export default function EditSubjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          requestAnimationFrame(() => titleRef.current?.focus());
+        }}
+      >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Edit Mata Pelajaran</DialogTitle>
+            <DialogTitle ref={titleRef} tabIndex={-1} className="outline-none">Edit Mata Pelajaran</DialogTitle>
             <DialogDescription>
               Perbarui informasi mata pelajaran
             </DialogDescription>
@@ -63,7 +70,6 @@ export default function EditSubjectDialog({
                 placeholder="Nama mapel"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                autoFocus
               />
             </div>
 

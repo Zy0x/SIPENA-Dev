@@ -50,6 +50,7 @@ export default function SubjectCard({ subject, showClassName, className }: Subje
   return (
     <>
       <Card
+        data-tour="subject-card"
         role="button"
         tabIndex={0}
         onClick={handleInputGrades}
@@ -96,7 +97,7 @@ export default function SubjectCard({ subject, showClassName, className }: Subje
               <FileSpreadsheet className="h-4 w-4" />
               <span className="min-w-0 truncate">Input Nilai</span>
             </Button>
-            <div className="grid min-w-0 grid-cols-3 gap-2">
+            <div data-tour="subject-card-actions" className="grid min-w-0 grid-cols-3 gap-2">
               <Button
                 type="button"
                 variant="outline"

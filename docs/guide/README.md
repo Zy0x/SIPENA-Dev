@@ -353,6 +353,9 @@ sipena/
 ### Import Kelas & Siswa
 Lihat `docs/guide/class-student-import.md` untuk standar workbook, aturan duplikat, dan perbedaan dengan Import Siswa ke Kelas Ini.
 
+### Import Mata Pelajaran
+Lihat `docs/guide/subject-import.md` untuk alur import mapel dari kelas lain, pilihan struktur pembelajaran, serta perbedaan mode Satuan dan Batch.
+
 ### Batch Import Flow
 1. Download template Excel (7 sheet)
 2. Isi data: Kelas → Siswa → Mapel → BAB/Tugas → Nilai → Presensi
