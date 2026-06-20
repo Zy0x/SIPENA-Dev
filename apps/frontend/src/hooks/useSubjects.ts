@@ -74,7 +74,11 @@ export interface ImportSubjectsFromClassResult {
  * @param classId - ID kelas untuk filter subjects
  * @param filterByActiveYear - Default TRUE: filter berdasarkan tahun ajaran aktif
  */
-export function useSubjects(classId?: string, filterByActiveYear: boolean = true) {
+export function useSubjects(
+  classId?: string,
+  filterByActiveYear: boolean = true,
+  includeAllSubjects: boolean = true,
+) {
   const { user } = useAuth();
   const { success, error: showError } = useEnhancedToast();
   const queryClient = useQueryClient();
@@ -131,7 +135,7 @@ export function useSubjects(classId?: string, filterByActiveYear: boolean = true
 
       return filteredData as (Subject & { classes: { name: string; academic_year_id: string | null } | null })[];
     },
-    enabled: !!user,
+    enabled: !!user && includeAllSubjects,
   });
 
   const createSubject = useMutation({
@@ -366,7 +370,7 @@ export function useSubjects(classId?: string, filterByActiveYear: boolean = true
   return {
     subjects: subjectsQuery.data || [],
     allSubjects: allSubjectsQuery.data || [],
-    isLoading: subjectsQuery.isLoading || allSubjectsQuery.isLoading,
+    isLoading: subjectsQuery.isLoading || (includeAllSubjects && allSubjectsQuery.isLoading),
     error: subjectsQuery.error || allSubjectsQuery.error,
     createSubject,
     createSubjectsBatch,

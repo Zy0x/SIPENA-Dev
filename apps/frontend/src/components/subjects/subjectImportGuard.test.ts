@@ -23,6 +23,11 @@ describe("subject import UI guard", () => {
     expect(source).toContain("Sertakan struktur pembelajaran");
     expect(source).toContain("structureAcknowledged");
     expect(source).toContain("finalConfirmOpen");
+    expect(source).toContain("loadStructureSummary");
+    expect(source).toContain("reviewImport");
+    expect(source).toContain("dihitung satu kali saat Anda memilih Periksa & Import");
+    expect(source).toContain("useSubjects(sourceClassId, false, false)");
+    expect(source).not.toContain("useQuery({");
     expect(source).toContain("Nilai siswa tidak akan disalin");
     expect(source).toContain("onOpenAutoFocus");
     expect(source).not.toContain("autoFocus");
@@ -35,6 +40,9 @@ describe("subject import UI guard", () => {
     expect(source).toContain("prepareSubjectsTour");
     expect(source).toContain("onBeforeStart={prepareSubjectsTour}");
     expect(source).toContain("ImportSubjectsDialog");
+    expect(source).toContain("Tambah Kelas Baru");
+    expect(source).toContain("AddClassDialog");
+    expect(source).toContain("grid-cols-[minmax(0,1fr)_8.5rem]");
     expect(source).not.toContain("dummy");
   });
 });

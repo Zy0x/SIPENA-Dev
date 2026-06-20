@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowRight, CheckCircle2, Copy, Loader2, School } from "lucide-react";
 
 import { ResponsiveDataPreview, StudioActionFooter } from "@/components/studio/ResponsiveStudio";
@@ -78,8 +77,11 @@ export default function ImportSubjectsDialog({
   const [includeStructure, setIncludeStructure] = useState(false);
   const [structureAcknowledged, setStructureAcknowledged] = useState(false);
   const [finalConfirmOpen, setFinalConfirmOpen] = useState(false);
+  const [structureSummary, setStructureSummary] = useState(EMPTY_STRUCTURE_SUMMARY);
+  const [structureSummaryLoading, setStructureSummaryLoading] = useState(false);
+  const [structureSummaryError, setStructureSummaryError] = useState<string | null>(null);
 
-  const { subjects: sourceSubjects, isLoading: sourceSubjectsLoading, importSubjectsFromClass } = useSubjects(sourceClassId, false);
+  const { subjects: sourceSubjects, isLoading: sourceSubjectsLoading, importSubjectsFromClass } = useSubjects(sourceClassId, false, false);
 
   const targetSemester = useMemo(() => (
     semesters.find((semester) => (
@@ -109,10 +111,14 @@ export default function ImportSubjectsDialog({
       targetSubjects.map((subject) => subject.name),
     );
 
-    return plan.map((planned) => ({
-      subject: sourceSubjects.find((subject) => subject.id === planned.id)!,
-      status: planned.status === "ready" ? "ready" as const : "existing" as const,
-    })).filter((row) => Boolean(row.subject));
+    const subjectsById = new Map(sourceSubjects.map((subject) => [subject.id, subject]));
+    return plan.flatMap((planned) => {
+      const subject = subjectsById.get(planned.id);
+      return subject ? [{
+        subject,
+        status: planned.status === "ready" ? "ready" as const : "existing" as const,
+      }] : [];
+    });
   }, [sourceSubjects, targetSubjects]);
 
   const readyRows = useMemo(() => previewRows.filter((row) => row.status === "ready"), [previewRows]);
@@ -143,58 +149,54 @@ export default function ImportSubjectsDialog({
     setSelectedSubjectIds(new Set(readyRows.map((row) => row.subject.id)));
     setIncludeStructure(false);
     setStructureAcknowledged(false);
+    setStructureSummary(EMPTY_STRUCTURE_SUMMARY);
+    setStructureSummaryError(null);
   }, [readyRows, selectionFingerprint]);
 
   const structureAvailable = Boolean(sourceSemesterId && targetSemester?.id);
 
-  const structureSummaryQuery = useQuery({
-    queryKey: ["subject-import-structure-summary", sourceClassId, sourceSemesterId, selectedReadyIds.join("|")],
-    queryFn: async (): Promise<StructureSummary> => {
-      if (selectedReadyIds.length === 0 || !sourceSemesterId) return EMPTY_STRUCTURE_SUMMARY;
+  const loadStructureSummary = useCallback(async (): Promise<StructureSummary> => {
+    if (selectedReadyIds.length === 0 || !sourceSemesterId) return EMPTY_STRUCTURE_SUMMARY;
 
-      const { data: chapters, error: chaptersError } = await supabase
-        .from("chapters")
-        .select("id")
+    const { data: chapters, error: chaptersError } = await supabase
+      .from("chapters")
+      .select("id")
+      .in("subject_id", selectedReadyIds)
+      .or(`semester_id.eq.${sourceSemesterId},semester_id.is.null`);
+    if (chaptersError) throw chaptersError;
+
+    const chapterIds = (chapters || []).map((chapter) => chapter.id);
+    const assignmentsPromise = chapterIds.length > 0
+      ? supabase
+        .from("assignments")
+        .select("id", { count: "exact", head: true })
+        .in("chapter_id", chapterIds)
+        .or(`semester_id.eq.${sourceSemesterId},semester_id.is.null`)
+      : Promise.resolve({ count: 0, error: null });
+
+    const [assignmentsResult, formulasResult, linksResult] = await Promise.all([
+      assignmentsPromise,
+      supabase.from("grade_formula_settings").select("id", { count: "exact", head: true }).in("subject_id", selectedReadyIds),
+      supabase
+        .from("shared_links")
+        .select("id", { count: "exact", head: true })
+        .eq("class_id", sourceClassId)
         .in("subject_id", selectedReadyIds)
-        .or(`semester_id.eq.${sourceSemesterId},semester_id.is.null`);
-      if (chaptersError) throw chaptersError;
+        .eq("revoked", false)
+        .gt("expired_at", new Date().toISOString()),
+    ]);
 
-      const chapterIds = (chapters || []).map((chapter) => chapter.id);
-      const assignmentsPromise = chapterIds.length > 0
-        ? supabase
-          .from("assignments")
-          .select("id", { count: "exact", head: true })
-          .in("chapter_id", chapterIds)
-          .or(`semester_id.eq.${sourceSemesterId},semester_id.is.null`)
-        : Promise.resolve({ count: 0, error: null });
+    if (assignmentsResult.error) throw assignmentsResult.error;
+    if (formulasResult.error) throw formulasResult.error;
+    if (linksResult.error) throw linksResult.error;
 
-      const [assignmentsResult, formulasResult, linksResult] = await Promise.all([
-        assignmentsPromise,
-        supabase.from("grade_formula_settings").select("id", { count: "exact", head: true }).in("subject_id", selectedReadyIds),
-        supabase
-          .from("shared_links")
-          .select("id", { count: "exact", head: true })
-          .eq("class_id", sourceClassId)
-          .in("subject_id", selectedReadyIds)
-          .eq("revoked", false)
-          .gt("expired_at", new Date().toISOString()),
-      ]);
-
-      if (assignmentsResult.error) throw assignmentsResult.error;
-      if (formulasResult.error) throw formulasResult.error;
-      if (linksResult.error) throw linksResult.error;
-
-      return {
-        chapters: chapters?.length || 0,
-        assignments: assignmentsResult.count || 0,
-        formulas: formulasResult.count || 0,
-        links: linksResult.count || 0,
-      };
-    },
-    enabled: open && includeStructure && selectedReadyIds.length > 0 && structureAvailable,
-  });
-
-  const structureSummary = structureSummaryQuery.data || EMPTY_STRUCTURE_SUMMARY;
+    return {
+      chapters: chapters?.length || 0,
+      assignments: assignmentsResult.count || 0,
+      formulas: formulasResult.count || 0,
+      links: linksResult.count || 0,
+    };
+  }, [selectedReadyIds, sourceClassId, sourceSemesterId]);
   const toggleSubject = (subjectId: string) => {
     setSelectedSubjectIds((current) => {
       const next = new Set(current);
@@ -225,11 +227,32 @@ export default function ImportSubjectsDialog({
     if (result.created > 0 || result.skipped > 0) resetAndClose(false);
   };
 
+  const reviewImport = async () => {
+    if (!includeStructure) {
+      setStructureSummary(EMPTY_STRUCTURE_SUMMARY);
+      setFinalConfirmOpen(true);
+      return;
+    }
+
+    setStructureSummaryLoading(true);
+    setStructureSummaryError(null);
+    try {
+      const summary = await loadStructureSummary();
+      setStructureSummary(summary);
+      setFinalConfirmOpen(true);
+    } catch {
+      setStructureSummaryError("Rincian struktur belum dapat dihitung. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setStructureSummaryLoading(false);
+    }
+  };
+
   const noOtherYears = academicYears.length === 0;
   const noSourceClasses = Boolean(sourceYearId && sourceClasses.length === 0);
   const allSubjectsExisting = previewRows.length > 0 && readyRows.length === 0;
   const canContinue = selectedReadyIds.length > 0
-    && (!includeStructure || (structureAvailable && structureAcknowledged && !structureSummaryQuery.isLoading));
+    && !structureSummaryLoading
+    && (!includeStructure || (structureAvailable && structureAcknowledged));
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
@@ -310,8 +333,8 @@ export default function ImportSubjectsDialog({
                   <p className="text-xs text-muted-foreground">{selectedReadyIds.length} dari {readyRows.length} mapel baru dipilih.</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setSelectedSubjectIds(new Set(readyRows.map((row) => row.subject.id)))}>Pilih Semua</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setSelectedSubjectIds(new Set())}>Hapus Pilihan</Button>
+                  <Button type="button" variant="outline" size="sm" className="min-h-11 touch-manipulation" onClick={() => setSelectedSubjectIds(new Set(readyRows.map((row) => row.subject.id)))}>Pilih Semua</Button>
+                  <Button type="button" variant="outline" size="sm" className="min-h-11 touch-manipulation" onClick={() => setSelectedSubjectIds(new Set())}>Hapus Pilihan</Button>
                 </div>
               </div>
 
@@ -327,7 +350,7 @@ export default function ImportSubjectsDialog({
                     primary: true,
                     className: "w-[34%]",
                     render: (row) => (
-                      <label className="flex min-h-11 cursor-pointer items-center gap-3">
+                      <label className="flex min-h-11 cursor-pointer select-none items-center gap-3 touch-manipulation">
                         <Checkbox
                           checked={row.status === "ready" && selectedSubjectIds.has(row.subject.id)}
                           disabled={row.status !== "ready"}
@@ -354,7 +377,7 @@ export default function ImportSubjectsDialog({
 
               <Separator />
               <div className="rounded-2xl border border-border p-3">
-                <label className="flex cursor-pointer items-start gap-3">
+                <label className="flex min-h-11 cursor-pointer select-none items-start gap-3 touch-manipulation">
                   <Checkbox
                     checked={includeStructure}
                     disabled={!structureAvailable}
@@ -378,18 +401,16 @@ export default function ImportSubjectsDialog({
                 )}
                 {includeStructure && (
                   <div className="mt-3 space-y-3 rounded-xl bg-muted/40 p-3">
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      <Badge variant="outline">{structureSummary.chapters} BAB</Badge>
-                      <Badge variant="outline">{structureSummary.assignments} tugas</Badge>
-                      <Badge variant="outline">{structureSummary.formulas} rumus</Badge>
-                      <Badge variant="outline">{structureSummary.links} link baru</Badge>
-                    </div>
-                    <label className="flex cursor-pointer items-start gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      Jumlah BAB, tugas, rumus, dan link dihitung satu kali saat Anda memilih Periksa & Import.
+                    </p>
+                    <label className="flex min-h-11 cursor-pointer select-none items-start gap-3 touch-manipulation">
                       <Checkbox checked={structureAcknowledged} onCheckedChange={(checked) => setStructureAcknowledged(checked === true)} />
                       <span className="text-xs leading-relaxed">Saya memahami struktur akan dibuat untuk semester tujuan dan tidak mencakup nilai siswa atau histori link lama.</span>
                     </label>
                   </div>
                 )}
+                {structureSummaryError ? <p className="mt-2 text-xs text-destructive">{structureSummaryError}</p> : null}
               </div>
             </>
           )}
@@ -399,9 +420,10 @@ export default function ImportSubjectsDialog({
           sticky
           helperText={`Kelas tujuan: ${targetClass.name}. KKM mapel yang sudah ada tidak akan ditimpa.`}
           actions={[
-            <Button key="cancel" type="button" variant="outline" onClick={() => resetAndClose(false)}>Batal</Button>,
-            <Button key="continue" type="button" disabled={!canContinue} onClick={() => setFinalConfirmOpen(true)}>
-              Periksa & Import <ArrowRight className="ml-2 h-4 w-4" />
+            <Button key="cancel" type="button" variant="outline" className="min-h-11 touch-manipulation" onClick={() => resetAndClose(false)}>Batal</Button>,
+            <Button key="continue" type="button" className="min-h-11 touch-manipulation" disabled={!canContinue} onClick={() => void reviewImport()}>
+              {structureSummaryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {structureSummaryLoading ? "Menghitung..." : "Periksa & Import"} <ArrowRight className="ml-2 h-4 w-4" />
             </Button>,
           ]}
         />

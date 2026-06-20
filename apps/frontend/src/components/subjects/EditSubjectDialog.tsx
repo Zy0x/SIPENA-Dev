@@ -26,7 +26,7 @@ export default function EditSubjectDialog({
 }: EditSubjectDialogProps) {
   const [name, setName] = useState(subject.name);
   const [kkm, setKkm] = useState(subject.kkm.toString());
-  const { updateSubject } = useSubjects(subject.class_id);
+  const { updateSubject } = useSubjects(subject.class_id, true, false);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {

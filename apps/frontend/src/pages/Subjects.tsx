@@ -5,6 +5,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -17,6 +18,7 @@ import {
   Copy,
   School,
   GraduationCap,
+  Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,12 +28,15 @@ import { useSubjects } from "@/hooks/useSubjects";
 import AddSubjectDialog from "@/components/subjects/AddSubjectDialog";
 import SubjectCard from "@/components/subjects/SubjectCard";
 import ImportSubjectsDialog from "@/components/subjects/ImportSubjectsDialog";
+import AddClassDialog from "@/components/classes/AddClassDialog";
+import type { Class } from "@/hooks/useClasses";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ProductTour, TourButton } from "@/components/ui/product-tour";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import gsap from "gsap";
 
 type SortOption = "name-asc" | "name-desc" | "kkm-asc" | "kkm-desc";
+const CREATE_CLASS_VALUE = "__create_class__";
 
 export default function Subjects() {
   const navigate = useNavigate();
@@ -46,9 +51,12 @@ export default function Subjects() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [addClassOpen, setAddClassOpen] = useState(false);
+  const [createdClass, setCreatedClass] = useState<Class | null>(null);
 
-  const { subjects, isLoading: subjectsLoading } = useSubjects(selectedClassId);
-  const selectedClass = classes.find((c) => c.id === selectedClassId);
+  const { subjects, isLoading: subjectsLoading } = useSubjects(selectedClassId, true, false);
+  const selectedClass = classes.find((c) => c.id === selectedClassId)
+    || (createdClass?.id === selectedClassId ? createdClass : undefined);
   const hasSelectedClass = Boolean(selectedClassId && selectedClass);
 
   const filteredSubjects = useMemo(() => {
@@ -158,6 +166,18 @@ export default function Subjects() {
     gsap.fromTo(containerRef.current, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" });
   }, [prefersReducedMotion]);
 
+  useEffect(() => {
+    if (createdClass && classes.some((item) => item.id === createdClass.id)) setCreatedClass(null);
+  }, [classes, createdClass]);
+
+  const handleClassChange = (value: string) => {
+    if (value === CREATE_CLASS_VALUE) {
+      setAddClassOpen(true);
+      return;
+    }
+    setSelectedClassId(value);
+  };
+
   return (
     <>
       <div ref={containerRef} className="app-page">
@@ -214,19 +234,13 @@ export default function Subjects() {
 
         {classes.length > 0 && (
           <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:p-4">
-            <div
-              className={
-                hasSelectedClass
-                  ? "grid gap-3 lg:grid-cols-[minmax(20rem,32rem)_minmax(16rem,1fr)_minmax(9rem,12rem)] lg:items-end"
-                  : "grid gap-3 lg:grid-cols-[minmax(22rem,44rem)_1fr] lg:items-end"
-              }
-            >
+            <div className="grid gap-3 lg:grid-cols-[minmax(22rem,36rem)_minmax(20rem,1fr)] lg:items-end">
               <div className="min-w-0" data-tour="class-select">
                 <Label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <School className="h-4 w-4 text-primary" />
                   Kelas
                 </Label>
-                <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+                <Select value={selectedClassId} onValueChange={handleClassChange}>
                   <SelectTrigger className="h-11 rounded-xl text-sm font-medium">
                     <SelectValue placeholder="Pilih kelas..." />
                   </SelectTrigger>
@@ -236,33 +250,35 @@ export default function Subjects() {
                         {cls.name} ({cls.student_count || 0} siswa)
                       </SelectItem>
                     ))}
+                    <SelectSeparator />
+                    <SelectItem value={CREATE_CLASS_VALUE} className="min-h-11 font-medium text-primary">
+                      <span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Tambah Kelas Baru</span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {selectedClassId && (
-                <>
-                  <div className="min-w-0" data-tour="search-subject">
-                    <Label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                      <Search className="h-4 w-4" />
-                      Cari Mapel
-                    </Label>
-                    <Input
-                      placeholder="Cari mata pelajaran..."
-                      className="h-11 rounded-xl text-sm"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_8.5rem] gap-2" data-tour="search-subject">
+                  <div className="min-w-0">
+                    <Label htmlFor="subject-page-search" className="sr-only">Cari Mata Pelajaran</Label>
+                    <div className="sipena-search-field h-11 min-h-11 rounded-xl px-3">
+                      <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Input
+                        id="subject-page-search"
+                        placeholder="Cari mata pelajaran..."
+                        className="sipena-search-input"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <div className="min-w-0">
-                    <Label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                      <ArrowUpDown className="h-4 w-4" />
-                      Urutkan
-                    </Label>
+                    <Label className="sr-only">Urutkan Mata Pelajaran</Label>
                     <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                      <SelectTrigger className="h-11 w-full rounded-xl text-sm lg:w-36">
-                        <SelectValue />
+                      <SelectTrigger className="h-11 w-full rounded-xl px-2.5 text-xs" aria-label="Urutkan mata pelajaran">
+                        <span className="flex min-w-0 items-center gap-1.5"><ArrowUpDown className="h-3.5 w-3.5 shrink-0" /><SelectValue /></span>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="name-asc">A-Z</SelectItem>
@@ -272,7 +288,7 @@ export default function Subjects() {
                       </SelectContent>
                     </Select>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
@@ -363,6 +379,15 @@ export default function Subjects() {
           allClasses={allClasses}
         />
       )}
+      <AddClassDialog
+        trigger={null}
+        open={addClassOpen}
+        onOpenChange={setAddClassOpen}
+        onCreated={(newClass) => {
+          setCreatedClass(newClass);
+          setSelectedClassId(newClass.id);
+        }}
+      />
     </>
   );
 }

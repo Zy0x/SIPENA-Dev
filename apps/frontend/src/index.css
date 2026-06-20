@@ -3522,6 +3522,29 @@
     transform: none !important;
   }
 
+  [data-button-variant="default"]:hover,
+  [data-button-variant="default"]:active,
+  [data-button-variant="default"]:focus-visible {
+    background-color: hsl(var(--primary)) !important;
+    border-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  [data-button-variant="destructive"]:hover,
+  [data-button-variant="destructive"]:active,
+  [data-button-variant="destructive"]:focus-visible {
+    background-color: hsl(var(--destructive)) !important;
+    color: hsl(var(--destructive-foreground)) !important;
+  }
+
+  [data-button-variant="outline"]:hover,
+  [data-button-variant="outline"]:active,
+  [data-button-variant="outline"]:focus-visible {
+    background-color: hsl(var(--background)) !important;
+    border-color: hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
   [role="checkbox"][data-state="checked"],
   [role="checkbox"][aria-checked="true"] {
     background-color: hsl(var(--primary)) !important;
@@ -3633,6 +3656,16 @@
   .sipena-tab-trigger[data-state="inactive"]:active {
     background-color: hsl(var(--muted)) !important;
     color: hsl(var(--foreground)) !important;
+  }
+
+  .sipena-subject-choice[data-selected="true"],
+  .sipena-subject-choice[data-selected="true"]:hover,
+  .sipena-subject-choice[data-selected="true"]:active,
+  .sipena-subject-choice[data-selected="true"]:focus,
+  .sipena-subject-choice[data-selected="true"]:focus-visible {
+    background-color: hsl(var(--primary)) !important;
+    border-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
   }
 
   .sipena-collapsible-trigger,

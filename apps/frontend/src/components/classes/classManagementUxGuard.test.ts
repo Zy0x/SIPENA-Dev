@@ -63,6 +63,7 @@ describe("class management UX guard", () => {
     expect(docsSource).toContain("Dropdown menu wajib collision-aware");
     expect(docsSource).toContain("Jangan memakai `active:bg-primary` global untuk semua tab");
     expect(docsSource).toContain("kelas `sipena-tab-trigger`");
+    expect(docsSource).toContain("`sipena-subject-choice`");
     expect(docsSource).toContain("overflow horizontal native");
   });
 

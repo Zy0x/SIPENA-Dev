@@ -24,6 +24,8 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Untuk segmented control yang secara perilaku sama dengan tab, pakai `sipena-tab-trigger` atau buat kelas semantic setara yang menjaga warna selected pada `:active`, `:focus`, dan `:focus-visible`.
 - Tombol `Lanjut` dan `Selesai` pada product tour wajib memakai `sipena-tour-action` plus atribut `data-tour-final`. Tombol `Selesai` harus tetap hijau ketika disentuh agar pengguna memahami bahwa langkah terakhir siap ditutup.
 - Source guard UI wajib memeriksa keberadaan `sipena-tab-trigger` dan `sipena-tour-action` ketika primitive tab atau tour diubah.
+- Pilihan katalog/kategori yang berperilaku seperti toggle wajib menyimpan state pada `data-selected`, bukan mengandalkan `:hover` atau `:active`. Gunakan kelas semantik domain seperti `sipena-subject-choice` agar warna aktif tetap permanen setelah tap pada coarse pointer.
+- Shared `Button` membawa `data-button-variant`. Aturan coarse-pointer wajib mempertahankan warna dasar variant utama, destructive, dan outline pada `hover`, `active`, dan `focus-visible`; jangan menghapus warna tombol secara global tanpa pengganti berbasis variant.
 
 ### Collapsible dan Kartu Pilihan Touch
 

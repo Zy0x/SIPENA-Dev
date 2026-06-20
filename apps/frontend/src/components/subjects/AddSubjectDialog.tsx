@@ -41,6 +41,10 @@ interface BatchSubjectDraft {
 type AddMode = "single" | "batch";
 type SubjectGroupFilter = "all" | DefaultSubjectGroup["id"];
 
+const subjectChoiceStyle = (selected: boolean) => selected
+  ? { backgroundColor: "hsl(var(--primary))", borderColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }
+  : { backgroundColor: "hsl(var(--background))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" };
+
 export default function AddSubjectDialog({
   classId,
   className,
@@ -59,9 +63,10 @@ export default function AddSubjectDialog({
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [batchSubjects, setBatchSubjects] = useState<BatchSubjectDraft[]>([]);
   const [batchCustomName, setBatchCustomName] = useState("");
+  const [batchCustomOpen, setBatchCustomOpen] = useState(false);
   const openedKeysRef = useRef(new Set<string>());
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const { subjects, createSubject, createSubjectsBatch } = useSubjects(classId);
+  const { subjects, createSubject, createSubjectsBatch } = useSubjects(classId, true, false);
   const { warning } = useEnhancedToast();
 
   const effectiveDefaultKkm = defaultKkm ?? 70;
@@ -197,6 +202,7 @@ export default function AddSubjectDialog({
     }
     toggleBatchSubject(name, true);
     setBatchCustomName("");
+    setBatchCustomOpen(false);
   };
 
   const resetDialog = () => {
@@ -209,6 +215,7 @@ export default function AddSubjectDialog({
     setDuplicateWarning(null);
     setBatchSubjects([]);
     setBatchCustomName("");
+    setBatchCustomOpen(false);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -267,7 +274,7 @@ export default function AddSubjectDialog({
         )}
       </DialogTrigger>
       <DialogContent
-        className="max-h-[min(94dvh,50rem)] overflow-y-auto sm:max-w-[620px]"
+        className="sipena-subject-dialog max-h-[min(94dvh,50rem)] overflow-y-auto sm:max-w-[620px]"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           requestAnimationFrame(() => titleRef.current?.focus());
@@ -283,10 +290,20 @@ export default function AddSubjectDialog({
 
           <Tabs value={mode} onValueChange={(value) => setMode(value as AddMode)} className="mt-4">
             <TabsList className="grid h-14 w-full grid-cols-2" data-tour="subject-add-tabs">
-              <TabsTrigger value="single" className="min-h-11 gap-2">
+              <TabsTrigger
+                value="single"
+                data-selected={mode === "single"}
+                className="sipena-subject-choice min-h-11 gap-2 !transition-none"
+                style={mode === "single" ? { backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" } : { backgroundColor: "transparent", color: "hsl(var(--muted-foreground))" }}
+              >
                 <Plus className="h-4 w-4" /> Satuan
               </TabsTrigger>
-              <TabsTrigger value="batch" className="min-h-11 gap-2">
+              <TabsTrigger
+                value="batch"
+                data-selected={mode === "batch"}
+                className="sipena-subject-choice min-h-11 gap-2 !transition-none"
+                style={mode === "batch" ? { backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" } : { backgroundColor: "transparent", color: "hsl(var(--muted-foreground))" }}
+              >
                 <ListPlus className="h-4 w-4" /> Batch
               </TabsTrigger>
             </TabsList>
@@ -305,9 +322,9 @@ export default function AddSubjectDialog({
                   />
                 </div>
                 <div className="flex gap-1.5 overflow-x-auto pb-1">
-                  <Button type="button" size="sm" variant={activeSubjectGroup === "all" ? "default" : "outline"} className="h-9 shrink-0 rounded-lg px-3 text-xs" onClick={() => setActiveSubjectGroup("all")}>Semua</Button>
+                  <Button type="button" size="sm" variant={activeSubjectGroup === "all" ? "default" : "outline"} data-selected={activeSubjectGroup === "all"} style={subjectChoiceStyle(activeSubjectGroup === "all")} className="sipena-subject-choice min-h-11 shrink-0 rounded-lg px-3 text-xs touch-manipulation !transition-none" onClick={() => setActiveSubjectGroup("all")}>Semua</Button>
                   {DEFAULT_SUBJECT_GROUPS.map((group) => (
-                    <Button key={group.id} type="button" size="sm" variant={activeSubjectGroup === group.id ? "default" : "outline"} className="h-9 shrink-0 rounded-lg px-3 text-xs" onClick={() => setActiveSubjectGroup(group.id)}>{group.label}</Button>
+                    <Button key={group.id} type="button" size="sm" variant={activeSubjectGroup === group.id ? "default" : "outline"} data-selected={activeSubjectGroup === group.id} style={subjectChoiceStyle(activeSubjectGroup === group.id)} className="sipena-subject-choice min-h-11 shrink-0 rounded-lg px-3 text-xs touch-manipulation !transition-none" onClick={() => setActiveSubjectGroup(group.id)}>{group.label}</Button>
                   ))}
                 </div>
               </div>
@@ -330,10 +347,11 @@ export default function AddSubjectDialog({
                       data-touch-scroll-click-target="true"
                       onClick={() => mode === "batch" ? toggleBatchSubject(option.name) : handleSubjectChange(option.name)}
                       className={cn(
-                        "flex min-h-11 w-full select-none items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
+                        "sipena-subject-choice flex min-h-11 w-full select-none touch-manipulation items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left !transition-none",
                         isSelected ? "border-primary bg-primary/10 text-primary" : "border-transparent hover:border-border hover:bg-muted/70",
                         alreadyExists && "cursor-not-allowed opacity-55",
                       )}
+                      style={isSelected ? subjectChoiceStyle(true) : undefined}
                     >
                       <span className="min-w-0">
                         <span className="block break-words text-sm font-medium">{option.name}</span>
@@ -351,7 +369,7 @@ export default function AddSubjectDialog({
             </div>
 
             <TabsContent value="single" className="space-y-4">
-              <Button type="button" variant={isCustom ? "default" : "outline"} className="h-11 w-full justify-start rounded-xl" onClick={handleSelectCustomSubject}>
+              <Button type="button" variant={isCustom ? "default" : "outline"} data-selected={isCustom} style={subjectChoiceStyle(isCustom)} className="sipena-subject-choice h-11 w-full justify-start rounded-xl touch-manipulation !transition-none" onClick={handleSelectCustomSubject}>
                 <Plus className="mr-2 h-4 w-4" /> Lainnya (Custom)
               </Button>
               {isCustom ? (
@@ -378,16 +396,29 @@ export default function AddSubjectDialog({
 
             <TabsContent value="batch" className="space-y-4">
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="outline" className="h-10 text-xs" onClick={selectAllFilteredBatchSubjects}>Pilih Semua Hasil</Button>
-                <Button type="button" variant="outline" className="h-10 text-xs" onClick={() => setBatchSubjects([])}>Hapus Pilihan</Button>
+                <Button type="button" variant="outline" className="min-h-11 text-xs touch-manipulation" onClick={selectAllFilteredBatchSubjects}>Pilih Semua Hasil</Button>
+                <Button type="button" variant="outline" className="min-h-11 text-xs touch-manipulation" onClick={() => setBatchSubjects([])}>Hapus Pilihan</Button>
               </div>
-              <div className="rounded-xl border border-border bg-muted/20 p-3">
-                <Label htmlFor="batch-custom-name">Tambah Mapel Custom</Label>
-                <div className="mt-2 flex gap-2">
-                  <Input id="batch-custom-name" value={batchCustomName} onChange={(event) => setBatchCustomName(event.target.value)} placeholder="Contoh: Robotika" />
-                  <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0" aria-label="Tambahkan mapel custom ke Batch" onClick={addBatchCustomSubject}><Plus className="h-4 w-4" /></Button>
+              <Button
+                type="button"
+                variant={batchCustomOpen ? "default" : "outline"}
+                data-selected={batchCustomOpen}
+                style={subjectChoiceStyle(batchCustomOpen)}
+                className="sipena-subject-choice h-11 w-full justify-start rounded-xl touch-manipulation !transition-none"
+                onClick={() => setBatchCustomOpen((current) => !current)}
+                aria-expanded={batchCustomOpen}
+              >
+                <Plus className="mr-2 h-4 w-4" /> Lainnya (Custom)
+              </Button>
+              {batchCustomOpen ? (
+                <div className="rounded-xl border border-border bg-muted/20 p-3">
+                  <Label htmlFor="batch-custom-name">Tambah Mapel Custom</Label>
+                  <div className="mt-2 flex gap-2">
+                    <Input id="batch-custom-name" value={batchCustomName} onChange={(event) => setBatchCustomName(event.target.value)} placeholder="Contoh: Robotika" />
+                    <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0 touch-manipulation" aria-label="Tambahkan mapel custom ke Batch" onClick={addBatchCustomSubject}><Plus className="h-4 w-4" /></Button>
+                  </div>
                 </div>
-              </div>
+              ) : null}
               <div className="space-y-2" aria-live="polite">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold">Daftar Batch</p>

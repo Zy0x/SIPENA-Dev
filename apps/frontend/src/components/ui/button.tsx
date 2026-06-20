@@ -82,6 +82,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <Comp
+        data-button-variant={variant || "default"}
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         onPointerUp={(event: React.PointerEvent<HTMLButtonElement>) => {

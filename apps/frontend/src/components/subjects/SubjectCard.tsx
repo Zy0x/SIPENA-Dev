@@ -29,7 +29,7 @@ export default function SubjectCard({ subject, showClassName, className }: Subje
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const { deleteSubject } = useSubjects(subject.class_id);
+  const { deleteSubject } = useSubjects(subject.class_id, true, false);
 
   const handleDelete = async () => {
     await deleteSubject.mutateAsync(subject.id);
