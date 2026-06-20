@@ -61,6 +61,16 @@ describe("OCR BETA integration guard", () => {
     expect(viewer).toContain("pointersRef.current.size === 2");
   });
 
+  it("keeps source photos and raw OCR text on one shared page selection", () => {
+    expect(dialog.match(/<OcrPageSwitcher images=\{images\}/g)).toHaveLength(2);
+    expect(dialog).toContain("activePageText");
+    expect(dialog).toContain("Tampilkan foto sebelumnya");
+    expect(dialog).toContain("Tampilkan foto berikutnya");
+    expect(dialog).toContain("Pilih halaman foto sumber");
+    expect(dialog).toContain("Disusun dari hasil tabel");
+    expect(dialog).toContain("Teks mengikuti foto sumber yang sedang dipilih");
+  });
+
   it("keeps shared collapsibles stateful and accessible on touch", () => {
     expect(studio).toContain("sipena-collapsible-trigger");
     expect(studio).toContain("group-data-[state=open]:rotate-180");

@@ -60,3 +60,6 @@ Import OCR BETA membaca foto daftar siswa, nilai, atau presensi. OCR membantu me
 - Foto utama dan foto sumber dapat membuka viewer berlapis yang mendukung zoom 50-400%, pan, pinch, double tap, tombol reset, serta keyboard `+`, `-`, dan `0`.
 - Daftar foto memakai tombol pilihan dan tombol aksi yang terpisah, `aria-pressed` untuk halaman aktif, serta kontrol urutan atas/bawah. Struktur interactive nested dilarang.
 - Panduan foto, foto sumber, dan teks OCR mentah memakai `sipena-collapsible-trigger` agar state open, ikon arah, focus, dan touch konsisten.
+- `Foto sumber` dan `Teks OCR mentah` memakai satu pilihan halaman bersama. Perubahan melalui panah, dropdown, atau tombol sumber pada tabel wajib memperbarui kedua section dan viewer secara bersamaan.
+- Respons OCR menyimpan teks mentah per halaman. Jika layanan lama atau model tidak mengirimkannya, SIPENA menyusun teks dari header dan baris halaman tersebut serta menampilkan label `Disusun dari hasil tabel`.
+- Teks gabungan lama tidak boleh ditampilkan berulang pada setiap foto dalam import multi-halaman.

@@ -6,6 +6,7 @@ import type {
   OcrImportContext,
   OcrImportKind,
   OcrIssue,
+  OcrPageText,
 } from "./types";
 
 const MAX_COLUMNS = 40;
@@ -26,6 +27,20 @@ const VALID_SEMANTICS = new Set<OcrColumnSemantic>([
 
 function cleanText(value: unknown, maxLength = MAX_CELL_LENGTH) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, maxLength) : "";
+}
+
+function cleanMultilineText(value: unknown, maxLength = MAX_RAW_TEXT_LENGTH) {
+  if (typeof value !== "string") return "";
+  const printableValue = Array.from(value.replace(/\r\n?/g, "\n"), (character) => {
+    const code = character.charCodeAt(0);
+    return code === 9 || code === 10 || (code >= 32 && code !== 127) ? character : "";
+  }).join("");
+  return printableValue
+    .replace(/[^\S\n\t]+/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxLength);
 }
 
 function normalizeIdentity(value: unknown) {
@@ -107,6 +122,53 @@ export function normalizeStudentOcrShape(
   };
 }
 
+function buildTableFallbackText(columns: OcrColumn[], rows: OcrExtractionResult["rows"], page: number) {
+  const pageRows = rows.filter((row) => row.page === page);
+  if (!pageRows.length) return "";
+  return [
+    columns.map((column) => column.label).join("\t"),
+    ...pageRows.map((row) => row.values.map((value) => cleanText(value)).join("\t")),
+  ].join("\n");
+}
+
+function sanitizePageTexts(
+  rawPageTexts: unknown,
+  legacyRawText: string,
+  columns: OcrColumn[],
+  rows: OcrExtractionResult["rows"],
+): OcrPageText[] {
+  const byPage = new Map<number, OcrPageText>();
+  if (Array.isArray(rawPageTexts)) {
+    rawPageTexts.slice(0, 5).forEach((item) => {
+      if (!item || typeof item !== "object") return;
+      const entry = item as Record<string, unknown>;
+      const page = cleanPage(entry.page);
+      const text = cleanMultilineText(entry.text);
+      if (!text) return;
+      const source = entry.source === "table_fallback" || entry.source === "manual" ? entry.source : "ocr";
+      const current = byPage.get(page);
+      byPage.set(page, {
+        page,
+        text: current ? `${current.text}\n\n${text}` : text,
+        source: current?.source === "ocr" || source === "ocr" ? "ocr" : source,
+      });
+    });
+  }
+
+  const rowPages = [...new Set(rows.map((row) => row.page))].sort((first, second) => first - second);
+  rowPages.forEach((page) => {
+    if (byPage.has(page)) return;
+    if (rowPages.length === 1 && legacyRawText) {
+      byPage.set(page, { page, text: legacyRawText, source: "ocr" });
+      return;
+    }
+    const text = buildTableFallbackText(columns, rows, page);
+    if (text) byPage.set(page, { page, text, source: "table_fallback" });
+  });
+
+  return [...byPage.values()].sort((first, second) => first.page - second.page);
+}
+
 export function sanitizeOcrExtractionResult(raw: unknown, expectedKind: OcrImportKind): OcrExtractionResult {
   if (!raw || typeof raw !== "object") throw new Error("Hasil OCR tidak valid.");
   const root = raw as Record<string, unknown>;
@@ -150,11 +212,14 @@ export function sanitizeOcrExtractionResult(raw: unknown, expectedKind: OcrImpor
   const canonical = kind === "students"
     ? normalizeStudentOcrShape(safeColumns, rows)
     : { columns: safeColumns, rows };
+  const rawText = cleanMultilineText(root.rawText);
+  const pageTexts = sanitizePageTexts(root.pageTexts, rawText, canonical.columns, canonical.rows);
 
   return {
     requestId: cleanText(root.requestId, 100) || crypto.randomUUID(),
     kind,
-    rawText: cleanText(root.rawText, MAX_RAW_TEXT_LENGTH),
+    rawText,
+    pageTexts,
     columns: canonical.columns,
     rows: canonical.rows,
     warnings: Array.isArray(root.warnings)
@@ -382,7 +447,8 @@ export function parseManualOcrText(text: string, kind: OcrImportKind): OcrExtrac
   return {
     requestId: crypto.randomUUID(),
     kind,
-    rawText: text.slice(0, MAX_RAW_TEXT_LENGTH),
+    rawText: cleanMultilineText(text),
+    pageTexts: [{ page: 1, text: cleanMultilineText(text), source: "manual" }],
     columns,
     rows,
     warnings: ["Data dibuat melalui editor manual setelah OCR tidak tersedia."],

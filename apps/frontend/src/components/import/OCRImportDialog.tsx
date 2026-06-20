@@ -5,6 +5,8 @@ import {
   ArrowUp,
   Camera,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   FilePenLine,
   Image as ImageIcon,
@@ -45,6 +47,7 @@ import {
   type OcrImportKind,
   type OcrImportPlan,
   type OcrImportResult,
+  type OcrPageText,
   type PreparedOcrImage,
 } from "@/lib/ocrImport";
 import { cn } from "@/lib/utils";
@@ -69,6 +72,69 @@ interface OCRImportDialogProps {
   onTargetClassIdChange?: (classId: string) => void;
   onRequestCreateClass?: () => void;
   onConfirmImport: (plan: OcrImportPlan) => Promise<OcrImportResult>;
+}
+
+interface OcrPageSwitcherProps {
+  images: PreparedOcrImage[];
+  activeImageId: string | null;
+  onChange: (imageId: string) => void;
+}
+
+function OcrPageSwitcher({ images, activeImageId, onChange }: OcrPageSwitcherProps) {
+  const activeIndex = Math.max(0, images.findIndex((image) => image.id === activeImageId));
+  const activeImage = images[activeIndex];
+  if (!activeImage) return null;
+
+  const moveTo = (nextIndex: number) => {
+    const nextImage = images[nextIndex];
+    if (nextImage) onChange(nextImage.id);
+  };
+
+  return (
+    <div className="grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-2 rounded-xl border border-border bg-muted/30 p-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-11 w-11 touch-manipulation"
+        disabled={activeIndex === 0}
+        onClick={() => moveTo(activeIndex - 1)}
+        aria-label="Tampilkan foto sebelumnya"
+        data-touch-scroll-click-target="true"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <div className="min-w-0">
+        <Select value={activeImage.id} onValueChange={onChange}>
+          <SelectTrigger className="h-11 min-w-0 bg-background" aria-label="Pilih halaman foto sumber">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {images.map((image, index) => (
+              <SelectItem key={image.id} value={image.id}>
+                Halaman {index + 1} - {image.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="mt-1 truncate px-1 text-[10px] text-muted-foreground">
+          Halaman {activeIndex + 1} dari {images.length}
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-11 w-11 touch-manipulation"
+        disabled={activeIndex === images.length - 1}
+        onClick={() => moveTo(activeIndex + 1)}
+        aria-label="Tampilkan foto berikutnya"
+        data-touch-scroll-click-target="true"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 }
 
 const CREATE_CLASS_OPTION = "__create-new-class__";
@@ -129,7 +195,7 @@ export default function OCRImportDialog({
   const [isPreparingImages, setIsPreparingImages] = useState(false);
   const [processStage, setProcessStage] = useState(0);
   const [processError, setProcessError] = useState("");
-  const [rawText, setRawText] = useState("");
+  const [pageTexts, setPageTexts] = useState<OcrPageText[]>([]);
   const [manualText, setManualText] = useState("");
   const [columns, setColumns] = useState<OcrColumn[]>([]);
   const [rows, setRows] = useState<OcrDraftRow[]>([]);
@@ -150,7 +216,7 @@ export default function OCRImportDialog({
     setIsPreparingImages(false);
     setProcessStage(0);
     setProcessError("");
-    setRawText("");
+    setPageTexts([]);
     setManualText("");
     setColumns([]);
     setRows([]);
@@ -160,6 +226,7 @@ export default function OCRImportDialog({
   }, []);
 
   const activeImage = images.find((image) => image.id === activeImageId) || images[0];
+  const activePageText = pageTexts.find((item) => item.page === activeImage?.page);
   const includedRows = rows.filter((row) => row.included);
   const blocking = hasBlockingOcrIssues(rows);
   const hasWarnings = hasOcrWarnings(rows);
@@ -229,7 +296,7 @@ export default function OCRImportDialog({
     const draft = prepareOcrDraft(result, context);
     setColumns(draft.columns);
     setRows(draft.rows);
-    setRawText(result.rawText);
+    setPageTexts(result.pageTexts);
     setWarningsAccepted(false);
   }, [context]);
 
@@ -491,13 +558,38 @@ export default function OCRImportDialog({
                 ) : null}
 
                 {images.length && activeImage ? (
-                  <StudioInfoCollapsible title={`Foto sumber halaman ${activeImage.page}`} description="Buka foto untuk mencocokkan isi tabel." defaultOpen={false}>
-                    <button type="button" className="flex w-full touch-manipulation items-center justify-center overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => setImageViewerOpen(true)} aria-label={`Buka foto sumber halaman ${activeImage.page} dalam viewer`}>
-                      <img src={activeImage.previewUrl} alt={`Foto sumber halaman ${activeImage.page}`} className="block h-auto max-h-[28rem] w-auto max-w-full object-contain" />
-                    </button>
+                  <StudioInfoCollapsible title={`Foto sumber - Halaman ${activeImage.page} dari ${images.length}`} description="Pilih halaman, lalu buka foto untuk mencocokkan isi tabel." defaultOpen={false}>
+                    <div className="min-w-0 space-y-3">
+                      <OcrPageSwitcher images={images} activeImageId={activeImage.id} onChange={setActiveImageId} />
+                      <button type="button" className="flex w-full touch-manipulation items-center justify-center overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => setImageViewerOpen(true)} aria-label={`Buka foto sumber halaman ${activeImage.page} dalam viewer`}>
+                        <img src={activeImage.previewUrl} alt={`Foto sumber halaman ${activeImage.page}`} className="block h-auto max-h-[28rem] w-auto max-w-full object-contain" />
+                      </button>
+                    </div>
                   </StudioInfoCollapsible>
                 ) : null}
-                {rawText ? <StudioInfoCollapsible title="Teks OCR mentah" description="Dipakai untuk pemeriksaan lanjutan bila tabel tampak berbeda."><pre className="max-h-56 overflow-auto whitespace-pre-wrap text-[11px] text-muted-foreground">{rawText}</pre></StudioInfoCollapsible> : null}
+                {images.length && activeImage ? (
+                  <StudioInfoCollapsible title={`Teks OCR mentah - Halaman ${activeImage.page} dari ${images.length}`} description="Teks mengikuti foto sumber yang sedang dipilih.">
+                    <div className="min-w-0 space-y-3">
+                      <OcrPageSwitcher images={images} activeImageId={activeImage.id} onChange={setActiveImageId} />
+                      {activePageText?.text ? (
+                        <div className="min-w-0 space-y-2">
+                          {activePageText.source === "table_fallback" ? (
+                            <Badge variant="outline" className="border-amber-400/50 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                              Disusun dari hasil tabel
+                            </Badge>
+                          ) : activePageText.source === "manual" ? (
+                            <Badge variant="outline">Input manual</Badge>
+                          ) : null}
+                          <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted/30 p-3 text-[11px] text-muted-foreground">{activePageText.text}</pre>
+                        </div>
+                      ) : (
+                        <p className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                          Tidak ada teks OCR yang terbaca untuk halaman ini.
+                        </p>
+                      )}
+                    </div>
+                  </StudioInfoCollapsible>
+                ) : null}
 
                 {hasWarnings ? (
                   <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-400/40 bg-amber-500/5 p-3"><Checkbox checked={warningsAccepted} onCheckedChange={(checked) => setWarningsAccepted(checked === true)} className="mt-0.5" /><span className="text-xs"><span className="block font-semibold">Saya sudah memeriksa baris yang memiliki peringatan.</span><span className="text-muted-foreground">Termasuk tulisan tangan, confidence rendah, data mirip, dan konflik data lama.</span></span></label>

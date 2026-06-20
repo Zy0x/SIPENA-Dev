@@ -22,6 +22,7 @@ function result(kind: OcrExtractionResult["kind"]): OcrExtractionResult {
     requestId: "request-1",
     kind,
     rawText: "",
+    pageTexts: [],
     columns: kind === "attendance"
       ? [
           { id: "name", label: "Nama Siswa", semantic: "student_name", confidence: 0.98 },
@@ -61,6 +62,62 @@ describe("OCR import validation", () => {
 
   it("rejects a response for another OCR domain", () => {
     expect(() => sanitizeOcrExtractionResult({ kind: "grades" }, "students")).toThrow(/tidak sesuai/i);
+  });
+
+  it("preserves page-specific OCR text and multiline formatting", () => {
+    const sanitized = sanitizeOcrExtractionResult({
+      kind: "students",
+      rawText: "Gabungan semua halaman",
+      pageTexts: [
+        { page: 2, text: "Nama\tNISN\nDewi\t002", source: "ocr" },
+        { page: 1, text: "Nama\tNISN\nBudi\t001", source: "ocr" },
+      ],
+      columns: [
+        { id: "name", label: "Nama Siswa", semantic: "student_name", confidence: 0.9 },
+        { id: "nisn", label: "NISN", semantic: "nisn", confidence: 0.9 },
+      ],
+      rows: [
+        { id: "row-1", page: 1, values: ["Budi", "001"], confidence: 0.9 },
+        { id: "row-2", page: 2, values: ["Dewi", "002"], confidence: 0.9 },
+      ],
+    }, "students");
+
+    expect(sanitized.pageTexts.map((item) => item.page)).toEqual([1, 2]);
+    expect(sanitized.pageTexts[0].text).toBe("Nama\tNISN\nBudi\t001");
+    expect(sanitized.pageTexts[1].source).toBe("ocr");
+  });
+
+  it("builds distinct page text from table rows for legacy multi-photo responses", () => {
+    const sanitized = sanitizeOcrExtractionResult({
+      kind: "students",
+      rawText: "Teks gabungan lama yang tidak boleh diulang",
+      columns: [
+        { id: "name", label: "Nama Siswa", semantic: "student_name", confidence: 0.9 },
+        { id: "nisn", label: "NISN", semantic: "nisn", confidence: 0.9 },
+      ],
+      rows: [
+        { id: "row-1", page: 1, values: ["Budi", "001"], confidence: 0.9 },
+        { id: "row-2", page: 2, values: ["Dewi", "002"], confidence: 0.9 },
+      ],
+    }, "students");
+
+    expect(sanitized.pageTexts).toHaveLength(2);
+    expect(sanitized.pageTexts.every((item) => item.source === "table_fallback")).toBe(true);
+    expect(sanitized.pageTexts[0].text).toContain("Budi");
+    expect(sanitized.pageTexts[0].text).not.toContain("Dewi");
+    expect(sanitized.pageTexts[1].text).toContain("Dewi");
+    expect(sanitized.pageTexts[1].text).not.toContain("Budi");
+  });
+
+  it("uses legacy raw text for a single-page response", () => {
+    const sanitized = sanitizeOcrExtractionResult({
+      kind: "students",
+      rawText: "Baris 1\nBaris 2",
+      columns: [{ id: "name", label: "Nama", semantic: "student_name", confidence: 0.9 }],
+      rows: [{ id: "row-1", page: 1, values: ["Budi"], confidence: 0.9 }],
+    }, "students");
+
+    expect(sanitized.pageTexts).toEqual([{ page: 1, text: "Baris 1\nBaris 2", source: "ocr" }]);
   });
 
   it("maps grade columns and blocks invalid values", () => {
@@ -194,6 +251,7 @@ describe("OCR import validation", () => {
     const manual = parseManualOcrText("1\tAhmad Fauzi\t0012345678", "students");
     expect(manual.usedFallback).toBe(true);
     expect(manual.rows).toHaveLength(1);
+    expect(manual.pageTexts[0].source).toBe("manual");
   });
 
   it("builds editable grade columns from a manual fallback header", () => {

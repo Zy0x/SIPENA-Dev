@@ -35,6 +35,7 @@ interface SafeRequest {
 
 interface RawTable {
   page: number;
+  rawText: string;
   headers: string[];
   rows: string[][];
   handwritten: boolean;
@@ -69,6 +70,20 @@ function jsonResponse(body: unknown, status = 200) {
 
 function cleanText(value: unknown, maxLength = MAX_CELL_LENGTH) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, maxLength) : "";
+}
+
+function cleanMultilineText(value: unknown, maxLength = 50_000) {
+  if (typeof value !== "string") return "";
+  const printableValue = Array.from(value.replace(/\r\n?/g, "\n"), (character) => {
+    const code = character.charCodeAt(0);
+    return code === 9 || code === 10 || (code >= 32 && code !== 127) ? character : "";
+  }).join("");
+  return printableValue
+    .replace(/[^\S\n\t]+/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxLength);
 }
 
 function normalizeKey(value: unknown) {
@@ -153,7 +168,7 @@ function extractionPrompt(kind: ImportKind) {
     "Pertahankan urutan foto, baris, dan kolom. Nilai 0 harus tetap 0.",
     "Jika sel tidak terbaca, gunakan string kosong. Tandai handwritten=true bila mayoritas baris berupa tulisan tangan.",
     "Kembalikan JSON saja dengan bentuk:",
-    '{"rawText":"...","tables":[{"page":1,"headers":["..."],"rows":[["..."]],"handwritten":false,"confidence":0.9}],"warnings":["..."]}',
+    '{"rawText":"gabungan semua foto","tables":[{"page":1,"rawText":"teks mentah khusus foto halaman 1","headers":["..."],"rows":[["..."]],"handwritten":false,"confidence":0.9}],"warnings":["..."]}',
   ].join("\n");
 }
 
@@ -190,6 +205,7 @@ function sanitizeRawTables(raw: unknown): { rawText: string; tables: RawTable[];
     if (headers.length === 0 && rows.length === 0) return [];
     return [{
       page: safePage(table.page, tableIndex + 1),
+      rawText: cleanMultilineText(table.rawText, 12_000),
       headers,
       rows,
       handwritten: table.handwritten === true,
@@ -197,10 +213,24 @@ function sanitizeRawTables(raw: unknown): { rawText: string; tables: RawTable[];
     }];
   });
   return {
-    rawText: cleanText(root.rawText, 50_000),
+    rawText: cleanMultilineText(root.rawText),
     tables,
     warnings: Array.isArray(root.warnings) ? root.warnings.map((item) => cleanText(item, 240)).filter(Boolean).slice(0, 12) : [],
   };
+}
+
+function buildPageTexts(images: SafeImage[], tables: RawTable[]) {
+  return images.map((image) => {
+    const pageTables = tables.filter((table) => table.page === image.page);
+    const ocrText = pageTables.map((table) => table.rawText).filter(Boolean).join("\n\n");
+    if (ocrText) return { page: image.page, text: ocrText, source: "ocr" as const };
+
+    const tableText = pageTables.map((table) => [
+      table.headers.join("\t"),
+      ...table.rows.map((row) => row.join("\t")),
+    ].filter(Boolean).join("\n")).filter(Boolean).join("\n\n");
+    return { page: image.page, text: tableText, source: "table_fallback" as const };
+  });
 }
 
 function inferSemantic(label: string, kind: ImportKind): Semantic {
@@ -370,10 +400,12 @@ serve(async (req) => {
       usedFallback,
       durationMs: Date.now() - startedAt,
     }));
+    const pageTexts = buildPageTexts(request.images, raw.tables);
     return jsonResponse({
       requestId,
       kind: request.kind,
-      rawText: raw.rawText,
+      rawText: raw.rawText || pageTexts.map((item) => item.text).filter(Boolean).join("\n\n"),
+      pageTexts,
       columns: normalized.columns,
       rows: normalized.rows,
       warnings: [...raw.warnings, ...(normalized.warnings || [])].slice(0, 12),

@@ -45,10 +45,17 @@ export interface OcrExtractedRow {
   handwritten: boolean;
 }
 
+export interface OcrPageText {
+  page: number;
+  text: string;
+  source: "ocr" | "table_fallback" | "manual";
+}
+
 export interface OcrExtractionResult {
   requestId: string;
   kind: OcrImportKind;
   rawText: string;
+  pageTexts: OcrPageText[];
   columns: OcrColumn[];
   rows: OcrExtractedRow[];
   warnings: string[];

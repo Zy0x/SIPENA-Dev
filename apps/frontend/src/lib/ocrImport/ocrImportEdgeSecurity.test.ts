@@ -18,6 +18,9 @@ describe("OCR Edge Function security guard", () => {
     expect(source).toContain("const MAX_BODY_BYTES = 10 * 1024 * 1024");
     expect(source).toContain("runVisionPass");
     expect(source).toContain("runRefinementPass");
+    expect(source).toContain("buildPageTexts");
+    expect(source).toContain('source: "table_fallback"');
+    expect(source).toContain("rawText: cleanMultilineText(table.rawText");
     expect(source).toContain("GROQ_API_KEY");
     expect(source).toContain("Login diperlukan untuk memakai OCR");
     expect(source).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
