@@ -5,10 +5,23 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Global dialog stack: only the topmost dialog responds to back gesture ──
-const dialogStack: Array<{ id: number; close: () => void }> = [];
+export interface DialogStackEntry {
+  id: number;
+  depth: number;
+  close: () => void;
+}
+
+const dialogStack: DialogStackEntry[] = [];
 let dialogCounter = 0;
 let globalPopstateHandler: ((e: PopStateEvent) => void) | null = null;
-const DialogStackDepthContext = React.createContext(1);
+export const DialogStackDepthContext = React.createContext(0);
+
+export function registerDialogStackEntry(entry: DialogStackEntry) {
+  if (dialogStack.some((item) => item.id === entry.id)) return;
+  const nextDeeperIndex = dialogStack.findIndex((item) => item.depth > entry.depth);
+  if (nextDeeperIndex === -1) dialogStack.push(entry);
+  else dialogStack.splice(nextDeeperIndex, 0, entry);
+}
 
 function ensureGlobalPopstateHandler() {
   if (globalPopstateHandler) return;
@@ -27,42 +40,48 @@ export function getDialogStack() {
 }
 
 const Dialog = ({ open, onOpenChange, ...props }: DialogPrimitive.DialogProps) => {
+  const parentStackDepth = React.useContext(DialogStackDepthContext);
+  const stackDepth = parentStackDepth + 1;
   const dialogIdRef = React.useRef<number | null>(null);
+  const stackEntryRef = React.useRef<DialogStackEntry | null>(null);
+  const onOpenChangeRef = React.useRef(onOpenChange);
   const closedByPopstateRef = React.useRef(false);
-  const [stackDepth, setStackDepth] = React.useState(() => (open ? dialogStack.length + 1 : 1));
+  onOpenChangeRef.current = onOpenChange;
 
   React.useEffect(() => {
-    if (open) {
-      ensureGlobalPopstateHandler();
-      
-      const myId = ++dialogCounter;
-      const myDepth = dialogStack.length + 1;
-      dialogIdRef.current = myId;
-      setStackDepth(myDepth);
-      window.history.pushState({ dialogId: myId }, "");
+    if (!open) return undefined;
 
-      const entry = {
+    ensureGlobalPopstateHandler();
+
+    if (dialogIdRef.current === null || stackEntryRef.current === null) {
+      const myId = ++dialogCounter;
+      dialogIdRef.current = myId;
+      stackEntryRef.current = {
         id: myId,
+        depth: stackDepth,
         close: () => {
           closedByPopstateRef.current = true;
-          onOpenChange?.(false);
+          onOpenChangeRef.current?.(false);
         },
       };
-      dialogStack.push(entry);
-
-      return () => {
-        // Remove from stack on cleanup
-        const idx = dialogStack.findIndex((e) => e.id === myId);
-        if (idx !== -1) dialogStack.splice(idx, 1);
-      };
+      window.history.pushState({ dialogId: myId }, "");
     }
-  }, [open, onOpenChange]);
+
+    const entry = stackEntryRef.current;
+    registerDialogStackEntry(entry);
+
+    return () => {
+      const idx = dialogStack.findIndex((item) => item.id === entry.id);
+      if (idx !== -1) dialogStack.splice(idx, 1);
+    };
+  }, [open, stackDepth]);
 
   // Handle close NOT triggered by popstate (e.g. X button, overlay click)
   React.useEffect(() => {
     if (!open && dialogIdRef.current !== null) {
       const myId = dialogIdRef.current;
       dialogIdRef.current = null;
+      stackEntryRef.current = null;
 
       // Remove from stack
       const idx = dialogStack.findIndex((e) => e.id === myId);
@@ -101,8 +120,8 @@ const DialogClose = DialogPrimitive.Close;
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, style, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay> & { motionProfile?: "default" | "adaptive" }
+>(({ className, style, motionProfile = "default", ...props }, ref) => {
   const stackDepth = React.useContext(DialogStackDepthContext);
   const stackOffset = Math.max(stackDepth - 1, 0) * 20;
 
@@ -111,6 +130,7 @@ const DialogOverlay = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed inset-0 z-[10080] bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        motionProfile === "adaptive" && "sipena-dialog-overlay-adaptive",
         className,
       )}
       style={{ zIndex: 10080 + stackOffset, ...style }}
@@ -122,18 +142,19 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, style, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { motionProfile?: "default" | "adaptive" }
+>(({ className, children, style, motionProfile = "default", ...props }, ref) => {
   const stackDepth = React.useContext(DialogStackDepthContext);
   const stackOffset = Math.max(stackDepth - 1, 0) * 20;
 
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay motionProfile={motionProfile} />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
           "sipena-scroll-isolated fixed left-[50%] top-[50%] z-[10090] grid w-[calc(100vw-1.5rem)] max-w-lg max-h-[calc(100dvh-1.5rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto scrollbar-thin border border-border bg-background text-foreground p-5 shadow-lg duration-200 rounded-2xl sm:w-[calc(100vw-3rem)] sm:p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+          motionProfile === "adaptive" && "sipena-dialog-motion-adaptive",
           className,
         )}
         style={{ zIndex: 10090 + stackOffset, ...style }}

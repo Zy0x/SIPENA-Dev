@@ -3604,6 +3604,32 @@
   }
 }
 
+@keyframes sipena-dialog-adaptive-open {
+  from { opacity: 0; transform: translate(-50%, -50%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@keyframes sipena-dialog-adaptive-close {
+  from { opacity: 1; transform: translate(-50%, -50%); }
+  to { opacity: 0; transform: translate(-50%, -50%); }
+}
+
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .sipena-dialog-overlay-adaptive {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    animation-duration: 100ms !important;
+  }
+
+  .sipena-dialog-motion-adaptive[data-state="open"] {
+    animation: sipena-dialog-adaptive-open 100ms ease-out both !important;
+  }
+
+  .sipena-dialog-motion-adaptive[data-state="closed"] {
+    animation: sipena-dialog-adaptive-close 80ms ease-in both !important;
+  }
+}
+
 @layer components {
   .app-page {
     @apply box-border w-full min-w-0 max-w-none space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5 lg:px-8 lg:py-8;

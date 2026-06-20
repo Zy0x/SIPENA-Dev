@@ -29,8 +29,8 @@ describe("subject cards layout guard", () => {
     expect(cardSource).toContain('aria-label="Bagikan link mata pelajaran"');
     expect(cardSource).not.toContain("DropdownMenu");
     expect(cardSource).not.toContain("MoreVertical");
-    expect(pageSource).toContain("lg:grid-cols-[minmax(20rem,32rem)_minmax(16rem,1fr)_minmax(9rem,12rem)]");
-    expect(pageSource).toContain("lg:grid-cols-[minmax(22rem,44rem)_1fr]");
+    expect(pageSource).toContain("lg:grid-cols-[minmax(22rem,36rem)_minmax(20rem,1fr)]");
+    expect(pageSource).toContain("grid-cols-[minmax(0,1fr)_8.5rem]");
     expect(pageSource).toContain("grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))]");
     expect(pageSource).toContain("KKM kelas");
   });

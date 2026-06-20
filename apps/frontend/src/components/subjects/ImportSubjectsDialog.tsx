@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ArrowRight, CheckCircle2, Copy, Loader2, School } from "lucide-react";
 
 import { ResponsiveDataPreview, StudioActionFooter } from "@/components/studio/ResponsiveStudio";
@@ -29,6 +30,7 @@ import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useStudioViewportProfile } from "@/hooks/useStudioViewportProfile";
 import type { Class } from "@/hooks/useClasses";
+import { useSubjectImportSources } from "@/hooks/useSubjectImportSources";
 import { type Subject, useSubjects } from "@/hooks/useSubjects";
 import { buildSubjectBatchPlan } from "@/lib/subjectBatch";
 
@@ -37,7 +39,6 @@ interface ImportSubjectsDialogProps {
   onOpenChange: (open: boolean) => void;
   targetClass: Class;
   targetSubjects: Subject[];
-  allClasses: Class[];
 }
 
 interface ImportPreviewRow {
@@ -64,10 +65,10 @@ export default function ImportSubjectsDialog({
   onOpenChange,
   targetClass,
   targetSubjects,
-  allClasses,
 }: ImportSubjectsDialogProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const layoutRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
   const viewport = useStudioViewportProfile(layoutRef, open);
   const { academicYears, semesters, activeSemesterNumber } = useAcademicYear();
   const [sourceYearId, setSourceYearId] = useState("");
@@ -81,6 +82,12 @@ export default function ImportSubjectsDialog({
   const [structureSummaryLoading, setStructureSummaryLoading] = useState(false);
   const [structureSummaryError, setStructureSummaryError] = useState<string | null>(null);
 
+  const {
+    sourceClasses: availableSourceClasses,
+    isLoading: sourceClassesLoading,
+    error: sourceClassesError,
+    refetch: refetchSourceClasses,
+  } = useSubjectImportSources(open);
   const { subjects: sourceSubjects, isLoading: sourceSubjectsLoading, importSubjectsFromClass } = useSubjects(sourceClassId, false, false);
 
   const targetSemester = useMemo(() => (
@@ -94,11 +101,11 @@ export default function ImportSubjectsDialog({
     [semesters, sourceYearId],
   );
 
-  const sourceClasses = useMemo(() => allClasses.filter((item) => (
+  const sourceClasses = useMemo(() => availableSourceClasses.filter((item) => (
     item.id !== targetClass.id
     && item.academic_year_id === sourceYearId
     && (!sourceSemesterId || item.semester_id === sourceSemesterId || item.semester_id === null)
-  )), [allClasses, sourceSemesterId, sourceYearId, targetClass.id]);
+  )), [availableSourceClasses, sourceSemesterId, sourceYearId, targetClass.id]);
 
   const previewRows = useMemo<ImportPreviewRow[]>(() => {
     const plan = buildSubjectBatchPlan(
@@ -127,6 +134,31 @@ export default function ImportSubjectsDialog({
     [readyRows, selectedSubjectIds],
   );
   const selectionFingerprint = readyRows.map((row) => row.subject.id).join("|");
+  const selectedFingerprint = useMemo(
+    () => [...selectedReadyIds].sort().join("|"),
+    [selectedReadyIds],
+  );
+
+  useEffect(() => {
+    if (!open || typeof performance === "undefined") return undefined;
+    performance.mark("sipena-subject-import-opened");
+    const frame = requestAnimationFrame(() => {
+      performance.mark("sipena-subject-import-painted");
+      performance.measure(
+        "sipena-subject-import-open-to-paint",
+        "sipena-subject-import-opened",
+        "sipena-subject-import-painted",
+      );
+      if (performance.getEntriesByName("sipena-subject-import-triggered", "mark").length > 0) {
+        performance.measure(
+          "sipena-subject-import-trigger-to-paint",
+          "sipena-subject-import-triggered",
+          "sipena-subject-import-painted",
+        );
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -152,6 +184,23 @@ export default function ImportSubjectsDialog({
     setStructureSummary(EMPTY_STRUCTURE_SUMMARY);
     setStructureSummaryError(null);
   }, [readyRows, selectionFingerprint]);
+
+  useEffect(() => {
+    if (!sourceClassId || sourceSubjectsLoading || typeof performance === "undefined") return undefined;
+    const frame = requestAnimationFrame(() => {
+      performance.mark("sipena-subject-import-preview-ready");
+      try {
+        performance.measure(
+          "sipena-subject-import-source-to-preview",
+          "sipena-subject-import-source-selected",
+          "sipena-subject-import-preview-ready",
+        );
+      } catch {
+        // The source may come from restored state rather than an explicit selection.
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [sourceClassId, sourceSubjectsLoading]);
 
   const structureAvailable = Boolean(sourceSemesterId && targetSemester?.id);
 
@@ -206,14 +255,19 @@ export default function ImportSubjectsDialog({
     });
   };
 
-  const resetAndClose = (nextOpen: boolean) => {
+  const resetAndClose = useCallback((nextOpen: boolean) => {
     if (importSubjectsFromClass.isPending) return;
     if (!nextOpen) {
       setFinalConfirmOpen(false);
       setSelectedSubjectIds(new Set());
     }
     onOpenChange(nextOpen);
-  };
+  }, [importSubjectsFromClass.isPending, onOpenChange]);
+
+  const handleSourceClassChange = useCallback((value: string) => {
+    if (typeof performance !== "undefined") performance.mark("sipena-subject-import-source-selected");
+    setSourceClassId(value);
+  }, []);
 
   const runImport = async () => {
     const result = await importSubjectsFromClass.mutateAsync({
@@ -237,7 +291,17 @@ export default function ImportSubjectsDialog({
     setStructureSummaryLoading(true);
     setStructureSummaryError(null);
     try {
-      const summary = await loadStructureSummary();
+      const summary = await queryClient.fetchQuery({
+        queryKey: [
+          "subject-import-structure-summary",
+          sourceClassId,
+          sourceSemesterId,
+          selectedFingerprint,
+        ],
+        queryFn: loadStructureSummary,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 15 * 60 * 1000,
+      });
       setStructureSummary(summary);
       setFinalConfirmOpen(true);
     } catch {
@@ -248,7 +312,7 @@ export default function ImportSubjectsDialog({
   };
 
   const noOtherYears = academicYears.length === 0;
-  const noSourceClasses = Boolean(sourceYearId && sourceClasses.length === 0);
+  const noSourceClasses = !sourceClassesLoading && Boolean(sourceYearId && sourceClasses.length === 0);
   const allSubjectsExisting = previewRows.length > 0 && readyRows.length === 0;
   const canContinue = selectedReadyIds.length > 0
     && !structureSummaryLoading
@@ -258,6 +322,7 @@ export default function ImportSubjectsDialog({
     <Dialog open={open} onOpenChange={resetAndClose}>
       <DialogContent
         ref={layoutRef}
+        motionProfile="adaptive"
         className="max-h-[min(96dvh,54rem)] min-w-0 max-w-5xl overflow-x-hidden p-0"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -297,8 +362,8 @@ export default function ImportSubjectsDialog({
             </div>
             <div className="grid gap-1.5">
               <Label>Kelas Sumber</Label>
-              <Select value={sourceClassId} onValueChange={setSourceClassId}>
-                <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Pilih kelas" /></SelectTrigger>
+              <Select value={sourceClassId} onValueChange={handleSourceClassChange} disabled={sourceClassesLoading || Boolean(sourceClassesError)}>
+                <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder={sourceClassesLoading ? "Memuat kelas..." : "Pilih kelas"} /></SelectTrigger>
                 <SelectContent>
                   {sourceClasses.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
                 </SelectContent>
@@ -306,7 +371,17 @@ export default function ImportSubjectsDialog({
             </div>
           </div>
 
-          {!sourceClassId ? (
+          {sourceClassesLoading ? (
+            <div className="flex min-h-32 items-center justify-center rounded-2xl border border-dashed border-border">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="ml-2 text-sm text-muted-foreground">Menyiapkan kelas sumber...</span>
+            </div>
+          ) : sourceClassesError ? (
+            <div className="rounded-2xl border border-destructive/25 bg-destructive/5 p-4 text-center text-sm">
+              <p className="text-destructive">Daftar kelas sumber belum dapat dimuat.</p>
+              <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void refetchSourceClasses()}>Coba Lagi</Button>
+            </div>
+          ) : !sourceClassId ? (
             <div className="rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
               <School className="mx-auto mb-2 h-7 w-7" />
               {noOtherYears

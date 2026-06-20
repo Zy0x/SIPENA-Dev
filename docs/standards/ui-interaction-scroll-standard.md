@@ -48,6 +48,9 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 
 - Dialog nested wajib tetap menampilkan overlay blur di atas dialog parent. Gunakan layer shared: dialog overlay/content, alert dialog, popover/select, lalu toast sebagai lapisan tertinggi.
 - Dialog normal wajib menaikkan z-index overlay/content berdasarkan kedalaman stack agar modal anak tetap menggelapkan dan memburamkan modal parent.
+- Registrasi stack dan `history.pushState` dialog hanya boleh terjadi sekali untuk setiap sesi buka. Perubahan callback, state form, pilihan tabel, atau rerender konten tidak boleh mendaftarkan ulang dialog maupun menambah history baru.
+- Callback `onOpenChange` yang dipanggil oleh gesture Back harus selalu memakai callback terbaru melalui ref stabil; identitas callback tidak boleh menjadi dependency lifecycle stack dialog.
+- Dialog berat boleh memakai profil motion adaptif. Pada coarse pointer atau reduced motion, hilangkan backdrop blur dan animasi zoom, tetapi pertahankan overlay, urutan layer, fokus, dan perilaku desktop non-touch.
 - Toast sukses/error yang muncul dari aksi di dalam modal harus berada di atas modal agar feedback tidak tertutup.
 - Semua header tabel pada halaman dan dialog wajib punya pembeda visual minimal berupa shadow/border bawah dan background solid agar tidak terlihat transparan saat scroll atau saat ada kolom sticky/freeze.
 

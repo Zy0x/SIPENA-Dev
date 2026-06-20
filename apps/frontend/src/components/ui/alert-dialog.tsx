@@ -3,42 +3,57 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { getDialogStack } from "@/components/ui/dialog";
+import {
+  DialogStackDepthContext,
+  getDialogStack,
+  registerDialogStackEntry,
+  type DialogStackEntry,
+} from "@/components/ui/dialog";
 
 // Reuse the global dialog stack from dialog.tsx
 let alertDialogCounter = 1000000; // offset to avoid ID collision
 
 const AlertDialog = ({ open, onOpenChange, ...props }: AlertDialogPrimitive.AlertDialogProps) => {
+  const parentStackDepth = React.useContext(DialogStackDepthContext);
+  const stackDepth = parentStackDepth + 1;
   const dialogIdRef = React.useRef<number | null>(null);
+  const stackEntryRef = React.useRef<DialogStackEntry | null>(null);
+  const onOpenChangeRef = React.useRef(onOpenChange);
   const closedByPopstateRef = React.useRef(false);
+  onOpenChangeRef.current = onOpenChange;
 
   React.useEffect(() => {
-    if (open) {
-      const stack = getDialogStack();
+    if (!open) return undefined;
+
+    const stack = getDialogStack();
+    if (dialogIdRef.current === null || stackEntryRef.current === null) {
       const myId = ++alertDialogCounter;
       dialogIdRef.current = myId;
       window.history.pushState({ dialogId: myId }, "");
-
-      const entry = {
+      stackEntryRef.current = {
         id: myId,
+        depth: stackDepth,
         close: () => {
           closedByPopstateRef.current = true;
-          onOpenChange?.(false);
+          onOpenChangeRef.current?.(false);
         },
       };
-      stack.push(entry);
-
-      return () => {
-        const idx = stack.findIndex((e) => e.id === myId);
-        if (idx !== -1) stack.splice(idx, 1);
-      };
     }
-  }, [open, onOpenChange]);
+
+    const entry = stackEntryRef.current;
+    registerDialogStackEntry(entry);
+
+    return () => {
+      const idx = stack.findIndex((item) => item.id === entry.id);
+      if (idx !== -1) stack.splice(idx, 1);
+    };
+  }, [open, stackDepth]);
 
   React.useEffect(() => {
     if (!open && dialogIdRef.current !== null) {
       const myId = dialogIdRef.current;
       dialogIdRef.current = null;
+      stackEntryRef.current = null;
 
       const stack = getDialogStack();
       const idx = stack.findIndex((e) => e.id === myId);
@@ -58,7 +73,11 @@ const AlertDialog = ({ open, onOpenChange, ...props }: AlertDialogPrimitive.Aler
     }
   }, [open]);
 
-  return <AlertDialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />;
+  return (
+    <DialogStackDepthContext.Provider value={stackDepth}>
+      <AlertDialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />
+    </DialogStackDepthContext.Provider>
+  );
 };
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;

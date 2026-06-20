@@ -42,7 +42,6 @@ export default function Subjects() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { classes, isLoading: classesLoading } = useClasses();
-  const { classes: allClasses, isLoading: allClassesLoading } = useClasses(false);
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -178,6 +177,11 @@ export default function Subjects() {
     setSelectedClassId(value);
   };
 
+  const openImportDialog = () => {
+    if (typeof performance !== "undefined") performance.mark("sipena-subject-import-triggered");
+    setImportDialogOpen(true);
+  };
+
   return (
     <>
       <div ref={containerRef} className="app-page">
@@ -199,7 +203,7 @@ export default function Subjects() {
             <TourButton tourKey="subjects" onBeforeStart={prepareSubjectsTour} />
             {selectedClassId && selectedClass && (
               <>
-                <Button type="button" variant="outline" className="h-9 gap-2" data-tour="import-subject" disabled={allClassesLoading} onClick={() => setImportDialogOpen(true)}>
+                <Button type="button" variant="outline" className="h-9 gap-2" data-tour="import-subject" onClick={openImportDialog}>
                   <Copy className="h-4 w-4" />
                   <span className="hidden min-[390px]:inline">Import Mapel</span>
                   <span className="min-[390px]:hidden">Import</span>
@@ -376,7 +380,6 @@ export default function Subjects() {
           onOpenChange={setImportDialogOpen}
           targetClass={selectedClass}
           targetSubjects={subjects}
-          allClasses={allClasses}
         />
       )}
       <AddClassDialog
