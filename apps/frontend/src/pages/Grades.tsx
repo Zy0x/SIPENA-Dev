@@ -1766,7 +1766,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:w-auto sm:justify-end w-full">
+                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions grid grid-cols-2 gap-2 sm:flex sm:flex-nowrap sm:items-center sm:w-auto sm:justify-end w-full">
                         {!isFullscreen && gradeToolbarActions}
                       </div>
                     </div>
