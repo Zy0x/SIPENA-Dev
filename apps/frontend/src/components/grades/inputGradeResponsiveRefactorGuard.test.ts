@@ -85,7 +85,7 @@ describe("Input Nilai responsive refactor guard", () => {
     expect(sourceCode).toContain("sipena-grade-toolbar-slot--rounding flex-auto min-w-[130px] lg:flex-none lg:min-w-0");
 
     // Assert that search slot is flex-auto
-    expect(sourceCode).toContain("sipena-grade-toolbar-slot--search w-full lg:flex-none lg:w-auto lg:min-w-0");
+    expect(sourceCode).toContain("sipena-grade-toolbar-slot--search w-full lg:flex-none lg:w-[240px] xl:w-[260px]");
   });
 
   it("retains low-height viewport rule for fullscreen mode", () => {

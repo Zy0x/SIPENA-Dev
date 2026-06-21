@@ -1386,7 +1386,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       onSearchQueryChange={(query) => setSearchQuery(query)}
       placeholder="Cari siswa AI..."
       showSuggestions={true}
-      className="w-full min-w-0 sm:w-64 lg:w-60"
+      className="w-full min-w-0"
     />
   );
 
@@ -1505,7 +1505,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       </Button>
       </div>
       {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground flex-auto lg:flex-none" />}
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full lg:flex-none lg:w-auto lg:min-w-0">{searchAction}</div>
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full lg:flex-none lg:w-[240px] xl:w-[260px]">{searchAction}</div>
     </>
   ) : null;
 
