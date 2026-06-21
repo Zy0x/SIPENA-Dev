@@ -1864,14 +1864,14 @@ export function SpreadsheetTable({
       {/* Toolbar - matching template style */}
       <div
         data-tour="grade-toolbar"
-        className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3`}
+        className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3 flex flex-wrap items-center justify-between gap-2`}
         onPointerDownCapture={handleToolbarPointerDownCapture}
         onPointerMoveCapture={handleToolbarPointerMoveCapture}
         onPointerUpCapture={handleToolbarPointerEndCapture}
         onPointerCancelCapture={handleToolbarPointerEndCapture}
         onClickCapture={handleToolbarClickCapture}
       >
-        <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
+        <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1.5 lg:gap-2">
           {/* Freeze Menu Toggle */}
           <Button
             data-tour="grade-freeze-control"
@@ -1879,12 +1879,12 @@ export function SpreadsheetTable({
             variant={showFreezeMenu ? "default" : "outline"}
             size="sm"
             onClick={() => !formatLocked && setShowFreezeMenu(!showFreezeMenu)}
-            className={`gap-1 sm:gap-2 h-9 sm:h-10 px-2.5 sm:px-3 ${formatLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`gap-1.5 lg:gap-2 h-9 lg:h-10 px-2.5 lg:px-3 ${formatLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={formatLocked}
             style={{ minWidth: 40, touchAction: 'manipulation' }}
           >
             <Columns3 className="w-4 h-4" />
-            <span className="sipena-grade-action-text hidden sm:inline">Bekukan</span>
+            <span className="sipena-grade-action-text hidden lg:inline">Bekukan</span>
           </Button>
 
           {/* Protection split button */}
@@ -1893,12 +1893,12 @@ export function SpreadsheetTable({
               variant={formatLocked || scrollLockMode ? "default" : "ghost"}
               size="sm"
               onClick={handleProtectionButtonClick}
-              className="gap-1.5 sm:gap-2 h-9 sm:h-10 rounded-none border-0 px-2.5 sm:px-3"
+              className="gap-1.5 lg:gap-2 h-9 lg:h-10 rounded-none border-0 px-2.5 lg:px-3"
               title="Aktifkan proteksi penuh: kunci tata letak dan mode navigasi"
               style={{ minWidth: 40, touchAction: 'manipulation' }}
             >
               <ProtectionModeIcon className="w-4 h-4" />
-              <span className="sipena-grade-action-text hidden sm:inline">{protectionModeMeta.label}</span>
+              <span className="sipena-grade-action-text hidden lg:inline">{protectionModeMeta.label}</span>
             </Button>
             <DropdownMenu
               open={showProtectionMenu}
@@ -1909,7 +1909,7 @@ export function SpreadsheetTable({
                   type="button"
                   variant={formatLocked || scrollLockMode ? "default" : "ghost"}
                   size="sm"
-                  className="h-9 sm:h-10 w-9 sm:w-10 rounded-none border-0 border-l border-border/50 px-0"
+                  className="h-9 lg:h-10 w-9 lg:w-10 rounded-none border-0 border-l border-border/50 px-0"
                   title="Pilih mode proteksi spreadsheet"
                   onPointerDown={protectionDropdownTapGuard.onPointerDown}
                   onPointerMove={protectionDropdownTapGuard.onPointerMove}
@@ -1960,7 +1960,7 @@ export function SpreadsheetTable({
             onClick={onUndo}
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
-            className="h-9 w-9 sm:h-10 sm:w-10"
+            className="h-9 w-9 lg:h-10 lg:w-10"
             style={{ touchAction: 'manipulation' }}
           >
             <Undo2 className="w-4 h-4" />
@@ -1971,7 +1971,7 @@ export function SpreadsheetTable({
             onClick={onRedo}
             disabled={!canRedo}
             title="Redo (Ctrl+Y)"
-            className="h-9 w-9 sm:h-10 sm:w-10"
+            className="h-9 w-9 lg:h-10 lg:w-10"
             style={{ touchAction: 'manipulation' }}
           >
             <Redo2 className="w-4 h-4" />
@@ -1984,7 +1984,7 @@ export function SpreadsheetTable({
             onClick={handleReset}
             disabled={formatLocked}
             title="Reset semua pengaturan"
-            className={`h-9 w-9 sm:h-10 sm:w-10 ${formatLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`h-9 w-9 lg:h-10 lg:w-10 ${formatLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
             style={{ touchAction: 'manipulation' }}
           >
             <RotateCcw className="w-4 h-4" />
@@ -1995,7 +1995,7 @@ export function SpreadsheetTable({
               type="button"
               variant="outline"
               size="icon"
-              className="h-9 w-9 sm:h-10 sm:w-10"
+              className="h-9 w-9 lg:h-10 lg:w-10"
               onClick={() => triggerTour(fullscreenTourKey)}
               title="Panduan toolbar fullscreen"
               aria-label="Buka panduan toolbar fullscreen"
@@ -2020,7 +2020,7 @@ export function SpreadsheetTable({
         </div>
 
         {/* Right side - Zoom & Search */}
-        <div className="sipena-grade-toolbar-view flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
+        <div className="sipena-grade-toolbar-view flex min-w-0 flex-wrap items-center justify-start gap-1.5 lg:gap-2 sm:justify-end">
           {toolbarExtra && (
             <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
               {toolbarExtra}
@@ -2049,7 +2049,7 @@ export function SpreadsheetTable({
                 onBlur={handleZoomInputBlur}
                 onKeyDown={handleZoomInputKeyDown}
                 disabled={formatLocked}
-                className="w-10 text-center bg-transparent border-none outline-none text-xs sm:text-sm font-medium disabled:cursor-not-allowed"
+                className="w-10 text-center bg-transparent border-none outline-none text-xs lg:text-sm font-medium disabled:cursor-not-allowed"
               />
               <span className="text-xs text-muted-foreground">%</span>
             </div>
@@ -2078,7 +2078,7 @@ export function SpreadsheetTable({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="sipena-grade-fullscreen-trigger h-9 gap-1 px-2.5 sm:px-3"
+                    className="sipena-grade-fullscreen-trigger h-9 lg:h-10 gap-1.5 lg:gap-2 px-2.5 lg:px-3"
                     onPointerDown={fullscreenDropdownTapGuard.onPointerDown}
                     onPointerMove={fullscreenDropdownTapGuard.onPointerMove}
                     onPointerCancel={fullscreenDropdownTapGuard.onPointerCancel}
@@ -2087,7 +2087,7 @@ export function SpreadsheetTable({
                     style={{ touchAction: 'pan-x pan-y' }}
                   >
                     <Maximize2 className="w-4 h-4" />
-                    <span className="sipena-grade-fullscreen-label hidden sm:inline">Fullscreen</span>
+                    <span className="sipena-grade-fullscreen-label hidden lg:inline">Fullscreen</span>
                     <ChevronDown className="sipena-grade-fullscreen-chevron w-3 h-3 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -2113,11 +2113,11 @@ export function SpreadsheetTable({
                 variant="outline"
                 size="sm"
                 onClick={onEnterFullscreen}
-                className="h-9 gap-1 px-2.5 sm:px-3"
+                className="h-9 lg:h-10 gap-1.5 lg:gap-2 px-2.5 lg:px-3"
                 style={{ touchAction: 'manipulation' }}
               >
                 <Maximize2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Fullscreen</span>
+                <span className="hidden lg:inline">Fullscreen</span>
               </Button>
             )
           )}
