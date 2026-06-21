@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.65",
+    version: "2.4.65",
+    title: "Restorasi Tombol Aksi Fullscreen Viewport Sempit",
+    description: "Perbaikan hilangnya tombol kelola nilai, rumus nilai, dan pembulatan pada mode Fullscreen di viewport sempit (mobile/tablet).",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Mengembalikan tampilan slot Kelola Nilai, Rumus Nilai, dan Pembulatan yang sebelumnya tersembunyi (display: none) pada viewport di bawah 1080px dalam mode fullscreen.",
+      "Memaksa layout toolbar fullscreen menggunakan CSS Grid (!important) untuk mengesampingkan flex-nowrap Tailwind, sehingga tombol dan kolom pencarian membungkus (wrap) dengan rapi ke baris kedua di layar sempit.",
+      "Menjaga konsistensi fungsionalitas penuh lembar nilai antara mode Desktop dan mode Mobile/Tablet saat berada dalam layar penuh."
+    ]
+  },
+  {
     id: "v2.4.64",
     version: "2.4.64",
     title: "Animasi Tinggi Dua Arah & Scroll Offset Cerdas",
