@@ -1405,6 +1405,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const ownerToolbarActions = classId && subjectId ? (
     <>
+      <div className="contents sm:flex sm:items-center sm:gap-2">
       <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--manage min-w-0">
       <DropdownMenu open={showGradeManageMenu} onOpenChange={setShowGradeManageMenu}>
         <DropdownMenuTrigger asChild>
@@ -1420,9 +1421,9 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             onClick={gradeManageDropdownTapGuard.onClick}
             style={{ touchAction: "pan-x pan-y" }}
           >
-            <Upload className="w-3.5 h-3.5" />
+            <Upload className="w-3.5 h-3.5 shrink-0" />
             <span className="sipena-grade-action-text inline sm:hidden lg:inline">Kelola Nilai</span>
-            <ChevronDown className="w-3 h-3 opacity-60" />
+            <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
@@ -1497,7 +1498,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         disabled={formulaSaving}
         className="sipena-grade-action-button h-9 w-full sm:w-auto gap-2"
       >
-        <Percent className="w-4 h-4" />
+        <Percent className="w-4 h-4 shrink-0" />
         <span className="sipena-grade-action-text inline sm:hidden lg:inline">Pembulatan</span>
         <Badge variant="secondary" className="sipena-grade-rounding-badge ml-0.5 text-[10px] inline-flex sm:hidden lg:inline-flex">
           {getReportRoundingLabel(formula.reportRounding.mode)} - {getReportRoundingTargetLabel(formula.reportRounding.target)}
@@ -1505,6 +1506,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       </Button>
       </div>
       {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground col-span-2 sm:col-span-1" />}
+      </div>
       <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search min-w-0 col-span-2 sm:col-span-1">{searchAction}</div>
     </>
   ) : null;
@@ -1513,7 +1515,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     <>
       <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary min-w-0">
       <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
-        <RefreshCw className={`w-4 h-4 lg:mr-2 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
+        <RefreshCw className={`w-4 h-4 shrink-0 lg:mr-2 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
         <span className="inline sm:hidden lg:inline">Muat Ulang</span>
       </Button>
       </div>
@@ -1766,7 +1768,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions grid grid-cols-2 gap-2 sm:flex sm:flex-nowrap sm:items-center sm:w-auto sm:justify-end w-full">
+                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:flex-1 w-full">
                         {!isFullscreen && gradeToolbarActions}
                       </div>
                     </div>

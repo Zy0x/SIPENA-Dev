@@ -68,7 +68,7 @@ export function FormulaSettings({ formula, onFormulaChange, hasChapters, trigger
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className={cn("gap-2", triggerClassName)}>
-          <Calculator className="w-4 h-4" />
+          <Calculator className="w-4 h-4 shrink-0" />
           <span className="sipena-grade-action-text inline sm:hidden lg:inline">Rumus</span>
           {formula.enabled && (
             <Badge variant="secondary" className="ml-1 text-xs inline-flex sm:hidden lg:inline-flex">
