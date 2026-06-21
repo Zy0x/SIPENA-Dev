@@ -204,7 +204,6 @@ export function ChapterStructure({
                             <label className="text-xs font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
                               <Edit2 className="h-3.5 w-3.5 text-primary" /> Edit Nama BAB
                             </label>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">Layar Lega</Badge>
                           </div>
                           <Input
                             value={editValue}
@@ -318,7 +317,6 @@ export function ChapterStructure({
                                         <label className="text-xs font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
                                           <Edit2 className="h-3.5 w-3.5 text-primary" /> Edit Nama Tugas
                                         </label>
-                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">Layar Lega</Badge>
                                       </div>
                                       <Input
                                         value={editValue}
