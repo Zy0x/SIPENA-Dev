@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.67",
+    version: "2.4.67",
+    title: "Penyelarasan Layout Fullscreen & Zoom Order",
+    description: "Perbaikan visual order zoom-pencarian dan perbaikan layout tombol Tutup (Close) pada mode layar penuh di berbagai perangkat mobile landscape.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Mengatur ulang visual order pada Baris 2 mode fullscreen menggunakan CSS Grid order (Zoom di kiri dengan lebar auto, dan Kolom Pencarian Siswa di kanan dengan lebar 1fr).",
+      "Memaksa tombol Tutup (Close) untuk selalu tampil secara eksklusif di Baris 1 format row pada seluruh lebar layar sempit/hybrid, serta menyembunyikan tombol Tutup di Baris 2 untuk mencegah pembungkusan ke baris ketiga.",
+      "Mengubah tombol Pembulatan pada Baris 1 menjadi tombol icon-only compact agar seragam dengan tombol format lainnya dan memberikan ruang bebas di layar landscape sempit."
+    ]
+  },
+  {
     id: "v2.4.66",
     version: "2.4.66",
     title: "Perbaikan Border Fokus Kotak Search Siswa",

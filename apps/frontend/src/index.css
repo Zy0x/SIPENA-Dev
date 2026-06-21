@@ -4833,24 +4833,24 @@
       padding-inline: 0.5rem;
     }
 
-    /* toolbarFormatSuffix wrapper: mengisi sisa ruang di baris 1 */
+    /* toolbarFormatSuffix wrapper: dijadikan compact agar Pembulatan berupa icon-only compact button */
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format-suffix {
-      flex: 1 1 0;
+      flex: 0 0 auto;
       min-width: 2rem;
       display: flex;
       align-items: center;
     }
 
-    /* Pembulatan button di baris 1 fullscreen: mengisi lebar penuh suffix-nya */
+    /* Pembulatan button di baris 1 fullscreen: seukuran dengan tombol format lainnya */
     .sipena-grade-toolbar--fullscreen .sipena-grade-format-suffix-rounding {
-      width: 100% !important;
+      width: auto !important;
       min-width: 2.25rem;
       height: 2.25rem;
-      padding-inline: 0.625rem;
+      padding-inline: 0.5rem;
       justify-content: center;
     }
 
-    /* Close button: pojok kanan baris 1 — pisah dari suffix dengan ml-auto */
+    /* Close button: pojok kanan baris 1 — dipaksa tampil di Baris 1 format row */
     .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
       position: static;
       flex: 0 0 auto;
@@ -4859,6 +4859,10 @@
       min-width: 2.25rem;
       height: 2.25rem;
       padding-inline: 0.5rem;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format .sipena-grade-close-button {
+      display: flex !important;
     }
 
     /* ── BARIS 2: [zoom auto] [search 1fr] ── */
@@ -4871,8 +4875,14 @@
       min-width: 0;
     }
 
-    /* Zoom: kolom kiri baris 2 — auto width */
+    /* Sembunyikan close button di Baris 2 agar tidak merusak tata letak grid */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view .sipena-grade-close-button {
+      display: none !important;
+    }
+
+    /* Zoom: kolom kiri baris 2 — diatur visual order agar berada di kolom kiri */
     .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control {
+      order: 1;
       flex: 0 0 auto;
       min-width: 6.5rem;
       padding: 0.125rem;
@@ -4884,9 +4894,10 @@
 
     /*
      * toolbar-extra sekarang hanya berisi search slot (fullscreenSearchOnly).
-     * Ia mengisi 1fr di baris 2 (kolom kanan grid).
+     * Ia mengisi 1fr di baris 2 (kolom kanan grid) — diatur visual order agar berada di kolom kanan.
      */
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-extra {
+      order: 2;
       display: flex !important;
       align-items: center;
       min-width: 0;
