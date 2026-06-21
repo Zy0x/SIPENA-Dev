@@ -3933,7 +3933,7 @@
   }
 
   .sipena-grade-toolbar-view {
-    width: 100%;
+    width: auto;
   }
 
   .sipena-grade-toolbar-extra {
@@ -4140,7 +4140,7 @@
     }
 
     .sipena-grade-card-title {
-      max-width: clamp(10rem, 23vw, 16rem);
+      max-width: none;
     }
 
     .sipena-grade-card-actions {
@@ -4205,7 +4205,7 @@
     }
 
     .sipena-grade-card-title {
-      max-width: clamp(9rem, 21vw, 14rem);
+      max-width: none;
     }
 
     .sipena-grade-card-actions {
@@ -4421,7 +4421,7 @@
     }
 
     .sipena-grade-card-title {
-      max-width: min(100%, 13rem);
+      max-width: none;
     }
 
     .sipena-grade-card-actions .sipena-grade-action-button {

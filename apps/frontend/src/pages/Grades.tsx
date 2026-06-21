@@ -1757,8 +1757,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                 <Card className="w-full min-w-0 overflow-visible rounded-none border-0 shadow-none" data-tour="grade-table">
                   <CardHeader className="sipena-grade-card-header relative z-30 bg-card px-3 pb-3 sm:px-6 border-b border-border/50">
                     <div className="sipena-grade-card-header-grid flex min-w-0 flex-wrap gap-2 sm:gap-3 items-start justify-end">
-                      <div className="sipena-grade-card-heading flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3 sm:mt-1.5 w-full sm:flex-[100_1_0%] sm:min-w-[120px]">
-                        <CardTitle className="sipena-grade-card-title text-sm sm:text-base truncate">
+                      <div className="sipena-grade-card-heading flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3 sm:mt-1.5 w-full sm:w-auto sm:mr-auto">
+                        <CardTitle className="sipena-grade-card-title text-sm sm:text-base">
                           {selectedClass?.name} - {selectedSubject?.name}
                         </CardTitle>
                         <Badge variant="pass" className="gap-1 text-xs">

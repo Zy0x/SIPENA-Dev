@@ -1864,14 +1864,14 @@ export function SpreadsheetTable({
       {/* Toolbar - matching template style */}
       <div
         data-tour="grade-toolbar"
-        className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3 flex flex-wrap items-center justify-between gap-2`}
+        className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3 flex flex-nowrap items-center justify-between gap-2`}
         onPointerDownCapture={handleToolbarPointerDownCapture}
         onPointerMoveCapture={handleToolbarPointerMoveCapture}
         onPointerUpCapture={handleToolbarPointerEndCapture}
         onPointerCancelCapture={handleToolbarPointerEndCapture}
         onClickCapture={handleToolbarClickCapture}
       >
-        <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1.5 lg:gap-2">
+        <div className="sipena-grade-toolbar-format flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2">
           {/* Freeze Menu Toggle */}
           <Button
             data-tour="grade-freeze-control"
@@ -2020,7 +2020,7 @@ export function SpreadsheetTable({
         </div>
 
         {/* Right side - Zoom & Search */}
-        <div className="sipena-grade-toolbar-view flex min-w-0 flex-wrap items-center justify-start gap-1.5 lg:gap-2 sm:justify-end w-full sm:w-auto">
+        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end">
           {toolbarExtra && (
             <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
               {toolbarExtra}
