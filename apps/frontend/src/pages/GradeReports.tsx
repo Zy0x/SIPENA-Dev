@@ -356,8 +356,8 @@ export default function GradeReports() {
     if (!target.requestFullscreen) {
       setReportFullscreenMode("app");
       toast({
-        title: "Layar penuh native tidak tersedia",
-        description: "Mode layar penuh panel tetap dibuka di dalam tab browser.",
+        title: "Layar penuh maksimal tidak tersedia",
+        description: "Layar penuh browser tetap dibuka di dalam tab.",
       });
       return;
     }
@@ -367,8 +367,8 @@ export default function GradeReports() {
     } catch {
       setReportFullscreenMode("app");
       toast({
-        title: "Layar penuh native diblokir",
-        description: "Browser tidak mengizinkan layar penuh perangkat. Mode layar penuh panel tetap aktif.",
+        title: "Layar penuh maksimal diblokir",
+        description: "Browser tidak mengizinkan layar penuh perangkat. Layar penuh browser tetap aktif.",
       });
     }
   }, [toast]);
@@ -1875,15 +1875,15 @@ export default function GradeReports() {
                         <DropdownMenuItem onClick={openReportAppFullscreen} className="min-h-[48px] items-start gap-2 py-2.5">
                           <Maximize2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                           <div>
-                            <p className="font-medium">Fullscreen Panel</p>
-                            <p className="text-xs text-muted-foreground">Layar penuh di dalam tab browser.</p>
+                            <p className="font-medium">Layar Penuh Browser</p>
+                            <p className="text-xs text-muted-foreground">Membuka Laporan Nilai lebih luas, tetapi tetap berada di dalam tampilan browser.</p>
                           </div>
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => void openReportBrowserFullscreen()} className="min-h-[48px] items-start gap-2 py-2.5">
                           <Maximize2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                           <div>
-                            <p className="font-medium">Fullscreen Native</p>
-                            <p className="text-xs text-muted-foreground">Memakai mode layar penuh perangkat.</p>
+                            <p className="font-medium">Layar Penuh Maksimal</p>
+                            <p className="text-xs text-muted-foreground">Membuka Laporan Nilai memenuhi seluruh layar perangkat.</p>
                           </div>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
