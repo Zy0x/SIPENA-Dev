@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.72";
+export const APP_VERSION = "2.4.73";
 export const VERSION_DATE = "2026-06-22";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.73": "Mengunci scroll body saat sidebar mobile terbuka, isolasi overscroll sidebar, dan menambahkan touch-none pada overlay mobile.",
   "2.4.72": "Revert simulasi rotasi layar dan penataan 3 kolom Baris 2 toolbar fullscreen, dengan tetap mempertahankan optimasi scrolling spreadsheet.",
   "2.4.71": "Optimasi performa mode fullscreen dengan direct DOM scroll updates.",
   "2.4.70": "Batas tinggi dropdown Select agar tidak terpotong di screen pendek/landscape dan opsi dapat digulir.",

@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.73",
+    version: "2.4.73",
+    title: "Perbaikan Gap dan Glitch Scroll pada Sidebar Mobile",
+    description: "Mengunci scroll latar belakang halaman (body/html) dan mengisolasi overscroll pada navigasi sidebar untuk menghilangkan celah visual dan konflik dengan footer saat scroll cepat.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Menambahkan useEffect di AppLayout untuk mengunci scroll body/html (overflow-hidden, overscroll-contain) ketika sidebar mobile terbuka.",
+      "Menambahkan kelas touch-none pada overlay mobile untuk mencegah gesture scroll menembus halaman latar belakang.",
+      "Mengubah overscroll-behavior-y menjadi contain pada Menu navigasi sidebar untuk menghentikan scroll chaining.",
+      "Menambahkan kelas sipena-scroll-isolated pada sidebar aside saat terbuka di perangkat mobile."
+    ]
+  },
+  {
     id: "v2.4.72",
     version: "2.4.72",
     title: "Revert Rotasi Layar & Penataan Grid Toolbar Fullscreen",

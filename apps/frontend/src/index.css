@@ -5171,6 +5171,7 @@
   height: min(100dvh, var(--sipena-visual-viewport-height, 100dvh));
   max-height: min(100dvh, var(--sipena-visual-viewport-height, 100dvh));
   overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .sipena-app-sidebar[data-sidebar-state="open"] {
@@ -5179,7 +5180,7 @@
 
 [aria-label="Menu navigasi"] {
   overscroll-behavior-x: contain;
-  overscroll-behavior-y: auto;
+  overscroll-behavior-y: contain;
 }
 
 @media (max-width: 360px) {

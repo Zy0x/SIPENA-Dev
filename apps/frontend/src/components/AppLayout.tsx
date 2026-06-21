@@ -263,6 +263,32 @@ export default function AppLayout({ children }: AppLayoutProps) {
      }
    }, [isDesktopSidebar, sidebarOpen]);
 
+  // Lock body scroll and contain overscroll when mobile sidebar is open
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    if (!isDesktopSidebar && sidebarOpen) {
+      const html = document.documentElement;
+      const body = document.body;
+      const previousHtmlOverflow = html.style.overflow;
+      const previousHtmlOverscrollBehavior = html.style.overscrollBehavior;
+      const previousBodyOverflow = body.style.overflow;
+      const previousBodyOverscrollBehavior = body.style.overscrollBehavior;
+
+      html.style.overflow = "hidden";
+      html.style.overscrollBehavior = "contain";
+      body.style.overflow = "hidden";
+      body.style.overscrollBehavior = "contain";
+
+      return () => {
+        html.style.overflow = previousHtmlOverflow;
+        html.style.overscrollBehavior = previousHtmlOverscrollBehavior;
+        body.style.overflow = previousBodyOverflow;
+        body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+      };
+    }
+  }, [sidebarOpen, isDesktopSidebar]);
+
   // Auto-expand menu if child is active (supports hash fragments)
   useEffect(() => {
     navItems.forEach(item => {
@@ -417,7 +443,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
        {/* Mobile overlay */}
        <div
          ref={overlayRef}
-         className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 lg:hidden"
+         className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 lg:hidden touch-none"
          onClick={() => setSidebarOpen(false)}
          style={{ display: "none", opacity: 0 }}
          aria-hidden="true"
@@ -433,7 +459,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
             "bg-card/95 backdrop-blur-xl border-r border-border",
             "shadow-2xl shadow-black/10",
            "lg:translate-x-0 transition-[width] duration-300 ease-out",
-           effectiveSidebarCollapsed ? "lg:w-[72px]" : "lg:w-[260px]"
+           effectiveSidebarCollapsed ? "lg:w-[72px]" : "lg:w-[260px]",
+           !isDesktopSidebar && sidebarOpen && "sipena-scroll-isolated"
          )}
          style={{
            transform: "translateX(-100%)",
