@@ -1411,7 +1411,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           <Button
             variant="outline"
             size="sm"
-            className="sipena-grade-action-button h-9 min-w-[44px] select-none gap-1.5 text-xs"
+            className="sipena-grade-action-button h-9 min-w-[44px] w-full sm:w-auto select-none gap-1.5 text-xs"
             aria-label="Kelola file nilai"
             onPointerDown={gradeManageDropdownTapGuard.onPointerDown}
             onPointerMove={gradeManageDropdownTapGuard.onPointerMove}
@@ -1485,17 +1485,17 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         formula={formula}
         onFormulaChange={handleFormulaChange}
         hasChapters={hasChaptersWithAssignments}
-        triggerClassName="sipena-grade-action-button h-9"
+        triggerClassName="sipena-grade-action-button h-9 w-full sm:w-auto"
       />
       </div>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--rounding min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--rounding min-w-0 col-span-2 sm:col-span-1">
       <Button
         type="button"
         variant="outline"
         size="sm"
         onClick={() => setShowReportRoundingSettings(true)}
         disabled={formulaSaving}
-        className="sipena-grade-action-button h-9 gap-2"
+        className="sipena-grade-action-button h-9 w-full sm:w-auto gap-2"
       >
         <Percent className="w-4 h-4" />
         <span className="sipena-grade-action-text">Pembulatan</span>
@@ -1504,26 +1504,26 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         </Badge>
       </Button>
       </div>
-      {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search min-w-0">{searchAction}</div>
+      {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground col-span-2 sm:col-span-1" />}
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search min-w-0 col-span-2 sm:col-span-1">{searchAction}</div>
     </>
   ) : null;
 
   const guestToolbarActions = (
     <>
       <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary min-w-0">
-      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
+      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
         <RefreshCw className={`w-4 h-4 mr-2 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
         <span className="hidden sm:inline">Muat Ulang</span>
       </Button>
       </div>
       <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary min-w-0">
-      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9" onClick={() => setShowGuestKkmDialog(true)}>
+      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto" onClick={() => setShowGuestKkmDialog(true)}>
         <Settings className="w-4 h-4 mr-2" />
         KKM: {kkm}
       </Button>
       </div>
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search min-w-0">{searchAction}</div>
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search min-w-0 col-span-2 sm:col-span-1">{searchAction}</div>
     </>
   );
 
@@ -1766,7 +1766,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:w-auto sm:justify-end w-full">
                         {!isFullscreen && gradeToolbarActions}
                       </div>
                     </div>

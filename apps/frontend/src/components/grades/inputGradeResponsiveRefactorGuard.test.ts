@@ -75,12 +75,21 @@ describe("Input Nilai responsive refactor guard", () => {
     expect(chapter).toContain("border-l-4");
   });
 
-  it("uses container query for card actions bento layout and low-height viewport rule", () => {
-    const styles = source("apps/frontend/src/index.css");
+  it("uses tailwind grid classes for card actions bento layout", () => {
+    const sourceCode = source("apps/frontend/src/pages/Grades.tsx");
 
-    // Container query for card actions (reacts to panel width, not viewport)
-    expect(styles).toContain("@container grade-card (max-width: 639px)");
-    expect(styles).toContain("container-name: grade-card");
+    // Assert that the Bento grid is applied via Tailwind utility classes
+    expect(sourceCode).toContain("sipena-grade-card-actions grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:w-auto sm:justify-end w-full");
+    
+    // Assert that rounding slot is full width on mobile
+    expect(sourceCode).toContain("sipena-grade-toolbar-slot--rounding min-w-0 col-span-2 sm:col-span-1");
+
+    // Assert that search slot is full width on mobile
+    expect(sourceCode).toContain("sipena-grade-toolbar-slot--search min-w-0 col-span-2 sm:col-span-1");
+  });
+
+  it("retains low-height viewport rule for fullscreen mode", () => {
+    const styles = source("apps/frontend/src/index.css");
 
     // Low-height landscape viewport rule (946×335 and similar)
     expect(styles).toContain("@media (max-height: 380px)");
