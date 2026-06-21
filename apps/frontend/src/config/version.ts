@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.74";
+export const APP_VERSION = "2.4.75";
 export const VERSION_DATE = "2026-06-22";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.75": "Perbaikan tata letak celah (gap) pada toolbar di luar mode fullscreen, penggunaan ikon rotasi kustom Flaticon, serta penambahan logika rotasi otomatis kiri/kanan berdasarkan orientasi fisik dan menu manual.",
   "2.4.74": "Menambahkan tombol Rotasi Layar (Rotate) di antara Zoom dan Search Siswa pada mode fullscreen.",
   "2.4.73": "Mengunci scroll body saat sidebar mobile terbuka, isolasi overscroll sidebar, dan menambahkan touch-none pada overlay mobile.",
   "2.4.72": "Revert simulasi rotasi layar dan penataan 3 kolom Baris 2 toolbar fullscreen, dengan tetap mempertahankan optimasi scrolling spreadsheet.",

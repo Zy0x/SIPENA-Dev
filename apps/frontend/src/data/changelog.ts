@@ -42,6 +42,24 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.75",
+    version: "2.4.75",
+    title: "Perbaikan Toolbar Non-Fullscreen & Pilihan Arah Rotasi Layar",
+    description: "Memperbaiki gap kosong lebar pada toolbar di luar mode fullscreen, menggunakan ikon rotasi kustom Flaticon, serta menambahkan logika rotasi pintar ke kiri/kanan berdasarkan orientasi fisik dan menu manual.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Membuat kelas w-full pada toolbar kanan kondisional sehingga tidak memicu gap kosong lebar pada toolbar saat di luar mode fullscreen.",
+      "Mengganti ikon rotasi layar dengan ikon RotateDeviceIcon kustom yang didesain serupa dengan Flaticon 2313449 (telepon miring 45 derajat dengan panah melingkar).",
+      "Memperluas status rotasi dari boolean menjadi rotationState ('none' | 'left' | 'right') untuk mendukung rotasi ke kiri dan ke kanan secara independen.",
+      "Mendengarkan event deviceorientation untuk mendeteksi kemiringan fisik perangkat (gamma) secara dinamis agar rotasi otomatis menyesuaikan dengan arah hadap perangkat.",
+      "Mendengarkan event screen.orientation change untuk otomatis mensinkronkan rotasi layout saat perangkat diputar secara fisik.",
+      "Menambahkan DropdownMenu pada tombol rotasi layar mode fullscreen untuk memberikan opsi rotasi manual (Putar ke Kiri, Putar ke Kanan, Reset Portrait).",
+      "Menambahkan kelas .sipena-layout-rotated-left (-90deg) dan .sipena-layout-rotated-right (90deg) pada stylesheet utama."
+    ]
+  },
+  {
     id: "v2.4.74",
     version: "2.4.74",
     title: "Fitur Rotasi Layar (Rotate Screen) pada Mode Fullscreen",

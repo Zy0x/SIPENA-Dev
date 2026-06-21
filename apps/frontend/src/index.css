@@ -5243,7 +5243,18 @@
   min-width: max-content;
 }
 
-.sipena-layout-rotated {
+.sipena-layout-rotated-left {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 100dvh !important;
+  height: 100vw !important;
+  transform: translate(-50%, -50%) rotate(-90deg) !important;
+  transform-origin: center center !important;
+  z-index: 9999 !important;
+}
+
+.sipena-layout-rotated-right {
   position: fixed !important;
   top: 50% !important;
   left: 50% !important;

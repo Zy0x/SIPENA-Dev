@@ -53,6 +53,35 @@ import {
 import { isVerticalScrollBoundary, scrollPageBy } from "@/lib/scrollChaining";
 import { useCoarsePointerTapGuard } from "@/hooks/useCoarsePointerTapGuard";
 
+// Smartphone rotation icon SVG (styled after Flaticon 2313449)
+const RotateDeviceIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="1.1em"
+    height="1.1em"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    {/* Tilted phone outline */}
+    <g transform="translate(12, 12) rotate(45)">
+      <rect x="-4" y="-7.5" width="8" height="15" rx="1.5" stroke="currentColor" strokeWidth="2" fill="none" />
+      {/* Notch */}
+      <path d="M -1.5 -7.5 L -1.5 -6.5 A 0.5 0.5 0 0 0 -1 -6 L 1 -6 A 0.5 0.5 0 0 0 1.5 -6.5 L 1.5 -7.5 Z" fill="currentColor" stroke="none" />
+    </g>
+    {/* Curved arrows wrapping around (clockwise) */}
+    {/* Top-left arrow */}
+    <path d="M 5 16 A 9 9 0 0 1 19 8" />
+    <path d="M 15 8 h 4 v 4" />
+    {/* Bottom-right arrow */}
+    <path d="M 19 8 A 9 9 0 0 1 5 16" />
+    <path d="M 9 16 h -4 v -4" />
+  </svg>
+);
+
 // Types
 interface Chapter {
   id: string;
@@ -296,12 +325,13 @@ export function SpreadsheetTable({
   const headersTranslationRef = useRef<HTMLDivElement>(null);
   const frozenColumnsTranslationRef = useRef<HTMLDivElement>(null);
 
-  const [isRotated, setIsRotated] = useState(false);
+  const [rotationState, setRotationState] = useState<"none" | "left" | "right">("none");
+  const lastTiltRef = useRef<"left" | "right">("left");
 
   // Reset rotation when exiting fullscreen mode
   useEffect(() => {
     if (!isFullscreen) {
-      setIsRotated(false);
+      setRotationState("none");
       if (typeof window !== "undefined" && screen.orientation) {
         try {
           const orient = screen.orientation as any;
@@ -315,16 +345,66 @@ export function SpreadsheetTable({
     }
   }, [isFullscreen]);
 
-  // Handle native screen orientation lock when isRotated changes in native browser fullscreen mode
+  // Listen to device physical tilt (accelerometer/gyroscope) to automatically select left/right rotation
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleDeviceOrientation = (e: DeviceOrientationEvent) => {
+      // gamma is the left/right tilt in degrees [-90, 90]
+      // If the user rotates the device counter-clockwise (tilts left), gamma is negative
+      // If they rotate clockwise (tilts right), gamma is positive
+      const gamma = e.gamma;
+      if (gamma !== null) {
+        if (gamma < -15) {
+          lastTiltRef.current = "left";
+        } else if (gamma > 15) {
+          lastTiltRef.current = "right";
+        }
+      }
+    };
+    window.addEventListener("deviceorientation", handleDeviceOrientation);
+    return () => {
+      window.removeEventListener("deviceorientation", handleDeviceOrientation);
+    };
+  }, []);
+
+  // Automatically sync rotationState with screen.orientation changes in fullscreen mode
+  useEffect(() => {
+    if (!isFullscreen || typeof window === "undefined" || !screen.orientation) return;
+
+    const handleOrientationChange = () => {
+      const type = screen.orientation.type;
+      if (type === "landscape-primary") {
+        setRotationState("left");
+      } else if (type === "landscape-secondary") {
+        setRotationState("right");
+      } else if (type.startsWith("portrait")) {
+        setRotationState("none");
+      }
+    };
+
+    screen.orientation.addEventListener("change", handleOrientationChange);
+    // Initialize immediately
+    handleOrientationChange();
+
+    return () => {
+      screen.orientation.removeEventListener("change", handleOrientationChange);
+    };
+  }, [isFullscreen]);
+
+  // Handle native screen orientation lock when rotationState changes in native browser fullscreen mode
   useEffect(() => {
     if (typeof window === "undefined" || !screen.orientation) return;
     const applyNativeRotation = async () => {
       if (isFullscreen) {
         try {
           const orient = screen.orientation as any;
-          if (isRotated) {
+          if (rotationState === "left") {
             if (typeof orient.lock === "function") {
-              await orient.lock("landscape");
+              await orient.lock("landscape-primary");
+            }
+          } else if (rotationState === "right") {
+            if (typeof orient.lock === "function") {
+              await orient.lock("landscape-secondary");
             }
           } else {
             if (typeof orient.unlock === "function") {
@@ -337,7 +417,7 @@ export function SpreadsheetTable({
       }
     };
     applyNativeRotation();
-  }, [isRotated, isFullscreen]);
+  }, [rotationState, isFullscreen]);
 
   // Apply scroll transforms directly to DOM elements to bypass React re-renders
   const syncScrollTransforms = useCallback(() => {
@@ -1937,9 +2017,9 @@ export function SpreadsheetTable({
   return (
     <div 
       ref={containerRef}
-      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? (isRotated ? 'sipena-layout-rotated' : 'fixed inset-0 z-[9999]') : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
+      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? (rotationState === 'left' ? 'sipena-layout-rotated-left' : rotationState === 'right' ? 'sipena-layout-rotated-right' : 'fixed inset-0 z-[9999]') : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
       style={{
-        ...(isFullscreen && !isRotated && {
+        ...(isFullscreen && rotationState === 'none' && {
           width: '100vw',
           height: fullscreenViewportHeight,
           maxHeight: fullscreenViewportHeight,
@@ -2112,7 +2192,7 @@ export function SpreadsheetTable({
         </div>
 
         {/* Right side - Zoom, Rotate & Search */}
-        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end w-full">
+        <div className={`sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end ${isFullscreen ? 'w-full' : ''}`}>
           {/* Zoom Controls - matching template */}
           <div data-tour="grade-zoom-control" className={`sipena-grade-zoom-control flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
             <Button 
@@ -2151,19 +2231,33 @@ export function SpreadsheetTable({
             </Button>
           </div>
 
-          {/* Rotate Control - fullscreen mode only */}
+          {/* Rotate Control - fullscreen mode only (with Flaticon layout and tilt auto-detection / manual override) */}
           {isFullscreen && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setIsRotated(!isRotated)}
-              title="Rotasi Layar"
-              className="sipena-grade-rotate-control h-9 w-9 flex-shrink-0"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <RotateCw className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  title="Rotasi Layar"
+                  className="sipena-grade-rotate-control h-9 w-9 flex-shrink-0"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  <RotateDeviceIcon className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => setRotationState("left")} className="flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4" /> Putar ke Kiri
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRotationState("right")} className="flex items-center gap-2">
+                  <RotateCw className="h-4 w-4" /> Putar ke Kanan
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRotationState("none")} disabled={rotationState === "none"} className="flex items-center gap-2">
+                  <Maximize2 className="h-4 w-4" /> Reset Portrait
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {toolbarExtra && (
