@@ -1975,30 +1975,32 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                   </CardHeader>
                   <CardContent className="relative z-0 min-w-0 overflow-hidden p-0">
                     <div className="sipena-grade-table-shell h-[70dvh] min-h-[420px] overflow-hidden">
-                      <SpreadsheetTable
-                        students={filteredStudents}
-                        chapters={chapters}
-                        assignmentsByChapter={assignmentsByChapter}
-                        studentAverages={studentAverages}
-                        kkm={kkm}
-                        getGradeValue={getGradeValue}
-                        onSaveGrade={handleSaveGrade}
-                        savingGrades={savingGrades}
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        isFullscreen={false}
-                        onClose={() => {}}
-                        className={selectedClass?.name || ""}
-                        subjectName={selectedSubject?.name || ""}
-                        canUndo={isGuestMode ? false : canUndo}
-                        canRedo={isGuestMode ? false : canRedo}
-                        onUndo={isGuestMode ? undefined : undo}
-                        onRedo={isGuestMode ? undefined : redo}
-                        onEnterFullscreen={openAppFullscreen}
-                        onEnterBrowserFullscreen={openBrowserFullscreen}
-                        toolbarExtra={null}
-                        tableColorScheme={gradeTableColorScheme}
-                      />
+                      {!isFullscreen && (
+                        <SpreadsheetTable
+                          students={filteredStudents}
+                          chapters={chapters}
+                          assignmentsByChapter={assignmentsByChapter}
+                          studentAverages={studentAverages}
+                          kkm={kkm}
+                          getGradeValue={getGradeValue}
+                          onSaveGrade={handleSaveGrade}
+                          savingGrades={savingGrades}
+                          searchQuery={searchQuery}
+                          onSearchChange={setSearchQuery}
+                          isFullscreen={false}
+                          onClose={() => {}}
+                          className={selectedClass?.name || ""}
+                          subjectName={selectedSubject?.name || ""}
+                          canUndo={isGuestMode ? false : canUndo}
+                          canRedo={isGuestMode ? false : canRedo}
+                          onUndo={isGuestMode ? undefined : undo}
+                          onRedo={isGuestMode ? undefined : redo}
+                          onEnterFullscreen={openAppFullscreen}
+                          onEnterBrowserFullscreen={openBrowserFullscreen}
+                          toolbarExtra={null}
+                          tableColorScheme={gradeTableColorScheme}
+                        />
+                      )}
                     </div>
                   </CardContent>
                 </Card>

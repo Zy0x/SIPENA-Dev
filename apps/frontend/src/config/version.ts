@@ -1,9 +1,9 @@
 // SIPENA Version Configuration
 export const APP_VERSION = "2.4.71";
-export const VERSION_DATE = "2026-06-21";
+export const VERSION_DATE = "2026-06-22";
 
 export const VERSION_HISTORY: Record<string, string> = {
-  "2.4.71": "Kolom Nama Siswa diperkecil menjadi 115px secara dinamis pada viewport mobile/fullscreen, dan 160px di layar lebar.",
+  "2.4.71": "Optimasi performa mode fullscreen dengan direct DOM scroll updates dan penambahan kontrol simulasi rotasi layar portrait/landscape di toolbar.",
   "2.4.70": "Batas tinggi dropdown Select agar tidak terpotong di screen pendek/landscape dan opsi dapat digulir.",
   "2.4.69": "Perbaikan duplikasi tombol tutup dan pelebaran dinamis search box fullscreen.",
   "2.4.68": "Prioritas layout 1 baris fullscreen untuk viewport lebar.",

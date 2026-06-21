@@ -16,6 +16,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  RotateCw,
   X,
   CheckCircle2,
   Star,
@@ -234,8 +235,6 @@ export function SpreadsheetTable({
   // State - based on template
   const [zoomLevel, setZoomLevel] = useState(100);
   const [zoomInput, setZoomInput] = useState('100');
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [scrollTop, setScrollTop] = useState(0);
   const [frozenColumns, setFrozenColumns] = useState<Set<number>>(new Set([0, 1]));
   const [frozenRows, setFrozenRows] = useState<Set<number>>(new Set());
   const [columnWidths, setColumnWidths] = useState<Record<number, number>>({});
@@ -290,6 +289,42 @@ export function SpreadsheetTable({
   const freezeMenuRef = useRef<HTMLDivElement>(null);
   const freezeMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const frozenTouchLayerRef = useRef<HTMLDivElement>(null);
+
+  // New refs for direct DOM scroll translation
+  const chapterDataSiswaTranslationRef = useRef<HTMLDivElement>(null);
+  const chapterHeadersTranslationRef = useRef<HTMLDivElement>(null);
+  const headersTranslationRef = useRef<HTMLDivElement>(null);
+  const frozenColumnsTranslationRef = useRef<HTMLDivElement>(null);
+  const [isRotated, setIsRotated] = useState(false);
+
+  // Apply scroll transforms directly to DOM elements to bypass React re-renders
+  const syncScrollTransforms = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const left = container.scrollLeft;
+    const top = container.scrollTop;
+
+    const leftTransform = `translate3d(-${left}px, 0, 0)`;
+    const topTransform = `translate3d(0, -${top}px, 0)`;
+
+    if (chapterDataSiswaTranslationRef.current) {
+      chapterDataSiswaTranslationRef.current.style.transform = leftTransform;
+    }
+    if (chapterHeadersTranslationRef.current) {
+      chapterHeadersTranslationRef.current.style.transform = leftTransform;
+    }
+    if (headersTranslationRef.current) {
+      headersTranslationRef.current.style.transform = leftTransform;
+    }
+    if (frozenColumnsTranslationRef.current) {
+      frozenColumnsTranslationRef.current.style.transform = topTransform;
+    }
+  }, []);
+
+  useEffect(() => {
+    syncScrollTransforms();
+  });
   const toolbarDragRef = useRef<{
     x: number;
     y: number;
@@ -650,21 +685,14 @@ export function SpreadsheetTable({
   }, [editingCell, onUndo, onRedo]);
 
   // Scroll handler
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    pendingScrollRef.current = {
-      left: target.scrollLeft,
-      top: target.scrollTop,
-    };
-
+  const handleScroll = useCallback((_e?: React.UIEvent<HTMLDivElement>) => {
     if (scrollRafRef.current !== null) return;
 
     scrollRafRef.current = window.requestAnimationFrame(() => {
       scrollRafRef.current = null;
-      setScrollLeft(pendingScrollRef.current.left);
-      setScrollTop(pendingScrollRef.current.top);
+      syncScrollTransforms();
     });
-  }, []);
+  }, [syncScrollTransforms]);
 
   useEffect(() => () => {
     if (scrollRafRef.current !== null) {
@@ -823,8 +851,6 @@ export function SpreadsheetTable({
     setFrozenRows(new Set([0]));
     setZoomLevel(100);
     setZoomInput('100');
-    setScrollLeft(0);
-    setScrollTop(0);
     setEditingCell(null);
     setEditValue('');
     setShowFreezeMenu(false);
@@ -833,7 +859,8 @@ export function SpreadsheetTable({
       scrollContainerRef.current.scrollLeft = 0;
       scrollContainerRef.current.scrollTop = 0;
     }
-  }, [formatLocked]);
+    syncScrollTransforms();
+  }, [formatLocked, syncScrollTransforms]);
 
   // Column resize handlers - blocked when format is locked
   const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent, colIndex: number) => {
@@ -1672,7 +1699,7 @@ export function SpreadsheetTable({
   }, [getColWidth, zoomFactor]);
 
   // Render chapter header row - FIXED: consistent header layout regardless of frozen columns
-  const renderChapterHeaders = useCallback((scrollOffset: number) => {
+  const renderChapterHeaders = useCallback(() => {
     if (chapters.length === 0) return null;
 
     const frozenWidth = getFrozenWidth();
@@ -1721,8 +1748,8 @@ export function SpreadsheetTable({
             }}
           >
             <div 
+              ref={chapterDataSiswaTranslationRef}
               className="relative"
-              style={{ transform: `translateX(-${scrollOffset}px)` }}
             >
               {/* Data Siswa header for No and Nama columns */}
               <div
@@ -1753,8 +1780,8 @@ export function SpreadsheetTable({
           }}
         >
           <div 
+            ref={chapterHeadersTranslationRef}
             className="relative"
-            style={{ transform: `translateX(-${scrollOffset}px)` }}
           >
             {/* When no frozen columns, show Data Siswa header first */}
             {frozenWidth === 0 && (
@@ -1868,7 +1895,7 @@ export function SpreadsheetTable({
   return (
     <div 
       ref={containerRef}
-      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
+      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? (isRotated ? 'sipena-layout-rotated' : 'fixed inset-0 z-[9999]') : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
       style={{
         ...(isFullscreen && {
           width: '100vw',
@@ -2042,14 +2069,8 @@ export function SpreadsheetTable({
           )}
         </div>
 
-        {/* Right side - Zoom & Search */}
-        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end">
-          {toolbarExtra && (
-            <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
-              {toolbarExtra}
-            </div>
-          )}
-
+        {/* Right side - Zoom, Rotate & Search */}
+        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end w-full">
           {/* Zoom Controls - matching template */}
           <div data-tour="grade-zoom-control" className={`sipena-grade-zoom-control flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
             <Button 
@@ -2087,6 +2108,27 @@ export function SpreadsheetTable({
               <ZoomIn className="w-4 h-4" />
             </Button>
           </div>
+
+          {/* Rotate Control - fullscreen mode only */}
+          {isFullscreen && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setIsRotated(!isRotated)}
+              title="Rotasi Layar"
+              className="sipena-grade-rotate-control h-9 w-9 flex-shrink-0"
+              style={{ touchAction: 'manipulation' }}
+            >
+              <RotateCw className="w-4 h-4" />
+            </Button>
+          )}
+
+          {toolbarExtra && (
+            <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
+              {toolbarExtra}
+            </div>
+          )}
 
           {/* Fullscreen button for non-fullscreen mode */}
           {!isFullscreen && onEnterFullscreen && (
@@ -2263,7 +2305,7 @@ export function SpreadsheetTable({
           </div>
         )}
         {/* Chapter Headers Row */}
-        {renderChapterHeaders(scrollLeft)}
+        {renderChapterHeaders()}
 
         {/* Header Row - Frozen columns */}
         <div
@@ -2289,9 +2331,9 @@ export function SpreadsheetTable({
           }}
         >
           <div
+            ref={headersTranslationRef}
             className="relative"
             style={{
-              transform: `translateX(-${scrollLeft}px)`,
               width: getNonFrozenWidth(),
             }}
           >
@@ -2360,9 +2402,9 @@ export function SpreadsheetTable({
             }}
           >
             <div
+              ref={frozenColumnsTranslationRef}
               style={{
                 position: 'relative',
-                transform: `translate3d(0, -${scrollTop}px, 0)`,
                 height: getTotalHeight(),
                 width: '100%',
               }}

@@ -44,15 +44,17 @@ export const changelogData: ChangelogEntry[] = [
   {
     id: "v2.4.71",
     version: "2.4.71",
-    title: "Kolom Nama Responsif pada Viewport Mobile & Fullscreen",
-    description: "Menyesuaikan lebar kolom Nama Siswa menjadi 115px secara dinamis pada viewport kecil/mobile (termasuk mode fullscreen), sedangkan pada layar lebar tetap 160px.",
+    title: "Optimasi Performa Fullscreen & Rotasi Layar Spreadsheet",
+    description: "Meningkatkan performa scrolling fullscreen pada perangkat low-end dan menambahkan simulasi rotasi layar portrait/landscape di toolbar.",
     type: "improvement",
     is_critical: false,
-    released_at: "2026-06-21",
+    released_at: "2026-06-22",
     details: [
-      "Menambahkan state isSmallScreen dan visual viewport resizing listener pada SpreadsheetTable untuk mendeteksi layar di bawah 1024px.",
-      "Mengubah lebar kolom Nama Siswa secara dinamis menjadi 115px (dari default 160px) apabila viewport berukuran kecil atau dalam mode fullscreen di mobile.",
-      "Memastikan layout spreadsheet (posisi kolom freeze, rata-rata, STS, SAS, dan rapor) otomatis menyesuaikan lebar dinamis ini."
+      "Mengoptimalkan performa scroll spreadsheet dengan memindahkan update translasi scroll dari React state ke manipulasi DOM Ref langsung dalam requestAnimationFrame.",
+      "Menghilangkan re-render ganda dengan melakukan unmount komponen background SpreadsheetTable saat mode fullscreen aktif.",
+      "Menambahkan tombol Rotasi Layar (Rotate) pada toolbar fullscreen di antara Zoom dan Search Siswa.",
+      "Menata ulang Baris 2 grid toolbar fullscreen menjadi 3 kolom secara proporsional sehingga Search Siswa dinamis melebar memenuhi sisa ruang.",
+      "Menambahkan kelas .sipena-layout-rotated untuk simulasi visual landscape 90 derajat pada perangkat mobile dalam posisi portrait."
     ]
   },
   {
