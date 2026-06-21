@@ -4784,8 +4784,20 @@
 
 
 
+
   @container grade-sheet (max-width: 1079px) {
-    /* ── BENTO GRID: tepat 2 baris ─────────────────────────────────────────── */
+    /*
+     * ══ BENTO GRID — TEPAT 2 BARIS ══════════════════════════════════════════════
+     *
+     * Baris 1 (.sipena-grade-toolbar-format):
+     *   [⊞][🔒][∨][↩][↪][↺][?]  ── [% Pembulatan ────────────] ── [✕]
+     *   format controls             format-suffix (flex:1)            close (ml-auto)
+     *
+     * Baris 2 (.sipena-grade-toolbar-view):
+     *   [- 100% +]  │  [Cari siswa .........................................]
+     *   zoom (auto) │  search (1fr — melebar ke pojok kanan)
+     * ═══════════════════════════════════════════════════════════════════════════
+     */
     .sipena-grade-toolbar--fullscreen {
       display: flex !important;
       flex-direction: column;
@@ -4797,83 +4809,63 @@
       contain: layout paint;
     }
 
-    /* Baris 1 ── format controls: freeze / lock / undo / redo / reset / help / close */
+    /* ── BARIS 1: format controls + Pembulatan suffix + tombol tutup ── */
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format {
       display: flex;
-      width: 100%;
-      min-width: 0;
       flex-wrap: nowrap;
       align-items: center;
       gap: 0.25rem;
-    }
-
-    /*
-     * Baris 2 ── bento grid: [toolbar-extra 1fr] [zoom auto]
-     * toolbar-extra menampung action icons + search bar (search melebar memenuhi sisa)
-     */
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view {
-      display: grid;
-      grid-template-columns: 1fr auto;
       width: 100%;
       min-width: 0;
-      align-items: center;
-      gap: 0.3rem;
     }
 
-    /* toolbar-extra: flex nowrap — [icon][icon][icon][search 1fr] */
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-extra {
-      display: flex !important;
-      flex-wrap: nowrap;
-      align-items: center;
-      gap: 0.25rem;
-      min-width: 0;
-      overflow: hidden;
-    }
-
-    /* Action-button slots: icon-only, tidak boleh shrink */
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--manage,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--formula,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--rounding,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--secondary {
-      display: flex !important;
+    /* Semua tombol format: seragam compact icon-only */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format button {
       flex: 0 0 auto;
-      min-width: 0;
-    }
-
-    /* Action buttons: icon-only, compact */
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--manage .sipena-grade-action-button,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--formula .sipena-grade-action-button,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--rounding .sipena-grade-action-button,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--secondary .sipena-grade-action-button {
-      width: auto !important;
       min-width: 2.25rem;
       height: 2.25rem;
       padding-inline: 0.5rem;
     }
 
-    /* Sembunyikan label teks action button & badge — icon-only di semua narrow viewport */
-    .sipena-grade-toolbar--fullscreen .sipena-grade-action-text,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-rounding-badge {
-      display: none;
-    }
-
-    /* Search slot: mengisi sisa ruang — ini yang melebar (bento style) */
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--search {
-      display: flex !important;
+    /* toolbarFormatSuffix wrapper: mengisi sisa ruang di baris 1 */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format-suffix {
       flex: 1 1 0;
-      min-width: 80px;
-      max-width: none;
-      overflow: hidden;
+      min-width: 2rem;
+      display: flex;
+      align-items: center;
     }
 
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--search > *,
-    .sipena-grade-toolbar--fullscreen [data-grade-student-search] {
+    /* Pembulatan button di baris 1 fullscreen: mengisi lebar penuh suffix-nya */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-format-suffix-rounding {
+      width: 100% !important;
+      min-width: 2.25rem;
+      height: 2.25rem;
+      padding-inline: 0.625rem;
+      justify-content: center;
+    }
+
+    /* Close button: pojok kanan baris 1 — pisah dari suffix dengan ml-auto */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
+      position: static;
+      flex: 0 0 auto;
+      margin-left: auto;
+      box-shadow: none;
+      min-width: 2.25rem;
+      height: 2.25rem;
+      padding-inline: 0.5rem;
+    }
+
+    /* ── BARIS 2: [zoom auto] [search 1fr] ── */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.3rem;
       width: 100%;
       min-width: 0;
-      max-width: none;
     }
 
-    /* Zoom: kolom kanan di bento grid baris 2 */
+    /* Zoom: kolom kiri baris 2 — auto width */
     .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control {
       flex: 0 0 auto;
       min-width: 6.5rem;
@@ -4884,37 +4876,54 @@
       width: 1.75rem;
     }
 
-    /* Close button: statis di baris 1, tidak mengapung */
-    .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
-      position: static;
-      margin-left: 0;
-      box-shadow: none;
-      flex: 0 0 auto;
-    }
-
-    /* Format row buttons: ukuran seragam compact */
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format button,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
-      min-width: 2.25rem;
-      height: 2.25rem;
-      padding-inline: 0.5rem;
-    }
-  }
-
-  /* max-width 459px: tidak perlu block terpisah — semua sudah ditangani di 1079px */
-  @container grade-sheet (max-width: 459px) {
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format,
-    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view {
-      gap: 0.2rem;
-    }
+    /*
+     * toolbar-extra sekarang hanya berisi search slot (fullscreenSearchOnly).
+     * Ia mengisi 1fr di baris 2 (kolom kanan grid).
+     */
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-extra {
-      gap: 0.2rem;
+      display: flex !important;
+      align-items: center;
+      min-width: 0;
+      overflow: hidden;
     }
-    /* Sembunyikan teks close juga */
+
+    /* Search slot: melebar hingga pojok kanan */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--search {
+      display: flex !important;
+      flex: 1 1 0;
+      min-width: 60px;
+      max-width: none;
+    }
+
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-slot--search > *,
+    .sipena-grade-toolbar--fullscreen [data-grade-student-search] {
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+    }
+
+    /* Sembunyikan label teks action button & badge di semua narrow viewport */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-action-text,
+    .sipena-grade-toolbar--fullscreen .sipena-grade-rounding-badge,
     .sipena-grade-toolbar--fullscreen .sipena-grade-close-text {
       display: none;
     }
   }
+
+  /* Viewport sangat sempit (≤459px): persempit gap sedikit */
+  @container grade-sheet (max-width: 459px) {
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format {
+      gap: 0.2rem;
+    }
+    .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view {
+      gap: 0.2rem;
+    }
+    /* Zoom sedikit lebih compact */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control {
+      min-width: 6rem;
+    }
+  }
+
 
   /* Very short landscape viewport (e.g. 946×335) — keep toolbar compact so table gets usable space */
   @media (max-height: 380px) {

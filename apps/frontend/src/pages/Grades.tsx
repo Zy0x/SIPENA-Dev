@@ -1701,6 +1701,35 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const gradeToolbarActions = isGuestMode ? guestToolbarActions : ownerToolbarActions;
 
+  /**
+   * Untuk mode fullscreen narrow viewport:
+   * - toolbarFormatSuffix → tombol Pembulatan masuk ke Baris 1 (format row)
+   * - fullscreenSearchOnly → hanya search bar di Baris 2 (view row)
+   */
+  const fullscreenFormatSuffix = classId && subjectId && !isGuestMode ? (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => setShowReportRoundingSettings(true)}
+      disabled={formulaSaving}
+      className="sipena-grade-action-button sipena-grade-format-suffix-rounding h-9 w-full gap-2"
+      title="Pengaturan Pembulatan Nilai"
+    >
+      <Percent className="w-4 h-4 shrink-0" />
+      <span className="sipena-grade-action-text">Pembulatan</span>
+      <Badge variant="secondary" className="sipena-grade-rounding-badge ml-0.5 text-[10px]">
+        {getReportRoundingLabel(formula.reportRounding.mode)} - {getReportRoundingTargetLabel(formula.reportRounding.target)}
+      </Badge>
+    </Button>
+  ) : null;
+
+  const fullscreenSearchOnly = (
+    <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full">
+      {searchAction}
+    </div>
+  );
+
   if (isGuestMode && guestSessionChecked && (!token || !guestSession)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -2006,7 +2035,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           canRedo={isGuestMode ? false : canRedo}
           onUndo={isGuestMode ? undefined : undo}
           onRedo={isGuestMode ? undefined : redo}
-          toolbarExtra={gradeToolbarActions}
+          toolbarExtra={fullscreenSearchOnly}
+          toolbarFormatSuffix={fullscreenFormatSuffix}
           fullscreenTourKey={isGuestMode ? "guest-grades-fullscreen" : "grades-fullscreen"}
           tableColorScheme={gradeTableColorScheme}
         />

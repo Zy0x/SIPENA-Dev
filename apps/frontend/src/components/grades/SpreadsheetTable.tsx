@@ -97,6 +97,8 @@ export interface SpreadsheetTableProps {
   onEnterFullscreen?: () => void;
   onEnterBrowserFullscreen?: () => void;
   toolbarExtra?: React.ReactNode;
+  /** Slot tambahan di format-row (baris 1) fullscreen, antara help button dan close button */
+  toolbarFormatSuffix?: React.ReactNode;
   tableColorScheme?: GradeTableColorSchemeId;
   fullscreenMode?: "browser" | "maximal" | null;
   fullscreenTourKey?: string;
@@ -220,6 +222,7 @@ export function SpreadsheetTable({
   onEnterFullscreen,
   onEnterBrowserFullscreen,
   toolbarExtra,
+  toolbarFormatSuffix,
   tableColorScheme = DEFAULT_GRADE_TABLE_COLOR_SCHEME,
   fullscreenMode = null,
   fullscreenTourKey,
@@ -1145,7 +1148,7 @@ export function SpreadsheetTable({
     if (e.pointerType === "mouse" && e.button !== 0) return;
     toolbarDragRef.current.x = e.clientX;
     toolbarDragRef.current.y = e.clientY;
-    toolbarDragRef.current.moved = false;
+    toolbarDragRef.moved = false;
     toolbarDragRef.current.pointerActive = true;
     toolbarDragRef.current.pointerId = e.pointerId;
     if (toolbarDragRef.current.resetTimer) {
@@ -2003,6 +2006,13 @@ export function SpreadsheetTable({
             >
               <HelpCircle className="h-4 w-4" />
             </Button>
+          )}
+
+          {/* toolbarFormatSuffix: slot tambahan antara help & close (diisi dari luar, mis. rounding button) */}
+          {isFullscreen && toolbarFormatSuffix && (
+            <div className="sipena-grade-toolbar-format-suffix flex-1 min-w-0">
+              {toolbarFormatSuffix}
+            </div>
           )}
 
           {isFullscreen && (
