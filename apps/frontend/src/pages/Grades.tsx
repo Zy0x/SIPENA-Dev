@@ -1505,7 +1505,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       </Button>
       </div>
       {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground flex-auto sm:flex-none" />}
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full sm:flex-auto sm:min-w-[240px] xl:min-w-[260px]">{searchAction}</div>
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full sm:w-auto sm:flex-auto sm:min-w-[240px] xl:min-w-[260px]">{searchAction}</div>
     </>
   ) : null;
 
@@ -1523,7 +1523,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         <span>KKM: {kkm}</span>
       </Button>
       </div>
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full sm:flex-auto sm:min-w-[240px] xl:min-w-[260px]">{searchAction}</div>
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full sm:w-auto sm:flex-auto sm:min-w-[240px] xl:min-w-[260px]">{searchAction}</div>
     </>
   );
 
