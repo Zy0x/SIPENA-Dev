@@ -79,13 +79,13 @@ describe("Input Nilai responsive refactor guard", () => {
     const sourceCode = source("apps/frontend/src/pages/Grades.tsx");
 
     // Assert that the Bento grid is applied via Tailwind utility classes directly on the header grid
-    expect(sourceCode).toContain("sipena-grade-card-header-grid flex min-w-0 flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-end");
+    expect(sourceCode).toContain("sipena-grade-card-header-grid flex min-w-0 flex-wrap gap-2 sm:gap-3 items-start justify-end");
     
     // Assert that rounding slot is flex-auto
-    expect(sourceCode).toContain("sipena-grade-toolbar-slot--rounding flex-auto min-w-[130px] md:flex-none md:min-w-0");
+    expect(sourceCode).toContain("sipena-grade-toolbar-slot--rounding flex-auto min-w-[130px] sm:flex-none sm:min-w-0");
 
     // Assert that search slot is flex-auto
-    expect(sourceCode).toContain("sipena-grade-toolbar-slot--search w-full md:flex-none md:w-[240px] xl:w-[260px]");
+    expect(sourceCode).toContain("sipena-grade-toolbar-slot--search w-full sm:flex-none sm:w-[240px] xl:w-[260px]");
   });
 
   it("retains low-height viewport rule for fullscreen mode", () => {

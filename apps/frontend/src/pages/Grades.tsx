@@ -1405,7 +1405,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const ownerToolbarActions = classId && subjectId ? (
     <>
-      <div data-tour="grade-card-actions" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--manage flex-auto min-w-[130px] md:flex-none md:min-w-0">
+      <div data-tour="grade-card-actions" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--manage flex-auto min-w-[130px] sm:flex-none sm:min-w-0">
       <DropdownMenu open={showGradeManageMenu} onOpenChange={setShowGradeManageMenu}>
         <DropdownMenuTrigger asChild>
           <Button
@@ -1480,7 +1480,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         </DropdownMenuContent>
       </DropdownMenu>
       </div>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--formula flex-auto min-w-[130px] md:flex-none md:min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--formula flex-auto min-w-[130px] sm:flex-none sm:min-w-0">
       <FormulaSettings
         formula={formula}
         onFormulaChange={handleFormulaChange}
@@ -1488,7 +1488,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         triggerClassName="sipena-grade-action-button h-9 w-full sm:w-auto"
       />
       </div>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--rounding flex-auto min-w-[130px] md:flex-none md:min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--rounding flex-auto min-w-[130px] sm:flex-none sm:min-w-0">
       <Button
         type="button"
         variant="outline"
@@ -1504,26 +1504,26 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         </Badge>
       </Button>
       </div>
-      {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground flex-auto md:flex-none" />}
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full md:flex-none md:w-[240px] xl:w-[260px]">{searchAction}</div>
+      {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground flex-auto sm:flex-none" />}
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full sm:flex-none sm:w-[240px] xl:w-[260px]">{searchAction}</div>
     </>
   ) : null;
 
   const guestToolbarActions = (
     <>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary flex-auto min-w-[130px] md:flex-none md:min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary flex-auto min-w-[130px] sm:flex-none sm:min-w-0">
       <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto gap-2" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
         <RefreshCw className={`w-4 h-4 shrink-0 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
         <span>Muat Ulang</span>
       </Button>
       </div>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary flex-auto min-w-[130px] md:flex-none md:min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary flex-auto min-w-[130px] sm:flex-none sm:min-w-0">
       <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto gap-2" onClick={() => setShowGuestKkmDialog(true)}>
         <Settings className="w-4 h-4" />
         <span>KKM: {kkm}</span>
       </Button>
       </div>
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full md:flex-none md:w-[240px] xl:w-[260px]">{searchAction}</div>
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full sm:flex-none sm:w-[240px] xl:w-[260px]">{searchAction}</div>
     </>
   );
 
@@ -1756,7 +1756,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
               {students.length > 0 && (
                 <Card className="w-full min-w-0 overflow-visible rounded-none border-0 shadow-none" data-tour="grade-table">
                   <CardHeader className="sipena-grade-card-header relative z-30 bg-card px-3 pb-3 sm:px-6 border-b border-border/50">
-                    <div className="sipena-grade-card-header-grid flex min-w-0 flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-end">
+                    <div className="sipena-grade-card-header-grid flex min-w-0 flex-wrap gap-2 sm:gap-3 items-start justify-end">
                       <div className="sipena-grade-card-heading flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3 sm:mt-1.5 w-full sm:w-auto sm:mr-auto">
                         <CardTitle className="sipena-grade-card-title text-sm sm:text-base truncate">
                           {selectedClass?.name} - {selectedSubject?.name}
