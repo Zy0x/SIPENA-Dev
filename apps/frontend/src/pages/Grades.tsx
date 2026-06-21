@@ -1405,7 +1405,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const ownerToolbarActions = classId && subjectId ? (
     <>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--manage flex-auto min-w-[130px] lg:flex-none lg:min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--manage flex-auto min-w-[130px] md:flex-none md:min-w-0">
       <DropdownMenu open={showGradeManageMenu} onOpenChange={setShowGradeManageMenu}>
         <DropdownMenuTrigger asChild>
           <Button
@@ -1480,7 +1480,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         </DropdownMenuContent>
       </DropdownMenu>
       </div>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--formula flex-auto min-w-[130px] lg:flex-none lg:min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--formula flex-auto min-w-[130px] md:flex-none md:min-w-0">
       <FormulaSettings
         formula={formula}
         onFormulaChange={handleFormulaChange}
@@ -1488,7 +1488,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         triggerClassName="sipena-grade-action-button h-9 w-full sm:w-auto"
       />
       </div>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--rounding flex-auto min-w-[130px] lg:flex-none lg:min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--rounding flex-auto min-w-[130px] md:flex-none md:min-w-0">
       <Button
         type="button"
         variant="outline"
@@ -1504,8 +1504,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         </Badge>
       </Button>
       </div>
-      {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground flex-auto lg:flex-none" />}
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full lg:flex-none lg:w-[240px] xl:w-[260px]">{searchAction}</div>
+      {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground flex-auto md:flex-none" />}
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full md:flex-none md:w-[240px] xl:w-[260px]">{searchAction}</div>
     </>
   ) : null;
 
@@ -1766,7 +1766,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions flex flex-wrap gap-2 w-full sm:flex-1 lg:flex-none lg:w-auto lg:justify-end">
+                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions flex flex-wrap gap-2 w-full sm:flex-1 md:justify-end">
                         {!isFullscreen && gradeToolbarActions}
                       </div>
                     </div>
