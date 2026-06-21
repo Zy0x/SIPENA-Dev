@@ -353,6 +353,12 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
     lockGradeTabsMinHeight(gradeTabsRef.current);
     setActiveTab(nextTab);
+
+    if (nextTab === "input") {
+      setTimeout(() => {
+        gradeTabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
   }, [activeTab]);
 
   useEffect(() => {

@@ -42,6 +42,19 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.60",
+    version: "2.4.60",
+    title: "Scroll Otomatis Tab Input Nilai",
+    description: "Meningkatkan UX navigasi dengan menambahkan fokus scroll otomatis saat pengguna berpindah ke tab Input Nilai.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Menambahkan pemicu scrollIntoView smooth secara otomatis ke arah container tabel nilai saat pengguna berpindah tab dari Struktur ke Input Nilai.",
+      "Menghilangkan keharusan pengguna untuk scroll ke bawah secara manual setelah menekan tombol 'Lanjut ke Input Nilai'."
+    ]
+  },
+  {
     id: "v2.4.59",
     version: "2.4.59",
     title: "Perombakan UI & Aksi Struktur BAB & Tugas",

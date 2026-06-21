@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.59";
+export const APP_VERSION = "2.4.60";
 export const VERSION_DATE = "2026-06-21";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.60": "Fokus scroll otomatis ke kontainer tabel saat berpindah dari Struktur ke Input Nilai.",
   "2.4.59": "Perombakan Struktur BAB & Tugas dengan accordion modern, menu kebab titik tiga, tombol navigasi lanjut, serta aksi duplikasi BAB/Tugas.",
   "2.4.58": "Audit menyeluruh empty-state dropdown di seluruh aplikasi, perbaikan bug di panel prediksi siswa dashboard, penambahan standar dokumentasi.",
   "2.4.57": "Empty-state guard diperluas ke Attendance, StudentRankings, dan ParentPortal, layout bento mobile bento diperbaiki, dan toolbar landscape viewport pendek dioptimasi.",
