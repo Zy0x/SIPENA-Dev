@@ -26,6 +26,7 @@ describe("contextual dropdown empty-state contract", () => {
     ["apps/frontend/src/pages/Attendance.tsx", "Tidak ada pilihan Kelas", "isEmpty"],
     ["apps/frontend/src/pages/StudentRankings.tsx", "Tidak ada pilihan Kelas", "isEmpty"],
     ["apps/frontend/src/pages/ParentPortal.tsx", "Tidak ada pilihan Kelas", "isEmpty"],
+    ["apps/frontend/src/components/dashboard/StudentPredictionCard.tsx", "Tidak ada pilihan Kelas", "Tidak ada pilihan Siswa"],
   ])("keeps contextual wording in %s", (path, firstLabel, secondLabel) => {
     const source = readSource(path);
     expect(source).toContain(firstLabel);

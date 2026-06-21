@@ -113,7 +113,7 @@ export function StudentPredictionCard() {
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih model AI" />
                   </SelectTrigger>
-                  <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
+                  <SelectContent>
                     {PREDICTION_MODELS.map((model) => (
                       <SelectItem key={model.id} value={model.id}>
                         <div className="flex items-center gap-2">
@@ -160,7 +160,7 @@ export function StudentPredictionCard() {
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih kelas" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                     {classes.map((cls) => (
                       <SelectItem key={cls.id} value={cls.id}>
                         {cls.name}
