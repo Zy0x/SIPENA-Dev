@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.66",
+    version: "2.4.66",
+    title: "Perbaikan Border Fokus Kotak Search Siswa",
+    description: "Perbaikan border selection (focus ring) Kotak Search Siswa agar tidak terpotong pada mode fullscreen di viewport sempit.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Mengubah properti 'overflow: hidden' menjadi 'overflow: visible' pada container pencarian .sipena-grade-toolbar-extra dalam mode fullscreen viewport sempit.",
+      "Menghilangkan pemotongan visual pada focus ring input search (efek glow biru) yang disebabkan oleh boundary clipping dari container.",
+      "Memastikan menu saran dropdown pencarian (SmartStudentSearch) tidak terpotong saat dirender di layar sempit."
+    ]
+  },
+  {
     id: "v2.4.65",
     version: "2.4.65",
     title: "Restorasi Tombol Aksi Fullscreen Viewport Sempit",

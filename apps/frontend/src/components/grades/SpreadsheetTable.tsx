@@ -1148,7 +1148,7 @@ export function SpreadsheetTable({
     if (e.pointerType === "mouse" && e.button !== 0) return;
     toolbarDragRef.current.x = e.clientX;
     toolbarDragRef.current.y = e.clientY;
-    toolbarDragRef.moved = false;
+    toolbarDragRef.current.moved = false;
     toolbarDragRef.current.pointerActive = true;
     toolbarDragRef.current.pointerId = e.pointerId;
     if (toolbarDragRef.current.resetTimer) {

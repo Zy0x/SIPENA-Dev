@@ -4716,6 +4716,12 @@
     min-width: 0;
   }
 
+  .sipena-grade-toolbar-slot--manage,
+  .sipena-grade-toolbar-slot--formula,
+  .sipena-grade-toolbar-slot--rounding {
+    /* Refactor guard placeholder */
+  }
+
   .sipena-grade-toolbar-slot--search {
     flex: 1 1 15rem;
   }
@@ -4884,7 +4890,7 @@
       display: flex !important;
       align-items: center;
       min-width: 0;
-      overflow: hidden;
+      overflow: visible;
     }
 
     /* Search slot: melebar hingga pojok kanan */

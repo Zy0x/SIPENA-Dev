@@ -503,7 +503,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).toContain("gradeManageDropdownTapGuard.onPointerCancel");
     expect(gradesPageSource).toContain("sipena-grade-rounding-badge");
     expect(gradesPageSource).toContain("showReportRoundingSettings");
-    expect(gradesPageSource).toContain("toolbarExtra={gradeToolbarActions}");
+    expect(gradesPageSource).toContain("toolbarExtra={fullscreenSearchOnly}");
     expect(gradesPageSource).toContain("getReportRoundingLabel(formula.reportRounding.mode)");
     expect(gradesPageSource).toContain("getReportRoundingTargetLabel(formula.reportRounding.target)");
     expect(formulaSource).toContain("ReportRoundingMode");
