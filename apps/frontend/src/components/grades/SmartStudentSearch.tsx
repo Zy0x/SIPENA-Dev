@@ -104,7 +104,21 @@ export function SmartStudentSearch({
     }
   }, [highlightedIndex]);
 
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup blur timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
   const handleInputFocus = useCallback(() => {
+    // Cancel any pending blur timeout — user re-focused before it fired
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
     setIsFocused(true);
     if (query && selectAllOnNextFocusRef.current) {
       requestAnimationFrame(() => inputRef.current?.select());
@@ -112,8 +126,23 @@ export function SmartStudentSearch({
     }
   }, [query]);
 
-  const handleInputBlur = useCallback(() => {
-    setTimeout(() => setIsFocused(false), 200);
+  const handleInputBlur = useCallback((e: React.FocusEvent) => {
+    // If focus moved to an element inside our container (e.g. suggestion button,
+    // clear button), keep the dropdown open.
+    const container = containerRef.current;
+    const related = e.relatedTarget as Node | null;
+    if (container && related && container.contains(related)) {
+      return;
+    }
+    // Otherwise close after a short delay (allows touch click on suggestions
+    // where relatedTarget may be null).
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+    blurTimeoutRef.current = setTimeout(() => {
+      blurTimeoutRef.current = null;
+      setIsFocused(false);
+    }, 250);
     selectAllOnNextFocusRef.current = true;
   }, []);
 
@@ -238,6 +267,8 @@ export function SmartStudentSearch({
           ref={suggestionsRef}
           className="absolute left-0 right-0 top-full z-[100] mt-1 overflow-hidden rounded-xl border bg-popover shadow-xl animate-fade-in"
           role="listbox"
+          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => { if (e.pointerType !== 'touch') e.preventDefault(); }}
         >
           <ScrollArea className="max-h-[35vh] sm:max-h-56">
             <div className="py-1">
