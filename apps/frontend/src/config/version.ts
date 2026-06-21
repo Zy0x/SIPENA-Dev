@@ -1,8 +1,13 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.65";
+export const APP_VERSION = "2.4.70";
 export const VERSION_DATE = "2026-06-21";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.70": "Batas tinggi dropdown Select agar tidak terpotong di screen pendek/landscape dan opsi dapat digulir.",
+  "2.4.69": "Perbaikan duplikasi tombol tutup dan pelebaran dinamis search box fullscreen.",
+  "2.4.68": "Prioritas layout 1 baris fullscreen untuk viewport lebar.",
+  "2.4.67": "Penyelarasan layout fullscreen & visual order zoom-pencarian landscape sempit.",
+  "2.4.66": "Perbaikan border fokus search siswa dan dropdown menu terpotong di mode fullscreen sempit.",
   "2.4.65": "Perbaikan hilangnya tombol kelola/rumus/pembulatan pada mode Fullscreen di viewport sempit.",
   "2.4.64": "Transisi tinggi kontainer tab secara dua arah (expand/shrink) yang mulus dan penyesuaian scroll offset dinamis untuk sticky header.",
   "2.4.63": "Transisi tinggi minimal kontainer tab secara smooth dan sinkronisasi smooth scroll halaman saat tab berubah.",

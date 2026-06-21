@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.70",
+    version: "2.4.70",
+    title: "Batas Tinggi Dropdown Select untuk Viewport Pendek",
+    description: "Membatasi tinggi maksimal dropdown Select agar tidak terpotong di screen pendek/landscape dan memastikan opsi-opsi tetap dapat digulir.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Mengganti max-h-96 dengan max-h-[var(--radix-select-content-available-height)] secara kondisional pada SelectContent saat position adalah popper.",
+      "Mencegah dropdown menu Mata Pelajaran dan Kelas terpotong di bagian atas atau bawah pada viewports sempit/landscape.",
+      "Memastikan scroll container dropdown select berfungsi dengan benar sehingga semua pilihan mapel/kelas tetap dapat diakses."
+    ]
+  },
+  {
     id: "v2.4.69",
     version: "2.4.69",
     title: "Deduplikasi Tombol Tutup & Kolom Pencarian Dinamis",
