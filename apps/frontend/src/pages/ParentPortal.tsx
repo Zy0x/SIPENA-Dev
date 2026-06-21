@@ -232,7 +232,7 @@ export default function ParentPortal() {
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih kelas..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                   {classes.map(cls => (
                     <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                   ))}

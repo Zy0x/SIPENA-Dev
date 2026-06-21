@@ -82,7 +82,7 @@ export function RankingSemesterSelector({
             <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuContent align="end" className="w-64" isEmpty={options.length === 0} emptyLabel="Tidak ada pilihan Semester">
           <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-2">
             <TrendingUp className="h-3.5 w-3.5" />
             Filter Semester Ranking

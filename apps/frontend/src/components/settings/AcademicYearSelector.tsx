@@ -184,7 +184,7 @@ export function AcademicYearSelector() {
                 )}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent isEmpty={!isLoading && academicYears.length === 0} emptyLabel="Tidak ada pilihan Tahun Ajaran">
               {academicYears.map((year) => (
                 <SelectItem key={year.id} value={year.id}>
                   <div className="flex items-center justify-between w-full">
@@ -226,7 +226,7 @@ export function AcademicYearSelector() {
                 {activeSemester?.name || "Pilih semester..."}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent isEmpty={!isLoading && activeYearSemesters.length === 0} emptyLabel="Tidak ada pilihan Semester">
               {activeYearSemesters.map((semester) => (
                 <SelectItem key={semester.id} value={semester.id}>
                   <div className="flex items-center justify-between w-full">

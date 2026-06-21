@@ -346,7 +346,7 @@ export default function ImportSubjectsDialog({
               <Label>Tahun Ajaran</Label>
               <Select value={sourceYearId} onValueChange={setSourceYearId}>
                 <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Pilih tahun" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent isEmpty={academicYears.length === 0} emptyLabel="Tidak ada pilihan Tahun Ajaran">
                   {academicYears.map((year) => <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -355,7 +355,7 @@ export default function ImportSubjectsDialog({
               <Label>Semester</Label>
               <Select value={sourceSemesterId} onValueChange={(value) => { setSourceSemesterId(value); setSourceClassId(""); }}>
                 <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Pilih semester" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent isEmpty={sourceSemesters.length === 0} emptyLabel="Tidak ada pilihan Semester">
                   {sourceSemesters.map((semester) => <SelectItem key={semester.id} value={semester.id}>{semester.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -364,7 +364,7 @@ export default function ImportSubjectsDialog({
               <Label>Kelas Sumber</Label>
               <Select value={sourceClassId} onValueChange={handleSourceClassChange} disabled={sourceClassesLoading || Boolean(sourceClassesError)}>
                 <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder={sourceClassesLoading ? "Memuat kelas..." : "Pilih kelas"} /></SelectTrigger>
-                <SelectContent>
+                <SelectContent isEmpty={!sourceClassesLoading && sourceClasses.length === 0} emptyLabel="Tidak ada pilihan Kelas Sumber">
                   {sourceClasses.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
                 </SelectContent>
               </Select>

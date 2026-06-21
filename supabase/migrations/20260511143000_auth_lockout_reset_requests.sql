@@ -39,6 +39,32 @@ CREATE INDEX IF NOT EXISTS auth_lockout_reset_requests_auto_approve_idx
 
 ALTER TABLE public.auth_lockout_reset_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.auth_lockout_reset_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.auth_lockout_reset_settings FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.auth_lockout_reset_requests FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS auth_lockout_reset_settings_edge_function_only
+  ON public.auth_lockout_reset_settings;
+DROP POLICY IF EXISTS auth_lockout_reset_requests_edge_function_only
+  ON public.auth_lockout_reset_requests;
+
+CREATE POLICY auth_lockout_reset_settings_edge_function_only
+ON public.auth_lockout_reset_settings
+FOR ALL
+TO anon, authenticated
+USING (false)
+WITH CHECK (false);
+
+CREATE POLICY auth_lockout_reset_requests_edge_function_only
+ON public.auth_lockout_reset_requests
+FOR ALL
+TO anon, authenticated
+USING (false)
+WITH CHECK (false);
+
+REVOKE ALL ON TABLE public.auth_lockout_reset_settings FROM anon, authenticated;
+REVOKE ALL ON TABLE public.auth_lockout_reset_requests FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.auth_lockout_reset_settings TO service_role;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.auth_lockout_reset_requests TO service_role;
 
 INSERT INTO public.auth_lockout_reset_settings (id, auto_approve_enabled, auto_approve_hours)
 VALUES ('global', true, 24)

@@ -248,7 +248,7 @@ export default function Subjects() {
                   <SelectTrigger className="h-11 rounded-xl text-sm font-medium">
                     <SelectValue placeholder="Pilih kelas..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent isEmpty={!classesLoading && classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                     {classes.map((cls) => (
                       <SelectItem key={cls.id} value={cls.id} className="text-sm">
                         {cls.name} ({cls.student_count || 0} siswa)

@@ -3216,7 +3216,7 @@ export default function Attendance() {
                 <SelectTrigger className="h-7 border-0 px-0 py-0 shadow-none text-sm font-medium focus:ring-0">
                   <SelectValue placeholder="Pilih kelas..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                   {classes.map((cls) => (
                     <SelectItem key={cls.id} value={cls.id} className="text-sm">{cls.name}</SelectItem>
                   ))}

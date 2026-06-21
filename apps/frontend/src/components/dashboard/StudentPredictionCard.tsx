@@ -113,7 +113,7 @@ export function StudentPredictionCard() {
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih model AI" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                     {PREDICTION_MODELS.map((model) => (
                       <SelectItem key={model.id} value={model.id}>
                         <div className="flex items-center gap-2">
@@ -180,7 +180,7 @@ export function StudentPredictionCard() {
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih siswa" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent isEmpty={students.length === 0} emptyLabel="Tidak ada pilihan Siswa">
                       <ScrollArea className="h-48">
                         {students.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
@@ -205,7 +205,7 @@ export function StudentPredictionCard() {
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih mata pelajaran" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent isEmpty={subjects.length === 0} emptyLabel="Tidak ada pilihan Mata Pelajaran">
                       {subjects.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {s.name} (KKM: {s.kkm})

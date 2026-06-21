@@ -42,6 +42,52 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.57",
+    version: "2.4.57",
+    title: "Penyempurnaan Standard Layout dan Pengaman Dropdown",
+    description: "Penyempurnaan empty-state guard untuk dropdown di Attendance, StudentRankings, dan ParentPortal, perbaikan layout bento mobile bento, serta optimasi toolbar landscape viewport pendek.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Memperluas dropdown empty-state guard test untuk mencakup label 'Tidak ada pilihan Kelas' di halaman Presensi, Ranking Siswa, dan Portal Orang Tua.",
+      "Mengatur layout aksi kartu Input Nilai (manage 50%, formula 50%, rounding penuh, search penuh) agar responsif berdasarkan container query @container grade-card (max-width: 639px).",
+      "Menyesuaikan style toolbar fullscreen compact agar tidak menggunakan overflow-x: auto dan memadat secara dinamis pada viewport landscape pendek.",
+      "Memperbaiki asersi test overflow-x pada guard test agar terisolasi di dalam block container query dan tidak menghasilkan false positive.",
+    ],
+  },
+  {
+    id: "v2.4.56",
+    version: "2.4.56",
+    title: "Laporan Nilai dan Mata Pelajaran Lebih Stabil",
+    description: "Tabel Laporan Nilai, kartu Mata Pelajaran, guard touch, dan ekspor ranking dirapikan agar lebih nyaman di mobile, tablet, desktop, dan layar sentuh.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-15",
+    details: [
+      "Tabel Laporan Nilai memisahkan freeze No/Nama dari NISN, menambahkan kontrol zoom/fullscreen, dan memperkuat permukaan header/frozen agar tidak terlihat transparan.",
+      "Kartu Mata Pelajaran memakai grid auto-fit dengan lebar minimum aman sehingga tombol tidak lagi terpotong pada viewport lebar maupun sempit.",
+      "Dropdown pilih kelas di halaman Mata Pelajaran dibuat lebih proporsional saat belum dan sudah memilih kelas.",
+      "Guard touch-scroll global diperkuat agar gesture scroll di atas toolbar atau tombol tidak berubah menjadi klik palsu.",
+      "Ekspor Ranking memakai minimum tinggi baris lebih efisien sambil mempertahankan font PDF efektif minimal 11pt dan nama panjang tetap membungkus.",
+    ],
+  },
+  {
+    id: "v2.4.55",
+    version: "2.4.55",
+    title: "Input Nilai Mobile dan Auth Reset Dikunci",
+    description: "Input Nilai kini lebih stabil pada viewport mobile outlier dari telemetry terbaru, dan tabel request reset waiting time login dikunci agar hanya Edge Function yang dapat mengelolanya.",
+    type: "security",
+    is_critical: false,
+    released_at: "2026-06-13",
+    details: [
+      "Layout Input Nilai dipadatkan untuk `/grades` pada 393x406, 415x462, 415x525, 946x335, dan viewport outlier sejenis.",
+      "Fullscreen browser memakai tinggi visual viewport agar toolbar dan tabel tidak terdorong keluar saat safe-area atau UI browser berubah.",
+      "Tabel auth_lockout_reset_requests dan auth_lockout_reset_settings memakai RLS fail-closed untuk anon/authenticated serta grant service role terbatas.",
+      "Guard test ditambahkan untuk mempertahankan compact mobile rules dan policy RLS function-only.",
+    ],
+  },
+  {
     id: "v2.4.54",
     version: "2.4.54",
     title: "Edit BAB dan Tugas Responsif",

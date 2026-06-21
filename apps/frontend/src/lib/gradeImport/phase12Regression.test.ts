@@ -460,13 +460,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(gradesPageSource).toContain("popstate");
     expect(gradesPageSource).toContain("skipHistoryBack");
     expect(gradesPageSource).toContain("gradeOverlayOpenRef");
-    expect(gradesPageSource).toContain('setFullscreenMode("app")');
+    expect(gradesPageSource).toContain('setFullscreenMode("browser")');
     expect(gradesPageSource).toContain("openBrowserFullscreen");
     expect(spreadsheetSource).toContain("onEnterBrowserFullscreen");
-    expect(spreadsheetSource).toContain("Mode Layar Penuh Panel");
-    expect(spreadsheetSource).toContain("Mode Layar Penuh Native");
-    expect(spreadsheetSource).toContain("fullscreenMode === \"browser\"");
-    expect(spreadsheetSource).toContain("sipena-grade-browser-fullscreen");
+    expect(spreadsheetSource).toContain("Layar Penuh Browser");
+    expect(spreadsheetSource).toContain("Layar Penuh Maksimal");
+    expect(spreadsheetSource).toContain("fullscreenMode === \"maximal\"");
+    expect(spreadsheetSource).toContain("sipena-grade-maximal-fullscreen");
     expect(spreadsheetSource).toContain("applyViewportCssVariables");
     expect(spreadsheetSource).toContain("captureViewportTelemetrySnapshot");
     expect(spreadsheetSource).toContain("sipena-freeze-menu");
@@ -497,6 +497,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(searchSource).not.toContain("Sparkles");
     expect(gradesPageSource).toContain("ReportRoundingSettingsDialog");
     expect(gradesPageSource).toContain("showGradeManageMenu");
+    expect(gradesPageSource).toContain("runAfterGradeManageMenuCloses");
+    expect(gradesPageSource).toContain("!isFullscreen && gradeToolbarActions");
     expect(gradesPageSource).toContain("gradeManageDropdownTapGuard.onPointerMove");
     expect(gradesPageSource).toContain("gradeManageDropdownTapGuard.onPointerCancel");
     expect(gradesPageSource).toContain("sipena-grade-rounding-badge");
@@ -566,7 +568,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
     expect(globalStyles).toContain(".sipena-grade-fullscreen-trigger");
     expect(globalStyles).toContain(".sipena-grade-fullscreen-chevron");
-    expect(globalStyles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(globalStyles).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(globalStyles).toContain("@container grade-sheet (max-width: 1079px)");
+    expect(globalStyles).toContain(".sipena-grade-resize-guide");
     expect(appSource).toContain("ViewportTelemetryReporter");
     expect(viewportTelemetrySource).toContain("visual_viewport_width");
     expect(viewportTelemetrySource).toContain("has_display_cutout");

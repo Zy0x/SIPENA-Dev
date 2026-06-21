@@ -103,9 +103,10 @@ async function getSettings(supabaseAdmin: ReturnType<typeof createClient>) {
   if (data) return data;
 
   const fallback = { auto_approve_enabled: true, auto_approve_hours: AUTO_APPROVE_HOURS };
-  await supabaseAdmin
+  const { error: upsertError } = await supabaseAdmin
     .from("auth_lockout_reset_settings")
     .upsert({ id: "global", ...fallback }, { onConflict: "id" });
+  if (upsertError) throw upsertError;
   return fallback;
 }
 
@@ -164,7 +165,7 @@ serve(async (req) => {
       const captchaOk = await verifyRecaptcha(body.captchaToken, req);
       if (!captchaOk) return json({ success: false, error: "Verifikasi CAPTCHA gagal" }, 400);
 
-      await autoApproveExpired(supabaseAdmin);
+      const { settings } = await autoApproveExpired(supabaseAdmin);
 
       const { data: existing, error: existingError } = await supabaseAdmin
         .from("auth_lockout_reset_requests")
@@ -182,7 +183,7 @@ serve(async (req) => {
         });
       }
 
-      const autoApproveAt = new Date(Date.now() + AUTO_APPROVE_HOURS * 60 * 60 * 1000).toISOString();
+      const autoApproveAt = new Date(Date.now() + settings.auto_approve_hours * 60 * 60 * 1000).toISOString();
       const { data: request, error: insertError } = await supabaseAdmin
         .from("auth_lockout_reset_requests")
         .insert({
@@ -202,7 +203,7 @@ serve(async (req) => {
       const { error: notificationError } = await supabaseAdmin.from("notifications").insert({
         user_id: "00000000-0000-0000-0000-000000000000",
         title: "Request Reset Waiting Time Login",
-        message: `${email} meminta reset waiting time login. Auto approve dalam 1x24 jam jika fitur aktif.`,
+        message: `${email} meminta reset waiting time login. Auto approve dalam ${settings.auto_approve_hours} jam jika fitur aktif.`,
         type: "auth_lockout_reset_request",
         data: { requestId: request.id, email, lockoutLevel, failureCount },
       });

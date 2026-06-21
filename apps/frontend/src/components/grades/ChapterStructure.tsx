@@ -141,7 +141,7 @@ export function ChapterStructure({
               </p>
             </div>
           </div>
-          <Button onClick={() => setAddChapterOpen(true)} className="w-full gap-2 sm:w-auto">
+          <Button data-tour="grade-add-chapter" onClick={() => setAddChapterOpen(true)} className="w-full gap-2 sm:w-auto">
             <Plus className="h-4 w-4" />
             Tambah BAB
           </Button>
@@ -157,10 +157,16 @@ export function ChapterStructure({
           </div>
         ) : (
           <div className="space-y-3">
-            {chapters.map((chapter) => {
+            {chapters.map((chapter, chapterIndex) => {
               const chapterAssignments = assignments[chapter.id] || [];
               const isExpanded = expandedChapters.has(chapter.id);
               const isEditingChapter = editingChapter === chapter.id;
+              const chapterAccent = [
+                "border-l-blue-500 bg-blue-500/[0.03]",
+                "border-l-emerald-500 bg-emerald-500/[0.03]",
+                "border-l-amber-500 bg-amber-500/[0.03]",
+                "border-l-violet-500 bg-violet-500/[0.03]",
+              ][chapterIndex % 4];
 
               return (
                 <Collapsible
@@ -168,7 +174,10 @@ export function ChapterStructure({
                   open={isExpanded}
                   onOpenChange={() => toggleChapter(chapter.id)}
                 >
-                  <div className="overflow-hidden rounded-lg border">
+                  <div
+                    className={cn("overflow-hidden rounded-lg border border-l-4", chapterAccent)}
+                    data-tour={chapterIndex === 0 ? "grade-chapter-card" : undefined}
+                  >
                     {isEditingChapter ? (
                       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 bg-muted/50 p-3 max-[420px]:grid-cols-1 sm:gap-3">
                         <ChevronDown className="mt-3 h-4 w-4 shrink-0 text-muted-foreground max-[420px]:hidden" />
@@ -209,7 +218,7 @@ export function ChapterStructure({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-muted/50 p-2 transition-colors hover:bg-muted/80 max-[420px]:grid-cols-1 sm:p-3">
+                      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-muted/35 p-2 transition-colors hover:bg-muted/55 max-[420px]:grid-cols-1 sm:p-3">
                         <CollapsibleTrigger asChild>
                           <button
                             type="button"
@@ -221,6 +230,9 @@ export function ChapterStructure({
                             ) : (
                               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                             )}
+                            <Badge variant="outline" className="shrink-0 border-primary/30 bg-background/80 text-[10px] font-semibold uppercase text-primary">
+                              BAB
+                            </Badge>
                             <span className="min-w-0 flex-1 break-words font-medium">{chapter.name}</span>
                             <Badge variant="secondary" className="shrink-0 text-xs">
                               {chapterAssignments.length} tugas
@@ -228,7 +240,12 @@ export function ChapterStructure({
                           </button>
                         </CollapsibleTrigger>
 
-                        <div className="flex shrink-0 justify-end gap-1 max-[420px]:border-t max-[420px]:pt-2">
+                        <div
+                          className="flex shrink-0 justify-end gap-1 rounded-md bg-background/75 p-0.5 max-[420px]:border-t max-[420px]:pt-2"
+                          role="group"
+                          aria-label={`Aksi BAB ${chapter.name}`}
+                          data-tour={chapterIndex === 0 ? "grade-chapter-actions" : undefined}
+                        >
                           <Button
                             variant="ghost"
                             size="icon"
@@ -282,7 +299,8 @@ export function ChapterStructure({
                           return (
                             <div
                               key={assignment.id}
-                              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md bg-muted/30 p-2 transition-colors hover:bg-muted/50 max-[420px]:grid-cols-1"
+                              className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border-l-2 border-l-muted-foreground/25 bg-muted/20 p-2 transition-colors hover:bg-muted/40 max-[420px]:grid-cols-1"
+                              data-tour={chapterIndex === 0 && chapterAssignments[0]?.id === assignment.id ? "grade-assignment-row" : undefined}
                             >
                               <div className="flex min-w-0 items-start gap-2">
                                 <FileText
@@ -328,14 +346,19 @@ export function ChapterStructure({
                                     </div>
                                   </div>
                                 ) : (
-                                  <span className="min-w-0 flex-1 break-words py-2 text-sm">
-                                    {assignment.name}
-                                  </span>
+                                  <div className="min-w-0 flex-1 py-1.5">
+                                    <span className="mb-0.5 block text-[10px] font-semibold uppercase text-muted-foreground">Tugas</span>
+                                    <span className="block min-w-0 break-words text-sm">{assignment.name}</span>
+                                  </div>
                                 )}
                               </div>
 
                               {!isEditingAssignment && (
-                                <div className="flex shrink-0 justify-end gap-1 max-[420px]:border-t max-[420px]:pt-2">
+                                <div
+                                  className="flex shrink-0 justify-end gap-1 rounded-md border border-border/70 bg-background/80 p-0.5 max-[420px]:border-t max-[420px]:pt-2"
+                                  role="group"
+                                  aria-label={`Aksi tugas ${assignment.name}`}
+                                >
                                   <Button
                                     variant="ghost"
                                     size="icon"

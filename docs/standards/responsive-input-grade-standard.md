@@ -16,29 +16,31 @@ Standar ini berlaku untuk:
 
 Setiap perubahan UI Input Nilai wajib aman di viewport berikut:
 
-- Mobile portrait: `320x642`, `375x642`, `392x778`, `415x866`, `425x642`
+- Mobile portrait: `320x642`, `375x642`, `392x778`, `415x866`, `425x642`, `431x846`
 - Mobile landscape pendek: `850x296`, `866x415`, `894x399`, `946x335`, `946x348`
-- Tablet: `768x642`, `768x1024`
+- Tablet dan compact desktop: `640x560`, `714x704`, `736x711`, `768x642`, `768x1024`
 - Laptop: `1366x768`, `1440x900`
 - Desktop lebar: `1920x1080`, `2560x1440`, `3840x2160`
 
 Observasi `viewport_observations` terbaru pada 2026-06-13 menunjukkan `/grades` sebagai route dominan untuk mobile QA. Outlier yang wajib dipertahankan dalam regression sweep: `320x616`, `393x406`, `393x462`, `393x514`, `415x462`, `415x525`, `415x866`, `393x886` dengan safe-area atas sampai `36px`, serta landscape pendek `894x399`, `946x335`, dan `946x415`. Pada viewport pendek tersebut, header kartu, info bar, dan toolbar wajib memadat sebelum mengorbankan area spreadsheet.
 
-Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sembunyikan label non-kritis, pertahankan ikon dan tooltip/aria-label, lalu gunakan scroll horizontal terkontrol. Jangan memotong tombol.
+Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sembunyikan label non-kritis, pertahankan ikon dan tooltip/aria-label, lalu susun toolbar fullscreen menjadi bento dua baris. Jangan memotong tombol dan jangan memakai scroll horizontal pada toolbar fullscreen.
 
 ## Toolbar Input Nilai
 
 - Tombol aksi utama harus berada dalam grid/flex responsif yang tidak menyebabkan tombol close, zoom, dropdown, atau pencarian terpotong.
 - Header kartu nilai dan toolbar tabel harus punya mode compact saat viewport tinggi pendek; jangan biarkan judul, search count, atau row kosong membuat area tabel turun terlalu jauh.
-- Pada fullscreen landscape pendek, toolbar harus memprioritaskan satu baris compact. Label panjang boleh disembunyikan, tetapi icon dan tombol aksi wajib tetap dapat ditekan.
-- Fullscreen Input Nilai harus membedakan mode `Mode Layar Penuh Panel` di dalam tab browser dan `Mode Layar Penuh Native` yang memakai Fullscreen API. Jika browser menolak Fullscreen API, UI wajib fallback ke mode panel dengan pesan non-teknis.
-- Mode Layar Penuh Native wajib membaca `visualViewport`, orientasi, DPR, dan `safe-area-inset-*` agar tombol kanan/kiri tidak masuk area notch, punch-hole, navigation bar, atau cutout mobile.
-- Pada mobile portrait sekitar `392x778`, toolbar tabel harus mengutamakan satu baris compact dengan scroll horizontal terkontrol. Pencarian siswa tetap terlihat dalam satu layar, sementara ruang vertikal harus diprioritaskan untuk tabel.
-- Toolbar yang memakai scroll horizontal wajib menampilkan scrollbar horizontal tipis berbasis token tema agar user tahu area tersebut dapat digeser.
+- Pada fullscreen dengan lebar panel di bawah `1080px`, toolbar wajib memakai dua baris tanpa scroll horizontal. Baris pertama memuat kontrol format/navigasi; baris kedua memuat pencarian yang lebar, zoom, dan tombol tutup.
+- Fullscreen Input Nilai harus membedakan `Layar Penuh Browser` yang tetap berada di dalam tampilan browser dan `Layar Penuh Maksimal` yang memakai Fullscreen API perangkat. Jika browser menolak Fullscreen API, UI wajib fallback ke Layar Penuh Browser dengan pesan non-teknis.
+- Layar Penuh Maksimal wajib membaca `visualViewport`, orientasi, DPR, dan `safe-area-inset-*` agar tombol kanan/kiri tidak masuk area notch, punch-hole, navigation bar, atau cutout mobile.
+- Pada fullscreen compact, `Kelola Nilai`, `Rumus`, dan `Pembulatan` disembunyikan. Fitur tersebut tetap tersedia setelah keluar dari fullscreen compact.
+- **Toolbar fullscreen compact tidak boleh memakai `overflow-x: auto` atau `white-space: nowrap`.** Jika lebar panel di bawah `1080px`, toolbar wajib beralih ke grid dua baris (`grid-template-rows: auto auto`) melalui `@container grade-sheet`.
+- Pada mobile portrait sekitar `392x778`, pencarian siswa wajib tetap lebar dan kontrol zoom tetap dapat digunakan tanpa menggeser toolbar secara horizontal.
+- Pada landscape sangat pendek seperti `946×335` (max-height 380px), toolbar wajib memadatkan padding dan menyembunyikan label teks agar area spreadsheet tetap berguna.
 - Toolbar horizontal wajib membedakan gesture drag dan tap. Jika user menggeser toolbar melewati threshold kecil, klik/tap tombol di bawah jari harus dibatalkan agar tidak memicu aksi tidak sengaja.
 - Toolbar horizontal tidak boleh memakai `setPointerCapture` pada container karena event tombol anak dapat diambil alih dan seluruh tombol menjadi tidak bisa ditekan.
 - Dropdown Proteksi dan Fullscreen pada toolbar harus memakai perilaku normal untuk mouse/keyboard, dengan guard touch/pen yang hanya membuka menu pada `pointerup` jika gesture bukan drag.
-- Aksi `Kelola Nilai`, `Rumus`, dan `Pembulatan` harus bisa duduk dalam satu baris fleksibel jika ruang cukup; pencarian siswa boleh memakai baris penuh agar input tetap nyaman.
+- **Aksi pada card Input Nilai normal menggunakan container query `@container grade-card (max-width: 639px)` agar tata letak bento (manage 50%, formula 50%, rounding penuh, search penuh) bereaksi berdasarkan lebar panel, bukan sekadar lebar viewport.** Parent card actions wajib memiliki `container-type: inline-size` dan `container-name: grade-card`.
 - Tombol tutup fullscreen wajib keluar dari overlay Input Nilai dan, bila aktif, juga keluar dari fullscreen browser.
 - Tombol close/tutup harus selalu terlihat, memakai warna destructive/merah, dan tidak boleh terdorong keluar viewport.
 - Count pencarian siswa tidak boleh menambah tinggi toolbar secara tiba-tiba. Jika ruang sempit, count dipindah ke info bar atau disembunyikan.
@@ -67,6 +69,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - `overscroll-behavior` wajib digunakan untuk mencegah scroll chaining liar pada touch device.
 - Scrollbar vertikal tidak boleh tertutup header. Area scroll tabel harus dimulai di bawah seluruh header sticky.
 - Header, frozen column, dan cell hover harus tetap sinkron saat zoom dan saat kolom di-resize.
+- Resize kolom wajib memberi feedback berupa handle yang jelas, tint pada kolom aktif, garis panduan vertikal, dan label lebar aktual. Feedback visual tidak boleh mengganti logika ukuran atau menghambat scroll tabel.
 - Header terakhir spreadsheet wajib punya pemisah visual yang jelas, minimal border plus shadow bawah ringan, agar tidak menyatu dengan baris nilai pertama.
 
 ## Teks dan Spasi
@@ -78,6 +81,7 @@ Jika toolbar atau tabel tidak cukup ruang, UI harus memadat secara bertahap: sem
 - Aksi simpan/batal editor nama BAB/Tugas harus turun ke baris aksi di viewport tablet sempit sekitar `<=820px`, bukan mengorbankan lebar input.
 - Ikon non-kritis pada editor nama BAB/Tugas boleh disembunyikan di viewport sangat sempit sekitar `<=420px` agar input tetap menjadi elemen utama.
 - Aksi edit/hapus pada baris BAB/Tugas harus turun ke baris aksi di viewport sempit sekitar `<=420px`, dengan target sentuh minimal `40px`.
+- BAB dan Tugas wajib memiliki label, surface, dan grup aksi yang berbeda. Jangan mengandalkan warna saja; gunakan label `BAB`/`Tugas`, ikon, border, dan `aria-label` grup aksi.
 - Trigger buka/tutup BAB harus terpisah dari tombol edit/hapus agar kontrol tidak saling memicu dan tetap valid untuk keyboard maupun touch.
 - Teks bantuan seperti `Klik = edit` hanya tampil jika membantu dan tidak mengurangi ruang input utama.
 - Tombol, select, dropdown, badge, dan tab harus `select-none` agar label tidak mudah terblok saat user drag atau scroll.
@@ -124,6 +128,7 @@ Visual smoke test wajib pada:
 - fullscreen desktop Input Nilai
 - mobile portrait sekitar `392x778`
 - mobile landscape pendek sekitar `850x296`
+- compact desktop `640x560`, `714x704`, dan `736x711`
 - dropdown Freeze
 - dropdown Proteksi
 - pencarian siswa dengan query aktif

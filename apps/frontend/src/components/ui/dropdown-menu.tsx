@@ -60,10 +60,15 @@ const DropdownMenuSubContent = React.forwardRef<
 ));
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
 
+interface DropdownMenuContentProps extends React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> {
+  isEmpty?: boolean;
+  emptyLabel?: React.ReactNode;
+}
+
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, sideOffset = 8, collisionPadding = 12, ...props }, ref) => (
+  DropdownMenuContentProps
+>(({ className, sideOffset = 8, collisionPadding = 12, isEmpty = false, emptyLabel = "Tidak ada pilihan", children, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
       ref={ref}
@@ -74,7 +79,19 @@ const DropdownMenuContent = React.forwardRef<
         className,
       )}
       {...props}
-    />
+    >
+      {isEmpty && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="px-2 py-2 text-sm text-muted-foreground"
+          data-dropdown-empty
+        >
+          {emptyLabel}
+        </div>
+      )}
+      {children}
+    </DropdownMenuPrimitive.Content>
   </DropdownMenuPrimitive.Portal>
 ));
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;

@@ -109,7 +109,7 @@ function OcrPageSwitcher({ images, activeImageId, onChange }: OcrPageSwitcherPro
           <SelectTrigger className="h-11 min-w-0 bg-background" aria-label="Pilih halaman foto sumber">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent isEmpty={images.length === 0} emptyLabel="Tidak ada pilihan Foto Sumber">
             {images.map((image, index) => (
               <SelectItem key={image.id} value={image.id}>
                 Halaman {index + 1} - {image.name}
@@ -403,7 +403,7 @@ export default function OCRImportDialog({
                     <label className="mb-2 block text-xs font-semibold">Kelas tujuan *</label>
                     <Select value={targetClassId || ""} onValueChange={handleTargetClassChange}>
                       <SelectTrigger className="min-h-11 bg-background"><SelectValue placeholder="Pilih kelas tujuan" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent isEmpty={availableClasses.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                         {availableClasses.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
                         {onRequestCreateClass ? (
                           <>
@@ -532,7 +532,7 @@ export default function OCRImportDialog({
                                 {type === "grades" && (column.semantic === "grade" || column.semantic === "unknown") ? (
                                   <Select value={column.targetId || ""} onValueChange={(value) => mapGradeColumn(column.id, value)}>
                                     <SelectTrigger className="mt-1 h-8 min-w-40 bg-background text-[10px]"><SelectValue placeholder="Pilih tugas" /></SelectTrigger>
-                                    <SelectContent>{(context.assignments || []).map((assignment) => <SelectItem key={assignment.id} value={assignment.id}>{assignment.name}</SelectItem>)}</SelectContent>
+                                    <SelectContent isEmpty={(context.assignments || []).length === 0} emptyLabel="Tidak ada pilihan Tugas">{(context.assignments || []).map((assignment) => <SelectItem key={assignment.id} value={assignment.id}>{assignment.name}</SelectItem>)}</SelectContent>
                                   </Select>
                                 ) : null}
                               </th>

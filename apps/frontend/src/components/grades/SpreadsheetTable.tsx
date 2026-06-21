@@ -6,6 +6,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -21,12 +23,15 @@ import {
   Redo2,
   Shield,
   Lock,
+  LockOpen,
   Hand,
   Snowflake,
   Target,
   Maximize2,
   ChevronDown,
+  HelpCircle,
 } from "lucide-react";
+import { triggerTour } from "@/components/ui/product-tour";
 import { getGradeColor, getGradeTextColor } from "./GradeInputCell";
 import { GradeHintPopup, HintTarget } from "./GradeHintPopup";
 import type { Assignment } from "@/hooks/useAssignments";
@@ -93,8 +98,18 @@ export interface SpreadsheetTableProps {
   onEnterBrowserFullscreen?: () => void;
   toolbarExtra?: React.ReactNode;
   tableColorScheme?: GradeTableColorSchemeId;
-  fullscreenMode?: "app" | "browser" | null;
+  fullscreenMode?: "browser" | "maximal" | null;
+  fullscreenTourKey?: string;
 }
+
+type ProtectionMode = 'full' | 'layout' | 'navigate' | 'off';
+
+const PROTECTION_MODE_META = {
+  full: { label: 'Proteksi Penuh', icon: Shield },
+  layout: { label: 'Kunci Tata Letak', icon: Lock },
+  navigate: { label: 'Mode Navigasi', icon: Hand },
+  off: { label: 'Proteksi', icon: LockOpen },
+} satisfies Record<ProtectionMode, { label: string; icon: typeof Shield }>;
 
 // Constants - matching template
 const DEFAULT_COL_WIDTH = 80;
@@ -207,6 +222,7 @@ export function SpreadsheetTable({
   toolbarExtra,
   tableColorScheme = DEFAULT_GRADE_TABLE_COLOR_SCHEME,
   fullscreenMode = null,
+  fullscreenTourKey,
 }: SpreadsheetTableProps) {
   const activeTableColorScheme = useMemo(
     () => normalizeGradeTableColorScheme(tableColorScheme),
@@ -220,6 +236,7 @@ export function SpreadsheetTable({
   const [frozenColumns, setFrozenColumns] = useState<Set<number>>(new Set([0, 1]));
   const [frozenRows, setFrozenRows] = useState<Set<number>>(new Set());
   const [columnWidths, setColumnWidths] = useState<Record<number, number>>({});
+  const [resizeFeedback, setResizeFeedback] = useState<{ colIndex: number; x: number; width: number } | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
@@ -315,14 +332,17 @@ export function SpreadsheetTable({
     };
   }, [showFreezeMenu]);
 
-  const protectionModeLabel = useMemo(() => {
-    if (formatLocked && scrollLockMode) return 'Proteksi';
-    if (formatLocked) return 'Tata Letak';
-    if (scrollLockMode) return 'Navigasi';
-    return 'Proteksi';
+  const protectionMode = useMemo<ProtectionMode>(() => {
+    if (formatLocked && scrollLockMode) return 'full';
+    if (formatLocked) return 'layout';
+    if (scrollLockMode) return 'navigate';
+    return 'off';
   }, [formatLocked, scrollLockMode]);
 
-  const applyProtectionMode = useCallback((mode: 'full' | 'layout' | 'navigate' | 'off') => {
+  const protectionModeMeta = PROTECTION_MODE_META[protectionMode];
+  const ProtectionModeIcon = protectionModeMeta.icon;
+
+  const applyProtectionMode = useCallback((mode: ProtectionMode) => {
     switch (mode) {
       case 'full':
         setFormatLocked(true);
@@ -807,8 +827,10 @@ export function SpreadsheetTable({
 
     const startX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const startWidth = getColWidth(colIndex);
+    const containerLeft = containerRef.current?.getBoundingClientRect().left || 0;
 
     resizingRef.current = { colIndex, startX, startWidth };
+    setResizeFeedback({ colIndex, x: startX - containerLeft, width: Math.round(startWidth) });
 
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
       const resizing = resizingRef.current;
@@ -824,21 +846,45 @@ export function SpreadsheetTable({
       const newWidth = Math.max(MIN_COL_WIDTH, resizing.startWidth + diff);
 
       setColumnWidths(prev => ({ ...prev, [resizing.colIndex]: newWidth }));
+      setResizeFeedback({
+        colIndex: resizing.colIndex,
+        x: currentX - containerLeft,
+        width: Math.round(newWidth),
+      });
     };
 
     const handleEnd = () => {
       resizingRef.current = null;
+      setResizeFeedback(null);
       document.removeEventListener('mousemove', handleMove);
       document.removeEventListener('mouseup', handleEnd);
       document.removeEventListener('touchmove', handleMove);
       document.removeEventListener('touchend', handleEnd);
+      document.removeEventListener('touchcancel', handleEnd);
+      window.removeEventListener('blur', handleEnd);
     };
 
     document.addEventListener('mousemove', handleMove);
     document.addEventListener('mouseup', handleEnd);
     document.addEventListener('touchmove', handleMove, { passive: false });
     document.addEventListener('touchend', handleEnd);
+    document.addEventListener('touchcancel', handleEnd);
+    window.addEventListener('blur', handleEnd);
   }, [getColWidth, zoomFactor, formatLocked]);
+
+  const renderResizeHandle = useCallback((colIndex: number) => (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Ubah lebar kolom ${columns[colIndex]?.label || colIndex + 1}`}
+      className="sipena-grade-resize-handle absolute right-0 top-0 z-10 h-full w-3 cursor-col-resize touch-none"
+      data-resizing={resizeFeedback?.colIndex === colIndex ? "true" : "false"}
+      onMouseDown={(event) => handleResizeStart(event, colIndex)}
+      onTouchStart={(event) => handleResizeStart(event, colIndex)}
+    >
+      <span aria-hidden="true" className="sipena-grade-resize-handle-line" />
+    </div>
+  ), [columns, handleResizeStart, resizeFeedback?.colIndex]);
 
   // Touch handling for pinch zoom - blocked when format is locked
   const getDistance = useCallback((touch1: React.Touch, touch2: React.Touch): number => {
@@ -1480,6 +1526,7 @@ export function SpreadsheetTable({
     const isAverageColumn = column.type === 'chapter_avg';
     const isRowHovered = hoveredRowIndex === rowIndex && !isEditing;
     const isColumnHovered = hoveredColumnIndex === colIndex && !isEditing;
+    const isColumnResizing = resizeFeedback?.colIndex === colIndex;
     const isCrossHovered = isRowHovered && isColumnHovered;
     const tableTouchAction = isEditing ? 'none' : isFrozenCol ? 'none' : 'pan-x pan-y';
     const columnBodyTone = getColumnBodyTone(column, activeTableColorScheme);
@@ -1533,6 +1580,7 @@ export function SpreadsheetTable({
         }}
         className={`border border-border/40 flex items-center transition-colors ${
           isEditing ? 'bg-primary/10 ring-2 ring-primary z-10' : 
+          isColumnResizing ? 'bg-primary/10 ring-1 ring-inset ring-primary/35' :
           isCrossHovered ? crossHoverBackground :
           isRowHovered ? rowHoverBackground :
           isColumnHovered ? columnHoverBackground :
@@ -1542,7 +1590,7 @@ export function SpreadsheetTable({
         {renderCellContent(student, column, rowIndex, colIndex)}
       </div>
     );
-  }, [activeTableColorScheme, students, columns, getColWidth, getRowHeight, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, hoveredColumnIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
+  }, [activeTableColorScheme, students, columns, getColWidth, getRowHeight, getFrozenColLeft, getNonFrozenColLeft, getRowTop, editingCell, hoveredRowIndex, hoveredColumnIndex, resizeFeedback?.colIndex, zoomFactor, handleCellClick, renderCellContent, frozenColumns, scrollLockMode, handleCellLongPress, handleCellTouchEnd, handleCellMouseEnter, handleCellMouseLeave]);
 
   // Render header cell - centered, no lock buttons
   const renderHeaderCell = useCallback((colIndex: number, isFrozen: boolean) => {
@@ -1553,6 +1601,7 @@ export function SpreadsheetTable({
     const left = isFrozen ? getFrozenColLeft(colIndex) : getNonFrozenColLeft(colIndex);
     const isFrozenCol = frozenColumns.has(colIndex);
     const isColumnHovered = hoveredColumnIndex === colIndex;
+    const isColumnResizing = resizeFeedback?.colIndex === colIndex;
     const isMergedStandaloneHeader = chapters.length > 0 && !isFrozen && isStandaloneFinalColumn(column);
 
     if (isMergedStandaloneHeader) return null;
@@ -1567,6 +1616,7 @@ export function SpreadsheetTable({
           getColumnHeaderTone(column, activeTableColorScheme)
         } ${isFrozenCol ? 'ring-1 ring-inset ring-primary/35' : ''} ${
           isColumnHovered ? 'ring-2 ring-inset ring-primary/45 brightness-[0.98]' : ''
+        } ${isColumnResizing ? 'sipena-grade-column-resizing ring-2 ring-inset ring-primary/70' : ''
         }`}
         style={{
           left: left,
@@ -1590,16 +1640,10 @@ export function SpreadsheetTable({
         </span>
 
         {/* Resize handle - only if format is not locked */}
-        {!formatLocked && (
-          <div
-            className="absolute right-0 top-0 w-2 h-full cursor-col-resize hover:bg-primary/50 active:bg-primary touch-none z-10"
-            onMouseDown={(e) => handleResizeStart(e, colIndex)}
-            onTouchStart={(e) => handleResizeStart(e, colIndex)}
-          />
-        )}
+        {!formatLocked && renderResizeHandle(colIndex)}
       </div>
     );
-  }, [activeTableColorScheme, chapters.length, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, frozenColumns, hoveredColumnIndex, zoomFactor, handleResizeStart, formatLocked]);
+  }, [activeTableColorScheme, chapters.length, columns, getColWidth, getFrozenColLeft, getNonFrozenColLeft, frozenColumns, hoveredColumnIndex, resizeFeedback?.colIndex, zoomFactor, renderResizeHandle, formatLocked]);
 
   // Calculate header positions for when no columns are frozen
   // This ensures BAB headers maintain their position relative to their columns
@@ -1789,13 +1833,7 @@ export function SpreadsheetTable({
                     }}
                   >
                     {column.label}
-                    {!formatLocked && (
-                      <div
-                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize touch-none hover:bg-primary/50 active:bg-primary"
-                        onMouseDown={(e) => handleResizeStart(e, colIdx)}
-                        onTouchStart={(e) => handleResizeStart(e, colIdx)}
-                      />
-                    )}
+                    {!formatLocked && renderResizeHandle(colIdx)}
                   </div>
                 );
               });
@@ -1804,17 +1842,17 @@ export function SpreadsheetTable({
         </div>
       </div>
     );
-  }, [activeTableColorScheme, chapters.length, chapterHeaders, columns, frozenColumns, formatLocked, handleResizeStart, hoveredColumnIndex, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, totalHeaderHeight, zoomFactor]);
+  }, [activeTableColorScheme, chapters.length, chapterHeaders, columns, frozenColumns, formatLocked, hoveredColumnIndex, nonFrozenColumns, sortedFrozenColumns, getColWidth, getFrozenWidth, getNonFrozenColLeft, renderResizeHandle, totalHeaderHeight, zoomFactor]);
 
   const fullscreenViewportHeight =
-    fullscreenMode === "browser"
+    fullscreenMode === "maximal"
       ? "min(100dvh, var(--sipena-visual-viewport-height, 100dvh))"
       : "100dvh";
 
   return (
     <div 
       ref={containerRef}
-      className={`flex flex-col bg-background select-none ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full'} ${fullscreenMode === "browser" ? "sipena-grade-browser-fullscreen" : ""}`}
+      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
       style={{
         ...(isFullscreen && {
           width: '100vw',
@@ -1825,6 +1863,7 @@ export function SpreadsheetTable({
     >
       {/* Toolbar - matching template style */}
       <div
+        data-tour="grade-toolbar"
         className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3`}
         onPointerDownCapture={handleToolbarPointerDownCapture}
         onPointerMoveCapture={handleToolbarPointerMoveCapture}
@@ -1835,6 +1874,7 @@ export function SpreadsheetTable({
         <div className="sipena-grade-toolbar-format flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
           {/* Freeze Menu Toggle */}
           <Button
+            data-tour="grade-freeze-control"
             ref={freezeMenuTriggerRef}
             variant={showFreezeMenu ? "default" : "outline"}
             size="sm"
@@ -1848,7 +1888,7 @@ export function SpreadsheetTable({
           </Button>
 
           {/* Protection split button */}
-          <div className={`sipena-protection-split flex items-stretch rounded-lg border border-input bg-background overflow-hidden ${formatLocked || scrollLockMode ? 'sipena-protection-split--active' : ''}`}>
+          <div data-tour="grade-protection-control" className={`sipena-protection-split flex items-stretch rounded-lg border border-input bg-background overflow-hidden ${formatLocked || scrollLockMode ? 'sipena-protection-split--active' : ''}`}>
             <Button
               variant={formatLocked || scrollLockMode ? "default" : "ghost"}
               size="sm"
@@ -1857,8 +1897,8 @@ export function SpreadsheetTable({
               title="Aktifkan proteksi penuh: kunci tata letak dan mode navigasi"
               style={{ minWidth: 40, touchAction: 'manipulation' }}
             >
-              {scrollLockMode ? <Hand className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-              <span className="sipena-grade-action-text hidden sm:inline">{protectionModeLabel}</span>
+              <ProtectionModeIcon className="w-4 h-4" />
+              <span className="sipena-grade-action-text hidden sm:inline">{protectionModeMeta.label}</span>
             </Button>
             <DropdownMenu
               open={showProtectionMenu}
@@ -1882,31 +1922,33 @@ export function SpreadsheetTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={6} className="sipena-protection-menu w-72 max-w-[calc(100vw-1rem)]">
-                <DropdownMenuItem onClick={() => applyProtectionMode('full')} className="sipena-protection-item flex items-start gap-2 py-2.5">
+                <DropdownMenuRadioGroup value={protectionMode} onValueChange={(value) => applyProtectionMode(value as ProtectionMode)}>
+                <DropdownMenuRadioItem value="full" className="sipena-protection-item flex items-start gap-2 py-2.5 data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary">
                   <Shield className="w-4 h-4 mt-0.5" />
                   <div className="min-w-0">
                     <p className="font-medium">Proteksi Penuh</p>
                     <p className="sipena-protection-item-description text-xs text-muted-foreground">Kunci tata letak sekaligus aktifkan mode navigasi.</p>
                   </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => applyProtectionMode('layout')} className="sipena-protection-item flex items-start gap-2 py-2.5">
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="layout" className="sipena-protection-item flex items-start gap-2 py-2.5 data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary">
                   <Lock className="w-4 h-4 mt-0.5" />
                   <div className="min-w-0">
                     <p className="font-medium">Kunci Tata Letak</p>
                     <p className="sipena-protection-item-description text-xs text-muted-foreground">Bekukan format spreadsheet tanpa mengaktifkan mode navigasi.</p>
                   </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => applyProtectionMode('navigate')} className="sipena-protection-item flex items-start gap-2 py-2.5">
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="navigate" className="sipena-protection-item flex items-start gap-2 py-2.5 data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary">
                   <Hand className="w-4 h-4 mt-0.5" />
                   <div className="min-w-0">
                     <p className="font-medium">Mode Navigasi</p>
                     <p className="sipena-protection-item-description text-xs text-muted-foreground">Nonaktifkan edit sel agar gulir spreadsheet lebih leluasa.</p>
                   </div>
-                </DropdownMenuItem>
+                </DropdownMenuRadioItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => applyProtectionMode('off')} className="sipena-protection-item py-2.5">
-                  Buka Semua Proteksi
-                </DropdownMenuItem>
+                <DropdownMenuRadioItem value="off" className="sipena-protection-item flex items-center gap-2 py-2.5 data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary">
+                  <LockOpen className="h-4 w-4" /> Buka Semua Proteksi
+                </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -1948,6 +1990,21 @@ export function SpreadsheetTable({
             <RotateCcw className="w-4 h-4" />
           </Button>
 
+          {isFullscreen && fullscreenTourKey && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 sm:h-10 sm:w-10"
+              onClick={() => triggerTour(fullscreenTourKey)}
+              title="Panduan toolbar fullscreen"
+              aria-label="Buka panduan toolbar fullscreen"
+              style={{ touchAction: 'manipulation' }}
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+          )}
+
           {isFullscreen && (
             <Button
               variant="destructive"
@@ -1971,7 +2028,7 @@ export function SpreadsheetTable({
           )}
 
           {/* Zoom Controls - matching template */}
-          <div className={`sipena-grade-zoom-control flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
+          <div data-tour="grade-zoom-control" className={`sipena-grade-zoom-control flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -2017,6 +2074,7 @@ export function SpreadsheetTable({
               >
                 <DropdownMenuTrigger asChild>
                   <Button
+                    data-tour="grade-fullscreen-control"
                     type="button"
                     variant="outline"
                     size="sm"
@@ -2037,15 +2095,15 @@ export function SpreadsheetTable({
                   <DropdownMenuItem onClick={onEnterFullscreen} className="sipena-fullscreen-menu-item min-h-[48px] items-start gap-2 py-2.5">
                     <Maximize2 className="mt-0.5 h-4 w-4" />
                     <div className="min-w-0">
-                      <p className="font-medium">Mode Layar Penuh Panel</p>
-                      <p className="text-xs text-muted-foreground">Membuka Input Nilai penuh di dalam tab browser.</p>
+                      <p className="font-medium">Layar Penuh Browser</p>
+                      <p className="text-xs text-muted-foreground">Membuka Input Nilai lebih luas, tetapi tetap berada di dalam tampilan browser.</p>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onEnterBrowserFullscreen} className="sipena-fullscreen-menu-item min-h-[48px] items-start gap-2 py-2.5">
                     <Maximize2 className="mt-0.5 h-4 w-4" />
                     <div className="min-w-0">
-                      <p className="font-medium">Mode Layar Penuh Native</p>
-                      <p className="text-xs text-muted-foreground">Meminta browser memakai seluruh layar perangkat dan safe-area.</p>
+                      <p className="font-medium">Layar Penuh Maksimal</p>
+                      <p className="text-xs text-muted-foreground">Membuka Input Nilai memenuhi seluruh layar perangkat.</p>
                     </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -2146,7 +2204,7 @@ export function SpreadsheetTable({
         </span>
         {isFullscreen && (
           <span className="text-muted-foreground hidden sm:inline">
-          {fullscreenMode === "browser" ? "Fullscreen browser aktif • " : ""}
+          {fullscreenMode === "maximal" ? "Layar penuh maksimal aktif • " : ""}
           {scrollLockMode
             ? 'Navigasi aktif • Geser spreadsheet dengan aman tanpa membuka edit sel'
             : formatLocked
@@ -2172,6 +2230,15 @@ export function SpreadsheetTable({
           WebkitTouchCallout: 'none',
         }}
       >
+        {resizeFeedback && (
+          <div
+            aria-hidden="true"
+            className="sipena-grade-resize-guide pointer-events-none absolute inset-y-0 z-[80]"
+            style={{ left: resizeFeedback.x }}
+          >
+            <span className="sipena-grade-resize-bubble">{resizeFeedback.width}px</span>
+          </div>
+        )}
         {/* Chapter Headers Row */}
         {renderChapterHeaders(scrollLeft)}
 

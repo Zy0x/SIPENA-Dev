@@ -43,6 +43,11 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Focus state search field wajib memakai `:focus-within` pada wrapper agar ring tetap mengikuti bentuk luar kotak dan tidak terlihat seperti border kecil di dalam card.
 - Dropdown menu wajib collision-aware: gunakan `DropdownMenuContent` shared dengan `collisionPadding`, `max-height` berbasis `--radix-dropdown-menu-content-available-height`, dan `max-width: calc(100vw - safe margin)` agar menu tidak terpotong di mobile, tablet, PID, atau viewport sempit.
 - Dropdown yang muncul dekat sisi layar harus memakai alignment yang memberi ruang baca paling besar. Untuk toolbar mobile yang berada di kiri/kanan, pilih `align="start"` atau `align="end"` secara eksplisit sesuai posisi trigger.
+- Setiap dropdown/select yang opsinya berasal dari data wajib memiliki empty-state setelah loading selesai. Gunakan `isEmpty` dan `emptyLabel` pada primitive shared; jangan mendeteksi kekosongan dengan membaca struktur `children`.
+- Label empty-state wajib mengikuti konteks, misalnya `Tidak ada pilihan Kelas`, `Tidak ada pilihan Mata Pelajaran`, `Tidak ada pilihan Semester`, atau `Tidak ada pilihan Kelas Sumber`. Default `Tidak ada pilihan` hanya untuk konteks yang benar-benar umum.
+- Loading, error, dan empty adalah state berbeda. Selama request berjalan tampilkan `Memuat ...`; jangan tampilkan pesan tidak ada pilihan sebelum request selesai.
+- Jika dropdown kosong masih menyediakan CTA seperti `Tambah Kelas Baru`, tampilkan pesan kosong terlebih dahulu lalu CTA tetap aktif dan dapat dipilih.
+- Menu aksi statis tidak perlu empty-state. Aturan ini berlaku untuk pilihan dinamis pada Select, DropdownMenu, Command, combobox, dan komponen katalog setara.
 
 ## Modal, Toast, dan Table Header
 

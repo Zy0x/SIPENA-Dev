@@ -8,6 +8,7 @@ export interface TourStep {
   title: string;
   description: string;
   placement?: "top" | "bottom" | "left" | "right";
+  prepare?: () => void | Promise<void>;
 }
 
 interface ProductTourProps {
@@ -142,6 +143,7 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
   useEffect(() => {
     if (!isActive || !step || !mountedRef.current) return;
 
+    let cancelled = false;
     let retryCount = 0;
     const maxRetries = 15;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -195,9 +197,16 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
       }, 100);
     };
 
-    findAndTrackElement();
+    const prepareAndTrackElement = async () => {
+      await step.prepare?.();
+      if (cancelled || !mountedRef.current || !isActive) return;
+      findAndTrackElement();
+    };
+
+    void prepareAndTrackElement();
 
     return () => {
+      cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);

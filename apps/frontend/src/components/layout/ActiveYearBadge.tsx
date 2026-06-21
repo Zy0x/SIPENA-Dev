@@ -176,7 +176,7 @@ export function ActiveYearBadge({
               <ChevronDown className="h-3 w-3 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-48" isEmpty={academicYears.length === 0} emptyLabel="Tidak ada pilihan Tahun Ajaran">
             {academicYears.map((year) => (
               <DropdownMenuItem
                 key={year.id}
@@ -325,7 +325,7 @@ export function ActiveYearBadge({
           </Button>
         </DropdownMenuTrigger>
         
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56" isEmpty={academicYears.length === 0} emptyLabel="Tidak ada pilihan Tahun Ajaran">
           <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
             Pilih Tahun Ajaran
           </div>

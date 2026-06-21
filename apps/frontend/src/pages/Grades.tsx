@@ -91,7 +91,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ProductTour, TourButton } from "@/components/ui/product-tour";
+import { ProductTour, TourButton, type TourStep } from "@/components/ui/product-tour";
 import { SmartStudentSearch } from "@/components/grades/SmartStudentSearch";
 import { ChapterStructure } from "@/components/grades/ChapterStructure";
 import { SpreadsheetTable } from "@/components/grades/SpreadsheetTable";
@@ -196,44 +196,31 @@ type RpcClient = {
 
 const guestRpcClient = supabase as unknown as RpcClient;
 
-const gradesTourSteps = [
+const fullscreenGradesTourSteps: TourStep[] = [
   {
-    target: "[data-tour='class-select']",
-    title: "Pilih Kelas",
-    description: "Pilih kelas yang akan diinput nilainya.",
+    target: ".sipena-grade-toolbar--fullscreen [data-tour='grade-freeze-control']",
+    title: "Kolom Tetap Terlihat",
+    description: "Pilih kolom yang tetap terlihat ketika tabel digeser ke samping.",
   },
   {
-    target: "[data-tour='subject-select']",
-    title: "Pilih Mata Pelajaran",
-    description: "Pilih mata pelajaran setelah memilih kelas.",
+    target: ".sipena-grade-toolbar--fullscreen [data-tour='grade-protection-control']",
+    title: "Proteksi dan Navigasi",
+    description: "Pilih Proteksi Penuh, Kunci Tata Letak, atau Mode Navigasi sesuai pekerjaan Anda.",
   },
   {
-    target: "[data-tour='structure-tab']",
-    title: "Struktur BAB",
-    description: "Buat struktur BAB dan tugas sebelum input nilai.",
+    target: ".sipena-grade-toolbar--fullscreen [data-tour='grade-search-control']",
+    title: "Cari Siswa",
+    description: "Cari dan kunci perhatian pada satu siswa tanpa menggulir daftar panjang.",
   },
   {
-    target: "[data-tour='input-tab']",
-    title: "Input Nilai",
-    description: "Tab untuk menginput nilai siswa. Nilai tersimpan otomatis.",
-  },
-];
-
-const guestGradesTourSteps = [
-  {
-    target: "[data-tour='guest-info']",
-    title: "Akses Guru Tamu",
-    description: "Mata pelajaran dan kelas dikunci dari link akses.",
+    target: ".sipena-grade-toolbar--fullscreen [data-tour='grade-zoom-control']",
+    title: "Atur Zoom",
+    description: "Sesuaikan ukuran tabel tanpa mengubah nilai atau lebar asli kolom.",
   },
   {
-    target: "[data-tour='structure-tab']",
-    title: "Struktur BAB",
-    description: "Kelola BAB dan tugas untuk input nilai.",
-  },
-  {
-    target: "[data-tour='input-tab']",
-    title: "Input Nilai",
-    description: "Input nilai siswa dengan tabel yang sama seperti guru utama.",
+    target: ".sipena-grade-toolbar--fullscreen",
+    title: "Toolbar Responsif",
+    description: "Pada layar sempit toolbar tersusun dua baris agar semua kontrol utama tetap dapat digunakan tanpa geser horizontal.",
   },
 ];
 
@@ -333,7 +320,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [activeTab, setActiveTab] = useState("input");
   const gradeTabsRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [fullscreenMode, setFullscreenMode] = useState<"app" | "browser" | null>(null);
+  const [fullscreenMode, setFullscreenMode] = useState<"browser" | "maximal" | null>(null);
   const gradeFullscreenHistoryRef = useRef(false);
   const gradeOverlayOpenRef = useRef(false);
   const [showGradeImportExport, setShowGradeImportExport] = useState(false);
@@ -391,32 +378,35 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   }, [isGuestMode, token, navigate]);
 
   const openAppFullscreen = useCallback(() => {
-    setFullscreenMode("app");
+    setShowGradeManageMenu(false);
+    setFullscreenMode("browser");
     setIsFullscreen(true);
   }, []);
 
   const openBrowserFullscreen = useCallback(async () => {
-    setFullscreenMode("browser");
+    setShowGradeManageMenu(false);
+    setFullscreenMode("maximal");
     setIsFullscreen(true);
 
     if (typeof document === "undefined") return;
 
     const target = document.documentElement;
     if (!target.requestFullscreen) {
-      setFullscreenMode("app");
-      showWarning("Layar penuh native tidak tersedia", "Mode layar penuh panel tetap dibuka di dalam tab browser.");
+      setFullscreenMode("browser");
+      showWarning("Layar penuh maksimal tidak tersedia", "Layar Penuh Browser tetap dibuka di dalam tampilan browser.");
       return;
     }
 
     try {
       await target.requestFullscreen({ navigationUI: "hide" });
     } catch {
-      setFullscreenMode("app");
-      showWarning("Layar penuh native diblokir", "Browser tidak mengizinkan layar penuh perangkat. Mode layar penuh panel tetap aktif.");
+      setFullscreenMode("browser");
+      showWarning("Layar penuh maksimal diblokir", "Browser tidak mengizinkan layar penuh perangkat. Layar Penuh Browser tetap aktif.");
     }
   }, [showWarning]);
 
   const closeGradeFullscreen = useCallback(async (options?: { skipHistoryBack?: boolean }) => {
+    setShowGradeManageMenu(false);
     if (typeof document !== "undefined" && document.fullscreenElement) {
       try {
         await document.exitFullscreen();
@@ -462,9 +452,9 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     if (typeof document === "undefined") return;
 
     const handleFullscreenChange = () => {
-      if (fullscreenMode === "browser" && !document.fullscreenElement) {
+      if (fullscreenMode === "maximal" && !document.fullscreenElement) {
         if (gradeOverlayOpenRef.current) {
-          setFullscreenMode("app");
+          setFullscreenMode("browser");
           setIsFullscreen(true);
           return;
         }
@@ -1291,6 +1281,103 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     (chapter) => (assignmentsByChapter[chapter.id]?.length || 0) > 0
   );
 
+  const prepareTourTab = useCallback((tab: "structure" | "input") => new Promise<void>((resolve) => {
+    handleActiveTabChange(tab);
+    if (typeof window === "undefined") {
+      resolve();
+      return;
+    }
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+  }), [handleActiveTabChange]);
+
+  const gradeTourSteps = useMemo<TourStep[]>(() => {
+    const steps: TourStep[] = [];
+
+    if (isGuestMode) {
+      steps.push({
+        target: "[data-tour='guest-info']",
+        title: "Akses Guru Tamu",
+        description: "Kelas, mata pelajaran, dan kemampuan Anda mengikuti link akses dari guru utama.",
+      });
+    } else {
+      steps.push(
+        {
+          target: "[data-tour='class-select']",
+          title: "Pilih Kelas",
+          description: "Pilih kelas tujuan. Daftar siswa dan mata pelajaran akan mengikuti kelas ini.",
+        },
+        {
+          target: "[data-tour='subject-select']",
+          title: "Pilih Mata Pelajaran",
+          description: "Pilih mata pelajaran beserta KKM yang akan digunakan dalam perhitungan nilai.",
+        },
+      );
+    }
+
+    steps.push({
+      target: "[data-tour='structure-tab']",
+      title: "Struktur BAB dan Tugas",
+      description: "Atur BAB dan tugas terlebih dahulu agar kolom nilai tersusun dengan benar.",
+      prepare: () => prepareTourTab("structure"),
+    });
+
+    if (chapters.length === 0) {
+      steps.push({
+        target: "[data-tour='grade-add-chapter']",
+        title: "Tambahkan BAB",
+        description: "Buat satu atau beberapa BAB, lalu tambahkan tugas pada BAB yang sesuai.",
+        prepare: () => prepareTourTab("structure"),
+      });
+    } else {
+      steps.push(
+        {
+          target: "[data-tour='grade-chapter-card']",
+          title: "Identitas Setiap BAB",
+          description: "Aksen dan label BAB membedakan kelompok materi beserta jumlah tugasnya.",
+          prepare: () => prepareTourTab("structure"),
+        },
+        {
+          target: "[data-tour='grade-chapter-actions']",
+          title: "Aksi Khusus BAB",
+          description: "Gunakan aksi ini hanya untuk mengganti nama atau menghapus seluruh BAB.",
+          prepare: () => prepareTourTab("structure"),
+        },
+      );
+    }
+
+    steps.push({
+      target: "[data-tour='input-tab']",
+      title: "Input Nilai",
+      description: "Nilai disimpan otomatis. Gunakan Enter untuk menyimpan dan berpindah ke siswa berikutnya.",
+      prepare: () => prepareTourTab("input"),
+    });
+
+    if (students.length > 0) {
+      steps.push(
+        {
+          target: "[data-tour='grade-table']",
+          title: "Spreadsheet Nilai",
+          description: "Geser tabel, ubah lebar kolom dari batas header, dan gunakan warna nilai untuk memeriksa ketuntasan.",
+          prepare: () => prepareTourTab("input"),
+        },
+        {
+          target: "[data-tour='grade-card-actions']",
+          title: "Kelola dan Periksa Nilai",
+          description: "Import, ekspor, rumus, pembulatan, dan pencarian siswa tersedia di area ini.",
+          prepare: () => prepareTourTab("input"),
+        },
+        {
+          target: "[data-tour='grade-fullscreen-control']",
+          title: "Layar Penuh",
+          description: "Pilih Layar Penuh Browser atau Layar Penuh Maksimal. Panduan khusus tersedia setelah fullscreen dibuka.",
+          prepare: () => prepareTourTab("input"),
+        },
+      );
+    }
+
+    return steps;
+  }, [chapters.length, isGuestMode, prepareTourTab, students.length]);
+
   const searchAction = (
     <SmartStudentSearch
       students={students}
@@ -1307,8 +1394,18 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     onValidTap: () => setShowGradeManageMenu((current) => !current),
   });
 
+  const runAfterGradeManageMenuCloses = useCallback((action: () => void) => {
+    setShowGradeManageMenu(false);
+    if (typeof window === "undefined") {
+      action();
+      return;
+    }
+    window.requestAnimationFrame(action);
+  }, []);
+
   const ownerToolbarActions = classId && subjectId ? (
     <>
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--manage min-w-0">
       <DropdownMenu open={showGradeManageMenu} onOpenChange={setShowGradeManageMenu}>
         <DropdownMenuTrigger asChild>
           <Button
@@ -1331,41 +1428,41 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">Import / Ekspor</DropdownMenuLabel>
           <DropdownMenuItem
-            onClick={() => {
+            onSelect={() => runAfterGradeManageMenuCloses(() => {
               setGradeImportExportTab("import");
               setShowGradeImportExport(true);
-            }}
+            })}
             className="gap-2 min-h-[44px]"
           >
             <FileSpreadsheet className="w-4 h-4" />
             Import Nilai
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => {
+            onSelect={() => runAfterGradeManageMenuCloses(() => {
               setGradeImportExportTab("export");
               setShowGradeImportExport(true);
-            }}
+            })}
             className="gap-2 min-h-[44px]"
           >
             <Download className="w-4 h-4" />
             Ekspor Nilai Saat Ini
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={handleDownloadOfficialTemplate}
+            onSelect={() => runAfterGradeManageMenuCloses(() => void handleDownloadOfficialTemplate())}
             disabled={!canDownloadGradeTemplate || isDownloadingOfficialTemplate}
             className="gap-2 min-h-[44px]"
           >
             {isDownloadingOfficialTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
             Download Template Resmi
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowOCRGrades(true)} className="gap-2 min-h-[44px]">
+          <DropdownMenuItem onSelect={() => runAfterGradeManageMenuCloses(() => setShowOCRGrades(true))} className="gap-2 min-h-[44px]">
             <Camera className="w-4 h-4" />
             Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">Backup / Restore</DropdownMenuLabel>
           <DropdownMenuItem
-            onClick={handleOpenGradeBackupOptions}
+            onSelect={() => runAfterGradeManageMenuCloses(handleOpenGradeBackupOptions)}
             disabled={isExportingGradeBackup || !gradeBackupRestoreContext}
             className="gap-2 min-h-[44px]"
           >
@@ -1373,7 +1470,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             Buat Backup Lengkap
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => setShowGradeBackupRestore(true)}
+            onSelect={() => runAfterGradeManageMenuCloses(() => setShowGradeBackupRestore(true))}
             disabled={!gradeBackupRestoreContext}
             className="gap-2 min-h-[44px]"
           >
@@ -1382,12 +1479,16 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--formula min-w-0">
       <FormulaSettings
         formula={formula}
         onFormulaChange={handleFormulaChange}
         hasChapters={hasChaptersWithAssignments}
         triggerClassName="sipena-grade-action-button h-9"
       />
+      </div>
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--rounding min-w-0">
       <Button
         type="button"
         variant="outline"
@@ -1402,22 +1503,27 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           {getReportRoundingLabel(formula.reportRounding.mode)} - {getReportRoundingTargetLabel(formula.reportRounding.target)}
         </Badge>
       </Button>
+      </div>
       {formulaSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-      {searchAction}
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search min-w-0">{searchAction}</div>
     </>
   ) : null;
 
   const guestToolbarActions = (
     <>
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary min-w-0">
       <Button variant="outline" size="sm" className="sipena-grade-action-button h-9" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
         <RefreshCw className={`w-4 h-4 mr-2 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
         <span className="hidden sm:inline">Muat Ulang</span>
       </Button>
+      </div>
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary min-w-0">
       <Button variant="outline" size="sm" className="sipena-grade-action-button h-9" onClick={() => setShowGuestKkmDialog(true)}>
         <Settings className="w-4 h-4 mr-2" />
         KKM: {kkm}
       </Button>
-      {searchAction}
+      </div>
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search min-w-0">{searchAction}</div>
     </>
   );
 
@@ -1549,7 +1655,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                     <SelectValue placeholder="Pilih Kelas" />
                   </div>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent isEmpty={!classesLoading && classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                   {classes.map((cls) => (
                     <SelectItem key={cls.id} value={cls.id}>
                       {cls.name} ({cls.student_count || 0} siswa)
@@ -1577,7 +1683,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                     <SelectValue placeholder={subjects.length === 0 ? "Belum ada mapel" : "Pilih Mata Pelajaran"} />
                   </div>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent isEmpty={!subjectsLoading && subjects.length === 0} emptyLabel="Tidak ada pilihan Mata Pelajaran">
                   {subjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>
                       {subject.name} (KKM: {subject.kkm})
@@ -1660,7 +1766,9 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div className="sipena-grade-card-actions flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">{gradeToolbarActions}</div>
+                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+                        {!isFullscreen && gradeToolbarActions}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="relative z-0 min-w-0 overflow-hidden p-0">
@@ -1726,16 +1834,26 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           onUndo={isGuestMode ? undefined : undo}
           onRedo={isGuestMode ? undefined : redo}
           toolbarExtra={gradeToolbarActions}
+          fullscreenTourKey={isGuestMode ? "guest-grades-fullscreen" : "grades-fullscreen"}
           tableColorScheme={gradeTableColorScheme}
         />
       )}
 
       <ProductTour
-        steps={isGuestMode ? guestGradesTourSteps : gradesTourSteps}
+        steps={gradeTourSteps}
         tourKey={isGuestMode ? "guest-grades" : "grades"}
         requireOnboarding={!isGuestMode}
         shouldAutoStart={isGuestMode ? false : shouldShowTours}
       />
+
+      {isFullscreen && (
+        <ProductTour
+          steps={fullscreenGradesTourSteps}
+          tourKey={isGuestMode ? "guest-grades-fullscreen" : "grades-fullscreen"}
+          requireOnboarding
+          shouldAutoStart={false}
+        />
+      )}
 
       {!isGuestMode && selectedSubjectId && selectedClassId && (
         <GradeImportExportDialog

@@ -1598,7 +1598,7 @@ export default function GradeReports() {
               <School className="w-4 h-4 mr-2 text-muted-foreground shrink-0" />
               <SelectValue placeholder="Pilih Kelas" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
               {classes.map((cls) => (
                 <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
               ))}
@@ -1610,7 +1610,7 @@ export default function GradeReports() {
               <BookOpen className="w-4 h-4 mr-2 text-muted-foreground shrink-0" />
               <SelectValue placeholder="Pilih Mapel" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent isEmpty={subjects.length === 0} emptyLabel="Tidak ada pilihan Mata Pelajaran">
               {subjects.map((subj) => (
                 <SelectItem key={subj.id} value={subj.id}>{subj.name}</SelectItem>
               ))}

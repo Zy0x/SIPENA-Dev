@@ -1,8 +1,11 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.54";
-export const VERSION_DATE = "2026-06-11";
+export const APP_VERSION = "2.4.57";
+export const VERSION_DATE = "2026-06-21";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.57": "Empty-state guard diperluas ke Attendance, StudentRankings, dan ParentPortal, layout bento mobile bento diperbaiki, dan toolbar landscape viewport pendek dioptimasi.",
+  "2.4.56": "Laporan Nilai menyamakan perilaku tabel dengan Input Nilai, kartu Mata Pelajaran lebih responsif, touch-scroll guard diperkuat, dan ekspor ranking memakai tinggi baris lebih efisien.",
+  "2.4.55": "Input Nilai memadatkan layout berdasarkan observasi viewport mobile terbaru dan jalur auth lockout reset kini dikunci lewat RLS function-only.",
   "2.4.54": "Editor nama BAB dan Tugas kini memakai lebar viewport yang tersedia, responsif di mobile/tablet/desktop, dan tombol aksinya tetap nyaman ditekan.",
   "2.4.53": "Perpindahan tab Input Nilai menjaga tinggi panel agar posisi scroll halaman tidak meloncat ke atas.",
   "2.4.52": "Divider tab Input Nilai dirapikan tanpa celah dan disambungkan ke panel sebagai satu siluet binder.",

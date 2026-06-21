@@ -542,7 +542,7 @@ export default function StudentRankings() {
                     <School className="w-4 h-4 mr-2 shrink-0 text-muted-foreground" />
                     <SelectValue placeholder="Pilih kelas" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                     {classes.map((cls) => (
                       <SelectItem key={cls.id} value={cls.id} className="text-sm">
                         {cls.name}
