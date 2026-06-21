@@ -252,6 +252,19 @@ export function SpreadsheetTable({
   const [formatLocked, setFormatLocked] = useState(false);
   // Scroll lock mode - disables cell editing for free scrolling on mobile
   const [scrollLockMode, setScrollLockMode] = useState(false);
+
+  // Track if screen is small (mobile/tablet viewport < 1024px) for responsive Nama column width
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 1024);
+    };
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
   
   // Debounced calculation ref for real-time updates without losing focus
   const debounceCalcRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -379,7 +392,7 @@ export function SpreadsheetTable({
   const columns: ColumnDef[] = useMemo(() => {
     const cols: ColumnDef[] = [
       { id: 'index', type: 'index', label: 'No', width: INDEX_COL_WIDTH },
-      { id: 'name', type: 'name', label: 'Nama Siswa', width: NAME_COL_WIDTH },
+      { id: 'name', type: 'name', label: 'Nama Siswa', width: isSmallScreen ? 115 : NAME_COL_WIDTH },
     ];
 
     chapters.forEach((chapter, chapterIndex) => {
@@ -413,7 +426,7 @@ export function SpreadsheetTable({
     );
 
     return cols;
-  }, [chapters, assignmentsByChapter]);
+  }, [chapters, assignmentsByChapter, isSmallScreen]);
 
   // Build chapter headers for grouped display
   const chapterHeaders = useMemo(() => {

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.71",
+    version: "2.4.71",
+    title: "Kolom Nama Responsif pada Viewport Mobile & Fullscreen",
+    description: "Menyesuaikan lebar kolom Nama Siswa menjadi 115px secara dinamis pada viewport kecil/mobile (termasuk mode fullscreen), sedangkan pada layar lebar tetap 160px.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Menambahkan state isSmallScreen dan visual viewport resizing listener pada SpreadsheetTable untuk mendeteksi layar di bawah 1024px.",
+      "Mengubah lebar kolom Nama Siswa secara dinamis menjadi 115px (dari default 160px) apabila viewport berukuran kecil atau dalam mode fullscreen di mobile.",
+      "Memastikan layout spreadsheet (posisi kolom freeze, rata-rata, STS, SAS, dan rapor) otomatis menyesuaikan lebar dinamis ini."
+    ]
+  },
+  {
     id: "v2.4.70",
     version: "2.4.70",
     title: "Batas Tinggi Dropdown Select untuk Viewport Pendek",
