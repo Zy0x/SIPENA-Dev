@@ -53,32 +53,25 @@ import {
 import { isVerticalScrollBoundary, scrollPageBy } from "@/lib/scrollChaining";
 import { useCoarsePointerTapGuard } from "@/hooks/useCoarsePointerTapGuard";
 
-// Smartphone rotation icon SVG (styled after Flaticon 2313449)
+// Smartphone rotation icon SVG (styled after Flaticon 2313449 - counter-clockwise)
 const RotateDeviceIcon = ({ className }: { className?: string }) => (
   <svg
-    viewBox="0 0 24 24"
+    viewBox="0 0 512 512"
     width="1.1em"
     height="1.1em"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+    fill="currentColor"
     className={className}
   >
-    {/* Tilted phone outline */}
-    <g transform="translate(12, 12) rotate(45)">
-      <rect x="-4" y="-7.5" width="8" height="15" rx="1.5" stroke="currentColor" strokeWidth="2" fill="none" />
-      {/* Notch */}
-      <path d="M -1.5 -7.5 L -1.5 -6.5 A 0.5 0.5 0 0 0 -1 -6 L 1 -6 A 0.5 0.5 0 0 0 1.5 -6.5 L 1.5 -7.5 Z" fill="currentColor" stroke="none" />
-    </g>
-    {/* Curved arrows wrapping around (clockwise) */}
-    {/* Top-left arrow */}
-    <path d="M 5 16 A 9 9 0 0 1 19 8" />
-    <path d="M 15 8 h 4 v 4" />
-    {/* Bottom-right arrow */}
-    <path d="M 19 8 A 9 9 0 0 1 5 16" />
-    <path d="M 9 16 h -4 v -4" />
+    {/* Top-left curved arrow */}
+    <path d="M 204 0 L 220 0 L 228 4 L 233 12 L 233 23 L 175 83 L 171 85 L 156 83 L 132 56 L 101 77 L 73 106 L 57 130 L 46 154 L 38 181 L 34 222 L 23 233 L 9 232 L 4 228 L 0 220 L 1 193 L 5 170 L 13 143 L 23 120 L 40 92 L 56 72 L 84 46 L 124 21 L 162 7 L 203 1 Z" />
+    {/* Bottom-right curved arrow */}
+    <path d="M 492 277 L 505 281 L 511 291 L 510 318 L 506 341 L 489 389 L 471 419 L 455 439 L 432 461 L 407 479 L 387 490 L 356 502 L 318 510 L 291 511 L 281 505 L 277 492 L 280 484 L 340 426 L 355 428 L 378 455 L 397 444 L 419 426 L 446 394 L 461 367 L 472 334 L 477 289 L 484 280 L 491 278 Z" />
+    {/* Tilted phone body with transparent screen (using evenodd fill rule) */}
+    <path 
+      fillRule="evenodd" 
+      clipRule="evenodd" 
+      d="M 321 21 L 338 23 L 350 29 L 482 161 L 488 173 L 490 190 L 487 204 L 478 220 L 220 478 L 204 487 L 196 489 L 177 489 L 161 482 L 29 350 L 23 338 L 21 321 L 24 307 L 33 291 L 291 33 L 307 24 L 322 21 Z M 320 58 L 330 61 L 339 70 L 342 77 L 341 86 L 330 103 L 332 117 L 394 179 L 408 181 L 425 170 L 434 169 L 441 172 L 450 181 L 453 187 L 453 196 L 450 202 L 202 450 L 196 453 L 187 453 L 181 450 L 61 330 L 58 324 L 58 315 L 61 309 L 309 61 L 319 58 Z" 
+    />
   </svg>
 );
 
@@ -345,19 +338,20 @@ export function SpreadsheetTable({
     }
   }, [isFullscreen]);
 
-  // Listen to device physical tilt (accelerometer/gyroscope) to automatically select left/right rotation
+  // Listen to device physical tilt (accelerometer/gyroscope) to automatically select left/right rotation (reversed coordinate layout mapping)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleDeviceOrientation = (e: DeviceOrientationEvent) => {
       // gamma is the left/right tilt in degrees [-90, 90]
       // If the user rotates the device counter-clockwise (tilts left), gamma is negative
       // If they rotate clockwise (tilts right), gamma is positive
+      // Reversed: Tilting left (notch left) needs layout rotated right, and vice versa.
       const gamma = e.gamma;
       if (gamma !== null) {
         if (gamma < -15) {
-          lastTiltRef.current = "left";
-        } else if (gamma > 15) {
           lastTiltRef.current = "right";
+        } else if (gamma > 15) {
+          lastTiltRef.current = "left";
         }
       }
     };
@@ -367,16 +361,16 @@ export function SpreadsheetTable({
     };
   }, []);
 
-  // Automatically sync rotationState with screen.orientation changes in fullscreen mode
+  // Automatically sync rotationState with screen.orientation changes in fullscreen mode (reversed coordinate layout mapping)
   useEffect(() => {
     if (!isFullscreen || typeof window === "undefined" || !screen.orientation) return;
 
     const handleOrientationChange = () => {
       const type = screen.orientation.type;
       if (type === "landscape-primary") {
-        setRotationState("left");
-      } else if (type === "landscape-secondary") {
         setRotationState("right");
+      } else if (type === "landscape-secondary") {
+        setRotationState("left");
       } else if (type.startsWith("portrait")) {
         setRotationState("none");
       }
@@ -391,7 +385,7 @@ export function SpreadsheetTable({
     };
   }, [isFullscreen]);
 
-  // Handle native screen orientation lock when rotationState changes in native browser fullscreen mode
+  // Handle native screen orientation lock when rotationState changes in native browser fullscreen mode (reversed coordinate layout mapping)
   useEffect(() => {
     if (typeof window === "undefined" || !screen.orientation) return;
     const applyNativeRotation = async () => {
@@ -400,11 +394,11 @@ export function SpreadsheetTable({
           const orient = screen.orientation as any;
           if (rotationState === "left") {
             if (typeof orient.lock === "function") {
-              await orient.lock("landscape-primary");
+              await orient.lock("landscape-secondary");
             }
           } else if (rotationState === "right") {
             if (typeof orient.lock === "function") {
-              await orient.lock("landscape-secondary");
+              await orient.lock("landscape-primary");
             }
           } else {
             if (typeof orient.unlock === "function") {

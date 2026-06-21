@@ -42,6 +42,34 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.77",
+    version: "2.4.77",
+    title: "Tracing Presisi Ikon Rotasi & Pembalikan Logika Arah Rotasi",
+    description: "Memperbarui ikon rotasi menggunakan SVG hasil tracing presisi tinggi (IoU ~98%) dari gambar rujukan Flaticon yang diunggah, serta menyelaraskan arah rotasi CSS kiri-kanan dengan tombol manual.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Mengintegrasikan SVG hasil tracing presisi tinggi (indeks Jaccard ~98%) dari berkas rujukan PNG flaticon untuk ikon RotateDeviceIcon.",
+      "Membalikkan pemetaan kelas CSS rotasi sehingga status 'left' memicu .sipena-layout-rotated-left (-90deg/berlawanan arah jarum jam) dan status 'right' memicu .sipena-layout-rotated-right (90deg/searah jarum jam).",
+      "Menyelaraskan tombol manual 'Putar ke Kiri' dan 'Putar ke Kanan' agar memutar tampilan ke arah yang sesuai dengan label tombol secara konsisten."
+    ]
+  },
+  {
+    id: "v2.4.76",
+    version: "2.4.76",
+    title: "Ikon Rotasi Kustom & Pembalikan Arah Logika Rotasi Layar",
+    description: "Mengganti arah panah ikon rotasi menjadi berlawanan arah jarum jam (counter-clockwise) sesuai gambar rujukan, serta membalikkan arah logika rotasi fisik kiri/kanan agar tampilan antarmuka selalu tegak lurus dari sudut pandang mata pengguna.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Mengganti arah panah ikon RotateDeviceIcon menjadi berlawanan arah jarum jam (counter-clockwise) dengan memodifikasi sweep-flag dan arah koordinat arrowhead SVG.",
+      "Membalikkan arah logika deteksi kemiringan fisik: kemiringan kiri (landscape-primary) memicu layout rotasi kanan (+90deg) dan kemiringan kanan (landscape-secondary) memicu layout rotasi kiri (-90deg). Hal ini mengoreksi orientasi teks agar tetap tegak lurus lurus dengan arah baca pengguna.",
+      "Menyelaraskan lock orientasi native screen.orientation agar konsisten dengan pembalikan arah rotasi visual."
+    ]
+  },
+  {
     id: "v2.4.75",
     version: "2.4.75",
     title: "Perbaikan Toolbar Non-Fullscreen & Pilihan Arah Rotasi Layar",
