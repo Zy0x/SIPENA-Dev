@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.71",
+    version: "2.4.71",
+    title: "Peningkatan Responsivitas Tombol Toolbar di Touchscreen",
+    description: "Meningkatkan responsivitas tombol-tombol toolbar (tidak macet) di layar sentuh dengan mengoptimasi threshold deteksi geser dan durasi pemblokiran klik.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Meningkatkan default moveThresholdX dan moveThresholdY pada useCoarsePointerTapGuard dari 6px/10px menjadi 18px untuk mencegah jitter sentuhan terdeteksi sebagai geseran.",
+      "Mengurangi durasi pemblokiran klik (click suppression) pasca-geser dari 650ms menjadi 250ms dan reset timer dari 700ms menjadi 150ms pada toolbar.",
+      "Menghilangkan preventDefault() pada handler onPointerDown di useCoarsePointerTapGuard agar tidak memblokir inisiasi gesture gulir native dari area tombol."
+    ]
+  },
+  {
     id: "v2.4.70",
     version: "2.4.70",
     title: "Batas Tinggi Dropdown Select untuk Viewport Pendek",
