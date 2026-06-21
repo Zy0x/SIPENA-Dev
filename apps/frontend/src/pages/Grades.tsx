@@ -1824,7 +1824,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="structure" className="sipena-grade-tab-panel mt-0">
+            <TabsContent value="structure" className="sipena-grade-tab-panel mt-0 animate-fade-in">
               <ChapterStructure
                 className="rounded-none border-0 shadow-none"
                 chapters={chapters}
@@ -1843,7 +1843,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
               />
             </TabsContent>
 
-            <TabsContent value="input" className="sipena-grade-tab-panel mt-0 space-y-4">
+            <TabsContent value="input" className="sipena-grade-tab-panel mt-0 space-y-4 animate-fade-in">
               {hasNoChapters && (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />

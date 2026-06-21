@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.61";
+export const APP_VERSION = "2.4.62";
 export const VERSION_DATE = "2026-06-21";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.62": "Penambahan animasi fade-in pada tab panel Input Nilai untuk transisi yang lebih halus.",
   "2.4.61": "Penghapusan otomatis locked min-height pasca-transisi tab untuk menyesuaikan tinggi secara dinamis.",
   "2.4.60": "Fokus scroll otomatis ke kontainer tabel saat berpindah dari Struktur ke Input Nilai.",
   "2.4.59": "Perombakan Struktur BAB & Tugas dengan accordion modern, menu kebab titik tiga, tombol navigasi lanjut, serta aksi duplikasi BAB/Tugas.",

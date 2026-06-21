@@ -42,6 +42,19 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.62",
+    version: "2.4.62",
+    title: "Transisi Halus Tab Input Nilai",
+    description: "Meningkatkan UX perpindahan tab dengan animasi fade-in yang halus saat berganti halaman.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Menambahkan kelas animasi Tailwind 'animate-fade-in' pada elemen TabsContent di tab Struktur dan Input Nilai.",
+      "Mengganti transisi instan (snap) menjadi transisi fade-in translasi vertikal halus (10px) untuk kenyamanan visual."
+    ]
+  },
+  {
     id: "v2.4.61",
     version: "2.4.61",
     title: "Penghapusan Tinggi Min Terkunci Pasca-Transisi Tab",
