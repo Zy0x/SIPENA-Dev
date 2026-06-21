@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.69",
+    version: "2.4.69",
+    title: "Deduplikasi Tombol Tutup & Kolom Pencarian Dinamis",
+    description: "Perbaikan redundansi tombol Tutup dan peningkatan fleksibilitas lebar kolom pencarian agar dinamis mendekati tombol Tutup di mode fullscreen.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Menyembunyikan tombol Tutup (Close) pada baris format secara eksplisit dalam mode 1 baris, sehingga hanya menyisakan satu tombol Tutup di sisi paling kanan.",
+      "Mengubah properti flex dan max-width kolom pencarian siswa agar memanjang secara dinamis (flex: 1 1 auto, max-width: 28rem) mengisi area kosong yang mendekati tombol Tutup.",
+      "Mencegah penumpukan visual dan duplikasi tombol kontrol fullscreen pada perangkat mobile landscape dan tablet."
+    ]
+  },
+  {
     id: "v2.4.68",
     version: "2.4.68",
     title: "Optimasi Toolbar Fullscreen 1 Baris di Layar Lebar",

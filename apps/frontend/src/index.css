@@ -4944,14 +4944,16 @@
         flex: 0 0 auto !important;
       }
 
-      .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
+      /* Sembunyikan close button di baris format (baris 1) */
+      .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format .sipena-grade-close-button {
         display: none !important;
       }
 
+      /* View row: melebar mengisi sisa ruang */
       .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view {
         display: flex !important;
         grid-template-columns: none !important;
-        flex: 1 0 auto !important;
+        flex: 1 1 auto !important;
         justify-content: flex-end !important;
         width: auto !important;
         gap: 0.375rem !important;
@@ -4962,17 +4964,20 @@
         min-width: 7.5rem !important;
       }
 
+      /* Search container: dinamis melebar mengisi ruang kosong */
       .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-extra {
         order: unset !important;
-        flex: 0 1 auto !important;
+        flex: 1 1 auto !important;
+        max-width: 28rem !important;
       }
 
       .sipena-grade-toolbar--fullscreen [data-grade-student-search] {
-        flex: 0 1 clamp(9rem, 20vw, 13rem) !important;
-        width: clamp(9rem, 20vw, 13rem) !important;
-        max-width: 13rem !important;
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
       }
 
+      /* Tampilkan close button di baris view (baris 2 / kanan) */
       .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view .sipena-grade-close-button {
         display: flex !important;
       }
