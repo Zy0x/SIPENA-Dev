@@ -1421,7 +1421,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             style={{ touchAction: "pan-x pan-y" }}
           >
             <Upload className="w-3.5 h-3.5 shrink-0" />
-            <span className="sipena-grade-action-text inline sm:hidden lg:inline">Kelola Nilai</span>
+            <span className="sipena-grade-action-text">Kelola Nilai</span>
             <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
@@ -1498,8 +1498,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         className="sipena-grade-action-button h-9 w-full sm:w-auto gap-2"
       >
         <Percent className="w-4 h-4 shrink-0" />
-        <span className="sipena-grade-action-text inline sm:hidden lg:inline">Pembulatan</span>
-        <Badge variant="secondary" className="sipena-grade-rounding-badge ml-0.5 text-[10px] inline-flex sm:hidden lg:inline-flex">
+        <span className="sipena-grade-action-text">Pembulatan</span>
+        <Badge variant="secondary" className="sipena-grade-rounding-badge ml-0.5 text-[10px]">
           {getReportRoundingLabel(formula.reportRounding.mode)} - {getReportRoundingTargetLabel(formula.reportRounding.target)}
         </Badge>
       </Button>
@@ -1512,15 +1512,15 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const guestToolbarActions = (
     <>
       <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary flex-auto min-w-[130px] md:flex-none md:min-w-0">
-      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
-        <RefreshCw className={`w-4 h-4 shrink-0 lg:mr-2 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
-        <span className="inline sm:hidden lg:inline">Muat Ulang</span>
+      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto gap-2" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
+        <RefreshCw className={`w-4 h-4 shrink-0 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
+        <span>Muat Ulang</span>
       </Button>
       </div>
       <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary flex-auto min-w-[130px] md:flex-none md:min-w-0">
-      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto" onClick={() => setShowGuestKkmDialog(true)}>
-        <Settings className="w-4 h-4 lg:mr-2" />
-        <span className="inline sm:hidden lg:inline">KKM: {kkm}</span>
+      <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto gap-2" onClick={() => setShowGuestKkmDialog(true)}>
+        <Settings className="w-4 h-4" />
+        <span>KKM: {kkm}</span>
       </Button>
       </div>
       <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full md:flex-none md:w-[240px] xl:w-[260px]">{searchAction}</div>
