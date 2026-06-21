@@ -4925,6 +4925,58 @@
     .sipena-grade-toolbar--fullscreen .sipena-grade-close-text {
       display: none;
     }
+
+    /* Override untuk mempertahankan 1 baris di viewport lebar (768px - 1079px) */
+    @container grade-sheet (min-width: 768px) {
+      .sipena-grade-toolbar--fullscreen {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.375rem !important;
+      }
+
+      .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format {
+        flex: 0 0 auto !important;
+        width: auto !important;
+      }
+
+      .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-format-suffix {
+        flex: 0 0 auto !important;
+      }
+
+      .sipena-grade-toolbar--fullscreen .sipena-grade-close-button {
+        display: none !important;
+      }
+
+      .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view {
+        display: flex !important;
+        grid-template-columns: none !important;
+        flex: 1 0 auto !important;
+        justify-content: flex-end !important;
+        width: auto !important;
+        gap: 0.375rem !important;
+      }
+
+      .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control {
+        order: unset !important;
+        min-width: 7.5rem !important;
+      }
+
+      .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-extra {
+        order: unset !important;
+        flex: 0 1 auto !important;
+      }
+
+      .sipena-grade-toolbar--fullscreen [data-grade-student-search] {
+        flex: 0 1 clamp(9rem, 20vw, 13rem) !important;
+        width: clamp(9rem, 20vw, 13rem) !important;
+        max-width: 13rem !important;
+      }
+
+      .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view .sipena-grade-close-button {
+        display: flex !important;
+      }
+    }
   }
 
   /* Viewport sangat sempit (≤459px): persempit gap sedikit */

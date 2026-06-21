@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.68",
+    version: "2.4.68",
+    title: "Optimasi Toolbar Fullscreen 1 Baris di Layar Lebar",
+    description: "Penerapan layout 1 baris untuk mode fullscreen pada perangkat/viewport landscape lebar (seperti landscape HP & tablet) untuk efisiensi ruang vertikal.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Menambahkan override media query container pada min-width 768px di dalam breakpoint 1079px untuk memaksa toolbar kembali ke mode 1 baris (row flex).",
+      "Menghilangkan pemisahan baris zoom/search dan mengembalikan layout format controls (kiri) serta zoom, search, dan tombol Tutup (kanan) dalam satu baris horizontal.",
+      "Menghemat ruang vertikal lembar spreadsheet secara signifikan pada perangkat landscape mobile/tablet dengan tetap mempertahankan mode 2 baris pada perangkat portrait mobile."
+    ]
+  },
+  {
     id: "v2.4.67",
     version: "2.4.67",
     title: "Penyelarasan Layout Fullscreen & Zoom Order",
