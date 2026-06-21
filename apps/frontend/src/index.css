@@ -4118,6 +4118,7 @@
 
     .sipena-grade-toolbar-view {
       justify-content: flex-end;
+      width: auto;
     }
   }
 

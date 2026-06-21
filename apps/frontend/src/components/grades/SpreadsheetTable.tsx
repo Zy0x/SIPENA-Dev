@@ -2020,7 +2020,7 @@ export function SpreadsheetTable({
         </div>
 
         {/* Right side - Zoom & Search */}
-        <div className="sipena-grade-toolbar-view flex min-w-0 flex-wrap items-center justify-start gap-1.5 lg:gap-2 sm:justify-end">
+        <div className="sipena-grade-toolbar-view flex min-w-0 flex-wrap items-center justify-start gap-1.5 lg:gap-2 sm:justify-end w-full sm:w-auto">
           {toolbarExtra && (
             <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
               {toolbarExtra}
