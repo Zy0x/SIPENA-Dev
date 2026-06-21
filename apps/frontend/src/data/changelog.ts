@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.59",
+    version: "2.4.59",
+    title: "Perombakan UI & Aksi Struktur BAB & Tugas",
+    description: "Desain ulang tab Struktur BAB dengan visual accordion modern, menu aksi titik tiga, tombol navigasi lanjut, serta penambahan fitur duplikasi.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Mengganti tombol Edit/Hapus langsung menjadi Menu Kebab (titik tiga) dropdown untuk kebersihan visual.",
+      "Menambahkan fitur Duplikat BAB (menyalin BAB beserta semua tugas) dan Duplikat Tugas.",
+      "Membuat visual pembeda yang sangat jelas antara Kotak BAB (Parent) dan Kotak Tugas (Child) dengan indentasi pohon visual.",
+      "Mendesain ulang mode edit inline nama BAB/Tugas agar lebih lega dan ramah mobile.",
+      "Menambahkan tombol 'Lanjut ke Input Nilai' di bagian bawah tab struktur untuk kejelasan alur kerja akademik."
+    ]
+  },
+  {
     id: "v2.4.58",
     version: "2.4.58",
     title: "Konsistensi Empty-State Dropdown",

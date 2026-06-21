@@ -1245,6 +1245,99 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     }
   };
 
+  const handleDuplicateChapter = async (chapterId: string) => {
+    const chapter = chapters.find((c) => c.id === chapterId);
+    if (!chapter || !subjectId) return;
+
+    try {
+      const copyName = `${chapter.name} (Salinan)`;
+      let newChapterId: string | undefined;
+
+      if (isGuestMode) {
+        const createdChapters = await runGuestRpc(
+          "guest_create_chapters",
+          { p_names: [copyName] },
+          "Gagal menduplikasi BAB"
+        );
+        const createdChapter = Array.isArray(createdChapters)
+          ? createdChapters[0]
+          : (createdChapters as any);
+        if (createdChapter && createdChapter.id) {
+          newChapterId = createdChapter.id;
+        }
+      } else {
+        const existingCount = chapters.length;
+        const createdChapters = await createBulkChapters.mutateAsync([
+          {
+            subject_id: subjectId,
+            name: copyName,
+            order_index: existingCount + 1,
+          },
+        ]);
+        const createdChapter = Array.isArray(createdChapters)
+          ? (createdChapters[0] as Chapter | undefined)
+          : undefined;
+        if (createdChapter?.id) {
+          newChapterId = createdChapter.id;
+        }
+      }
+
+      if (newChapterId) {
+        const chapterAssignments = assignmentsByChapter[chapterId] || [];
+        if (chapterAssignments.length > 0) {
+          const names = chapterAssignments.map((a) => a.name);
+          if (isGuestMode) {
+            await runGuestRpc(
+              "guest_create_assignments",
+              { p_chapter_id: newChapterId, p_names: names },
+              "Gagal menduplikasi tugas"
+            );
+          } else {
+            const newAssignments = names.map((name, i) => ({
+              chapter_id: newChapterId!,
+              name,
+              order_index: i + 1,
+            }));
+            await createBulkAssignments.mutateAsync(newAssignments);
+          }
+        }
+        success("Berhasil!", "BAB berhasil diduplikasi");
+      }
+    } catch (err) {
+      showError("Gagal menduplikasi BAB", err instanceof Error ? err.message : "Terjadi kesalahan");
+    }
+  };
+
+  const handleDuplicateAssignment = async (chapterId: string, assignmentId: string) => {
+    const chapterAssignments = assignmentsByChapter[chapterId] || [];
+    const assignment = chapterAssignments.find((a) => a.id === assignmentId);
+    if (!assignment) return;
+
+    try {
+      const copyName = `${assignment.name} (Salinan)`;
+      if (isGuestMode) {
+        await runGuestRpc(
+          "guest_create_assignments",
+          { p_chapter_id: chapterId, p_names: [copyName] },
+          "Gagal menduplikasi tugas"
+        );
+      } else {
+        const existingCount = chapterAssignments.length;
+        await createBulkAssignments.mutateAsync([
+          {
+            chapter_id: chapterId,
+            name: copyName,
+            order_index: existingCount + 1,
+          },
+        ]);
+      }
+      success("Berhasil!", "Tugas berhasil diduplikasi");
+    } catch (err) {
+      showError("Gagal menduplikasi tugas", err instanceof Error ? err.message : "Terjadi kesalahan");
+    }
+  };
+
+
   const handleUpdateGuestKkm = async () => {
     if (!access.capabilities.canUpdateKkm) return;
     if (Number.isNaN(guestKkm) || guestKkm < 0 || guestKkm > 100) {
@@ -1732,6 +1825,9 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                 onUpdateAssignment={handleUpdateAssignment}
                 onDeleteChapter={handleDeleteChapter}
                 onDeleteAssignment={handleDeleteAssignment}
+                onDuplicateChapter={handleDuplicateChapter}
+                onDuplicateAssignment={handleDuplicateAssignment}
+                onContinueToInput={() => handleActiveTabChange("input")}
                 isLoading={isGuestMode ? guestQuery.isLoading : chaptersLoading}
               />
             </TabsContent>
