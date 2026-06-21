@@ -42,19 +42,31 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.72",
+    version: "2.4.72",
+    title: "Revert Rotasi Layar & Penataan Grid Toolbar Fullscreen",
+    description: "Membatalkan tombol simulasi rotasi layar dan grid 3-kolom toolbar, namun tetap mempertahankan optimasi performa scrolling spreadsheet.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Menghapus tombol Rotasi Layar (Rotate) dari toolbar fullscreen.",
+      "Mengembalikan grid Baris 2 toolbar fullscreen menjadi 2 kolom (Zoom dan Search Siswa) dengan urutan DOM aslinya.",
+      "Menghapus kelas .sipena-layout-rotated dari stylesheet.",
+      "Tetap mempertahankan optimasi scroll berkecepatan tinggi via DOM Refs bypass React re-render dan unmount background table."
+    ]
+  },
+  {
     id: "v2.4.71",
     version: "2.4.71",
-    title: "Optimasi Performa Fullscreen & Rotasi Layar Spreadsheet",
-    description: "Meningkatkan performa scrolling fullscreen pada perangkat low-end dan menambahkan simulasi rotasi layar portrait/landscape di toolbar.",
+    title: "Optimasi Performa Fullscreen Spreadsheet",
+    description: "Meningkatkan performa scrolling fullscreen pada perangkat low-end dengan direct DOM scroll updates.",
     type: "improvement",
     is_critical: false,
     released_at: "2026-06-22",
     details: [
       "Mengoptimalkan performa scroll spreadsheet dengan memindahkan update translasi scroll dari React state ke manipulasi DOM Ref langsung dalam requestAnimationFrame.",
-      "Menghilangkan re-render ganda dengan melakukan unmount komponen background SpreadsheetTable saat mode fullscreen aktif.",
-      "Menambahkan tombol Rotasi Layar (Rotate) pada toolbar fullscreen di antara Zoom dan Search Siswa.",
-      "Menata ulang Baris 2 grid toolbar fullscreen menjadi 3 kolom secara proporsional sehingga Search Siswa dinamis melebar memenuhi sisa ruang.",
-      "Menambahkan kelas .sipena-layout-rotated untuk simulasi visual landscape 90 derajat pada perangkat mobile dalam posisi portrait."
+      "Menghilangkan re-render ganda dengan melakukan unmount komponen background SpreadsheetTable saat mode fullscreen aktif."
     ]
   },
   {

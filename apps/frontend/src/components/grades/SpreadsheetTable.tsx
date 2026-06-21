@@ -16,7 +16,6 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  RotateCw,
   X,
   CheckCircle2,
   Star,
@@ -295,7 +294,6 @@ export function SpreadsheetTable({
   const chapterHeadersTranslationRef = useRef<HTMLDivElement>(null);
   const headersTranslationRef = useRef<HTMLDivElement>(null);
   const frozenColumnsTranslationRef = useRef<HTMLDivElement>(null);
-  const [isRotated, setIsRotated] = useState(false);
 
   // Apply scroll transforms directly to DOM elements to bypass React re-renders
   const syncScrollTransforms = useCallback(() => {
@@ -1895,7 +1893,7 @@ export function SpreadsheetTable({
   return (
     <div 
       ref={containerRef}
-      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? (isRotated ? 'sipena-layout-rotated' : 'fixed inset-0 z-[9999]') : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
+      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
       style={{
         ...(isFullscreen && {
           width: '100vw',
@@ -2069,8 +2067,14 @@ export function SpreadsheetTable({
           )}
         </div>
 
-        {/* Right side - Zoom, Rotate & Search */}
-        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end w-full">
+        {/* Right side - Zoom & Search */}
+        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end">
+          {toolbarExtra && (
+            <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
+              {toolbarExtra}
+            </div>
+          )}
+
           {/* Zoom Controls - matching template */}
           <div data-tour="grade-zoom-control" className={`sipena-grade-zoom-control flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
             <Button 
@@ -2108,27 +2112,6 @@ export function SpreadsheetTable({
               <ZoomIn className="w-4 h-4" />
             </Button>
           </div>
-
-          {/* Rotate Control - fullscreen mode only */}
-          {isFullscreen && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setIsRotated(!isRotated)}
-              title="Rotasi Layar"
-              className="sipena-grade-rotate-control h-9 w-9 flex-shrink-0"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <RotateCw className="w-4 h-4" />
-            </Button>
-          )}
-
-          {toolbarExtra && (
-            <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
-              {toolbarExtra}
-            </div>
-          )}
 
           {/* Fullscreen button for non-fullscreen mode */}
           {!isFullscreen && onEnterFullscreen && (
