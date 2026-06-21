@@ -42,6 +42,33 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.64",
+    version: "2.4.64",
+    title: "Animasi Tinggi Dua Arah & Scroll Offset Cerdas",
+    description: "Implementasi transisi tinggi dua arah (expand & shrink) kontainer tab secara mulus dan penyesuaian scroll offset dinamis untuk kenyamanan navigasi.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Mengubah transisi min-height menjadi transisi height + overflow: hidden untuk mendukung animasi tinggi yang mulus saat kontainer membesar (expand) maupun menyusut (shrink).",
+      "Mengimplementasikan scroll offset dinamis (dikurangi 76px) agar tab trigger tetap terlihat nyaman di bawah sticky header pada saat berpindah ke tab manapun.",
+      "Menambahkan mekanisme cleanup timer Timeout menggunakan React refs untuk mencegah race condition/layout jump saat perpindahan tab dilakukan dengan cepat."
+    ]
+  },
+  {
+    id: "v2.4.63",
+    version: "2.4.63",
+    title: "Transisi Tinggi Dinamis & Sinkronisasi Scroll",
+    description: "Animasi perubahan tinggi kontainer tab secara smooth dan sinkronisasi smooth scroll untuk mencegah lompatan layout.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Mengganti penghapusan instan min-height dengan transisi CSS 'min-height 400ms cubic-bezier(0.4, 0, 0.2, 1)' agar space kosong menyusut secara bertahap.",
+      "Menyelaraskan penyusutan tinggi halaman dengan smooth scroll browser agar pergerakan scroll terasa mengalir dan stabil."
+    ]
+  },
+  {
     id: "v2.4.62",
     version: "2.4.62",
     title: "Transisi Halus Tab Input Nilai",

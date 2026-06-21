@@ -319,6 +319,16 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [lockedStudentId, setLockedStudentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("input");
   const gradeTabsRef = useRef<HTMLDivElement>(null);
+  const tabTransitionTimerRef = useRef<any>(null);
+  const tabMeasureTimerRef = useRef<any>(null);
+  const tabScrollTimerRef = useRef<any>(null);
+
+  const clearTabChangeTimers = useCallback(() => {
+    if (tabTransitionTimerRef.current) clearTimeout(tabTransitionTimerRef.current);
+    if (tabMeasureTimerRef.current) clearTimeout(tabMeasureTimerRef.current);
+    if (tabScrollTimerRef.current) clearTimeout(tabScrollTimerRef.current);
+  }, []);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenMode, setFullscreenMode] = useState<"browser" | "maximal" | null>(null);
   const gradeFullscreenHistoryRef = useRef(false);
@@ -348,23 +358,81 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     gradeOverlayOpenRef.current = gradeOverlayOpen;
   }, [gradeOverlayOpen]);
 
+  useEffect(() => {
+    return () => {
+      clearTabChangeTimers();
+    };
+  }, [clearTabChangeTimers]);
+
   const handleActiveTabChange = useCallback((nextTab: string) => {
     if (nextTab === activeTab) return;
 
-    lockGradeTabsMinHeight(gradeTabsRef.current);
-    setActiveTab(nextTab);
-
-    if (nextTab === "input") {
-      setTimeout(() => {
-        gradeTabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+    const tabsElement = gradeTabsRef.current;
+    if (!tabsElement) {
+      setActiveTab(nextTab);
+      return;
     }
 
-    // Clean up locked min-height after transition completes to prevent empty white gaps
-    setTimeout(() => {
-      gradeTabsRef.current?.style.removeProperty("min-height");
-    }, 350);
-  }, [activeTab]);
+    // Cancel any ongoing transitions to avoid race conditions
+    clearTabChangeTimers();
+
+    // 1. Get current height before changing tab
+    const oldHeight = Math.ceil(tabsElement.getBoundingClientRect().height);
+    
+    // Lock height and set overflow to hidden to prevent sudden layout jumps
+    tabsElement.style.height = `${oldHeight}px`;
+    tabsElement.style.overflow = "hidden";
+    tabsElement.style.transition = "none";
+
+    setActiveTab(nextTab);
+
+    // 2. Measure the new tab content height and animate height smoothly
+    tabMeasureTimerRef.current = setTimeout(() => {
+      if (!tabsElement) return;
+
+      // Temporarily remove height to measure new natural height
+      tabsElement.style.height = "";
+      const newHeight = Math.ceil(tabsElement.getBoundingClientRect().height);
+      
+      // Restore the old height to start transition from
+      tabsElement.style.height = `${oldHeight}px`;
+
+      // Force a layout reflow
+      void tabsElement.offsetHeight;
+
+      // Apply smooth ease-in-out transition for height expanding/shrinking
+      tabsElement.style.transition = "height 400ms cubic-bezier(0.4, 0, 0.2, 1)";
+      tabsElement.style.height = `${newHeight}px`;
+
+      // 3. Clean up inline styles once transition completes
+      tabTransitionTimerRef.current = setTimeout(() => {
+        if (!tabsElement) return;
+        tabsElement.style.height = "";
+        tabsElement.style.overflow = "";
+        tabsElement.style.transition = "";
+      }, 450);
+    }, 50);
+
+    // 4. Scroll smoothly to the container to prevent jarring viewport jumps (accounting for sticky headers)
+    tabScrollTimerRef.current = setTimeout(() => {
+      if (!tabsElement) return;
+      
+      const rect = tabsElement.getBoundingClientRect();
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const elementTop = rect.top + scrollTop;
+      
+      // 76px safety margin accounts for the sticky header + spacing
+      const targetScrollY = Math.max(0, elementTop - 76);
+      const currentScrollY = window.scrollY || document.documentElement.scrollTop;
+      
+      if (Math.abs(currentScrollY - targetScrollY) > 8) {
+        window.scrollTo({
+          top: targetScrollY,
+          behavior: "smooth"
+        });
+      }
+    }, 80);
+  }, [activeTab, clearTabChangeTimers]);
 
   useEffect(() => {
     if (!isGuestMode) {
