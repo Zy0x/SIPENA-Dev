@@ -17,9 +17,9 @@ type GuardedPointerState = {
   cancelled: boolean;
 };
 
-const DEFAULT_MOVE_THRESHOLD_X = 18;
-const DEFAULT_MOVE_THRESHOLD_Y = 18;
-const DEFAULT_SUPPRESS_MS = 250;
+const DEFAULT_MOVE_THRESHOLD_X = 6;
+const DEFAULT_MOVE_THRESHOLD_Y = 10;
+const DEFAULT_SUPPRESS_MS = 650;
 
 function isCoarsePointer<T extends HTMLElement>(event: ReactPointerEvent<T>): boolean {
   return event.pointerType === "touch" || event.pointerType === "pen";
@@ -60,6 +60,7 @@ export function useCoarsePointerTapGuard<T extends HTMLElement>({
     };
 
     event.currentTarget.focus({ preventScroll: true });
+    event.preventDefault();
     event.stopPropagation();
   }, []);
 

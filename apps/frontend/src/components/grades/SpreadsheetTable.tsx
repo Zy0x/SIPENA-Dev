@@ -125,10 +125,10 @@ const NAME_CELL_VERTICAL_PADDING = 12;
 const NAME_LINE_HEIGHT = 16;
 const NISN_LINE_HEIGHT = 12;
 const GRADE_HINT_POPUP_ENABLED = false;
-const TOOLBAR_DRAG_SUPPRESS_MS = 250;
-const TOOLBAR_DRAG_RESET_MS = 150;
-const TOOLBAR_DRAG_THRESHOLD_X = 18;
-const TOOLBAR_DRAG_THRESHOLD_Y = 18;
+const TOOLBAR_DRAG_SUPPRESS_MS = 650;
+const TOOLBAR_DRAG_RESET_MS = 700;
+const TOOLBAR_DRAG_THRESHOLD_X = 6;
+const TOOLBAR_DRAG_THRESHOLD_Y = 10;
 const WHEEL_LINE_HEIGHT = 16;
 
 function normalizeWheelDelta(delta: number, deltaMode: number, pageSize: number): number {

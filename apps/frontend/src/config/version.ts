@@ -1,9 +1,8 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.71";
+export const APP_VERSION = "2.4.70";
 export const VERSION_DATE = "2026-06-21";
 
 export const VERSION_HISTORY: Record<string, string> = {
-  "2.4.71": "Peningkatan responsivitas tombol-tombol toolbar di touchscreen dengan mengoptimasi threshold dan durasi suppress klik.",
   "2.4.70": "Batas tinggi dropdown Select agar tidak terpotong di screen pendek/landscape dan opsi dapat digulir.",
   "2.4.69": "Perbaikan duplikasi tombol tutup dan pelebaran dinamis search box fullscreen.",
   "2.4.68": "Prioritas layout 1 baris fullscreen untuk viewport lebar.",
