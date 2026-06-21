@@ -1864,7 +1864,7 @@ export function SpreadsheetTable({
       {/* Toolbar - matching template style */}
       <div
         data-tour="grade-toolbar"
-        className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card p-2 sm:p-3 flex flex-nowrap items-center justify-between gap-2`}
+        className={`sipena-grade-toolbar ${isFullscreen ? 'sipena-grade-toolbar--fullscreen' : ''} flex-shrink-0 border-b bg-card px-3 py-2 sm:px-4 sm:py-3 flex flex-nowrap items-center justify-between gap-2`}
         onPointerDownCapture={handleToolbarPointerDownCapture}
         onPointerMoveCapture={handleToolbarPointerMoveCapture}
         onPointerUpCapture={handleToolbarPointerEndCapture}
