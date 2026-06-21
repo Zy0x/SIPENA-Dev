@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.58",
+    version: "2.4.58",
+    title: "Konsistensi Empty-State Dropdown",
+    description: "Memastikan seluruh dropdown dalam sistem menampilkan label kosong yang spesifik dengan konteksnya.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Perbaikan label kosong pada panel Prediksi Siswa di Dashboard agar merujuk ke 'Kelas' dan 'Siswa' dengan benar.",
+      "Standarisasi dokumentasi di dalam /docs terkait empty-state untuk seluruh dropdown aplikasi.",
+      "Peningkatan cakupan Automated Tests (dropdownEmptyStateGuard) untuk komponen dashboard."
+    ]
+  },
+  {
     id: "v2.4.57",
     version: "2.4.57",
     title: "Penyempurnaan Standard Layout dan Pengaman Dropdown",
