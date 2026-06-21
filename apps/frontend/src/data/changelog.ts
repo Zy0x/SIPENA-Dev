@@ -42,6 +42,19 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.61",
+    version: "2.4.61",
+    title: "Penghapusan Tinggi Min Terkunci Pasca-Transisi Tab",
+    description: "Mengatur tinggi kontainer tab secara dinamis setelah transisi selesai untuk menghilangkan celah kosong di bawah tab Struktur BAB.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-21",
+    details: [
+      "Secara otomatis menghapus properti style min-height yang terkunci di kontainer utama setelah masa transisi tab (350ms) selesai.",
+      "Memastikan tab Struktur BAB yang memiliki konten lebih pendek tidak menyisakan celah kosong berwarna putih di bawah tombol aksi."
+    ]
+  },
+  {
     id: "v2.4.60",
     version: "2.4.60",
     title: "Scroll Otomatis Tab Input Nilai",

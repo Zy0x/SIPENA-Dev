@@ -359,6 +359,11 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         gradeTabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }
+
+    // Clean up locked min-height after transition completes to prevent empty white gaps
+    setTimeout(() => {
+      gradeTabsRef.current?.style.removeProperty("min-height");
+    }, 350);
   }, [activeTab]);
 
   useEffect(() => {
