@@ -4865,10 +4865,10 @@
       display: flex !important;
     }
 
-    /* ── BARIS 2: [zoom auto] [search 1fr] ── */
+    /* ── BARIS 2: [zoom auto] [rotate auto] [search 1fr] ── */
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-view {
       display: grid;
-      grid-template-columns: auto 1fr;
+      grid-template-columns: auto auto 1fr;
       align-items: center;
       gap: 0.3rem;
       width: 100%;
@@ -4880,9 +4880,8 @@
       display: none !important;
     }
 
-    /* Zoom: kolom kiri baris 2 — diatur visual order agar berada di kolom kiri */
+    /* Zoom: kolom kiri baris 2 */
     .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control {
-      order: 1;
       flex: 0 0 auto;
       min-width: 6.5rem;
       padding: 0.125rem;
@@ -4892,12 +4891,22 @@
       width: 1.75rem;
     }
 
+    /* Tombol Rotasi: kolom tengah baris 2 */
+    .sipena-grade-toolbar--fullscreen .sipena-grade-rotate-control {
+      flex: 0 0 auto;
+      min-width: 2.25rem;
+      height: 2.25rem;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     /*
      * toolbar-extra sekarang hanya berisi search slot (fullscreenSearchOnly).
-     * Ia mengisi 1fr di baris 2 (kolom kanan grid) — diatur visual order agar berada di kolom kanan.
+     * Ia mengisi 1fr di baris 2 (kolom kanan grid).
      */
     .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-extra {
-      order: 2;
       display: flex !important;
       align-items: center;
       min-width: 0;
@@ -4960,13 +4969,11 @@
       }
 
       .sipena-grade-toolbar--fullscreen .sipena-grade-zoom-control {
-        order: unset !important;
         min-width: 7.5rem !important;
       }
 
       /* Search container: dinamis melebar mengisi ruang kosong */
       .sipena-grade-toolbar--fullscreen .sipena-grade-toolbar-extra {
-        order: unset !important;
         flex: 1 1 auto !important;
         max-width: 28rem !important;
       }
@@ -5234,6 +5241,17 @@
 
 .table-responsive > table {
   min-width: max-content;
+}
+
+.sipena-layout-rotated {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 100dvh !important;
+  height: 100vw !important;
+  transform: translate(-50%, -50%) rotate(90deg) !important;
+  transform-origin: center center !important;
+  z-index: 9999 !important;
 }
 
 @media print {

@@ -16,6 +16,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  RotateCw,
   X,
   CheckCircle2,
   Star,
@@ -294,6 +295,49 @@ export function SpreadsheetTable({
   const chapterHeadersTranslationRef = useRef<HTMLDivElement>(null);
   const headersTranslationRef = useRef<HTMLDivElement>(null);
   const frozenColumnsTranslationRef = useRef<HTMLDivElement>(null);
+
+  const [isRotated, setIsRotated] = useState(false);
+
+  // Reset rotation when exiting fullscreen mode
+  useEffect(() => {
+    if (!isFullscreen) {
+      setIsRotated(false);
+      if (typeof window !== "undefined" && screen.orientation) {
+        try {
+          const orient = screen.orientation as any;
+          if (typeof orient.unlock === "function") {
+            orient.unlock();
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+  }, [isFullscreen]);
+
+  // Handle native screen orientation lock when isRotated changes in native browser fullscreen mode
+  useEffect(() => {
+    if (typeof window === "undefined" || !screen.orientation) return;
+    const applyNativeRotation = async () => {
+      if (isFullscreen) {
+        try {
+          const orient = screen.orientation as any;
+          if (isRotated) {
+            if (typeof orient.lock === "function") {
+              await orient.lock("landscape");
+            }
+          } else {
+            if (typeof orient.unlock === "function") {
+              orient.unlock();
+            }
+          }
+        } catch (e) {
+          console.log("Native orientation lock failed:", e);
+        }
+      }
+    };
+    applyNativeRotation();
+  }, [isRotated, isFullscreen]);
 
   // Apply scroll transforms directly to DOM elements to bypass React re-renders
   const syncScrollTransforms = useCallback(() => {
@@ -1893,9 +1937,9 @@ export function SpreadsheetTable({
   return (
     <div 
       ref={containerRef}
-      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? 'fixed inset-0 z-[9999]' : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
+      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? (isRotated ? 'sipena-layout-rotated' : 'fixed inset-0 z-[9999]') : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
       style={{
-        ...(isFullscreen && {
+        ...(isFullscreen && !isRotated && {
           width: '100vw',
           height: fullscreenViewportHeight,
           maxHeight: fullscreenViewportHeight,
@@ -2067,14 +2111,8 @@ export function SpreadsheetTable({
           )}
         </div>
 
-        {/* Right side - Zoom & Search */}
-        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end">
-          {toolbarExtra && (
-            <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
-              {toolbarExtra}
-            </div>
-          )}
-
+        {/* Right side - Zoom, Rotate & Search */}
+        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end w-full">
           {/* Zoom Controls - matching template */}
           <div data-tour="grade-zoom-control" className={`sipena-grade-zoom-control flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
             <Button 
@@ -2112,6 +2150,27 @@ export function SpreadsheetTable({
               <ZoomIn className="w-4 h-4" />
             </Button>
           </div>
+
+          {/* Rotate Control - fullscreen mode only */}
+          {isFullscreen && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setIsRotated(!isRotated)}
+              title="Rotasi Layar"
+              className="sipena-grade-rotate-control h-9 w-9 flex-shrink-0"
+              style={{ touchAction: 'manipulation' }}
+            >
+              <RotateCw className="w-4 h-4" />
+            </Button>
+          )}
+
+          {toolbarExtra && (
+            <div className="sipena-grade-toolbar-extra flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
+              {toolbarExtra}
+            </div>
+          )}
 
           {/* Fullscreen button for non-fullscreen mode */}
           {!isFullscreen && onEnterFullscreen && (

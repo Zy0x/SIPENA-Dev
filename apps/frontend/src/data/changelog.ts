@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.74",
+    version: "2.4.74",
+    title: "Fitur Rotasi Layar (Rotate Screen) pada Mode Fullscreen",
+    description: "Menambahkan tombol rotasi layar di antara Zoom dan Search Siswa pada mode fullscreen untuk memudahkan penyuntingan nilai di perangkat mobile.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Menambahkan tombol Rotasi Layar (Rotate) dengan ikon RotateCw di toolbar fullscreen.",
+      "Menata ulang urutan DOM secara alami (Zoom -> Rotate -> Search Siswa) agar terposisi sempurna di baris kedua toolbar fullscreen.",
+      "Mendukung native Screen Orientation lock ke landscape jika didukung perangkat dan sedang dalam mode fullscreen browser.",
+      "Menyediakan fallback CSS rotation (.sipena-layout-rotated) menggunakan transform 90deg dan swap lebar/tinggi jika native lock tidak didukung.",
+      "Menghilangkan properti order CSS di grid toolbar fullscreen agar penataan visual serasi dan responsif."
+    ]
+  },
+  {
     id: "v2.4.73",
     version: "2.4.73",
     title: "Perbaikan Gap dan Glitch Scroll pada Sidebar Mobile",
