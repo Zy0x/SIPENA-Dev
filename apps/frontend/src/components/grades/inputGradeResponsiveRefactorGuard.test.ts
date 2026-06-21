@@ -78,8 +78,8 @@ describe("Input Nilai responsive refactor guard", () => {
   it("uses tailwind grid classes for card actions bento layout", () => {
     const sourceCode = source("apps/frontend/src/pages/Grades.tsx");
 
-    // Assert that the Bento grid is applied via Tailwind utility classes
-    expect(sourceCode).toContain("sipena-grade-card-actions flex flex-wrap gap-2 w-full sm:flex-1 md:justify-end");
+    // Assert that the Bento grid is applied via Tailwind utility classes directly on the header grid
+    expect(sourceCode).toContain("sipena-grade-card-header-grid flex min-w-0 flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-end");
     
     // Assert that rounding slot is flex-auto
     expect(sourceCode).toContain("sipena-grade-toolbar-slot--rounding flex-auto min-w-[130px] md:flex-none md:min-w-0");

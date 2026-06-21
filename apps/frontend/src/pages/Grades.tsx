@@ -1405,7 +1405,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const ownerToolbarActions = classId && subjectId ? (
     <>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--manage flex-auto min-w-[130px] md:flex-none md:min-w-0">
+      <div data-tour="grade-card-actions" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--manage flex-auto min-w-[130px] md:flex-none md:min-w-0">
       <DropdownMenu open={showGradeManageMenu} onOpenChange={setShowGradeManageMenu}>
         <DropdownMenuTrigger asChild>
           <Button
@@ -1511,19 +1511,19 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const guestToolbarActions = (
     <>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary flex-auto min-w-[130px] md:flex-none md:min-w-0">
       <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto" onClick={refreshGuestData} disabled={guestQuery.isFetching}>
         <RefreshCw className={`w-4 h-4 shrink-0 lg:mr-2 ${guestQuery.isFetching ? "animate-spin" : ""}`} />
         <span className="inline sm:hidden lg:inline">Muat Ulang</span>
       </Button>
       </div>
-      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary min-w-0">
+      <div className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--secondary flex-auto min-w-[130px] md:flex-none md:min-w-0">
       <Button variant="outline" size="sm" className="sipena-grade-action-button h-9 w-full sm:w-auto" onClick={() => setShowGuestKkmDialog(true)}>
         <Settings className="w-4 h-4 lg:mr-2" />
         <span className="inline sm:hidden lg:inline">KKM: {kkm}</span>
       </Button>
       </div>
-      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search min-w-0 col-span-2 sm:col-span-1">{searchAction}</div>
+      <div data-tour="grade-search-control" className="sipena-grade-toolbar-slot sipena-grade-toolbar-slot--search w-full md:flex-none md:w-[240px] xl:w-[260px]">{searchAction}</div>
     </>
   );
 
@@ -1756,8 +1756,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
               {students.length > 0 && (
                 <Card className="w-full min-w-0 overflow-visible rounded-none border-0 shadow-none" data-tour="grade-table">
                   <CardHeader className="sipena-grade-card-header relative z-30 bg-card px-3 pb-3 sm:px-6 border-b border-border/50">
-                    <div className="sipena-grade-card-header-grid flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-                      <div className="sipena-grade-card-heading flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3 sm:mt-1.5">
+                    <div className="sipena-grade-card-header-grid flex min-w-0 flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-end">
+                      <div className="sipena-grade-card-heading flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3 sm:mt-1.5 w-full sm:w-auto sm:mr-auto">
                         <CardTitle className="sipena-grade-card-title text-sm sm:text-base truncate">
                           {selectedClass?.name} - {selectedSubject?.name}
                         </CardTitle>
@@ -1766,9 +1766,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                           Auto-Save
                         </Badge>
                       </div>
-                      <div data-tour="grade-card-actions" className="sipena-grade-card-actions flex flex-wrap gap-2 w-full sm:flex-1 md:justify-end">
-                        {!isFullscreen && gradeToolbarActions}
-                      </div>
+                      {!isFullscreen && gradeToolbarActions}
                     </div>
                   </CardHeader>
                   <CardContent className="relative z-0 min-w-0 overflow-hidden p-0">
