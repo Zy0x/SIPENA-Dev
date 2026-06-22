@@ -51,6 +51,7 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 
 ## Modal, Toast, dan Table Header
 
+- Semua dialog (termasuk `Dialog`, `AlertDialog`, `Sheet`, drawer, dan popup overlay lainnya) wajib menggunakan **controlled state** secara eksplisit dengan melewatkan prop `open={state}` dan `onOpenChange={setState}`. Penggunaan uncontrolled state (tanpa mendefinisikan prop `open` dan `onOpenChange` secara eksplisit) dilarang keras, karena akan melewati logika efek pendaftaran stack history popstate di `dialog.tsx` / `alert-dialog.tsx`. Dampaknya, ketika pengguna melakukan navigasi back-gesture saat overlay tampil, browser/aplikasi akan langsung kembali ke halaman sebelumnya alih-alih menutup overlay tersebut.
 - Dialog nested wajib tetap menampilkan overlay blur di atas dialog parent. Gunakan layer shared: dialog overlay/content, alert dialog, popover/select, lalu toast sebagai lapisan tertinggi.
 - Dialog normal wajib menaikkan z-index overlay/content berdasarkan kedalaman stack agar modal anak tetap menggelapkan dan memburamkan modal parent.
 - Registrasi stack dan `history.pushState` dialog hanya boleh terjadi sekali untuk setiap sesi buka. Perubahan callback, state form, pilihan tabel, atau rerender konten tidak boleh mendaftarkan ulang dialog maupun menambah history baru.

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.85",
+    version: "2.4.85",
+    title: "Standar Siklus Hidup Dialog & Intersep Back-Gesture",
+    description: "Menyusun dan mewajibkan penggunaan controlled state untuk seluruh dialog dan overlay guna mendukung intersepsi back-gesture di perangkat mobile/PWA secara konsisten.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Menyusun standar teknis baru di 'Standar Interaksi UI dan Scroll SIPENA' yang mewajibkan penulisan Dialog/AlertDialog menggunakan controlled state open dan onOpenChange.",
+      "Memastikan hook efek pendaftaran stack history popstate di dialog.tsx dan alert-dialog.tsx beroperasi sempurna untuk mencegah back-gesture melompati penutupan overlay.",
+      "Melakukan audit dan penyesuaian visual untuk tombol Panduan Warna agar sepenuhnya mematuhi standar intersep gestur kembali di berbagai rasio layar mobile."
+    ]
+  },
+  {
     id: "v2.4.84",
     version: "2.4.84",
     title: "Fitur Legenda & Panduan Warna Tabel",

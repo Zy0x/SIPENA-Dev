@@ -330,6 +330,7 @@ export function SpreadsheetTable({
   const [nativeOrientation, setNativeOrientation] = useState<string>(
     typeof window !== "undefined" && screen.orientation ? screen.orientation.type : ""
   );
+  const [showColorGuide, setShowColorGuide] = useState(false);
   const lastTiltRef = useRef<"left" | "right">("left");
 
   // Reset rotation when exiting fullscreen mode
@@ -2598,7 +2599,7 @@ export function SpreadsheetTable({
           )}
           
           {/* Panduan Warna Dialog */}
-          <Dialog>
+          <Dialog open={showColorGuide} onOpenChange={setShowColorGuide}>
             <DialogTrigger asChild>
               <button 
                 type="button" 
