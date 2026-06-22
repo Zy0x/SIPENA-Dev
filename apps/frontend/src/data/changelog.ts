@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.83",
+    version: "2.4.83",
+    title: "Sinkronisasi Reaktif Orientasi Native Fullscreen Maksimal",
+    description: "Mencegah konflik rotasi ganda 180 derajat pada mode Fullscreen Maksimal dengan melacak status screen.orientation secara reaktif melalui state React.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Memperkenalkan state nativeOrientation untuk merekam screen.orientation.type secara reaktif di SpreadsheetTable.tsx.",
+      "Memastikan isNativelyRotated dievaluasi ulang secara instan oleh React ketika orientasi native berubah (seperti saat orient.lock berhasil memutar layar di PWA standalone).",
+      "Menghilangkan penundaan re-render yang memicu double-rotation (native + CSS = 180deg) saat berpindah rotasi di mode Fullscreen Maksimal."
+    ]
+  },
+  {
     id: "v2.4.82",
     version: "2.4.82",
     title: "Koreksi Arah Rotasi Manual Putar Kiri/Kanan Terbalik",

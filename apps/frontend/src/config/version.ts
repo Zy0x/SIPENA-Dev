@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.82";
+export const APP_VERSION = "2.4.83";
 export const VERSION_DATE = "2026-06-22";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.83": "Menambahkan state nativeOrientation untuk sinkronisasi reaktif screen.orientation guna mencegah konflik rotasi ganda 180 derajat pada mode Fullscreen Maksimal.",
   "2.4.82": "Memperbaiki orientasi rotasi manual (Putar Kiri/Kanan) yang terbalik pada toolbar fullscreen agar sesuai dengan arah rotasi visual yang diharapkan.",
   "2.4.81": "Menyelaraskan orientasi rotasi manual (Putar Kiri/Kanan) dengan membalik pemetaan CSS transform dan native lock agar sesuai dengan arah gerak fisik pengguna.",
   "2.4.80": "Mencegah konflik rotasi terbalik 180 derajat pada mobile dengan menonaktifkan transform CSS rotasi secara dinamis apabila browser telah memutar viewport ke orientasi landscape secara native.",

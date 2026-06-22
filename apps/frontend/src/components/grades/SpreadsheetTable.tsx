@@ -319,6 +319,9 @@ export function SpreadsheetTable({
   const frozenColumnsTranslationRef = useRef<HTMLDivElement>(null);
 
   const [rotationState, setRotationState] = useState<"none" | "left" | "right">("none");
+  const [nativeOrientation, setNativeOrientation] = useState<string>(
+    typeof window !== "undefined" && screen.orientation ? screen.orientation.type : ""
+  );
   const lastTiltRef = useRef<"left" | "right">("left");
 
   // Reset rotation when exiting fullscreen mode
@@ -371,6 +374,7 @@ export function SpreadsheetTable({
 
     const handleOrientationChange = () => {
       const type = screen.orientation.type;
+      setNativeOrientation(type);
       if (type === "landscape-primary") {
         setRotationState("left");
       } else if (type === "landscape-secondary") {
@@ -2014,8 +2018,9 @@ export function SpreadsheetTable({
 
   // Check if browser orientation has natively rotated the viewport to landscape
   const isNativelyRotated = typeof window !== "undefined" && 
-    !!screen.orientation && 
-    screen.orientation.type.startsWith("landscape");
+    (nativeOrientation ? nativeOrientation.startsWith("landscape") : (
+      !!screen.orientation && screen.orientation.type.startsWith("landscape")
+    ));
 
   const rotationClass = isFullscreen
     ? (isNativelyRotated 
