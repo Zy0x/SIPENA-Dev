@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.84",
+    version: "2.4.84",
+    title: "Fitur Legenda & Panduan Warna Tabel",
+    description: "Menambahkan tombol panduan warna pada footer tabel yang membuka modal overlay berisi detail indikator KKM riil, kolom nilai khusus, dan setelan tema.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Menyediakan tombol 'Panduan Warna' dengan ikon Info di pojok kanan bawah footer tabel.",
+      "Mengintegrasikan modal overlay berbasis Dialog Radix yang menampilkan parameter KKM dinamis (Lulus, Cukup, Belum Lulus) menggunakan visual warna riil dari tabel.",
+      "Menambahkan informasi visual untuk kolom khusus (Rata-rata BAB, STS, SAS, Rapor) dan penjelas tema aktif (Setting A vs Setting B) untuk kemudahan navigasi guru."
+    ]
+  },
+  {
     id: "v2.4.83",
     version: "2.4.83",
     title: "Sinkronisasi Reaktif Orientasi Native Fullscreen Maksimal",

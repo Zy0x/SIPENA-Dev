@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.83";
+export const APP_VERSION = "2.4.84";
 export const VERSION_DATE = "2026-06-22";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.84": "Menambahkan tombol Panduan Warna di footer tabel yang membuka modal overlay berisi informasi indikator KKM riil, kolom nilai khusus, dan setelan tema.",
   "2.4.83": "Menambahkan state nativeOrientation untuk sinkronisasi reaktif screen.orientation guna mencegah konflik rotasi ganda 180 derajat pada mode Fullscreen Maksimal.",
   "2.4.82": "Memperbaiki orientasi rotasi manual (Putar Kiri/Kanan) yang terbalik pada toolbar fullscreen agar sesuai dengan arah rotasi visual yang diharapkan.",
   "2.4.81": "Menyelaraskan orientasi rotasi manual (Putar Kiri/Kanan) dengan membalik pemetaan CSS transform dan native lock agar sesuai dengan arah gerak fisik pengguna.",

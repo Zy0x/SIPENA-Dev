@@ -52,6 +52,14 @@ import {
 } from "@/lib/viewportTelemetry";
 import { isVerticalScrollBoundary, scrollPageBy } from "@/lib/scrollChaining";
 import { useCoarsePointerTapGuard } from "@/hooks/useCoarsePointerTapGuard";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Smartphone rotation icon SVG (styled after Flaticon 2313449 - counter-clockwise)
 const RotateDeviceIcon = ({ className }: { className?: string }) => (
@@ -2581,11 +2589,151 @@ export function SpreadsheetTable({
             : 'Klik sel untuk edit • Enter untuk simpan • Pinch untuk zoom'
           }
         </span>
-        {isFullscreen && (
-          <span className="hidden shrink-0 text-right font-medium sm:inline">
-            {className} - {subjectName}
-          </span>
-        )}
+        
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {isFullscreen && (
+            <span className="hidden shrink-0 text-right font-medium sm:inline">
+              {className} - {subjectName}
+            </span>
+          )}
+          
+          {/* Panduan Warna Dialog */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <button 
+                type="button" 
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted px-2 py-0.5 rounded transition-colors border border-border/40 font-medium cursor-pointer select-none"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                Panduan Warna
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md md:max-w-lg overflow-y-auto max-h-[90vh]">
+              <DialogHeader>
+                <DialogTitle>Panduan & Legenda Warna Tabel</DialogTitle>
+                <DialogDescription>
+                  Penjelasan sistem warna indikator nilai KKM dan kolom khusus pada Spreadsheet Nilai SIPENA.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6 py-2 text-sm text-foreground">
+                {/* Section 1: KKM */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                    Status Kelulusan (KKM: {kkm})
+                  </h4>
+                  <div className="space-y-2.5">
+                    {/* Lulus */}
+                    <div className="flex items-start gap-3">
+                      <div className={`w-24 px-2 py-1 text-center font-semibold text-xs rounded border flex-shrink-0 ${getGradeColor(kkm + 10, kkm)}`}>
+                        {kkm + 10}
+                      </div>
+                      <div>
+                        <div className="font-medium text-emerald-600 dark:text-emerald-400">Lulus (Sangat Baik)</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Nilai &gt; {kkm + 5}. Nilai tuntas secara aman di atas batas minimum KKM.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cukup */}
+                    <div className="flex items-start gap-3">
+                      <div className={`w-24 px-2 py-1 text-center font-extrabold text-xs rounded border flex-shrink-0 ${getGradeColor(kkm + 2, kkm)}`}>
+                        {kkm + 2}
+                      </div>
+                      <div>
+                        <div className="font-medium text-yellow-600 dark:text-yellow-400">Cukup</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Nilai antara {kkm} hingga {kkm + 5}. Nilai tuntas tetapi mendekati batas KKM minimum.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Belum Lulus */}
+                    <div className="flex items-start gap-3">
+                      <div className={`w-24 px-2 py-1 text-center font-black text-xs rounded border flex-shrink-0 ${getGradeColor(kkm - 5, kkm)}`}>
+                        {kkm - 5}
+                      </div>
+                      <div>
+                        <div className="font-medium text-red-600 dark:text-red-400">Belum Lulus</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Nilai &lt; {kkm}. Nilai di bawah KKM, siswa memerlukan program pembelajaran remedial.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Special Columns */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                    Kolom Nilai Khusus
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Chapter Avg */}
+                    <div className="flex items-center gap-2 rounded border p-2 bg-muted/20">
+                      <div className={`w-12 h-6 flex items-center justify-center text-xs font-semibold rounded border ${getGradeTableAverageCellTone(activeTableColorScheme)}`}>
+                        85
+                      </div>
+                      <div>
+                        <div className="font-medium text-xs">Rata-rata BAB</div>
+                        <div className="text-[10px] text-muted-foreground">Nilai rata-rata tugas per BAB</div>
+                      </div>
+                    </div>
+
+                    {/* STS */}
+                    <div className="flex items-center gap-2 rounded border p-2 bg-muted/20">
+                      <div className={`w-12 h-6 flex items-center justify-center text-xs font-semibold rounded border ${getGradeTableColumnHeaderTone(activeTableColorScheme, { type: 'sts' })}`}>
+                        82
+                      </div>
+                      <div>
+                        <div className="font-medium text-xs">Nilai STS</div>
+                        <div className="text-[10px] text-muted-foreground">Sumatif Tengah Semester</div>
+                      </div>
+                    </div>
+
+                    {/* SAS */}
+                    <div className="flex items-center gap-2 rounded border p-2 bg-muted/20">
+                      <div className={`w-12 h-6 flex items-center justify-center text-xs font-semibold rounded border ${getGradeTableColumnHeaderTone(activeTableColorScheme, { type: 'sas' })}`}>
+                        80
+                      </div>
+                      <div>
+                        <div className="font-medium text-xs">Nilai SAS</div>
+                        <div className="text-[10px] text-muted-foreground">Sumatif Akhir Semester</div>
+                      </div>
+                    </div>
+
+                    {/* Rapor */}
+                    <div className="flex items-center gap-2 rounded border p-2 bg-muted/20">
+                      <div className={`w-12 h-6 flex items-center justify-center text-xs font-semibold rounded border ${getGradeTableColumnHeaderTone(activeTableColorScheme, { type: 'final' })}`}>
+                        83
+                      </div>
+                      <div>
+                        <div className="font-medium text-xs">Nilai Rapor</div>
+                        <div className="text-[10px] text-muted-foreground">Hasil akhir kalkulasi rapor</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Active Theme Scheme */}
+                <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1.5">
+                  <div className="font-semibold text-muted-foreground">Tema Tabel Aktif:</div>
+                  <div className="font-medium text-foreground">
+                    {activeTableColorScheme === "classic" ? "Setting A (Awal SIPENA)" : "Setting B (Warna Sekarang)"}
+                  </div>
+                  <div className="text-muted-foreground">
+                    {activeTableColorScheme === "classic" 
+                      ? "Menggunakan header BAB bernuansa biru klasik untuk tampilan ringan dan bersih."
+                      : "Menggunakan kode warna khusus per BAB (biru, ungu, toska, dll.) untuk memudahkan navigasi horizontal."
+                    }
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Grade Hint Popup for mobile long-press */}
