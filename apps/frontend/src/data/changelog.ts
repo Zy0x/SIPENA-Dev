@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.87",
+    version: "2.4.87",
+    title: "Fitur Tambah Kelas & Perapian Label Selektor",
+    description: "Menambahkan tombol tambah kelas langsung pada halaman Input Nilai dan merapikan visual header label selektor.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Mengintegrasikan AddClassDialog langsung di halaman Input Nilai agar guru dapat membuat kelas baru tanpa meninggalkan halaman.",
+      "Menyelaraskan visual dropdown selektor dengan menambahkan label header 'Kelas' (ikon School) dan 'Mata Pelajaran' (ikon BookOpen) di atas masing-masing pilihan, mengikuti standard estetika halaman Mapel.",
+      "Memastikan kelas yang baru saja dibuat terpilih otomatis sebagai kelas aktif di halaman Input Nilai."
+    ]
+  },
+  {
     id: "v2.4.86",
     version: "2.4.86",
     title: "Redesain Footer Tabel Spreadsheet",

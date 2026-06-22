@@ -82,10 +82,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -104,6 +106,7 @@ import {
 } from "@/components/grades/FormulaSettings";
 import { ReportRoundingSettingsDialog } from "@/components/grades/ReportRoundingSettingsDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
+import AddClassDialog from "@/components/classes/AddClassDialog";
 
 export type GradeInputMode = "owner" | "guest";
 
@@ -292,6 +295,8 @@ function getRpcErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+const CREATE_CLASS_VALUE = "__create_class__";
+
 export default function Grades({ mode = "owner" }: GradesProps) {
   const isGuestMode = mode === "guest";
   const navigate = useNavigate();
@@ -304,6 +309,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const { colorScheme: gradeTableColorScheme } = useGradeTableColorScheme();
 
   const token = searchParams.get("token") || "";
+  const [addClassOpen, setAddClassOpen] = useState(false);
+  const [createdClass, setCreatedClass] = useState<Class | null>(null);
   const [guestSession, setGuestSession] = useState<GuestSession | null>(() =>
     isGuestMode ? readGuestSession(token) : null
   );
@@ -566,6 +573,12 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const { subjects, isLoading: subjectsLoading } = useSubjects(
     isGuestMode ? "" : selectedClassId
   );
+
+  useEffect(() => {
+    if (createdClass && classes.some((item) => item.id === createdClass.id)) {
+      setCreatedClass(null);
+    }
+  }, [classes, createdClass]);
   const {
     grades: ownerGrades,
     isLoading: gradesLoading,
@@ -626,7 +639,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   );
   const selectedClass = isGuestMode
     ? guestData?.classInfo
-    : classes.find((c) => c.id === selectedClassId);
+    : classes.find((c) => c.id === selectedClassId) || (createdClass?.id === selectedClassId ? createdClass : undefined);
   const selectedSubject = isGuestMode
     ? guestData?.subjectInfo
     : subjects.find((s) => s.id === selectedSubjectId);
@@ -1840,10 +1853,18 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
         {!isGuestMode && !hasNoClasses && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-fade-in-up delay-100">
-            <div data-tour="class-select" className="rounded-2xl bg-card border border-border overflow-hidden p-3 sm:p-3.5">
+            <div data-tour="class-select" className="rounded-2xl bg-card border border-border p-3 sm:p-3.5 flex flex-col gap-1.5">
+              <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground px-3 pt-0.5 select-none">
+                <School className="w-3.5 h-3.5 text-primary" />
+                Kelas
+              </Label>
               <Select
                 value={selectedClassId}
                 onValueChange={(value) => {
+                  if (value === CREATE_CLASS_VALUE) {
+                    setAddClassOpen(true);
+                    return;
+                  }
                   setSelectedClassId(value);
                   setSelectedSubjectId("");
                   setLockedStudentId(null);
@@ -1862,11 +1883,19 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                       {cls.name} ({cls.student_count || 0} siswa)
                     </SelectItem>
                   ))}
+                  <SelectSeparator />
+                  <SelectItem value={CREATE_CLASS_VALUE} className="min-h-11 font-medium text-primary">
+                    <span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Tambah Kelas Baru</span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div data-tour="subject-select" className="rounded-2xl bg-card border border-border overflow-hidden p-3 sm:p-3.5">
+            <div data-tour="subject-select" className="rounded-2xl bg-card border border-border p-3 sm:p-3.5 flex flex-col gap-1.5">
+              <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground px-3 pt-0.5 select-none">
+                <BookOpen className="w-3.5 h-3.5 text-primary" />
+                Mata Pelajaran
+              </Label>
               <Select
                 value={selectedSubjectId}
                 onValueChange={(value) => {
@@ -2245,6 +2274,18 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {!isGuestMode && (
+        <AddClassDialog
+          trigger={null}
+          open={addClassOpen}
+          onOpenChange={setAddClassOpen}
+          onCreated={(newClass) => {
+            setCreatedClass(newClass);
+            setSelectedClassId(newClass.id);
+          }}
+        />
       )}
     </>
   );
