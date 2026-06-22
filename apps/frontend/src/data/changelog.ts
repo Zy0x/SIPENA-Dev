@@ -42,6 +42,33 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.82",
+    version: "2.4.82",
+    title: "Koreksi Arah Rotasi Manual Putar Kiri/Kanan Terbalik",
+    description: "Memperbaiki masalah orientasi pada menu rotasi manual di mana opsi Putar ke Kiri dan Putar ke Kanan bekerja terbalik dari arah putaran visual yang seharusnya.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Mengubah pemetaan status 'left' agar memicu kelas CSS .sipena-layout-rotated-left (-90deg/berlawanan arah jarum jam) dan lock native 'landscape-secondary'.",
+      "Mengubah pemetaan status 'right' agar memicu kelas CSS .sipena-layout-rotated-right (+90deg/searah jarum jam) dan lock native 'landscape-primary'.",
+      "Menyelaraskan event listener screen.orientation change agar landscape-primary memicu status 'right' dan landscape-secondary memicu status 'left'."
+    ]
+  },
+  {
+    id: "v2.4.81",
+    version: "2.4.81",
+    title: "Penyelarasan Orientasi Rotasi Manual & Fisik",
+    description: "Menyelaraskan pemetaan CSS transform dan native lock pada rotasi layar agar sesuai dengan arah gerak fisik pengguna saat memiringkan perangkat.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Menyelaraskan arah manual Putar Kiri/Kanan dengan logika kompensasi visual.",
+      "Mengoptimalkan perilaku native lock dan orientasi browser mobile."
+    ]
+  },
+  {
     id: "v2.4.80",
     version: "2.4.80",
     title: "Koreksi Konflik Rotasi Terbalik 180 Derajat di Mobile",

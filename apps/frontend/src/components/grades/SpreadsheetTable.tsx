@@ -372,9 +372,9 @@ export function SpreadsheetTable({
     const handleOrientationChange = () => {
       const type = screen.orientation.type;
       if (type === "landscape-primary") {
-        setRotationState("right");
-      } else if (type === "landscape-secondary") {
         setRotationState("left");
+      } else if (type === "landscape-secondary") {
+        setRotationState("right");
       } else if (type.startsWith("portrait")) {
         setRotationState("none");
       }
@@ -398,11 +398,11 @@ export function SpreadsheetTable({
           const orient = screen.orientation as any;
           if (rotationState === "left") {
             if (typeof orient.lock === "function") {
-              await orient.lock("landscape-secondary");
+              await orient.lock("landscape-primary");
             }
           } else if (rotationState === "right") {
             if (typeof orient.lock === "function") {
-              await orient.lock("landscape-primary");
+              await orient.lock("landscape-secondary");
             }
           } else {
             if (typeof orient.unlock === "function") {
@@ -2021,9 +2021,9 @@ export function SpreadsheetTable({
     ? (isNativelyRotated 
         ? 'fixed inset-0 z-[9999]' 
         : (rotationState === 'left' 
-            ? 'sipena-layout-rotated-left' 
+            ? 'sipena-layout-rotated-right' 
             : rotationState === 'right' 
-              ? 'sipena-layout-rotated-right' 
+              ? 'sipena-layout-rotated-left' 
               : 'fixed inset-0 z-[9999]'
           )
       )
