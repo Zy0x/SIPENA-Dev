@@ -2612,12 +2612,6 @@ export function SpreadsheetTable({
           )}
           
           <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
-            {/* Zoom Indicator */}
-            <div className="inline-flex items-center gap-1 px-1.5 xs:px-2 py-0.5 rounded border border-border/40 bg-muted/20 text-muted-foreground font-medium text-[10px] xs:text-[11px]">
-              <Maximize2 className="w-3 h-3 opacity-70" />
-              <span>{zoomLevel}%</span>
-            </div>
-
             {/* Panduan Warna Dialog */}
             <Dialog open={showColorGuide} onOpenChange={setShowColorGuide}>
               <DialogTrigger asChild>

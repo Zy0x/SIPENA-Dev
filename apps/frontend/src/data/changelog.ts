@@ -42,6 +42,19 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.89",
+    version: "2.4.89",
+    title: "Pembersihan Indikator Zoom Redundan di Footer",
+    description: "Menghilangkan realtime zoom level (%) dari footer tabel karena informasi tersebut sudah ada secara permanen di toolbar atas.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Menghilangkan div Zoom Indicator (%) beserta ikon Maximize2 di sebelah kiri tombol Panduan Warna pada footer tabel spreadsheet.",
+      "Menyisakan tombol Panduan Warna saja di bagian kanan footer untuk memaksimalkan ruang teks instruksi pada layar kecil."
+    ]
+  },
+  {
     id: "v2.4.88",
     version: "2.4.88",
     title: "Relokasi Badge Mode & Optimalisasi Footer",
