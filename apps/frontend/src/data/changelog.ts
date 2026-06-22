@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.78",
+    version: "2.4.78",
+    title: "Perbaikan Overlap Tombol Pembulatan Toolbar Fullscreen Desktop",
+    description: "Memperbaiki masalah tumpang tindih (overlap) tombol Pembulatan pada toolbar fullscreen di desktop dengan menghapus kelas lebar penuh w-full yang statis dari container right-side, menyerahkan kontrol lebar sepenuhnya kepada CSS Container Queries.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Menghapus kelas inline w-full pada elemen .sipena-grade-toolbar-view di SpreadsheetTable.tsx ketika dalam mode fullscreen.",
+      "Menyelaraskan pembagian lebar toolbar pada desktop agar bagian kiri (.sipena-grade-toolbar-format) dan bagian kanan (.sipena-grade-toolbar-view) berukuran auto secara proporsional sesuai lebar kontennya.",
+      "Menjaga agar tata letak dua baris yang responsif pada mobile/tablet (lebar < 1080px) tetap bekerja menggunakan aturan width: 100% dari CSS Container Queries."
+    ]
+  },
+  {
     id: "v2.4.77",
     version: "2.4.77",
     title: "Tracing Presisi Ikon Rotasi & Pembalikan Logika Arah Rotasi",

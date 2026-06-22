@@ -2186,7 +2186,7 @@ export function SpreadsheetTable({
         </div>
 
         {/* Right side - Zoom, Rotate & Search */}
-        <div className={`sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end ${isFullscreen ? 'w-full' : ''}`}>
+        <div className="sipena-grade-toolbar-view flex min-w-0 flex-nowrap items-center gap-1.5 lg:gap-2 justify-end">
           {/* Zoom Controls - matching template */}
           <div data-tour="grade-zoom-control" className={`sipena-grade-zoom-control flex items-center gap-1 bg-muted rounded-lg p-1 ${formatLocked ? 'opacity-50' : ''}`}>
             <Button 
