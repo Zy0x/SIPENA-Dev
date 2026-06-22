@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.87";
+export const APP_VERSION = "2.4.88";
 export const VERSION_DATE = "2026-06-23";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.88": "Memindahkan badge mode edit ke toolbar atas sejajar dengan status freeze, serta merampingkan padding dan teks footer agar hemat ruang di layar mobile.",
   "2.4.87": "Integrasi fitur Tambah Kelas Baru langsung di halaman Input Nilai dan perapian visual label penjelas pada dropdown selektor kelas/mapel.",
   "2.4.86": "Redesain footer SpreadsheetTable dengan badge status mode interaktif, indikator zoom level reaktif, dan integrasi ikon metadata sekolah.",
   "2.4.85": "Menyusun standar wajib controlled state untuk dialog/overlay guna mendukung intersepsi back-gesture di perangkat mobile/PWA secara konsisten.",

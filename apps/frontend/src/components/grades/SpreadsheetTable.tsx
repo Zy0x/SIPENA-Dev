@@ -2425,6 +2425,12 @@ export function SpreadsheetTable({
             Mode Navigasi
           </Badge>
         )}
+        {!formatLocked && !scrollLockMode && (
+          <Badge variant="outline" className="gap-1 flex-shrink-0 text-xs border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400">
+            <LockOpen className="w-3 h-3" />
+            Mode Edit
+          </Badge>
+        )}
         {frozenColumns.size > 0 && (
           <Badge variant="outline" className="gap-1 flex-shrink-0 text-xs border-primary/50 text-primary">
             <Snowflake className="w-3 h-3" />
@@ -2585,29 +2591,16 @@ export function SpreadsheetTable({
       </div>
 
       {/* Footer */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t bg-background/80 backdrop-blur-sm px-4 py-2 text-xs text-muted-foreground select-none">
-        {/* Left: Mode Indicator & Instructions */}
-        <div className="flex items-center gap-2 min-w-0 flex-wrap">
-          {scrollLockMode ? (
-            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800/40 font-semibold text-[10px] uppercase tracking-wider">
-              <Hand className="w-3 h-3" />
-              Navigasi
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40 font-semibold text-[10px] uppercase tracking-wider">
-              <LockOpen className="w-3 h-3" />
-              Mode Edit
-            </div>
-          )}
-          <span className="truncate text-muted-foreground/80 font-medium">
-            {scrollLockMode 
-              ? 'Geser bebas tanpa takut salah edit • Cubit untuk zoom'
-              : 'Klik sel untuk mengubah • Enter untuk simpan • Cubit untuk zoom'
-            }
-          </span>
-        </div>
+      <div className="flex items-center justify-between gap-2 border-t bg-background/80 backdrop-blur-sm px-2.5 sm:px-4 py-1 sm:py-2 text-xs text-muted-foreground select-none">
+        {/* Left: Instructions */}
+        <span className="text-[9px] xs:text-[10px] sm:text-xs text-muted-foreground/80 font-medium leading-tight min-w-0 tracking-tight">
+          {scrollLockMode 
+            ? 'Geser bebas tanpa takut salah edit • Cubit untuk zoom'
+            : 'Klik sel untuk mengubah • Enter untuk simpan • Cubit untuk zoom'
+          }
+        </span>
         
-        <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
+        <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0">
           {isFullscreen && (
             <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded border border-border/30 bg-muted/30 text-muted-foreground font-medium text-[11px]">
               <School className="w-3.5 h-3.5 text-muted-foreground/75" />
@@ -2618,9 +2611,9 @@ export function SpreadsheetTable({
             </div>
           )}
           
-          <div className="flex items-center gap-2 ml-auto sm:ml-0">
+          <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
             {/* Zoom Indicator */}
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border/40 bg-muted/20 text-muted-foreground font-medium text-[11px]">
+            <div className="inline-flex items-center gap-1 px-1.5 xs:px-2 py-0.5 rounded border border-border/40 bg-muted/20 text-muted-foreground font-medium text-[10px] xs:text-[11px]">
               <Maximize2 className="w-3 h-3 opacity-70" />
               <span>{zoomLevel}%</span>
             </div>
@@ -2630,7 +2623,7 @@ export function SpreadsheetTable({
               <DialogTrigger asChild>
                 <button 
                   type="button" 
-                  className="inline-flex items-center gap-1.5 text-xs text-foreground hover:text-primary bg-background hover:bg-muted/30 px-2.5 py-1 rounded-md transition-all border border-border/60 font-medium cursor-pointer shadow-sm active:scale-95 select-none"
+                  className="inline-flex items-center gap-1.5 text-[10px] xs:text-xs text-foreground hover:text-primary bg-background hover:bg-muted/30 px-2 xs:px-2.5 py-0.5 xs:py-1 rounded transition-all border border-border/60 font-medium cursor-pointer shadow-sm active:scale-95 select-none"
                   style={{ touchAction: 'manipulation' }}
                 >
                   <HelpCircle className="w-3.5 h-3.5 text-muted-foreground" />

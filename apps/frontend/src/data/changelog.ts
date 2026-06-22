@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.88",
+    version: "2.4.88",
+    title: "Relokasi Badge Mode & Optimalisasi Footer",
+    description: "Memindahkan badge mode edit/navigasi ke info bar atas sejajar dengan kolom freeze, serta mendesain ulang footer agar lebih hemat ruang pada viewport mobile.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Memindahkan badge penanda mode (Mode Edit/Mode Navigasi) dari footer tabel spreadsheet ke Info Bar atas sejajar dengan status '2 Kolom Freeze'.",
+      "Mendesain ulang footer tabel agar lebih tipis dan responsif dengan meminimalkan padding dan celah (gap) antar elemen.",
+      "Mengecilkan font size instruksi dan tombol di footer pada viewport sempit agar seluruh teks muat dalam 1 atau 2 baris tanpa terpotong."
+    ]
+  },
+  {
     id: "v2.4.87",
     version: "2.4.87",
     title: "Fitur Tambah Kelas & Perapian Label Selektor",
