@@ -2012,12 +2012,29 @@ export function SpreadsheetTable({
       ? "min(100dvh, var(--sipena-visual-viewport-height, 100dvh))"
       : "100dvh";
 
+  // Check if browser orientation has natively rotated the viewport to landscape
+  const isNativelyRotated = typeof window !== "undefined" && 
+    !!screen.orientation && 
+    screen.orientation.type.startsWith("landscape");
+
+  const rotationClass = isFullscreen
+    ? (isNativelyRotated 
+        ? 'fixed inset-0 z-[9999]' 
+        : (rotationState === 'left' 
+            ? 'sipena-layout-rotated-left' 
+            : rotationState === 'right' 
+              ? 'sipena-layout-rotated-right' 
+              : 'fixed inset-0 z-[9999]'
+          )
+      )
+    : 'h-full';
+
   return (
     <div 
       ref={containerRef}
-      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${isFullscreen ? (rotationState === 'left' ? 'sipena-layout-rotated-left' : rotationState === 'right' ? 'sipena-layout-rotated-right' : 'fixed inset-0 z-[9999]') : 'h-full'} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
+      className={`sipena-grade-spreadsheet flex flex-col bg-background select-none ${rotationClass} ${fullscreenMode === "maximal" ? "sipena-grade-maximal-fullscreen" : ""}`}
       style={{
-        ...(isFullscreen && rotationState === 'none' && {
+        ...(isFullscreen && (rotationState === 'none' || isNativelyRotated) && {
           width: '100vw',
           height: fullscreenViewportHeight,
           maxHeight: fullscreenViewportHeight,

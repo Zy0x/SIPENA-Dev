@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.80",
+    version: "2.4.80",
+    title: "Koreksi Konflik Rotasi Terbalik 180 Derajat di Mobile",
+    description: "Memperbaiki masalah visual di mana layar berputar terbalik 180 derajat (upside down) di perangkat mobile ketika menekan tombol rotate dengan menonaktifkan transform CSS rotasi secara otomatis jika viewport telah diputar secara native.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Menambahkan evaluasi isNativelyRotated untuk mendeteksi apakah screen.orientation telah berhasil memutar layar ke landscape secara native.",
+      "Menghindari penerapan kelas CSS transform rotasi (.sipena-layout-rotated-left/right) ketika isNativelyRotated bernilai true untuk mencegah rotasi ganda (90deg native + 90deg CSS = 180deg).",
+      "Mempertahankan penerapan transform CSS rotasi sebagai fallback yang andal pada browser yang tidak mendukung native lock (seperti iOS Safari).",
+      "Menyinkronkan inline style width (100vw) dan height (100dvh) agar tetap mengisi seluruh viewport ketika dalam orientasi native landscape."
+    ]
+  },
+  {
     id: "v2.4.79",
     version: "2.4.79",
     title: "Pencegahan Rotasi Otomatis Fullscreen di Desktop",
