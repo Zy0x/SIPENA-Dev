@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.79",
+    version: "2.4.79",
+    title: "Pencegahan Rotasi Otomatis Fullscreen di Desktop",
+    description: "Memperbaiki masalah rotasi otomatis yang tidak diinginkan pada monitor desktop saat masuk mode fullscreen dengan membatasi listener screen.orientation hanya untuk perangkat mobile/tablet.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-22",
+    details: [
+      "Membatasi eksekusi sync screen.orientation dan deteksi sensor accelerometer agar hanya berjalan di perangkat yang memiliki pointer kasar (coarse) atau user agent mobile.",
+      "Memastikan default status rotasi (rotationState) saat pertama kali masuk fullscreen di desktop tetap bernilai 'none' (tanpa rotasi).",
+      "Mempertahankan fungsionalitas auto-sync orientasi fisik pada perangkat mobile/tablet saat diputar secara fisik."
+    ]
+  },
+  {
     id: "v2.4.78",
     version: "2.4.78",
     title: "Perbaikan Overlap Tombol Pembulatan Toolbar Fullscreen Desktop",

@@ -365,6 +365,10 @@ export function SpreadsheetTable({
   useEffect(() => {
     if (!isFullscreen || typeof window === "undefined" || !screen.orientation) return;
 
+    // Prevent automatic orientation sync on desktop landscape screens
+    const isMobile = window.matchMedia("(pointer: coarse)").matches || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (!isMobile) return;
+
     const handleOrientationChange = () => {
       const type = screen.orientation.type;
       if (type === "landscape-primary") {

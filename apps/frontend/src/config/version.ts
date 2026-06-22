@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.78";
+export const APP_VERSION = "2.4.79";
 export const VERSION_DATE = "2026-06-22";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.79": "Mencegah rotasi otomatis (auto-rotate) saat masuk mode fullscreen di desktop dengan membatasi sinkronisasi screen.orientation khusus untuk perangkat mobile/tablet.",
   "2.4.78": "Perbaikan tumpang tindih (overlap) tombol Pembulatan pada toolbar fullscreen di desktop dengan melepas kelas w-full kondisional pada bagian view right-side, menyelaraskannya dengan CSS Container Query.",
   "2.4.77": "Memperbarui ikon rotasi menggunakan SVG presisi tinggi hasil tracing gambar rujukan flaticon, serta membalik logika arah rotasi (kiri dan kanan) agar tombol Putar Kiri/Kanan dan orientasi fisik terpetakan secara konsisten.",
   "2.4.76": "Mengganti ikon rotasi dengan desain panah melingkar berlawanan arah jarum jam (counter-clockwise) serta membalik logika penyesuaian rotasi kiri-kanan agar selaras dengan sudut pandang mata pengguna saat perangkat dimiringkan.",
