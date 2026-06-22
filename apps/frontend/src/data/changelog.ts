@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.86",
+    version: "2.4.86",
+    title: "Redesain Footer Tabel Spreadsheet",
+    description: "Mendesain ulang footer tabel Spreadsheet Nilai agar lebih bersih, modern, informatif, dan nyaman digunakan oleh guru.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Menambahkan badge status semantik (biru untuk Mode Navigasi dengan ikon Hand, hijau untuk Mode Edit dengan ikon LockOpen).",
+      "Menyajikan info reaktif tingkat pembesaran (Zoom Level %) agar fitur pinch-to-zoom lebih mudah disadari dan dipantau.",
+      "Mengintegrasikan badge metadata sekolah (Kelas dan Mata Pelajaran) menggunakan ikon School dan BookOpen di mode fullscreen.",
+      "Menerapkan latar belakang semi-transparan dengan efek blur (backdrop-blur-sm) dan merapikan layout footer untuk performa visual premium."
+    ]
+  },
+  {
     id: "v2.4.85",
     version: "2.4.85",
     title: "Standar Siklus Hidup Dialog & Intersep Back-Gesture",
