@@ -79,8 +79,8 @@ BEGIN
   LIMIT 1;
 
   IF v_subject_id IS NULL THEN
-    INSERT INTO public.subjects (user_id, class_id, name, code, target_grade_kkm)
-    VALUES (p_user_id, v_class_id, 'Mata Pelajaran Uji Coba', 'MP-OCR', 75)
+    INSERT INTO public.subjects (user_id, class_id, name, kkm)
+    VALUES (p_user_id, v_class_id, 'Mata Pelajaran Uji Coba', 75)
     RETURNING id INTO v_subject_id;
   END IF;
 
