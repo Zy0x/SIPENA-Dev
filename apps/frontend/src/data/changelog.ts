@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.93",
+    version: "2.4.93",
+    title: "Zoom Panduan Format & Fallback Persetujuan AI",
+    description: "Meningkatkan kenyamanan interaksi dengan membuat gambar panduan visual format tabel dapat diklik untuk diperbesar, serta menambahkan penanganan fallback interaktif (highlight dan pesan kesalahan) apabila persetujuan AI belum dicentang.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Mengaktifkan perbesaran dinamis gambar panduan format tabel (/ocr-guide-example.webp) melalui OcrImageViewerDialog saat gambar diklik.",
+      "Mengubah tombol 'Proses OCR & AI' agar tidak diblok saat persetujuan belum dicentang, melainkan menampilkan pesan error persetujuan serta memberikan efek pulse warna merah pada kontainer persetujuan sebagai fallback penunjuk arah.",
+      "Memastikan standardisasi kata sandi 'murid' tetap konsisten di seluruh log perubahan."
+    ]
+  },
+  {
     id: "v2.4.92",
     version: "2.4.92",
     title: "Optimasi Ketajaman OCR JPEG & Panduan Visual WebP",

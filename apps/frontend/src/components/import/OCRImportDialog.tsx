@@ -11,6 +11,7 @@ import {
   FilePenLine,
   Image as ImageIcon,
   Loader2,
+  Maximize2,
   Plus,
   RefreshCw,
   ScanLine,
@@ -191,7 +192,9 @@ export default function OCRImportDialog({
   const [images, setImages] = useState<PreparedOcrImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [guideViewerOpen, setGuideViewerOpen] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [consentErrorHighlight, setConsentErrorHighlight] = useState(false);
   const [isPreparingImages, setIsPreparingImages] = useState(false);
   const [processStage, setProcessStage] = useState(0);
   const [processError, setProcessError] = useState("");
@@ -212,7 +215,9 @@ export default function OCRImportDialog({
     setImages([]);
     setActiveImageId(null);
     setImageViewerOpen(false);
+    setGuideViewerOpen(false);
     setConsent(false);
+    setConsentErrorHighlight(false);
     setIsPreparingImages(false);
     setProcessStage(0);
     setProcessError("");
@@ -301,7 +306,12 @@ export default function OCRImportDialog({
   }, [context]);
 
   const runOcr = useCallback(async () => {
-    if (!images.length || !consent || (type === "students" && !targetClassId)) return;
+    if (!images.length || (type === "students" && !targetClassId)) return;
+    if (!consent) {
+      setConsentErrorHighlight(true);
+      showError("Persetujuan Diperlukan", "Harap centang persetujuan pemrosesan foto oleh layanan AI sebelum memproses.");
+      return;
+    }
     setStep("processing");
     setProcessStage(1);
     setProcessError("");
@@ -319,7 +329,7 @@ export default function OCRImportDialog({
       setProcessError(error instanceof Error ? error.message : "OCR gagal memproses foto.");
       setStep("review");
     }
-  }, [applyExtraction, consent, images, targetClassId, type]);
+  }, [applyExtraction, consent, images, targetClassId, type, showError]);
 
   const applyManualText = useCallback(() => {
     if (!manualText.trim()) return;
@@ -540,8 +550,24 @@ export default function OCRImportDialog({
                   </div>
                 ) : null}
 
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
-                  <Checkbox checked={consent} onCheckedChange={(checked) => setConsent(checked === true)} className="mt-0.5 h-5 w-5" />
+                <label 
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all duration-300",
+                    consentErrorHighlight 
+                      ? "border-destructive bg-destructive/5 ring-2 ring-destructive/20 animate-pulse" 
+                      : "border-primary/25 bg-primary/5"
+                  )}
+                >
+                  <Checkbox 
+                    checked={consent} 
+                    onCheckedChange={(checked) => {
+                      setConsent(checked === true);
+                      if (checked === true) {
+                        setConsentErrorHighlight(false);
+                      }
+                    }} 
+                    className="mt-0.5 h-5 w-5" 
+                  />
                   <span className="text-xs leading-relaxed"><span className="block font-semibold">Saya setuju foto diproses oleh layanan AI untuk sesi ini.</span><span className="text-muted-foreground">Foto tidak disimpan oleh SIPENA. Foto dan base64 dibuang saat modal ditutup.</span></span>
                 </label>
 
@@ -565,11 +591,21 @@ export default function OCRImportDialog({
                         </div>
                       </div>
                       <div className="w-full md:w-80 shrink-0 overflow-hidden rounded-lg border border-border bg-background p-1">
-                        <img 
-                          src="/ocr-guide-example.webp" 
-                          alt="Contoh Format Foto Tabel" 
-                          className="h-auto w-full rounded-md object-contain" 
-                        />
+                        <button
+                          type="button"
+                          className="group relative flex w-full touch-manipulation items-center justify-center overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => setGuideViewerOpen(true)}
+                          aria-label="Perbesar gambar panduan format tabel"
+                        >
+                          <img 
+                            src="/ocr-guide-example.webp" 
+                            alt="Contoh Format Foto Tabel" 
+                            className="h-auto w-full rounded-md object-contain transition-transform duration-300 group-hover:scale-105" 
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                            <Maximize2 className="h-6 w-6 text-white" />
+                          </div>
+                        </button>
                       </div>
                     </div>
                     <ul className="space-y-1.5 list-disc pl-4">
@@ -775,7 +811,7 @@ export default function OCRImportDialog({
           helperText={step === "capture" ? "Foto hanya hidup selama modal ini terbuka dan tidak disimpan oleh SIPENA." : step === "review" ? "Geser tabel secara horizontal pada layar kecil. Keluarkan baris bermasalah atau perbaiki isinya." : "OCR BETA selalu memerlukan pemeriksaan manusia sebelum data disimpan."}
           actions={(
             <>
-              {step === "capture" ? <><Button variant="outline" onClick={() => closeDialog(false)}>Batal</Button><Button onClick={() => void runOcr()} disabled={!images.length || !consent || isPreparingImages || (type === "students" && !targetClassId)} className="gap-2"><ScanLine className="h-4 w-4" /> Proses OCR & AI</Button></> : null}
+              {step === "capture" ? <><Button variant="outline" onClick={() => closeDialog(false)}>Batal</Button><Button onClick={() => void runOcr()} disabled={!images.length || isPreparingImages || (type === "students" && !targetClassId)} className="gap-2"><ScanLine className="h-4 w-4" /> Proses OCR & AI</Button></> : null}
               {step === "processing" ? <Button variant="outline" disabled><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sedang memproses</Button> : null}
               {step === "review" ? <><Button variant="outline" onClick={() => setStep("capture")}>Kembali ke Foto</Button><Button onClick={() => setStep("confirm")} disabled={!canContinueReview}>Lanjut Konfirmasi ({includedRows.length})</Button></> : null}
               {step === "confirm" ? <><Button variant="outline" onClick={() => setStep("review")}>Periksa Lagi</Button><Button onClick={() => void executeImport()} disabled={isImporting} className="gap-2">{isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Konfirmasi Import</Button></> : null}
@@ -789,6 +825,13 @@ export default function OCRImportDialog({
           imageUrl={activeImage?.previewUrl}
           imageName={activeImage?.name}
           page={activeImage?.page}
+        />
+        <OcrImageViewerDialog
+          open={guideViewerOpen}
+          onOpenChange={setGuideViewerOpen}
+          imageUrl="/ocr-guide-example.webp"
+          imageName="Panduan Format Foto Tabel"
+          page={1}
         />
       </DialogContent>
     </Dialog>
