@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, Sele
 import { Textarea } from "@/components/ui/textarea";
 import { StudioActionFooter, StudioInfoCollapsible, StudioStepHeader } from "@/components/studio/ResponsiveStudio";
 import { useEnhancedToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   OCR_MAX_IMAGES,
   hasBlockingOcrIssues,
@@ -39,6 +40,7 @@ import {
   prepareOcrDraft,
   prepareOcrImage,
   requestOcrExtraction,
+  uploadOcrImageAndLog,
   validateOcrDraft,
   validateOcrImageFiles,
   type OcrColumn,
@@ -187,6 +189,7 @@ export default function OCRImportDialog({
   onRequestCreateClass,
   onConfirmImport,
 }: OCRImportDialogProps) {
+  const { user } = useAuth();
   const [step, setStep] = useState<OcrStudioStep>("capture");
   const [images, setImages] = useState<PreparedOcrImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
@@ -423,13 +426,44 @@ export default function OCRImportDialog({
         rows,
       });
       setImportResult(result);
+
+      // Unggah foto WebP acuan dan buat record log audit OCR di latar belakang (fire-and-forget)
+      if (user?.id) {
+        images.forEach((image) => {
+          const count = rows.filter((row) => row.included && row.page === image.page).length;
+          if (count > 0) {
+            void uploadOcrImageAndLog({
+              userId: user.id,
+              classId: context.targetClassId || targetClassId || "",
+              subjectId: context.targetSubjectId,
+              kind: type,
+              base64: image.base64,
+              imageName: image.name,
+              recordsCount: count,
+            });
+          }
+        });
+      }
+
       setStep("done");
     } catch (error) {
       showError("Import gagal", error instanceof Error ? error.message : "Data belum tersimpan. Coba kembali.");
     } finally {
       setIsImporting(false);
     }
-  }, [canContinueReview, columns, context.targetClassId, onConfirmImport, rows, showError, type]);
+  }, [
+    canContinueReview,
+    columns,
+    context.targetClassId,
+    context.targetSubjectId,
+    targetClassId,
+    images,
+    onConfirmImport,
+    rows,
+    showError,
+    type,
+    user,
+  ]);
 
   const summary = useMemo(() => ({
     included: includedRows.length,

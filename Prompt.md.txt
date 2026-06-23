@@ -1,0 +1,54 @@
+Anda bekerja sebagai coding agent untuk project SIPENA.
+
+Konteks wajib:
+- Folder kerja utama dan satu-satunya project aktif adalah:
+  E:\Data\GitHub\SIPENA\tessipena3-f7e2575d
+- Jangan bekerja di folder lain.
+- Jangan gunakan folder lama/redundan seperti tessipena-main-audit.
+- Remote source utama:
+  https://github.com/Web-Modder/tessipena3-f7e2575d.git
+- Branch utama: main
+- Netlify production site: https://sipenadev.netlify.app
+- Netlify terhubung ke repo target:
+  https://github.com/Zy0x/SIPENA-Dev
+- Alur normal deploy:
+  1. Commit + push ke Web-Modder/tessipena3-f7e2575d:main
+  2. GitHub Actions “Trigger sync” otomatis dispatch ke Zy0x/SIPENA-Dev
+  3. Zy0x/SIPENA-Dev melakukan sync source
+  4. Netlify otomatis build dari Zy0x/SIPENA-Dev:main
+- Jangan melakukan deploy manual Netlify kecuali:
+  - GitHub Actions sync gagal,
+  - Netlify auto deploy gagal,
+  - user secara eksplisit meminta deploy manual,
+  - atau ada kebutuhan hotfix produksi yang jelas.
+
+Sebelum mengubah apa pun:
+1. Pastikan cwd adalah:
+   E:\Data\GitHub\SIPENA\tessipena3-f7e2575d
+2. Jalankan:
+   git status --short --branch
+   git rev-parse HEAD
+   git rev-list --left-right --count HEAD...origin/main
+3. Jangan commit file temp, cache, .env, node_modules, dist manual, supabase/.temp, atau file lokal yang tidak relevan.
+4. Jika ada perubahan yang tidak dibuat oleh agent, jangan revert tanpa instruksi eksplisit.
+
+Validasi sebelum commit:
+- Minimal jalankan:
+  npm run typecheck
+  npm test
+  git diff --check
+- Jika perubahan UI/frontend cukup besar, jalankan juga:
+  npm run lint
+  npm run build
+- Lint boleh punya warning lama, tapi tidak boleh ada error baru.
+- Setelah commit, push ke origin main dan cek GitHub Actions sync ke SIPENA-Dev.
+- Cek Netlify auto deploy dari commit sync target. Jangan deploy manual jika auto deploy berjalan.
+
+Jika melakukan QA browser:
+- Production URL: https://sipenadev.netlify.app
+- Jika halaman protected redirect ke /auth dan tidak ada sesi login, laporkan blocker dengan jelas.
+- Jangan klaim button-level QA selesai jika belum benar-benar masuk ke halaman setelah login.
+
+Tugas utama akan saya berikan setelah ini!
+
+Kerjakan sampai selesai: implementasi, test, commit, push, lalu verifikasi sync GitHub Actions dan Netlify auto deploy. Laporkan hasil dengan commit SHA, status test, status sync, dan status deploy.

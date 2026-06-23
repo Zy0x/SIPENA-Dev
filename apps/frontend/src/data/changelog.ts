@@ -42,18 +42,34 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.91",
+    version: "2.4.91",
+    title: "Optimasi Jaringan OCR WebP & Log Audit Supabase",
+    description: "Meningkatkan efisiensi pengiriman foto OCR dengan kompresi WebP client-side serta mengintegrasikan penyimpanan foto acuan terkompresi dan pencatatan log audit di Supabase.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Mengubah format kompresi foto pra-OCR dari JPEG ke WebP di sisi client untuk menghemat bandwidth hingga 30%.",
+      "Menurunkan batas ukuran berkas hasil pemrosesan dari 1.5MB ke 800KB guna mengurangi latensi unggah dan beban memori server.",
+      "Mengintegrasikan unggahan foto WebP acuan secara latar belakang (fire-and-forget) ke bucket private 'ocr-imports' di Supabase Storage.",
+      "Mencatat log audit transaksi pengunggahan OCR ke tabel baru public.ocr_imports dan activity_logs untuk keperluan pelacakan sejarah.",
+      "Menyediakan skrip seeding SQL berisi data 10 murid acuan beserta nilai Tugas 1 (Acuan) untuk simulasi sandbox."
+    ]
+  },
+  {
     id: "v2.4.90",
     version: "2.4.90",
     title: "Peningkatan Fitur Import Nilai dari Foto",
-    description: "Meningkatkan kegunaan dan akurasi fitur Import Nilai dari Foto (OCR & AI) dengan panduan format foto yang jelas, algoritma fuzzy matching, pencocokan berbasis No. Urut (Absen), dropdown selektor siswa manual, dan konverter skala nilai.",
+    description: "Meningkatkan kegunaan dan akurasi fitur Import Nilai dari Foto (OCR & AI) dengan panduan format foto yang jelas, algoritma fuzzy matching, pencocokan berbasis No. Urut (Absen), dropdown selektor murid manual, dan konverter skala nilai.",
     type: "feature",
     is_critical: false,
     released_at: "2026-06-23",
     details: [
       "Menyediakan panduan format peletakan foto tabel yang interaktif menggunakan visual tab/accordion pada dialog import.",
-      "Mengimplementasikan algoritma Jaro-Winkler untuk pencocokan nama siswa secara fuzzy guna mentolerir typo pembacaan OCR.",
-      "Menambahkan pencocokan berbasis No. Urut (Absen) alfabetis kelas sebagai fallback pencocokan jika nama siswa buram atau dihilangkan pada tabel foto.",
-      "Menambahkan dropdown penyeleksi siswa langsung di sel nama tabel review agar guru dapat memilih/mencocokkan baris secara manual.",
+      "Mengimplementasikan algoritma Jaro-Winkler untuk pencocokan nama murid secara fuzzy guna mentolerir typo pembacaan OCR.",
+      "Menambahkan pencocokan berbasis No. Urut (Absen) alfabetis kelas sebagai fallback pencocokan jika nama murid buram atau dihilangkan pada tabel foto.",
+      "Menambahkan dropdown penyeleksi murid langsung di sel nama tabel review agar guru dapat memilih/mencocokkan baris secara manual.",
       "Menyediakan pendeteksi skala nilai desimal 10 (misal: 8.5) dengan tombol utilitas sekali-klik untuk mengkonversinya ke skala 100 secara massal."
     ]
   },

@@ -2,7 +2,7 @@ import type { PreparedOcrImage } from "./types";
 
 export const OCR_MAX_IMAGES = 5;
 export const OCR_MAX_SOURCE_BYTES = 10 * 1024 * 1024;
-export const OCR_MAX_PROCESSED_BYTES = 1_500_000;
+export const OCR_MAX_PROCESSED_BYTES = 800_000;
 export const OCR_MAX_DIMENSION = 2048;
 export const OCR_ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -34,7 +34,7 @@ function loadImage(dataUrl: string) {
 
 function canvasToBlob(canvas: HTMLCanvasElement, quality: number) {
   return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Gagal mengompres foto.")), "image/jpeg", quality);
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Gagal mengompres foto.")), "image/webp", quality);
   });
 }
 
@@ -65,7 +65,7 @@ export async function prepareOcrImage(file: File, page: number): Promise<Prepare
   return {
     id: crypto.randomUUID(),
     name: file.name,
-    mimeType: "image/jpeg",
+    mimeType: "image/webp",
     base64,
     page,
     previewUrl,
