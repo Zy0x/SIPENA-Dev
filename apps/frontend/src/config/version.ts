@@ -1,8 +1,10 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.95";
-export const VERSION_DATE = "2026-06-23";
+export const APP_VERSION = "2.4.97";
+export const VERSION_DATE = "2026-06-24";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.97": "Peningkatan Tour Guide Nilai dengan deteksi data kosong (kelas, mapel, murid, BAB, tugas) untuk menyajikan data tiruan in-memory hibrida secara otomatis.",
+  "2.4.96": "Peningkatan Tour Guide interaktif halaman Nilai dengan data tiruan (dummy) in-memory untuk akun baru, serta otomatisasi cleanup pasca-tour.",
   "2.4.95": "Memperbaiki border fokus input nama BAB dan tugas pada modal tambah satu per satu agar tidak terpotong (clipped) oleh batas scroll area.",
   "2.4.94": "Merapikan transisi tab Struktur BAB dan Input Nilai agar bebas dari visual snapping (hentakan) menggunakan body min-height lock dan pure opacity animation.",
   "2.4.93": "Peningkatan UI/UX panduan visual format tabel agar bisa diperbesar serta fallback interaktif untuk persetujuan AI yang belum dicentang.",

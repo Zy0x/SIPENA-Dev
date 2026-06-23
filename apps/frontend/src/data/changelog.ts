@@ -42,6 +42,40 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.97",
+    version: "2.4.97",
+    title: "Peningkatan Tour Guide Nilai — Deteksi Dinamis Hibrida",
+    description: "Peningkatan mendalam pada Tombol Panduan (Tour Guide) halaman Nilai untuk mendeteksi ketersediaan data secara dinamis (kelas, mapel, murid, BAB, tugas, nilai) dan secara otomatis menyajikan data tiruan in-memory yang sesuai secara hibrida, serta pembersihan otomatis pasca-tour.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-24",
+    details: [
+      "Deteksi dinamis: jika kelas atau mapel sudah ada, sistem tidak akan membuat duplikat tiruannya dan langsung menggunakannya.",
+      "Penyediaan data parsial: jika kelas/mapel asli terpilih namun belum memiliki murid atau BAB/tugas, sistem secara otomatis membangkitkan data murid tiruan atau BAB/tugas/nilai tiruan secara in-memory untuk memastikan elemen spreadsheet dan tab Struktur BAB dirender penuh dan dapat disorot step tour.",
+      "Pencegahan kebocoran: menjamin tidak ada data tiruan yang bocor ke Supabase atau merusak data nyata milik pengguna.",
+      "Pembersihan menyeluruh: semua data tiruan direset penuh ke keadaan semula saat tour selesai atau dilewati."
+    ]
+  },
+  {
+    id: "v2.4.96",
+    version: "2.4.96",
+    title: "Tour Panduan Interaktif Halaman Nilai — Data Tiruan In-Memory",
+    description: "Tombol Panduan di halaman Input Nilai kini menampilkan tur interaktif yang sesungguhnya: jika belum ada kelas atau mata pelajaran, sistem membuat data tiruan (kelas, mapel, murid, BAB, tugas, dan nilai) secara in-memory sehingga setiap langkah tur dapat menyoroti elemen nyata. Data ini otomatis dibersihkan saat tur selesai atau ditutup.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Sistem deteksi otomatis: jika kelas dan mapel sudah ada, tur langsung menggunakan data nyata tanpa membuat data tiruan.",
+      "Jika kelas tersedia tetapi mapel kosong, sistem membuat mapel tiruan 'Matematika' beserta murid dan nilai tiruan.",
+      "Jika tidak ada data sama sekali, sistem membuat kelas 'Contoh Kelas VIIA', mapel 'Matematika', 5 murid (Ahmad Fauzi, Budi Pratama, Citra Lestari, Dewi Sartika, Eko Wijaya), 1 BAB (BAB 1: Aljabar), 1 tugas, beserta nilai variatif di atas dan di bawah KKM.",
+      "Selama tur berlangsung, pengguna dapat mencoba mengedit nilai, menambah BAB, dan menghapus tugas — semua aksi ini hanya memodifikasi state in-memory tanpa menulis ke database Supabase.",
+      "Seluruh data tiruan dibersihkan otomatis saat tur selesai atau dilewati (cleanup on complete/cancel).",
+      "Zero database pollution: tidak ada satupun data tiruan yang tersimpan ke Supabase.",
+      "Penambahan atribut data-tour pada tombol aksi BAB pertama agar step tur 'Aksi Khusus BAB' dapat menyoroti elemen dropdown dengan presisi.",
+      "Penyeragaman terminologi: seluruh teks tur dan antarmuka menggunakan istilah 'murid' (bukan 'siswa')."
+    ]
+  },
+  {
     id: "v2.4.95",
     version: "2.4.95",
     title: "Perbaikan Fokus Border Dialog Tambah BAB & Tugas",

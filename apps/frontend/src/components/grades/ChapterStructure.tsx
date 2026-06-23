@@ -266,6 +266,7 @@ export function ChapterStructure({
                                 size="icon"
                                 className="h-9 w-9 text-muted-foreground hover:text-foreground"
                                 aria-label="Aksi BAB"
+                                data-tour={chapterIndex === 0 ? "grade-chapter-actions" : undefined}
                               >
                                 <MoreVertical className="h-4.5 w-4.5" />
                               </Button>

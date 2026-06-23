@@ -212,8 +212,8 @@ const fullscreenGradesTourSteps: TourStep[] = [
   },
   {
     target: ".sipena-grade-toolbar--fullscreen [data-tour='grade-search-control']",
-    title: "Cari Siswa",
-    description: "Cari dan kunci perhatian pada satu siswa tanpa menggulir daftar panjang.",
+    title: "Cari Murid",
+    description: "Cari dan kunci perhatian pada satu murid tanpa menggulir daftar panjang.",
   },
   {
     target: ".sipena-grade-toolbar--fullscreen [data-tour='grade-zoom-control']",
@@ -311,6 +311,15 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const token = searchParams.get("token") || "";
   const [addClassOpen, setAddClassOpen] = useState(false);
   const [createdClass, setCreatedClass] = useState<Class | null>(null);
+
+  // States for Tour Dummy Data
+  const [isTourDummyActive, setIsTourDummyActive] = useState(false);
+  const [tourDummyClass, setTourDummyClass] = useState<Class | null>(null);
+  const [tourDummySubject, setTourDummySubject] = useState<Subject | null>(null);
+  const [tourDummyStudents, setTourDummyStudents] = useState<Student[]>([]);
+  const [tourDummyChapters, setTourDummyChapters] = useState<Chapter[]>([]);
+  const [tourDummyAssignments, setTourDummyAssignments] = useState<Assignment[]>([]);
+  const [tourDummyGrades, setTourDummyGrades] = useState<Grade[]>([]);
   const [guestSession, setGuestSession] = useState<GuestSession | null>(() =>
     isGuestMode ? readGuestSession(token) : null
   );
@@ -575,13 +584,44 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     staleTime: 1000 * 30,
   });
 
-  const { classes, isLoading: classesLoading } = useClasses();
+  const { classes: dbClasses, isLoading: classesLoading } = useClasses();
   const { students: ownerStudents, isLoading: studentsLoading } = useStudents(
     isGuestMode ? "" : selectedClassId
   );
-  const { subjects, isLoading: subjectsLoading } = useSubjects(
+  const { subjects: dbSubjects, isLoading: subjectsLoading } = useSubjects(
     isGuestMode ? "" : selectedClassId
   );
+
+  const dbSubjectsRef = useRef<Subject[]>([]);
+  const subjectsLoadingRef = useRef(false);
+  const studentsLoadingRef = useRef(false);
+  const studentsRef = useRef<Student[]>([]);
+  const chaptersLoadingRef = useRef(false);
+  const chaptersRef = useRef<Chapter[]>([]);
+  const assignmentsLoadingRef = useRef(false);
+  const assignmentsRef = useRef<Assignment[]>([]);
+  const gradesLoadingRef = useRef(false);
+  const gradesRef = useRef<Grade[]>([]);
+
+  useEffect(() => {
+    dbSubjectsRef.current = dbSubjects;
+    subjectsLoadingRef.current = subjectsLoading;
+  }, [dbSubjects, subjectsLoading]);
+
+
+  const classes = useMemo(() => {
+    if (isTourDummyActive && tourDummyClass) {
+      return dbClasses.length > 0 ? dbClasses : [tourDummyClass];
+    }
+    return dbClasses;
+  }, [dbClasses, isTourDummyActive, tourDummyClass]);
+
+  const subjects = useMemo(() => {
+    if (isTourDummyActive && tourDummySubject) {
+      return dbSubjects.length > 0 ? dbSubjects : [tourDummySubject];
+    }
+    return dbSubjects;
+  }, [dbSubjects, isTourDummyActive, tourDummySubject]);
 
   useEffect(() => {
     if (createdClass && classes.some((item) => item.id === createdClass.id)) {
@@ -618,6 +658,26 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     gradeTabsRef.current?.style.removeProperty("min-height");
   }, [classId, subjectId]);
 
+  useEffect(() => {
+    studentsLoadingRef.current = studentsLoading;
+    studentsRef.current = ownerStudents;
+  }, [ownerStudents, studentsLoading]);
+
+  useEffect(() => {
+    chaptersLoadingRef.current = chaptersLoading;
+    chaptersRef.current = ownerChapters;
+  }, [ownerChapters, chaptersLoading]);
+
+  useEffect(() => {
+    assignmentsLoadingRef.current = assignmentsLoading;
+    assignmentsRef.current = ownerAssignments;
+  }, [ownerAssignments, assignmentsLoading]);
+
+  useEffect(() => {
+    gradesLoadingRef.current = gradesLoading;
+    gradesRef.current = ownerGrades;
+  }, [ownerGrades, gradesLoading]);
+
   const {
     formula: ownerFormula,
     saveFormula,
@@ -631,27 +691,50 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     [guestData?.formulaSetting?.formula, isGuestMode, ownerFormula],
   );
   const students = useMemo(
-    () => (isGuestMode ? guestData?.students || [] : ownerStudents),
-    [guestData?.students, isGuestMode, ownerStudents]
+    () => {
+      if (isTourDummyActive && tourDummyStudents.length > 0) return tourDummyStudents;
+      return isGuestMode ? guestData?.students || [] : ownerStudents;
+    },
+    [guestData?.students, isGuestMode, ownerStudents, isTourDummyActive, tourDummyStudents]
   );
   const chapters = useMemo(
-    () => (isGuestMode ? guestData?.chapters || [] : ownerChapters),
-    [guestData?.chapters, isGuestMode, ownerChapters]
+    () => {
+      if (isTourDummyActive && tourDummyChapters.length > 0) return tourDummyChapters;
+      return isGuestMode ? guestData?.chapters || [] : ownerChapters;
+    },
+    [guestData?.chapters, isGuestMode, ownerChapters, isTourDummyActive, tourDummyChapters]
   );
   const allAssignments = useMemo(
-    () => (isGuestMode ? guestData?.assignments || [] : ownerAssignments),
-    [guestData?.assignments, isGuestMode, ownerAssignments]
+    () => {
+      if (isTourDummyActive && tourDummyAssignments.length > 0) return tourDummyAssignments;
+      return isGuestMode ? guestData?.assignments || [] : ownerAssignments;
+    },
+    [guestData?.assignments, isGuestMode, ownerAssignments, isTourDummyActive, tourDummyAssignments]
   );
   const grades = useMemo(
-    () => (isGuestMode ? guestData?.grades || [] : ownerGrades),
-    [guestData?.grades, isGuestMode, ownerGrades]
+    () => {
+      if (isTourDummyActive && tourDummyGrades.length > 0) return tourDummyGrades;
+      return isGuestMode ? guestData?.grades || [] : ownerGrades;
+    },
+    [guestData?.grades, isGuestMode, ownerGrades, isTourDummyActive, tourDummyGrades]
   );
-  const selectedClass = isGuestMode
-    ? guestData?.classInfo
-    : classes.find((c) => c.id === selectedClassId) || (createdClass?.id === selectedClassId ? createdClass : undefined);
-  const selectedSubject = isGuestMode
-    ? guestData?.subjectInfo
-    : subjects.find((s) => s.id === selectedSubjectId);
+  const selectedClass = useMemo(() => {
+    if (isTourDummyActive && tourDummyClass && selectedClassId === "tour-dummy-class") {
+      return tourDummyClass;
+    }
+    return isGuestMode
+      ? guestData?.classInfo
+      : classes.find((c) => c.id === selectedClassId) || (createdClass?.id === selectedClassId ? createdClass : undefined);
+  }, [isGuestMode, guestData?.classInfo, classes, selectedClassId, createdClass, isTourDummyActive, tourDummyClass]);
+
+  const selectedSubject = useMemo(() => {
+    if (isTourDummyActive && tourDummySubject && selectedSubjectId === "tour-dummy-subject") {
+      return tourDummySubject;
+    }
+    return isGuestMode
+      ? guestData?.subjectInfo
+      : subjects.find((s) => s.id === selectedSubjectId);
+  }, [isGuestMode, guestData?.subjectInfo, subjects, selectedSubjectId, isTourDummyActive, tourDummySubject]);
   const importChapterCacheRef = useRef<Chapter[]>([]);
   const importAssignmentCacheRef = useRef<Assignment[]>([]);
 
@@ -1129,7 +1212,35 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     setSavingGrades((prev) => new Set(prev).add(key));
 
     try {
-      if (isGuestMode) {
+      if (isTourDummyActive) {
+        await new Promise((resolve) => setTimeout(resolve, 100)); // simulate latency
+        setTourDummyGrades((prev) => {
+          const matchIndex = prev.findIndex(
+            (g) => g.student_id === studentId && g.grade_type === gradeType && g.assignment_id === (assignmentId || null)
+          );
+          const updated = [...prev];
+          const now = new Date().toISOString();
+          const newGrade: Grade = {
+            id: matchIndex >= 0 ? prev[matchIndex].id : `tour-dummy-grade-${Math.random()}`,
+            student_id: studentId,
+            subject_id: subjectId,
+            grade_type: gradeType,
+            assignment_id: assignmentId || null,
+            value: value,
+            created_at: now,
+            updated_at: now,
+            semester_id: activeSemesterId || "tour-dummy-semester",
+            academic_year_id: activeYear?.id || "tour-dummy-academic-year",
+            user_id: user?.id || "tour-user",
+          };
+          if (matchIndex >= 0) {
+            updated[matchIndex] = newGrade;
+          } else {
+            updated.push(newGrade);
+          }
+          return updated;
+        });
+      } else if (isGuestMode) {
         await runGuestRpc(
           "guest_upsert_grade",
           {
@@ -1158,6 +1269,21 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     if (!subjectId) return;
 
     try {
+      if (isTourDummyActive) {
+        const now = new Date().toISOString();
+        const existingCount = chapters.length;
+        const newChapters = names.map((name, i) => ({
+          id: `tour-chap-${Math.random()}`,
+          subject_id: subjectId,
+          name,
+          order_index: existingCount + i + 1,
+          created_at: now,
+          updated_at: now,
+          user_id: user?.id || "tour-user",
+        }));
+        setTourDummyChapters((prev) => [...prev, ...newChapters]);
+        return;
+      }
       if (isGuestMode) {
         await runGuestRpc("guest_create_chapters", { p_names: names }, "Gagal menambahkan BAB");
         return;
@@ -1177,6 +1303,21 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const handleAddAssignments = async (chapterId: string, names: string[]) => {
     try {
+      if (isTourDummyActive) {
+        const now = new Date().toISOString();
+        const existingCount = assignmentsByChapter[chapterId]?.length || 0;
+        const newAssignments = names.map((name, i) => ({
+          id: `tour-ass-${Math.random()}`,
+          chapter_id: chapterId,
+          name,
+          order_index: existingCount + i + 1,
+          created_at: now,
+          updated_at: now,
+          user_id: user?.id || "tour-user",
+        }));
+        setTourDummyAssignments((prev) => [...prev, ...newAssignments]);
+        return;
+      }
       if (isGuestMode) {
         await runGuestRpc(
           "guest_create_assignments",
@@ -1288,6 +1429,12 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const handleUpdateChapter = async (id: string, name: string) => {
     try {
+      if (isTourDummyActive) {
+        setTourDummyChapters((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, name } : c))
+        );
+        return;
+      }
       if (isGuestMode) {
         await runGuestRpc(
           "guest_update_chapter",
@@ -1304,6 +1451,12 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const handleUpdateAssignment = async (id: string, name: string) => {
     try {
+      if (isTourDummyActive) {
+        setTourDummyAssignments((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, name } : a))
+        );
+        return;
+      }
       if (isGuestMode) {
         await runGuestRpc(
           "guest_update_assignment",
@@ -1320,6 +1473,11 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const handleDeleteAssignment = async (id: string) => {
     try {
+      if (isTourDummyActive) {
+        setTourDummyAssignments((prev) => prev.filter((a) => a.id !== id));
+        setTourDummyGrades((prev) => prev.filter((g) => g.assignment_id !== id));
+        return;
+      }
       if (isGuestMode) {
         await runGuestRpc(
           "guest_delete_assignment",
@@ -1336,6 +1494,15 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
   const handleDeleteChapter = async (id: string) => {
     try {
+      if (isTourDummyActive) {
+        setTourDummyChapters((prev) => prev.filter((c) => c.id !== id));
+        const deletedAssignmentIds = assignmentsByChapter[id]?.map((a) => a.id) || [];
+        setTourDummyAssignments((prev) => prev.filter((a) => a.chapter_id !== id));
+        setTourDummyGrades((prev) =>
+          prev.filter((g) => !g.assignment_id || !deletedAssignmentIds.includes(g.assignment_id))
+        );
+        return;
+      }
       if (isGuestMode) {
         await runGuestRpc("guest_delete_chapter", { p_chapter_id: id }, "Gagal menghapus BAB");
         return;
@@ -1353,6 +1520,37 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     try {
       const copyName = `${chapter.name} (Salinan)`;
       let newChapterId: string | undefined;
+
+      if (isTourDummyActive) {
+        const now = new Date().toISOString();
+        newChapterId = `tour-chap-${Math.random()}`;
+        const newChapter: Chapter = {
+          id: newChapterId,
+          subject_id: subjectId,
+          name: copyName,
+          order_index: chapters.length + 1,
+          created_at: now,
+          updated_at: now,
+          user_id: user?.id || "tour-user",
+        };
+        setTourDummyChapters((prev) => [...prev, newChapter]);
+
+        const chapterAssignments = assignmentsByChapter[chapterId] || [];
+        if (chapterAssignments.length > 0) {
+          const newAssignments = chapterAssignments.map((a, i) => ({
+            id: `tour-ass-${Math.random()}`,
+            chapter_id: newChapterId!,
+            name: a.name,
+            order_index: i + 1,
+            created_at: now,
+            updated_at: now,
+            user_id: user?.id || "tour-user",
+          }));
+          setTourDummyAssignments((prev) => [...prev, ...newAssignments]);
+        }
+        success("Berhasil!", "BAB berhasil diduplikasi");
+        return;
+      }
 
       if (isGuestMode) {
         const createdChapters = await runGuestRpc(
@@ -1416,6 +1614,21 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
     try {
       const copyName = `${assignment.name} (Salinan)`;
+      if (isTourDummyActive) {
+        const now = new Date().toISOString();
+        const newAssignment: Assignment = {
+          id: `tour-ass-${Math.random()}`,
+          chapter_id: chapterId,
+          name: copyName,
+          order_index: chapterAssignments.length + 1,
+          created_at: now,
+          updated_at: now,
+          user_id: user?.id || "tour-user",
+        };
+        setTourDummyAssignments((prev) => [...prev, newAssignment]);
+        success("Berhasil!", "Tugas berhasil diduplikasi");
+        return;
+      }
       if (isGuestMode) {
         await runGuestRpc(
           "guest_create_assignments",
@@ -1465,6 +1678,272 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     success("Berhasil", "Data berhasil dimuat ulang");
   };
 
+  const setupDummyGradesAndChapters = (classId: string, subjectId: string) => {
+    const now = new Date().toISOString();
+
+    const dummyStus: Student[] = [
+      { id: "tour-stud-1", class_id: classId, name: "Ahmad Fauzi", nisn: "0012345671", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+      { id: "tour-stud-2", class_id: classId, name: "Budi Pratama", nisn: "0012345672", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+      { id: "tour-stud-3", class_id: classId, name: "Citra Lestari", nisn: "0012345673", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+      { id: "tour-stud-4", class_id: classId, name: "Dewi Sartika", nisn: "0012345674", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+      { id: "tour-stud-5", class_id: classId, name: "Eko Wijaya", nisn: "0012345675", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+    ];
+    setTourDummyStudents(dummyStus);
+
+    const dummyChaps: Chapter[] = [
+      { id: "tour-chap-1", subject_id: subjectId, name: "BAB 1: Aljabar", order_index: 1, created_at: now, updated_at: now, user_id: user?.id || "tour-user" },
+    ];
+    setTourDummyChapters(dummyChaps);
+
+    const dummyAsses: Assignment[] = [
+      { id: "tour-ass-1", chapter_id: "tour-chap-1", name: "Tugas 1", order_index: 1, created_at: now, updated_at: now, user_id: user?.id || "tour-user" },
+    ];
+    setTourDummyAssignments(dummyAsses);
+
+    const dummyGrds: Grade[] = [
+      { id: "tg-1-1", student_id: "tour-stud-1", subject_id: subjectId, grade_type: "assignment", assignment_id: "tour-ass-1", value: 85, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-1-2", student_id: "tour-stud-1", subject_id: subjectId, grade_type: "sts", assignment_id: null, value: 80, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-1-3", student_id: "tour-stud-1", subject_id: subjectId, grade_type: "sas", assignment_id: null, value: 85, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      
+      { id: "tg-2-1", student_id: "tour-stud-2", subject_id: subjectId, grade_type: "assignment", assignment_id: "tour-ass-1", value: 70, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-2-2", student_id: "tour-stud-2", subject_id: subjectId, grade_type: "sts", assignment_id: null, value: 72, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-2-3", student_id: "tour-stud-2", subject_id: subjectId, grade_type: "sas", assignment_id: null, value: 75, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+
+      { id: "tg-3-1", student_id: "tour-stud-3", subject_id: subjectId, grade_type: "assignment", assignment_id: "tour-ass-1", value: 90, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-3-2", student_id: "tour-stud-3", subject_id: subjectId, grade_type: "sts", assignment_id: null, value: 88, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-3-3", student_id: "tour-stud-3", subject_id: subjectId, grade_type: "sas", assignment_id: null, value: 92, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+
+      { id: "tg-4-1", student_id: "tour-stud-4", subject_id: subjectId, grade_type: "assignment", assignment_id: "tour-ass-1", value: 65, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-4-2", student_id: "tour-stud-4", subject_id: subjectId, grade_type: "sts", assignment_id: null, value: 70, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-4-3", student_id: "tour-stud-4", subject_id: subjectId, grade_type: "sas", assignment_id: null, value: 68, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+
+      { id: "tg-5-1", student_id: "tour-stud-5", subject_id: subjectId, grade_type: "assignment", assignment_id: "tour-ass-1", value: 95, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-5-2", student_id: "tour-stud-5", subject_id: subjectId, grade_type: "sts", assignment_id: null, value: 90, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+      { id: "tg-5-3", student_id: "tour-stud-5", subject_id: subjectId, grade_type: "sas", assignment_id: null, value: 94, created_at: now, updated_at: now, semester_id: activeSemesterId || "tour-sem", academic_year_id: activeYear?.id || "tour-ay", user_id: user?.id || "tour-user" },
+    ];
+    setTourDummyGrades(dummyGrds);
+  };
+
+  const setupFullDummyData = () => {
+    setIsTourDummyActive(true);
+    const now = new Date().toISOString();
+
+    const dummyClass: Class = {
+      id: "tour-dummy-class",
+      user_id: user?.id || "tour-user",
+      academic_year_id: activeYear?.id || null,
+      semester_id: activeSemesterId || null,
+      name: "Contoh Kelas VIIA",
+      description: "Kelas contoh untuk panduan interaktif SIPENA.",
+      class_kkm: 75,
+      created_at: now,
+      updated_at: now,
+      student_count: 5,
+    };
+    setTourDummyClass(dummyClass);
+    setSelectedClassId("tour-dummy-class");
+
+    const dummySub: Subject = {
+      id: "tour-dummy-subject",
+      class_id: "tour-dummy-class",
+      name: "Matematika",
+      kkm: 75,
+      created_at: now,
+      updated_at: now,
+      academic_year_id: activeYear?.id || null,
+      user_id: user?.id || "tour-user",
+      is_custom: false,
+    };
+    setTourDummySubject(dummySub);
+    setSelectedSubjectId("tour-dummy-subject");
+
+    setupDummyGradesAndChapters("tour-dummy-class", "tour-dummy-subject");
+  };
+
+  const setupDummySubjectAndGrades = (classId: string) => {
+    setIsTourDummyActive(true);
+    const now = new Date().toISOString();
+
+    const dummySub: Subject = {
+      id: "tour-dummy-subject",
+      class_id: classId,
+      name: "Matematika",
+      kkm: 75,
+      created_at: now,
+      updated_at: now,
+      academic_year_id: activeYear?.id || null,
+      user_id: user?.id || "tour-user",
+      is_custom: false,
+    };
+    setTourDummySubject(dummySub);
+    setSelectedSubjectId("tour-dummy-subject");
+
+    setupDummyGradesAndChapters(classId, "tour-dummy-subject");
+  };
+
+  const prepareGradesTour = async () => {
+    // 1. Tentukan Kelas yang akan digunakan
+    let activeClassId = selectedClassId;
+    if (!activeClassId) {
+      if (dbClasses.length > 0) {
+        activeClassId = dbClasses[0].id;
+        setSelectedClassId(activeClassId);
+        // Tunggu render React state & inisiasi query mata pelajaran
+        await new Promise<void>((resolve) => setTimeout(resolve, 150));
+      } else {
+        // Database kosong kelasnya -> setup data tiruan penuh
+        setupFullDummyData();
+        await new Promise<void>((resolve) => setTimeout(resolve, 300));
+        return;
+      }
+    }
+
+    // 2. Tentukan Mata Pelajaran yang akan digunakan (setelah loading mapel selesai)
+    let retries = 0;
+    while (subjectsLoadingRef.current && retries < 15) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      retries++;
+    }
+
+    let activeSubjectId = selectedSubjectId;
+    if (!activeSubjectId) {
+      const classSubjects = dbSubjectsRef.current;
+      if (classSubjects.length > 0) {
+        activeSubjectId = classSubjects[0].id;
+        setSelectedSubjectId(activeSubjectId);
+        // Tunggu render React state agar query bab, tugas, murid & nilai terpicu
+        await new Promise<void>((resolve) => setTimeout(resolve, 150));
+      } else {
+        // Kelas asli ada, tapi tidak punya mapel -> buat mapel tiruan dan data pendukungnya
+        setupDummySubjectAndGrades(activeClassId);
+        await new Promise<void>((resolve) => setTimeout(resolve, 300));
+        return;
+      }
+    }
+
+    // 3. Tunggu hingga loading query data murid, bab, tugas, dan nilai selesai
+    retries = 0;
+    while (
+      (studentsLoadingRef.current ||
+        chaptersLoadingRef.current ||
+        assignmentsLoadingRef.current ||
+        gradesLoadingRef.current) &&
+      retries < 20
+    ) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      retries++;
+    }
+
+    const currentStudents = studentsRef.current;
+    const currentChapters = chaptersRef.current;
+
+    // Deteksi apakah murid atau bab belum tersedia di kelas/mapel terpilih
+    const needDummyStudents = currentStudents.length === 0;
+    const needDummyChapters = currentChapters.length === 0;
+
+    if (needDummyStudents || needDummyChapters) {
+      setIsTourDummyActive(true);
+      const now = new Date().toISOString();
+
+      // Gunakan ID kelas dan mapel aktif (bisa asli atau tiruan)
+      const targetClassId = activeClassId;
+      const targetSubjectId = activeSubjectId;
+
+      // 3.1. Buat Murid Dummy jika tidak ada murid asli
+      let finalDummyStudents = currentStudents;
+      if (needDummyStudents) {
+        finalDummyStudents = [
+          { id: "tour-stud-1", class_id: targetClassId, name: "Ahmad Fauzi", nisn: "0012345671", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+          { id: "tour-stud-2", class_id: targetClassId, name: "Budi Pratama", nisn: "0012345672", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+          { id: "tour-stud-3", class_id: targetClassId, name: "Citra Lestari", nisn: "0012345673", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+          { id: "tour-stud-4", class_id: targetClassId, name: "Dewi Sartika", nisn: "0012345674", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+          { id: "tour-stud-5", class_id: targetClassId, name: "Eko Wijaya", nisn: "0012345675", created_at: now, updated_at: now, user_id: user?.id || "tour-user", is_bookmarked: false },
+        ];
+        setTourDummyStudents(finalDummyStudents);
+      }
+
+      // 3.2. Buat BAB, Tugas & Nilai Dummy jika tidak ada BAB asli
+      if (needDummyChapters) {
+        const dummyChaps: Chapter[] = [
+          { id: "tour-chap-1", subject_id: targetSubjectId, name: "BAB 1: Aljabar", order_index: 1, created_at: now, updated_at: now, user_id: user?.id || "tour-user" },
+        ];
+        setTourDummyChapters(dummyChaps);
+
+        const dummyAsses: Assignment[] = [
+          { id: "tour-ass-1", chapter_id: "tour-chap-1", name: "Tugas 1", order_index: 1, created_at: now, updated_at: now, user_id: user?.id || "tour-user" },
+        ];
+        setTourDummyAssignments(dummyAsses);
+
+        const finalGrades: Grade[] = [];
+        finalDummyStudents.forEach((student, index) => {
+          const baseValue = 70 + ((index * 5) % 25); // 70, 75, 80, 85, 90
+          finalGrades.push(
+            {
+              id: `tg-${student.id}-ass-1`,
+              student_id: student.id,
+              subject_id: targetSubjectId,
+              grade_type: "assignment",
+              assignment_id: "tour-ass-1",
+              value: baseValue,
+              created_at: now,
+              updated_at: now,
+              semester_id: activeSemesterId || "tour-dummy-semester",
+              academic_year_id: activeYear?.id || "tour-dummy-academic-year",
+              user_id: user?.id || "tour-user",
+            },
+            {
+              id: `tg-${student.id}-sts`,
+              student_id: student.id,
+              subject_id: targetSubjectId,
+              grade_type: "sts",
+              assignment_id: null,
+              value: baseValue - 2,
+              created_at: now,
+              updated_at: now,
+              semester_id: activeSemesterId || "tour-dummy-semester",
+              academic_year_id: activeYear?.id || "tour-dummy-academic-year",
+              user_id: user?.id || "tour-user",
+            },
+            {
+              id: `tg-${student.id}-sas`,
+              student_id: student.id,
+              subject_id: targetSubjectId,
+              grade_type: "sas",
+              assignment_id: null,
+              value: baseValue + 3,
+              created_at: now,
+              updated_at: now,
+              semester_id: activeSemesterId || "tour-dummy-semester",
+              academic_year_id: activeYear?.id || "tour-dummy-academic-year",
+              user_id: user?.id || "tour-user",
+            }
+          );
+        });
+        setTourDummyGrades(finalGrades);
+      }
+
+      // Tunggu React merender data tiruan agar siap disorot
+      await new Promise<void>((resolve) => setTimeout(resolve, 300));
+    }
+  };
+
+  const cleanupGradesTour = () => {
+    setIsTourDummyActive(false);
+    setTourDummyClass(null);
+    setTourDummySubject(null);
+    setTourDummyStudents([]);
+    setTourDummyChapters([]);
+    setTourDummyAssignments([]);
+    setTourDummyGrades([]);
+
+    if (selectedClassId === "tour-dummy-class") {
+      setSelectedClassId("");
+    }
+    if (selectedSubjectId === "tour-dummy-subject") {
+      setSelectedSubjectId("");
+    }
+  };
+
   const isLoading = isGuestMode
     ? !guestSessionChecked || guestQuery.isLoading
     : classesLoading || studentsLoading || subjectsLoading || gradesLoading || chaptersLoading || assignmentsLoading || formulaLoading;
@@ -1498,7 +1977,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         {
           target: "[data-tour='class-select']",
           title: "Pilih Kelas",
-          description: "Pilih kelas tujuan. Daftar siswa dan mata pelajaran akan mengikuti kelas ini.",
+          description: "Pilih kelas tujuan. Daftar murid dan mata pelajaran akan mengikuti kelas ini.",
         },
         {
           target: "[data-tour='subject-select']",
@@ -1542,7 +2021,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     steps.push({
       target: "[data-tour='input-tab']",
       title: "Input Nilai",
-      description: "Nilai disimpan otomatis. Gunakan Enter untuk menyimpan dan berpindah ke siswa berikutnya.",
+      description: "Nilai disimpan otomatis. Gunakan Enter untuk menyimpan dan berpindah ke murid berikutnya.",
       prepare: () => prepareTourTab("input"),
     });
 
@@ -1557,7 +2036,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         {
           target: "[data-tour='grade-card-actions']",
           title: "Kelola dan Periksa Nilai",
-          description: "Import, ekspor, rumus, pembulatan, dan pencarian siswa tersedia di area ini.",
+          description: "Import, ekspor, rumus, pembulatan, dan pencarian murid tersedia di area ini.",
           prepare: () => prepareTourTab("input"),
         },
         {
@@ -1578,7 +2057,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
       onFilter={() => {}}
       onSelectionChange={(student) => setLockedStudentId(student?.id ?? null)}
       onSearchQueryChange={(query) => setSearchQuery(query)}
-      placeholder="Cari siswa AI..."
+      placeholder="Cari murid AI..."
       showSuggestions={true}
       className="w-full min-w-0"
     />
@@ -1805,7 +2284,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           subtitle={
             isGuestMode
               ? "Akses input nilai terbatas sesuai link guru tamu"
-              : "Pilih kelas dan mata pelajaran untuk menginput nilai siswa"
+              : "Pilih kelas dan mata pelajaran untuk menginput nilai murid"
           }
           breadcrumbs={[
             { label: "Input Nilai" },
@@ -1815,7 +2294,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           ]}
           actions={
             <div className="flex items-center gap-2">
-              <TourButton tourKey={isGuestMode ? "guest-grades" : "grades"} />
+              <TourButton
+                tourKey={isGuestMode ? "guest-grades" : "grades"}
+                onBeforeStart={prepareGradesTour}
+              />
               {isGuestMode && (
                 <Button variant="outline" size="sm" onClick={handleGuestLogout}>
                   <LogOut className="w-4 h-4 mr-2" />
@@ -1852,7 +2334,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           <Alert className="animate-fade-in-up">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
-              <span>Buat kelas dan tambahkan siswa terlebih dahulu.</span>
+              <span>Buat kelas dan tambahkan murid terlebih dahulu.</span>
               <Button variant="outline" size="sm" onClick={() => navigate("/classes")}>
                 Buat Kelas <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
@@ -1889,7 +2371,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                 <SelectContent isEmpty={!classesLoading && classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                   {classes.map((cls) => (
                     <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name} ({cls.student_count || 0} siswa)
+                      {cls.name} ({cls.student_count || 0} murid)
                     </SelectItem>
                   ))}
                   <SelectSeparator />
@@ -2087,6 +2569,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         tourKey={isGuestMode ? "guest-grades" : "grades"}
         requireOnboarding={!isGuestMode}
         shouldAutoStart={isGuestMode ? false : shouldShowTours}
+        onComplete={cleanupGradesTour}
       />
 
       {isFullscreen && (
@@ -2095,6 +2578,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           tourKey={isGuestMode ? "guest-grades-fullscreen" : "grades-fullscreen"}
           requireOnboarding
           shouldAutoStart={false}
+          onComplete={cleanupGradesTour}
         />
       )}
 
