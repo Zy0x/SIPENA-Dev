@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.90",
+    version: "2.4.90",
+    title: "Peningkatan Fitur Import Nilai dari Foto",
+    description: "Meningkatkan kegunaan dan akurasi fitur Import Nilai dari Foto (OCR & AI) dengan panduan format foto yang jelas, algoritma fuzzy matching, pencocokan berbasis No. Urut (Absen), dropdown selektor siswa manual, dan konverter skala nilai.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Menyediakan panduan format peletakan foto tabel yang interaktif menggunakan visual tab/accordion pada dialog import.",
+      "Mengimplementasikan algoritma Jaro-Winkler untuk pencocokan nama siswa secara fuzzy guna mentolerir typo pembacaan OCR.",
+      "Menambahkan pencocokan berbasis No. Urut (Absen) alfabetis kelas sebagai fallback pencocokan jika nama siswa buram atau dihilangkan pada tabel foto.",
+      "Menambahkan dropdown penyeleksi siswa langsung di sel nama tabel review agar guru dapat memilih/mencocokkan baris secara manual.",
+      "Menyediakan pendeteksi skala nilai desimal 10 (misal: 8.5) dengan tombol utilitas sekali-klik untuk mengkonversinya ke skala 100 secara massal."
+    ]
+  },
+  {
     id: "v2.4.89",
     version: "2.4.89",
     title: "Pembersihan Indikator Zoom Redundan di Footer",

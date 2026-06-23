@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.89";
+export const APP_VERSION = "2.4.90";
 export const VERSION_DATE = "2026-06-23";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.90": "Peningkatan fitur Import Nilai dari Foto: penambahan panduan visual interaktif, algoritma fuzzy matching, pencocokan berbasis No. Urut (Absen), dropdown penyeleksi siswa manual, serta konverter desimal skala 10.",
   "2.4.89": "Menghilangkan indikator zoom tingkat riil (zoom level %) dari footer tabel karena sudah tersedia pada toolbar utama.",
   "2.4.88": "Memindahkan badge mode edit ke toolbar atas sejajar dengan status freeze, serta merampingkan padding dan teks footer agar hemat ruang di layar mobile.",
   "2.4.87": "Integrasi fitur Tambah Kelas Baru langsung di halaman Input Nilai dan perapian visual label penjelas pada dropdown selektor kelas/mapel.",

@@ -242,27 +242,163 @@ function issue(severity: OcrIssue["severity"], code: string, message: string, co
   return { severity, code, message, columnId };
 }
 
-function resolveStudent(name: string, nisn: string, context: OcrImportContext) {
+export function cleanOcrGradeValue(val: string): string {
+  let cleaned = val.trim();
+  if (!cleaned) return "";
+
+  // Replace common OCR character mismatches for numbers
+  cleaned = cleaned
+    .replace(/[Oo]/g, "0")
+    .replace(/[lI]/g, "1")
+    .replace(/[^0-9,.]/g, ""); // Keep only numbers, commas, and dots
+
+  // Replace comma with dot
+  cleaned = cleaned.replace(",", ".");
+
+  return cleaned;
+}
+
+function getJaroWinklerSimilarity(s1: string, s2: string): number {
+  const str1 = s1.toLowerCase().trim();
+  const str2 = s2.toLowerCase().trim();
+  if (str1 === str2) return 1;
+  const len1 = str1.length;
+  const len2 = str2.length;
+  if (len1 === 0 || len2 === 0) return 0;
+
+  const matchWindow = Math.floor(Math.max(len1, len2) / 2) - 1;
+  const matches1 = new Array(len1).fill(false);
+  const matches2 = new Array(len2).fill(false);
+
+  let matches = 0;
+  let transpositions = 0;
+
+  for (let i = 0; i < len1; i++) {
+    const start = Math.max(0, i - matchWindow);
+    const end = Math.min(len2 - 1, i + matchWindow);
+
+    for (let j = start; j <= end; j++) {
+      if (matches2[j]) continue;
+      if (str1[i] === str2[j]) {
+        matches1[i] = true;
+        matches2[j] = true;
+        matches++;
+        break;
+      }
+    }
+  }
+
+  if (matches === 0) return 0;
+
+  let k = 0;
+  for (let i = 0; i < len1; i++) {
+    if (!matches1[i]) continue;
+    while (!matches2[k]) k++;
+    if (str1[i] !== str2[k]) transpositions++;
+    k++;
+  }
+
+  const jaro = (matches / len1 + matches / len2 + (matches - transpositions / 2) / matches) / 3;
+
+  let prefix = 0;
+  for (let i = 0; i < Math.min(4, len1, len2); i++) {
+    if (str1[i] === str2[i]) prefix++;
+    else break;
+  }
+
+  return jaro + prefix * 0.1 * (1 - jaro);
+}
+
+function getSimilarityScore(s1: string, s2: string): number {
+  const norm1 = normalizeIdentity(s1);
+  const norm2 = normalizeIdentity(s2);
+  if (!norm1 || !norm2) return 0;
+  if (norm1 === norm2) return 1.0;
+
+  const jw = getJaroWinklerSimilarity(norm1, norm2);
+
+  if (norm1.length > 3 && norm2.length > 3) {
+    if (norm1.includes(norm2) || norm2.includes(norm1)) {
+      return Math.max(jw, 0.88);
+    }
+  }
+
+  return jw;
+}
+
+function resolveStudent(name: string, nisn: string, orderStr: string, context: OcrImportContext) {
   const normalizedNisn = normalizeIdentity(nisn);
   if (normalizedNisn) {
     const byNisn = context.students.filter((student) => normalizeIdentity(student.nisn) === normalizedNisn);
-    if (byNisn.length === 1) return { id: byNisn[0].id, ambiguous: false };
-    if (byNisn.length > 1) return { id: undefined, ambiguous: true };
+    if (byNisn.length === 1) return { id: byNisn[0].id, ambiguous: false, matchedBy: "nisn" as const };
+    if (byNisn.length > 1) return { id: undefined, ambiguous: true, matchedBy: "none" as const };
   }
 
   const normalizedName = normalizeIdentity(name);
-  if (!normalizedName) return { id: undefined, ambiguous: false };
-  const exact = context.students.filter((student) => normalizeIdentity(student.name) === normalizedName);
-  if (exact.length === 1) return { id: exact[0].id, ambiguous: false };
-  if (exact.length > 1) return { id: undefined, ambiguous: true };
 
-  const partial = context.students.filter((student) => {
-    const candidate = normalizeIdentity(student.name);
-    return candidate.includes(normalizedName) || normalizedName.includes(candidate);
-  });
-  return partial.length === 1
-    ? { id: partial[0].id, ambiguous: false }
-    : { id: undefined, ambiguous: partial.length > 1 };
+  // Check No. Urut (Absen) matching
+  const orderNum = parseInt(orderStr, 10);
+  let studentByOrder: typeof context.students[0] | undefined;
+  if (Number.isInteger(orderNum) && orderNum > 0 && orderNum <= context.students.length) {
+    studentByOrder = context.students[orderNum - 1];
+  }
+
+  if (!normalizedName) {
+    if (studentByOrder) {
+      return { id: studentByOrder.id, ambiguous: false, matchedBy: "order" as const };
+    }
+    return { id: undefined, ambiguous: false, matchedBy: "none" as const };
+  }
+
+  // Exact name matching
+  const exact = context.students.filter((student) => normalizeIdentity(student.name) === normalizedName);
+  if (exact.length === 1) {
+    const conflict = studentByOrder && studentByOrder.id !== exact[0].id;
+    return { id: exact[0].id, ambiguous: false, matchedBy: "name_exact" as const, orderMatchConflict: conflict };
+  }
+  if (exact.length > 1) return { id: undefined, ambiguous: true, matchedBy: "none" as const };
+
+  // Fuzzy matching
+  let bestStudent: typeof context.students[0] | undefined;
+  let highestScore = 0;
+  let matchesCountAtHighest = 0;
+
+  for (const student of context.students) {
+    const score = getSimilarityScore(normalizedName, student.name);
+    if (score > highestScore) {
+      highestScore = score;
+      bestStudent = student;
+      matchesCountAtHighest = 1;
+    } else if (score === highestScore && score > 0) {
+      matchesCountAtHighest++;
+    }
+  }
+
+  const FUZZY_THRESHOLD = 0.78;
+  if (bestStudent && highestScore >= FUZZY_THRESHOLD) {
+    const closeCompetitors = context.students.filter(
+      (s) => s.id !== bestStudent!.id && Math.abs(getSimilarityScore(normalizedName, s.name) - highestScore) < 0.04
+    );
+
+    if (closeCompetitors.length > 0 || matchesCountAtHighest > 1) {
+      return { id: undefined, ambiguous: true, matchedBy: "none" as const };
+    }
+
+    const conflict = studentByOrder && studentByOrder.id !== bestStudent.id;
+    return {
+      id: bestStudent.id,
+      ambiguous: false,
+      matchedBy: "name_fuzzy" as const,
+      similarity: Math.round(highestScore * 100),
+      orderMatchConflict: conflict,
+    };
+  }
+
+  if (studentByOrder) {
+    return { id: studentByOrder.id, ambiguous: false, matchedBy: "order" as const };
+  }
+
+  return { id: undefined, ambiguous: false, matchedBy: "none" as const };
 }
 
 export function normalizeOcrDate(value: string) {
@@ -371,36 +507,86 @@ export function validateOcrDraft(rows: OcrDraftRow[], columns: OcrColumn[], cont
         return { ...row, included: issues.every((item) => item.code !== "STUDENT_EXISTS"), issues };
       }
 
-      if (!nisn) issues.push(issue("warning", "NISN_MISSING", "NISN tidak terbaca; pencocokan memakai nama."));
-      const match = resolveStudent(name, nisn, context);
-      if (match.ambiguous) issues.push(issue("error", "STUDENT_AMBIGUOUS", "Siswa cocok ke lebih dari satu data. Perbaiki nama atau NISN."));
-      if (!match.id && !match.ambiguous) issues.push(issue("error", "STUDENT_NOT_FOUND", "Siswa tidak ditemukan pada kelas aktif."));
+      let matchId: string | undefined;
+      let matchedBy: "nisn" | "name_exact" | "order" | "name_fuzzy" | "manual" | "none" = "none";
+      let similarity = 0;
+      let orderMatchConflict = false;
+
+      if (row.manualStudentId) {
+        matchId = row.manualStudentId;
+        matchedBy = "manual";
+      } else {
+        const orderVal = valueAt(row, columns, "order");
+        const match = resolveStudent(name, nisn, orderVal, context);
+        matchId = match.id;
+        matchedBy = match.matchedBy;
+        similarity = match.similarity || 0;
+        orderMatchConflict = match.orderMatchConflict || false;
+      }
+
+      if (!nisn && matchedBy !== "manual") {
+        issues.push(issue("warning", "NISN_MISSING", "NISN tidak terbaca; pencocokan memakai nama/No. Urut."));
+      }
+
+      if (matchedBy === "none") {
+        if (name) {
+          issues.push(issue("error", "STUDENT_NOT_FOUND", "Siswa tidak ditemukan pada kelas aktif."));
+        }
+      } else if (matchedBy === "order") {
+        const matchedStudent = context.students.find((s) => s.id === matchId);
+        const sim = matchedStudent ? Math.round(getSimilarityScore(name, matchedStudent.name) * 100) : 0;
+        if (name && sim < 60) {
+          issues.push(issue("warning", "ORDER_NAME_MISMATCH", `No. Urut cocok (${valueAt(row, columns, "order")}), tapi nama di foto (${name}) berbeda jauh dari data sekolah (${matchedStudent?.name || ""}).`));
+        } else {
+          issues.push(issue("info", "RESOLVED_BY_ORDER", `Siswa cocok berdasarkan No. Urut ${valueAt(row, columns, "order")} (${matchedStudent?.name}).`));
+        }
+      } else if (matchedBy === "name_fuzzy") {
+        const matchedStudent = context.students.find((s) => s.id === matchId);
+        issues.push(issue("warning", "RESOLVED_FUZZY", `Nama cocok secara fuzzy dengan ${matchedStudent?.name} (kemiripan ${similarity}%).`));
+      }
+
+      if (orderMatchConflict) {
+        const matchedStudent = context.students.find((s) => s.id === matchId);
+        issues.push(issue("warning", "ORDER_CONFLICT", `No. Urut di foto (${valueAt(row, columns, "order")}) berbeda dari daftar absen sekolah untuk ${matchedStudent?.name}.`));
+      }
 
       if (context.kind === "grades") {
         const gradeColumns = columns.filter((column) => column.semantic === "grade");
         if (gradeColumns.length === 0) issues.push(issue("error", "GRADE_COLUMN_REQUIRED", "Tidak ada kolom nilai yang terdeteksi."));
         gradeColumns.forEach((column) => {
           const index = columns.findIndex((item) => item.id === column.id);
-          const rawValue = cleanText(row.values[index]);
+          const rawValue = cleanOcrGradeValue(row.values[index]);
+          // Auto-clean cell value in-place
+          row.values[index] = rawValue;
+
           if (!column.targetId) issues.push(issue("error", "ASSIGNMENT_UNMAPPED", `Kolom ${column.label} belum dipetakan ke tugas.`, column.id));
-          if (rawValue && (!Number.isFinite(Number(rawValue.replace(",", "."))) || Number(rawValue.replace(",", ".")) < 0 || Number(rawValue.replace(",", ".")) > 100)) {
+          if (rawValue && (!Number.isFinite(Number(rawValue)) || Number(rawValue) < 0 || Number(rawValue) > 100)) {
             issues.push(issue("error", "GRADE_INVALID", `Nilai ${column.label} harus berupa angka 0–100.`, column.id));
           }
-          if (rawValue && match.id && column.targetId && existingGrades.has(`${match.id}:${column.targetId}`)) {
+          if (rawValue && matchId && column.targetId && existingGrades.has(`${matchId}:${column.targetId}`)) {
             issues.push(issue("warning", "GRADE_EXISTS", `Nilai ${column.label} sudah ada dan tidak akan ditimpa.`, column.id));
           }
         });
       } else {
+        const dateIdx = columnIndex(columns, "date");
+        if (dateIdx >= 0) {
+          row.values[dateIdx] = normalizeOcrDate(row.values[dateIdx]);
+        }
+        const statusIdx = columnIndex(columns, "attendance_status");
+        if (statusIdx >= 0) {
+          row.values[statusIdx] = normalizeAttendanceStatus(row.values[statusIdx]);
+        }
+
         const date = normalizeOcrDate(valueAt(row, columns, "date"));
         const status = normalizeAttendanceStatus(valueAt(row, columns, "attendance_status"));
         if (!date) issues.push(issue("error", "DATE_INVALID", "Tanggal harus memakai format YYYY-MM-DD atau DD/MM/YYYY."));
         if (!status) issues.push(issue("error", "STATUS_INVALID", "Status harus H, I, S, A, atau D."));
-        if (match.id && date && existingAttendance.has(`${match.id}:${date}`)) {
+        if (matchId && date && existingAttendance.has(`${matchId}:${date}`)) {
           issues.push(issue("warning", "ATTENDANCE_EXISTS", "Presensi pada tanggal ini sudah ada dan tidak akan ditimpa."));
         }
       }
 
-      return { ...row, targetStudentId: match.id, issues };
+      return { ...row, targetStudentId: matchId, issues };
     }),
   };
 }

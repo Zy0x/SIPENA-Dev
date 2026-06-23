@@ -267,4 +267,51 @@ describe("OCR import validation", () => {
     expect(() => validateOcrImageFiles([image], 5)).toThrow(/Maksimal 5/);
     expect(() => validateOcrImageFiles([new File(["x"], "photo.gif", { type: "image/gif" })])).toThrow(/JPG/);
   });
+
+  it("performs fuzzy name matching and resolves slight typos", () => {
+    const extraction = result("grades");
+    extraction.rows = [{ id: "row-1", page: 1, values: ["Ahnad Fauzi", "", "85"], confidence: 0.95, handwritten: false }];
+    const context: OcrImportContext = {
+      kind: "grades",
+      students,
+      assignments: [{ id: "task-1", name: "Tugas 1" }],
+    };
+    const draft = prepareOcrDraft(extraction, context);
+    expect(draft.rows[0].targetStudentId).toBe("student-1");
+    expect(draft.rows[0].issues.some((issue) => issue.code === "RESOLVED_FUZZY")).toBe(true);
+  });
+
+  it("performs matching by No. Urut (Absen) as fallback or verification", () => {
+    const extraction = result("grades");
+    extraction.columns.unshift({ id: "order", label: "No", semantic: "order", confidence: 0.98 });
+    extraction.rows = [
+      { id: "row-1", page: 1, values: ["2", "", "", "90"], confidence: 0.95, handwritten: false }
+    ];
+    const context: OcrImportContext = {
+      kind: "grades",
+      students,
+      assignments: [{ id: "task-1", name: "Tugas 1" }],
+    };
+    const draft = prepareOcrDraft(extraction, context);
+    expect(draft.rows[0].targetStudentId).toBe("student-2");
+    expect(draft.rows[0].issues.some((issue) => issue.code === "RESOLVED_BY_ORDER")).toBe(true);
+  });
+
+  it("handles manual student override and skips automatic resolving", () => {
+    const extraction = result("grades");
+    extraction.rows = [{ id: "row-1", page: 1, values: ["Siswa Asing", "", "90"], confidence: 0.95, handwritten: false }];
+    const context: OcrImportContext = {
+      kind: "grades",
+      students,
+      assignments: [{ id: "task-1", name: "Tugas 1" }],
+    };
+    const draft = prepareOcrDraft(extraction, context);
+    expect(draft.rows[0].targetStudentId).toBeUndefined();
+    expect(draft.rows[0].issues.some((issue) => issue.code === "STUDENT_NOT_FOUND")).toBe(true);
+
+    draft.rows[0].manualStudentId = "student-1";
+    const updated = validateOcrDraft(draft.rows, draft.columns, context);
+    expect(updated.rows[0].targetStudentId).toBe("student-1");
+    expect(updated.rows[0].issues.some((issue) => issue.code === "STUDENT_NOT_FOUND")).toBe(false);
+  });
 });

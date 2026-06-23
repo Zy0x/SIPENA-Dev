@@ -109,6 +109,7 @@ export interface OcrImportContext {
 export interface OcrDraftRow extends OcrExtractedRow {
   included: boolean;
   targetStudentId?: string;
+  manualStudentId?: string;
   issues: OcrIssue[];
 }
 

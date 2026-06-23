@@ -335,8 +335,19 @@ export default function OCRImportDialog({
   }, [columns, context]);
 
   const updateCell = useCallback((rowId: string, columnIndex: number, value: string) => {
+    const isStudentNameCol = columns[columnIndex]?.semantic === "student_name";
     revalidate(rows.map((row) => row.id === rowId
-      ? { ...row, values: row.values.map((cell, index) => index === columnIndex ? value : cell) }
+      ? {
+          ...row,
+          manualStudentId: isStudentNameCol ? undefined : row.manualStudentId,
+          values: row.values.map((cell, index) => index === columnIndex ? value : cell),
+        }
+      : row));
+  }, [revalidate, rows, columns]);
+
+  const handleManualStudentSelect = useCallback((rowId: string, studentId: string) => {
+    revalidate(rows.map((row) => row.id === rowId
+      ? { ...row, manualStudentId: studentId }
       : row));
   }, [revalidate, rows]);
 
@@ -348,6 +359,58 @@ export default function OCRImportDialog({
     const nextColumns = columns.map((column) => column.id === columnId ? { ...column, targetId } : column);
     revalidate(rows, nextColumns);
   }, [columns, revalidate, rows]);
+
+  const isScale10Detected = useMemo(() => {
+    if (type !== "grades" || rows.length === 0) return false;
+    const gradeIndexes = columns
+      .map((col, index) => (col.semantic === "grade" ? index : -1))
+      .filter((index) => index >= 0);
+
+    if (gradeIndexes.length === 0) return false;
+
+    let hasNumericGrade = false;
+    let allNumericGradesAreScale10 = true;
+
+    for (const row of rows) {
+      for (const idx of gradeIndexes) {
+        const val = row.values[idx]?.trim();
+        if (!val) continue;
+        const num = Number(val);
+        if (Number.isFinite(num)) {
+          hasNumericGrade = true;
+          if (num > 10) {
+            allNumericGradesAreScale10 = false;
+            break;
+          }
+        }
+      }
+      if (!allNumericGradesAreScale10) break;
+    }
+
+    return hasNumericGrade && allNumericGradesAreScale10;
+  }, [type, rows, columns]);
+
+  const handleScale10To100 = useCallback(() => {
+    const gradeIndexes = columns
+      .map((col, index) => (col.semantic === "grade" ? index : -1))
+      .filter((index) => index >= 0);
+
+    const nextRows = rows.map((row) => {
+      const nextValues = row.values.map((val, idx) => {
+        if (!gradeIndexes.includes(idx)) return val;
+        const cleaned = val.trim();
+        if (!cleaned) return val;
+        const num = Number(cleaned);
+        if (Number.isFinite(num)) {
+          return (num * 10).toString();
+        }
+        return val;
+      });
+      return { ...row, values: nextValues };
+    });
+
+    revalidate(nextRows);
+  }, [rows, columns, revalidate]);
 
   const executeImport = useCallback(async () => {
     if (!canContinueReview) return;
@@ -470,12 +533,27 @@ export default function OCRImportDialog({
                   <span className="text-xs leading-relaxed"><span className="block font-semibold">Saya setuju foto diproses oleh layanan AI untuk sesi ini.</span><span className="text-muted-foreground">Foto tidak disimpan oleh SIPENA. Foto dan base64 dibuang saat modal ditutup.</span></span>
                 </label>
 
-                <StudioInfoCollapsible title="Cara mendapat hasil yang lebih akurat" description="Foto tegak, terang, dan seluruh tabel terlihat." defaultOpen={false}>
-                  <ul className="space-y-1 text-xs text-muted-foreground">
-                    <li>Gunakan satu halaman dokumen per foto dan susun urutannya.</li>
-                    <li>Tulisan tangan diproses sebisa mungkin, tetapi wajib diperiksa ulang.</li>
-                    <li>AI hanya membaca dan merapikan data; AI tidak dapat menyimpan data.</li>
-                  </ul>
+                <StudioInfoCollapsible title="Panduan Format & Peletakan Foto Tabel" description="Sistem OCR cerdas SIPENA mendukung pencocokan nama, No. Urut Absen, dan deteksi typo." defaultOpen={true}>
+                  <div className="space-y-3 text-xs text-muted-foreground">
+                    <div className="grid gap-2 border-b border-border/30 pb-3 sm:grid-cols-3">
+                      <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
+                        <strong className="block text-foreground mb-1">Layout A (Nama & Nilai)</strong>
+                        Pencocokan standar menggunakan nama siswa. Sangat cocok untuk daftar nilai digital atau cetakan.
+                      </div>
+                      <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
+                        <strong className="block text-foreground mb-1">Layout B (No. Absen & Nilai)</strong>
+                        Pencocokan alternatif menggunakan nomor urut absen (1, 2, 3...) sesuai daftar alfabetis kelas. Berguna jika nama buram/tidak terbaca.
+                      </div>
+                      <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
+                        <strong className="block text-foreground mb-1">Layout C (Lengkap)</strong>
+                        Menyertakan No. Urut, Nama Siswa, dan Nilai. Sistem akan memvalidasi keselarasan nomor urut dengan nama untuk mendeteksi data tertukar.
+                      </div>
+                    </div>
+                    <ul className="space-y-1.5 list-disc pl-4">
+                      <li><strong>Pencocokan Cerdas:</strong> Jika terjadi typo kecil pada nama dari hasil OCR (misal "Ahnad Fauzi"), sistem akan otomatis mencocokkannya ke "Ahmad Fauzi" (fuzzy matching).</li>
+                      <li><strong>Tips Foto:</strong> Posisikan kamera sejajar/tegak lurus di atas kertas, pastikan cahaya cukup terang tanpa bayangan, dan hindari melipat atau memotong pinggiran tabel.</li>
+                    </ul>
+                  </div>
                 </StudioInfoCollapsible>
               </>
             ) : null}
@@ -496,6 +574,25 @@ export default function OCRImportDialog({
                     <AlertTriangle className="h-4 w-4" /><AlertTitle>OCR belum berhasil</AlertTitle><AlertDescription>{processError} Foto tetap tersedia. Coba lagi atau masukkan teks secara manual.</AlertDescription>
                   </Alert>
                 ) : null}
+
+                {isScale10Detected && (
+                  <Alert className="border-amber-400/40 bg-amber-500/5">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <AlertTitle>Skala Nilai 10 Terdeteksi</AlertTitle>
+                    <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <span>Semua nilai angka yang terbaca berukuran &le; 10 (misal: 8.5). Apakah Anda ingin mengkonversinya ke skala 100 secara massal?</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="self-start sm:self-auto border-amber-500/40 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium shrink-0"
+                        onClick={handleScale10To100}
+                      >
+                        <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Konversi ke Skala 100
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap gap-2"><Badge variant="outline">{rows.length} baris</Badge><Badge variant="outline">{summary.errors} error</Badge><Badge variant="outline">{summary.warnings} peringatan</Badge></div>
@@ -546,7 +643,39 @@ export default function OCRImportDialog({
                               <td className="border-r border-border p-2 text-center"><Checkbox checked={row.included} onCheckedChange={(checked) => toggleRow(row.id, checked === true)} aria-label={`Sertakan baris halaman ${row.page}`} /></td>
                               <td className="border-r border-border p-2 text-center"><button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={() => { setActiveImageId(images.find((image) => image.page === row.page)?.id || null); }}>Foto {row.page}</button><span className="mt-1 block text-[10px] text-muted-foreground">{Math.round(row.confidence * 100)}%</span></td>
                               {columns.map((column, columnIndex) => (
-                                <td key={column.id} className="border-r border-border p-1.5"><Input value={row.values[columnIndex] || ""} onChange={(event) => updateCell(row.id, columnIndex, event.target.value)} disabled={!row.included} className="h-9 min-w-32 bg-background text-xs" /></td>
+                                <td key={column.id} className="border-r border-border p-1.5">
+                                  <Input 
+                                    value={row.values[columnIndex] || ""} 
+                                    onChange={(event) => updateCell(row.id, columnIndex, event.target.value)} 
+                                    disabled={!row.included} 
+                                    className="h-9 min-w-32 bg-background text-xs" 
+                                  />
+                                  {column.semantic === "student_name" && type !== "students" && (
+                                    <div className="mt-1">
+                                      <Select
+                                        value={row.manualStudentId || row.targetStudentId || ""}
+                                        onValueChange={(studentId) => handleManualStudentSelect(row.id, studentId)}
+                                      >
+                                        <SelectTrigger 
+                                          className={cn(
+                                            "h-7 bg-background text-[10px] min-w-32", 
+                                            !row.targetStudentId ? "border-amber-500/50 text-amber-700 dark:text-amber-300" : "border-border/60"
+                                          )} 
+                                          aria-label="Lakukan pencocokan manual"
+                                        >
+                                          <SelectValue placeholder="-- Cocokkan manual --" />
+                                        </SelectTrigger>
+                                        <SelectContent isEmpty={context.students.length === 0} emptyLabel="Tidak ada siswa">
+                                          {context.students.map((student) => (
+                                            <SelectItem key={student.id} value={student.id}>
+                                              {student.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
+                                </td>
                               ))}
                               <td className="p-2 align-top"><div className={cn("rounded-lg border p-2", issueTone(row))}>{row.issues.length ? row.issues.map((issue, index) => <p key={`${issue.code}-${index}`} className={cn("text-[10px] leading-relaxed", issue.severity === "error" ? "text-destructive" : issue.severity === "warning" ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground")}>{issue.message}</p>) : <p className="flex items-center gap-1 text-[10px] text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="h-3 w-3" /> Siap</p>}</div></td>
                             </tr>
