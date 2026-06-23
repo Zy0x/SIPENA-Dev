@@ -602,6 +602,8 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const assignmentsRef = useRef<Assignment[]>([]);
   const gradesLoadingRef = useRef(false);
   const gradesRef = useRef<Grade[]>([]);
+  const preTourClassIdRef = useRef<string | null>(null);
+  const preTourSubjectIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     dbSubjectsRef.current = dbSubjects;
@@ -1782,6 +1784,10 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   };
 
   const prepareGradesTour = async () => {
+    // Simpan pilihan kelas/mapel asal untuk dikembalikan saat tour ditutup
+    preTourClassIdRef.current = selectedClassId;
+    preTourSubjectIdRef.current = selectedSubjectId;
+
     // 1. Tentukan Kelas yang akan digunakan
     let activeClassId = selectedClassId;
     if (!activeClassId) {
@@ -1936,11 +1942,23 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     setTourDummyAssignments([]);
     setTourDummyGrades([]);
 
-    if (selectedClassId === "tour-dummy-class") {
-      setSelectedClassId("");
+    // Kembalikan ke pilihan kelas/mapel asal sebelum tour dimulai
+    if (preTourClassIdRef.current !== null) {
+      setSelectedClassId(preTourClassIdRef.current);
+      preTourClassIdRef.current = null;
+    } else {
+      if (selectedClassId === "tour-dummy-class") {
+        setSelectedClassId("");
+      }
     }
-    if (selectedSubjectId === "tour-dummy-subject") {
-      setSelectedSubjectId("");
+
+    if (preTourSubjectIdRef.current !== null) {
+      setSelectedSubjectId(preTourSubjectIdRef.current);
+      preTourSubjectIdRef.current = null;
+    } else {
+      if (selectedSubjectId === "tour-dummy-subject") {
+        setSelectedSubjectId("");
+      }
     }
   };
 

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.98",
+    version: "2.4.98",
+    title: "Perbaikan Cleanup Pilihan Asal Tour Guide Nilai",
+    description: "Memperbaiki alur pembersihan (cleanup) pada Tour Guide Nilai agar pilihan kelas dan mata pelajaran asli dikembalikan ke kondisi semula (sebelum tur dimulai) saat tur selesai atau ditutup.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-24",
+    details: [
+      "Menyimpan referensi selectedClassId dan selectedSubjectId asli ke dalam tracking refs sebelum memulai tur.",
+      "Mengembalikan pilihan kelas dan mata pelajaran asli (atau mengosongkan pilihan jika sebelumnya tidak ada yang dipilih) saat cleanup dipicu (onComplete/onSkip).",
+      "Memastikan tidak ada kelas atau mapel asli yang tertinggal dalam status terpilih secara tidak sengaja pasca-tur."
+    ]
+  },
+  {
     id: "v2.4.97",
     version: "2.4.97",
     title: "Peningkatan Tour Guide Nilai — Deteksi Dinamis Hibrida",
