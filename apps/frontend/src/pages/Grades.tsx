@@ -397,12 +397,21 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     tabMeasureTimerRef.current = setTimeout(() => {
       if (!tabsElement) return;
 
+      // Lock body min-height to prevent document scroll height from shrinking
+      const oldBodyMinHeight = document.body.style.minHeight;
+      const oldBodyHeight = document.body.style.height;
+      document.body.style.minHeight = `${document.documentElement.scrollHeight}px`;
+
       // Temporarily remove height to measure new natural height
       tabsElement.style.height = "";
       const newHeight = Math.ceil(tabsElement.getBoundingClientRect().height);
       
       // Restore the old height to start transition from
       tabsElement.style.height = `${oldHeight}px`;
+
+      // Restore body styles immediately in the same block
+      document.body.style.minHeight = oldBodyMinHeight;
+      document.body.style.height = oldBodyHeight;
 
       // Force a layout reflow
       void tabsElement.offsetHeight;
@@ -1950,7 +1959,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="structure" className="sipena-grade-tab-panel mt-0 animate-fade-in">
+            <TabsContent value="structure" className="sipena-grade-tab-panel mt-0 animate-fade-in-only">
               <ChapterStructure
                 className="rounded-none border-0 shadow-none"
                 chapters={chapters}
@@ -1969,7 +1978,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
               />
             </TabsContent>
 
-            <TabsContent value="input" className="sipena-grade-tab-panel mt-0 space-y-4 animate-fade-in">
+            <TabsContent value="input" className="sipena-grade-tab-panel mt-0 space-y-4 animate-fade-in-only">
               {hasNoChapters && (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />

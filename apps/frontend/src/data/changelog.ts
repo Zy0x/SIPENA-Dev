@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.94",
+    version: "2.4.94",
+    title: "Optimasi Transisi Tab Struktur & Input Nilai",
+    description: "Merapikan transisi antara tab Struktur BAB dan Input Nilai agar bebas dari visual snapping (hentakan) akibat browser scroll-capping dan translateY shift.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Mengimplementasikan penguncian min-height sementara pada body dokumen selama penghitungan ulang tinggi dinamis, mencegah browser memotong (capping) posisi gulir halaman secara tiba-tiba.",
+      "Mengubah animasi panel tab dari fade-in dengan translateY (yang menggeser layout secara vertikal sebesar 10px) ke fade-in-only murni (hanya opacity) guna menghindari visual stuttering.",
+      "Memastikan pengalaman transisi mulus dan responsif di seluruh tipe perangkat, terutama pada layar mobile dan landscape sempit."
+    ]
+  },
+  {
     id: "v2.4.93",
     version: "2.4.93",
     title: "Zoom Panduan Format & Fallback Persetujuan AI",
