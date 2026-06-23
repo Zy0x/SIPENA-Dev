@@ -31,7 +31,6 @@ import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, Sele
 import { Textarea } from "@/components/ui/textarea";
 import { StudioActionFooter, StudioInfoCollapsible, StudioStepHeader } from "@/components/studio/ResponsiveStudio";
 import { useEnhancedToast } from "@/contexts/ToastContext";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   OCR_MAX_IMAGES,
   hasBlockingOcrIssues,
@@ -40,7 +39,6 @@ import {
   prepareOcrDraft,
   prepareOcrImage,
   requestOcrExtraction,
-  uploadOcrImageAndLog,
   validateOcrDraft,
   validateOcrImageFiles,
   type OcrColumn,
@@ -151,7 +149,7 @@ const STEP_LABELS = [
 
 const KIND_COPY: Record<OcrImportKind, { subject: string; manualExample: string }> = {
   students: {
-    subject: "siswa",
+    subject: "murid",
     manualExample: "1\tAhmad Fauzi\t0012345678\n2\tBudi Santoso\t0012345679",
   },
   grades: {
@@ -189,7 +187,6 @@ export default function OCRImportDialog({
   onRequestCreateClass,
   onConfirmImport,
 }: OCRImportDialogProps) {
-  const { user } = useAuth();
   const [step, setStep] = useState<OcrStudioStep>("capture");
   const [images, setImages] = useState<PreparedOcrImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
@@ -427,24 +424,6 @@ export default function OCRImportDialog({
       });
       setImportResult(result);
 
-      // Unggah foto WebP acuan dan buat record log audit OCR di latar belakang (fire-and-forget)
-      if (user?.id) {
-        images.forEach((image) => {
-          const count = rows.filter((row) => row.included && row.page === image.page).length;
-          if (count > 0) {
-            void uploadOcrImageAndLog({
-              userId: user.id,
-              classId: context.targetClassId || targetClassId || "",
-              subjectId: context.targetSubjectId,
-              kind: type,
-              base64: image.base64,
-              imageName: image.name,
-              recordsCount: count,
-            });
-          }
-        });
-      }
-
       setStep("done");
     } catch (error) {
       showError("Import gagal", error instanceof Error ? error.message : "Data belum tersimpan. Coba kembali.");
@@ -462,7 +441,6 @@ export default function OCRImportDialog({
     rows,
     showError,
     type,
-    user,
   ]);
 
   const summary = useMemo(() => ({
@@ -569,18 +547,29 @@ export default function OCRImportDialog({
 
                 <StudioInfoCollapsible title="Panduan Format & Peletakan Foto Tabel" description="Sistem OCR cerdas SIPENA mendukung pencocokan nama, No. Urut Absen, dan deteksi typo." defaultOpen={true}>
                   <div className="space-y-3 text-xs text-muted-foreground">
-                    <div className="grid gap-2 border-b border-border/30 pb-3 sm:grid-cols-3">
-                      <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
-                        <strong className="block text-foreground mb-1">Layout A (Nama & Nilai)</strong>
-                        Pencocokan standar menggunakan nama siswa. Sangat cocok untuk daftar nilai digital atau cetakan.
+                    <div className="flex flex-col md:flex-row gap-4 items-start border-b border-border/30 pb-3">
+                      <div className="flex-1 space-y-3">
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
+                            <strong className="block text-foreground mb-1">Layout A (Nama & Nilai)</strong>
+                            Pencocokan standar menggunakan nama murid. Sangat cocok untuk daftar nilai digital atau cetakan.
+                          </div>
+                          <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
+                            <strong className="block text-foreground mb-1">Layout B (No. Absen & Nilai)</strong>
+                            Pencocokan alternatif menggunakan nomor urut absen (1, 2, 3...) sesuai daftar alfabetis kelas. Berguna jika nama buram/tidak terbaca.
+                          </div>
+                          <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
+                            <strong className="block text-foreground mb-1">Layout C (Lengkap)</strong>
+                            Menyertakan No. Urut, Nama Murid, dan Nilai. Sistem akan memvalidasi keselarasan nomor urut dengan nama untuk mendeteksi data tertukar.
+                          </div>
+                        </div>
                       </div>
-                      <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
-                        <strong className="block text-foreground mb-1">Layout B (No. Absen & Nilai)</strong>
-                        Pencocokan alternatif menggunakan nomor urut absen (1, 2, 3...) sesuai daftar alfabetis kelas. Berguna jika nama buram/tidak terbaca.
-                      </div>
-                      <div className="rounded-lg border border-border/60 bg-muted/10 p-2.5">
-                        <strong className="block text-foreground mb-1">Layout C (Lengkap)</strong>
-                        Menyertakan No. Urut, Nama Siswa, dan Nilai. Sistem akan memvalidasi keselarasan nomor urut dengan nama untuk mendeteksi data tertukar.
+                      <div className="w-full md:w-80 shrink-0 overflow-hidden rounded-lg border border-border bg-background p-1">
+                        <img 
+                          src="/ocr-guide-example.webp" 
+                          alt="Contoh Format Foto Tabel" 
+                          className="h-auto w-full rounded-md object-contain" 
+                        />
                       </div>
                     </div>
                     <ul className="space-y-1.5 list-disc pl-4">

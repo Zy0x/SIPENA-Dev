@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.92",
+    version: "2.4.92",
+    title: "Optimasi Ketajaman OCR JPEG & Panduan Visual WebP",
+    description: "Membatalkan kompresi WebP pada foto unggahan OCR agar mempertahankan kualitas JPEG asli untuk akurasi pembacaan AI, menghapus logging audit di database Supabase demi privasi murid, dan menyajikan panduan visual WebP ringan langsung di modal dialog.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Mengembalikan format kompresi foto unggahan OCR ke format JPEG asli di sisi client untuk akurasi pembacaan AI yang optimal.",
+      "Meningkatkan batas ukuran berkas hasil pemrosesan ke 1.5MB agar gambar tetap tajam pada resolusi tinggi.",
+      "Menghapus fungsi pengunggahan foto OCR ke storage dan pencatatan riwayat impor di database Supabase untuk menjamin privasi murid.",
+      "Menampilkan contoh gambar panduan format tabel (/ocr-guide-example.webp) berukuran ringan (35KB) langsung di dalam collapsible panel dialog.",
+      "Membersihkan tabel public.ocr_imports dan bucket ocr-imports yang tidak lagi digunakan dari database Supabase."
+    ]
+  },
+  {
     id: "v2.4.91",
     version: "2.4.91",
     title: "Optimasi Jaringan OCR WebP & Log Audit Supabase",

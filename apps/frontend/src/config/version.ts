@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.91";
+export const APP_VERSION = "2.4.92";
 export const VERSION_DATE = "2026-06-23";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.92": "Membatalkan kompresi WebP pada unggahan OCR untuk menjaga ketajaman JPEG asli untuk akurasi AI, menghapus log audit Supabase demi privasi murid, serta menyajikan panduan visual WebP di modal dialog.",
   "2.4.91": "Optimasi konversi WebP (client-side) foto OCR untuk menghemat bandwidth jaringan, dan integrasi logging riwayat impor serta unggah gambar audit murid ke Supabase.",
   "2.4.90": "Peningkatan fitur Import Nilai dari Foto: penambahan panduan visual interaktif, algoritma fuzzy matching, pencocokan berbasis No. Urut (Absen), dropdown penyeleksi murid manual, serta konverter desimal skala 10.",
   "2.4.89": "Menghilangkan indikator zoom tingkat riil (zoom level %) dari footer tabel karena sudah tersedia pada toolbar utama.",
