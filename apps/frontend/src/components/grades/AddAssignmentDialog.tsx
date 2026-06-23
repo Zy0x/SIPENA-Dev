@@ -120,7 +120,7 @@ export function AddAssignmentDialog({
 
           <TabsContent value="list" className="flex-1 flex flex-col min-h-0 mt-3 space-y-3">
             <ScrollArea className="flex-1 max-h-[40vh] pr-3">
-              <div className="space-y-2">
+              <div className="space-y-2 p-1">
                 {assignmentNames.map((name, index) => (
                   <div key={index} className="flex items-center gap-1.5 sm:gap-2">
                     <div className="flex-1 min-w-0">

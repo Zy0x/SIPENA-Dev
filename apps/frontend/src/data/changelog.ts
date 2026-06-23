@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.95",
+    version: "2.4.95",
+    title: "Perbaikan Fokus Border Dialog Tambah BAB & Tugas",
+    description: "Memperbaiki tampilan garis tepi fokus (focus ring outline) input pada modal Tambah BAB dan Tambah Tugas agar tidak terpotong oleh batas area gulir (ScrollArea).",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-06-23",
+    details: [
+      "Menambahkan padding (p-1) pada elemen penampung baris input di dalam ScrollArea di AddChapterDialog dan AddAssignmentDialog.",
+      "Padding ini memberikan ruang bagi outline ring fokus setebal 2px untuk dirender secara utuh tanpa terpotong oleh overflow scroll area.",
+      "Memastikan keselarasan tata letak visual tetap rapi dan konsisten di seluruh dialog pengelolaan struktur akademik."
+    ]
+  },
+  {
     id: "v2.4.94",
     version: "2.4.94",
     title: "Optimasi Transisi Tab Struktur & Input Nilai",

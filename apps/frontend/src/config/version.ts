@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.94";
+export const APP_VERSION = "2.4.95";
 export const VERSION_DATE = "2026-06-23";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.95": "Memperbaiki border fokus input nama BAB dan tugas pada modal tambah satu per satu agar tidak terpotong (clipped) oleh batas scroll area.",
   "2.4.94": "Merapikan transisi tab Struktur BAB dan Input Nilai agar bebas dari visual snapping (hentakan) menggunakan body min-height lock dan pure opacity animation.",
   "2.4.93": "Peningkatan UI/UX panduan visual format tabel agar bisa diperbesar serta fallback interaktif untuk persetujuan AI yang belum dicentang.",
   "2.4.92": "Membatalkan kompresi WebP pada unggahan OCR untuk menjaga ketajaman JPEG asli untuk akurasi AI, menghapus log audit Supabase demi privasi murid, serta menyajikan panduan visual WebP di modal dialog.",
