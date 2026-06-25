@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.5.1";
+export const APP_VERSION = "2.5.2";
 export const VERSION_DATE = "2026-06-25";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.5.2": "Peningkatan Tour Guide Kelas & Murid dengan data tiruan in-memory hibrida, serta penyelarasan istilah 'Murid' di antarmuka Kelas & Murid.",
   "2.5.1": "Menambahkan ikon peringatan KKM otomatis dengan tooltip interaktif (hover & press) saat KKM kelas belum dikonfigurasi.",
   "2.5.0": "Penyempurnaan tampilan angka KKM kelas pada badge ringkasan halaman Mata Pelajaran dengan fallback nilai default.",
   "2.4.99": "Peningkatan Tour Guide Mata Pelajaran dengan data tiruan in-memory hibrida dinamis untuk kelas/mapel kosong, serta pemulihan status seleksi.",

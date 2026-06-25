@@ -129,7 +129,7 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
             <div className="flex items-center gap-2 text-foreground">
               <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <span className="text-xs font-semibold sm:text-sm">
-                {classData.student_count || 0} siswa
+                {classData.student_count || 0} murid
               </span>
             </div>
             <div className="flex items-center gap-2 text-foreground">
@@ -169,7 +169,7 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
               onClick={() => setShowAddStudentDialog(true)}
             >
               <UserPlus className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">Siswa</span>
+              <span className="truncate">Murid</span>
             </Button>
             <Button
               variant="outline"
@@ -199,7 +199,7 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
             <AlertDialogTitle>Hapus Kelas?</AlertDialogTitle>
             <AlertDialogDescription>
               Anda yakin ingin menghapus kelas <strong>{classData.name}</strong>?
-              Semua data siswa dan nilai dalam kelas ini akan ikut terhapus.
+              Semua data murid dan nilai dalam kelas ini akan ikut terhapus.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -42,13 +42,13 @@ const classesTourSteps: TourStep[] = [
   },
   {
     target: "[data-tour='class-import-menu']",
-    title: "Import Kelas & Siswa",
-    description: "Gunakan menu ini untuk membuat banyak kelas dan siswa dari template Excel resmi. Import foto tetap tersedia untuk input siswa dari gambar.",
+    title: "Import Kelas & Murid",
+    description: "Gunakan menu ini untuk membuat banyak kelas dan murid dari template Excel resmi. Import foto tetap tersedia untuk input murid dari gambar.",
   },
   {
     target: "[data-tour='class-search']",
     title: "Cari Kelas",
-    description: "Temukan kelas berdasarkan nama atau deskripsi tanpa perlu menggulir daftar panjang.",
+    description: "Temukan kelas berdasarkan nama atau deskripsi tanpa perlu menggulir daftar daftar panjang.",
   },
   {
     target: "[data-tour='class-kkm-alert']",
@@ -58,12 +58,12 @@ const classesTourSteps: TourStep[] = [
   {
     target: "[data-tour='class-card']",
     title: "Kartu Kelas",
-    description: "Kartu menampilkan nama, jumlah siswa, KKM, dan deskripsi singkat agar kelas mudah dibedakan.",
+    description: "Kartu menampilkan nama, jumlah murid, KKM, dan deskripsi singkat agar kelas mudah dibedakan.",
   },
   {
     target: "[data-tour='class-card-actions']",
     title: "Aksi Utama",
-    description: "Tombol Detail, Siswa, Mapel, dan Nilai langsung membuka alur kerja utama untuk kelas tersebut.",
+    description: "Tombol Detail, Murid, Mapel, dan Nilai langsung membuka alur kerja utama untuk kelas tersebut.",
   },
   {
     target: "[data-tour='class-card-menu']",
@@ -76,7 +76,9 @@ export default function Classes() {
   const { classes, isLoading } = useClasses();
   const { allSubjects, isLoading: subjectsLoading } = useSubjects();
   const [searchQuery, setSearchQuery] = useState("");
-  const [tourDummyClass, setTourDummyClass] = useState<Class | null>(null);
+  const [isTourDummyActive, setIsTourDummyActive] = useState(false);
+  const [tourDummyClasses, setTourDummyClasses] = useState<Class[]>([]);
+  const preTourSearchQueryRef = useRef("");
   const [classImportDialogOpen, setClassImportDialogOpen] = useState(false);
   const [showOCRImport, setShowOCRImport] = useState(false);
   const [ocrTargetClassId, setOcrTargetClassId] = useState("");
@@ -99,9 +101,14 @@ export default function Classes() {
   }, [classes, ocrCreatedClass]);
 
   const displayClasses = useMemo(() => {
-    if (classes.length > 0 || !tourDummyClass) return classes;
-    return [tourDummyClass];
-  }, [classes, tourDummyClass]);
+    if (isTourDummyActive && tourDummyClasses.length > 0) {
+      if (classes.length === 0) {
+        return tourDummyClasses;
+      }
+      return [...classes, ...tourDummyClasses];
+    }
+    return classes;
+  }, [classes, isTourDummyActive, tourDummyClasses]);
 
   const filteredClasses = useMemo(() => {
     if (!searchQuery.trim()) return displayClasses;
@@ -138,26 +145,67 @@ export default function Classes() {
   }, [classesWithoutKkm.length, isLoading]);
 
   const prepareClassesTour = () => {
-    if (classes.length > 0 || tourDummyClass) return;
+    preTourSearchQueryRef.current = searchQuery;
+    setSearchQuery("");
 
     const now = new Date().toISOString();
-    setSearchQuery("");
-    setTourDummyClass({
-      id: "tour-dummy-class",
-      user_id: "tour-preview",
-      academic_year_id: null,
-      semester_id: null,
-      name: "Contoh Kelas VIIA",
-      description: "Kelas contoh untuk panduan. Gunakan kartu ini untuk melihat posisi tombol Detail, Siswa, Mapel, Nilai, dan menu lanjutan.",
-      class_kkm: 75,
-      created_at: now,
-      updated_at: now,
-      student_count: 24,
-    });
+    const hasNoClasses = classes.length === 0;
+    const hasNoNullKkmClasses = classes.length > 0 && !classes.some(cls => cls.class_kkm === null);
+
+    if (hasNoClasses) {
+      setIsTourDummyActive(true);
+      setTourDummyClasses([
+        {
+          id: "tour-dummy-class-1",
+          user_id: "tour-preview",
+          academic_year_id: null,
+          semester_id: null,
+          name: "Contoh Kelas VIIA",
+          description: "Kelas contoh untuk panduan dengan KKM dasar terkonfigurasi.",
+          class_kkm: 75,
+          created_at: now,
+          updated_at: now,
+          student_count: 24,
+        },
+        {
+          id: "tour-dummy-class-2",
+          user_id: "tour-preview",
+          academic_year_id: null,
+          semester_id: null,
+          name: "Contoh Kelas VIIB",
+          description: "Kelas contoh tanpa KKM dasar untuk menunjukkan fitur peringatan KKM.",
+          class_kkm: null,
+          created_at: now,
+          updated_at: now,
+          student_count: 18,
+        }
+      ]);
+    } else if (hasNoNullKkmClasses) {
+      setIsTourDummyActive(true);
+      setTourDummyClasses([
+        {
+          id: "tour-dummy-class-null-kkm",
+          user_id: "tour-preview",
+          academic_year_id: null,
+          semester_id: null,
+          name: "Contoh Kelas KKM Kosong (Dummy)",
+          description: "Kelas contoh sementara tanpa KKM untuk menunjukkan fitur peringatan KKM.",
+          class_kkm: null,
+          created_at: now,
+          updated_at: now,
+          student_count: 15,
+        }
+      ]);
+    }
   };
 
   const cleanupClassesTour = () => {
-    setTourDummyClass(null);
+    setIsTourDummyActive(false);
+    setTourDummyClasses([]);
+    if (preTourSearchQueryRef.current !== undefined) {
+      setSearchQuery(preTourSearchQueryRef.current);
+      preTourSearchQueryRef.current = "";
+    }
   };
 
   return (
@@ -171,10 +219,10 @@ export default function Classes() {
             </div>
             <div className="min-w-0">
               <h1 className="text-base sm:text-lg font-bold text-foreground">
-                Kelas & Siswa
+                Kelas & Murid
               </h1>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
-                Kelola daftar kelas dan data siswa
+                Kelola daftar kelas dan data murid
               </p>
             </div>
           </div>
@@ -190,11 +238,11 @@ export default function Classes() {
               <DropdownMenuContent align="start" className="w-[min(15rem,calc(100vw-1.5rem))]">
                 <DropdownMenuItem onClick={() => setClassImportDialogOpen(true)} className="gap-2 min-h-[44px]">
                   <Upload className="w-4 h-4" />
-                  Import Kelas & Siswa
+                  Import Kelas & Murid
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowOCRImport(true)} className="gap-2 min-h-[44px]">
                   <Camera className="w-4 h-4" />
-                  Import Siswa dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
+                  Import Murid dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -246,7 +294,7 @@ export default function Classes() {
                 Belum Ada Kelas
               </h3>
               <p className="text-xs text-muted-foreground text-center max-w-xs mb-4">
-                Buat kelas pertama Anda untuk mulai mengelola siswa dan nilai.
+                Buat kelas pertama Anda untuk mulai mengelola murid dan nilai.
               </p>
               <AddClassDialog
                 trigger={
@@ -264,7 +312,7 @@ export default function Classes() {
         {!isLoading && displayClasses.length > 0 && (
           <div className="flex items-center gap-2 px-1 text-[10px] sm:text-xs text-muted-foreground">
             <Users className="w-3 h-3 flex-shrink-0" />
-            <span>Gunakan tombol di kartu kelas untuk membuka detail, siswa, mapel, atau nilai.</span>
+            <span>Gunakan tombol di kartu kelas untuk membuka detail, murid, mapel, atau nilai.</span>
           </div>
         )}
 
@@ -330,8 +378,8 @@ export default function Classes() {
         open={showOCRImport}
         onOpenChange={setShowOCRImport}
         type="students"
-        title="Import Siswa dari Foto"
-        description="Baca daftar siswa dari maksimal 5 foto, periksa hasilnya, lalu simpan ke kelas tujuan."
+        title="Import Murid dari Foto"
+        description="Baca daftar murid dari maksimal 5 foto, periksa hasilnya, lalu simpan ke kelas tujuan."
         availableClasses={ocrClassOptions.map((item) => ({ id: item.id, name: item.name }))}
         targetClassId={ocrTargetClassId}
         onTargetClassIdChange={setOcrTargetClassId}
@@ -358,7 +406,7 @@ export default function Classes() {
             success: inputs.length,
             skipped,
             failed: 0,
-            message: `${inputs.length} siswa disimpan ke ${ocrClassOptions.find((item) => item.id === ocrTargetClassId)?.name || "kelas tujuan"}.`,
+            message: `${inputs.length} murid disimpan ke ${ocrClassOptions.find((item) => item.id === ocrTargetClassId)?.name || "kelas tujuan"}.`,
           };
         }}
       />

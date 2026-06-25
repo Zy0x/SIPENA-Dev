@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.5.2",
+    version: "2.5.2",
+    title: "Peningkatan Panduan Interaktif Kelas & Murid",
+    description: "Peningkatan Tour Guide pada halaman Kelas & Murid dengan data tiruan (dummy) in-memory hibrida dinamis serta penyelarasan istilah 'Murid' di antarmuka Kelas.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-25",
+    details: [
+      "Mengimplementasikan dynamic dummy data injection (hybrid mocking) untuk memicu peringatan KKM dasar kelas (class-kkm-alert) agar disorot selama tour guide.",
+      "Menjamin zero database pollution dengan mengelola data tiruan sepenuhnya di memori dan memulihkan filter serta search query pencarian ke kondisi semula pasca-tour.",
+      "Menyelaraskan penggunaan istilah 'siswa' menjadi 'murid' secara menyeluruh di antarmuka halaman Kelas, dropdown menu import, dialog OCR, dan label tombol kartu kelas."
+    ]
+  },
+  {
     id: "v2.5.1",
     version: "2.5.1",
     title: "Penanda Peringatan KKM Otomatis Halaman Mapel",
