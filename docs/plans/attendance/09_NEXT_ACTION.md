@@ -1,5 +1,5 @@
 # NEXT ACTION
 
-Execute Phase 02:
-- Clone V1 hooks & logic structure to isolated feature directory
-- Establish identical copy of useAttendance.ts in V1 Adapter folder
+Execute Phase 03:
+- Define Canonical Model structure for attendance records, day events, holidays, and locks.
+- Implement Mapper helpers to bridge V1 data and Canonical structures.
