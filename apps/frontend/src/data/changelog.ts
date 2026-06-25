@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.99",
+    version: "2.4.99",
+    title: "Peningkatan Tour Guide Mata Pelajaran — Data Tiruan Hibrida",
+    description: "Meningkatkan panduan visual (Tour Guide) pada halaman Mata Pelajaran dengan mendeteksi ketersediaan data secara dinamis dan menyajikan data tiruan in-memory (kelas dan daftar mapel) jika data belum tersedia di database, serta pemulihan otomatis pasca-tour.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-25",
+    details: [
+      "Penyediaan data tiruan hibrida: jika DB kosong, membangkitkan kelas 'Contoh Kelas VIIA' beserta 3 mapel dummy (Matematika, IPA, Bahasa Inggris) secara in-memory.",
+      "Penyediaan data parsial: jika kelas asli terpilih belum memiliki mapel, secara otomatis membuat 3 mapel dummy agar kartu mapel dapat dirender penuh dan disorot step tour.",
+      "Pemulihan status seleksi: pilihan kelas asli dikembalikan ke kondisi semula saat tur ditutup, selesai, atau dilewati.",
+      "Zero database pollution: menjamin seluruh mapel/kelas tiruan in-memory tidak pernah disimpan ke Supabase.",
+      "Perbaikan bahasa: menyelaraskan kata 'siswa' menjadi 'murid' di dalam selektor dropdown Kelas."
+    ]
+  },
+  {
     id: "v2.4.98",
     version: "2.4.98",
     title: "Perbaikan Cleanup Pilihan Asal Tour Guide Nilai",

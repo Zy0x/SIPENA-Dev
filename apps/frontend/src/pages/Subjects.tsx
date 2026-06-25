@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useClasses } from "@/hooks/useClasses";
-import { useSubjects } from "@/hooks/useSubjects";
+import { useSubjects, type Subject } from "@/hooks/useSubjects";
 import AddSubjectDialog from "@/components/subjects/AddSubjectDialog";
 import SubjectCard from "@/components/subjects/SubjectCard";
 import ImportSubjectsDialog from "@/components/subjects/ImportSubjectsDialog";
@@ -41,9 +41,17 @@ const CREATE_CLASS_VALUE = "__create_class__";
 export default function Subjects() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { classes, isLoading: classesLoading } = useClasses();
+  const { classes: dbClasses, isLoading: classesLoading } = useClasses();
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [isTourDummyActive, setIsTourDummyActive] = useState(false);
+  const [tourDummyClass, setTourDummyClass] = useState<Class | null>(null);
+  const [tourDummySubjects, setTourDummySubjects] = useState<Subject[]>([]);
+
+  const dbSubjectsRef = useRef<Subject[]>([]);
+  const subjectsLoadingRef = useRef(false);
+  const preTourClassIdRef = useRef<string | null>(null);
 
   const initialClassId = searchParams.get("classId") || "";
   const [selectedClassId, setSelectedClassId] = useState<string>(initialClassId);
@@ -53,7 +61,27 @@ export default function Subjects() {
   const [addClassOpen, setAddClassOpen] = useState(false);
   const [createdClass, setCreatedClass] = useState<Class | null>(null);
 
-  const { subjects, isLoading: subjectsLoading } = useSubjects(selectedClassId, true, false);
+  const { subjects: dbSubjects, isLoading: subjectsLoading } = useSubjects(selectedClassId, true, false);
+
+  useEffect(() => {
+    dbSubjectsRef.current = dbSubjects;
+    subjectsLoadingRef.current = subjectsLoading;
+  }, [dbSubjects, subjectsLoading]);
+
+  const classes = useMemo(() => {
+    if (isTourDummyActive && tourDummyClass) {
+      return dbClasses.length > 0 ? dbClasses : [tourDummyClass];
+    }
+    return dbClasses;
+  }, [dbClasses, isTourDummyActive, tourDummyClass]);
+
+  const subjects = useMemo(() => {
+    if (isTourDummyActive && tourDummySubjects.length > 0) {
+      return tourDummySubjects;
+    }
+    return dbSubjects;
+  }, [dbSubjects, isTourDummyActive, tourDummySubjects]);
+
   const selectedClass = classes.find((c) => c.id === selectedClassId)
     || (createdClass?.id === selectedClassId ? createdClass : undefined);
   const hasSelectedClass = Boolean(selectedClassId && selectedClass);
@@ -153,10 +181,91 @@ export default function Subjects() {
     ];
   }, [classes.length, subjects.length]);
 
+  const setupFullDummyData = () => {
+    setIsTourDummyActive(true);
+    const now = new Date().toISOString();
+
+    const dummyClass: Class = {
+      id: "tour-dummy-class",
+      user_id: "tour-user",
+      academic_year_id: "tour-year",
+      semester_id: "tour-semester",
+      name: "Contoh Kelas VIIA",
+      description: "Kelas contoh untuk panduan interaktif SIPENA.",
+      class_kkm: 75,
+      created_at: now,
+      updated_at: now,
+      student_count: 5,
+    };
+    setTourDummyClass(dummyClass);
+    setSelectedClassId("tour-dummy-class");
+
+    const dummySubs: Subject[] = [
+      { id: "tour-sub-1", class_id: "tour-dummy-class", name: "Matematika", kkm: 75, created_at: now, updated_at: now, academic_year_id: "tour-year", user_id: "tour-user", is_custom: false },
+      { id: "tour-sub-2", class_id: "tour-dummy-class", name: "IPA", kkm: 75, created_at: now, updated_at: now, academic_year_id: "tour-year", user_id: "tour-user", is_custom: false },
+      { id: "tour-sub-3", class_id: "tour-dummy-class", name: "Bahasa Inggris", kkm: 70, created_at: now, updated_at: now, academic_year_id: "tour-year", user_id: "tour-user", is_custom: true },
+    ];
+    setTourDummySubjects(dummySubs);
+  };
+
+  const setupDummySubjects = (classId: string) => {
+    setIsTourDummyActive(true);
+    const now = new Date().toISOString();
+
+    const dummySubs: Subject[] = [
+      { id: "tour-sub-1", class_id: classId, name: "Matematika", kkm: 75, created_at: now, updated_at: now, academic_year_id: "tour-year", user_id: "tour-user", is_custom: false },
+      { id: "tour-sub-2", class_id: classId, name: "IPA", kkm: 75, created_at: now, updated_at: now, academic_year_id: "tour-year", user_id: "tour-user", is_custom: false },
+      { id: "tour-sub-3", class_id: classId, name: "Bahasa Inggris", kkm: 70, created_at: now, updated_at: now, academic_year_id: "tour-year", user_id: "tour-user", is_custom: true },
+    ];
+    setTourDummySubjects(dummySubs);
+  };
+
   const prepareSubjectsTour = async () => {
-    if (!selectedClassId && classes.length > 0) {
-      setSelectedClassId(classes[0].id);
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    // Simpan pilihan kelas asal
+    preTourClassIdRef.current = selectedClassId;
+
+    let activeClassId = selectedClassId;
+    if (!activeClassId) {
+      if (classes.length > 0) {
+        activeClassId = classes[0].id;
+        setSelectedClassId(activeClassId);
+        // Tunggu render React state & inisiasi query mata pelajaran
+        await new Promise<void>((resolve) => setTimeout(resolve, 150));
+      } else {
+        // Database kosong kelasnya -> setup data tiruan penuh
+        setupFullDummyData();
+        await new Promise<void>((resolve) => setTimeout(resolve, 300));
+        return;
+      }
+    }
+
+    // Tunggu hingga loading mata pelajaran selesai
+    let retries = 0;
+    while (subjectsLoadingRef.current && retries < 15) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      retries++;
+    }
+
+    // Cek apakah mata pelajaran kosong untuk kelas ini
+    if (dbSubjectsRef.current.length === 0) {
+      setupDummySubjects(activeClassId);
+      await new Promise<void>((resolve) => setTimeout(resolve, 300));
+    }
+  };
+
+  const cleanupSubjectsTour = () => {
+    setIsTourDummyActive(false);
+    setTourDummyClass(null);
+    setTourDummySubjects([]);
+
+    // Kembalikan ke pilihan kelas asal sebelum tour dimulai
+    if (preTourClassIdRef.current !== null) {
+      setSelectedClassId(preTourClassIdRef.current);
+      preTourClassIdRef.current = null;
+    } else {
+      if (selectedClassId === "tour-dummy-class") {
+        setSelectedClassId("");
+      }
     }
   };
 
@@ -251,7 +360,7 @@ export default function Subjects() {
                   <SelectContent isEmpty={!classesLoading && classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                     {classes.map((cls) => (
                       <SelectItem key={cls.id} value={cls.id} className="text-sm">
-                        {cls.name} ({cls.student_count || 0} siswa)
+                        {cls.name} ({cls.student_count || 0} murid)
                       </SelectItem>
                     ))}
                     <SelectSeparator />
@@ -373,7 +482,7 @@ export default function Subjects() {
         )}
       </div>
 
-      <ProductTour steps={subjectsTourSteps} tourKey="subjects" />
+      <ProductTour steps={subjectsTourSteps} tourKey="subjects" onComplete={cleanupSubjectsTour} />
       {selectedClass && (
         <ImportSubjectsDialog
           open={importDialogOpen}
