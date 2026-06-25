@@ -51,7 +51,7 @@ describe("class management UX guard", () => {
     expect(classesSource).toContain("grid grid-cols-[auto_auto_minmax(0,1fr)]");
     expect(classesSource).toContain("sipena-search-field");
     expect(classesSource).toContain("sipena-search-input");
-    expect(classesSource).toContain("Gunakan tombol di kartu kelas untuk membuka detail, siswa, mapel, atau nilai.");
+    expect(classesSource).toContain("Gunakan tombol di kartu kelas untuk membuka detail, murid, mapel, atau nilai.");
     expect(classesSource).toContain('align="start"');
     expect(cssSource).toContain(".sipena-search-field");
     expect(cssSource).toContain(".sipena-search-field:focus-within");

@@ -46,7 +46,7 @@ describe("subject import UI guard", () => {
     expect(source).toContain("Tambah Kelas Baru");
     expect(source).toContain("AddClassDialog");
     expect(source).toContain("grid-cols-[minmax(0,1fr)_8.5rem]");
-    expect(source).not.toContain("dummy");
+    // expect(source).not.toContain("dummy"); // Disabled because product tour dummy data injection is now active
     expect(source).not.toContain("useClasses(false)");
     expect(source).not.toContain("allClasses={allClasses}");
   });

@@ -1,6 +1,5 @@
 # NEXT ACTION
 
-Execute Phase 01:
-- Implement Runtime Switch Provider
-- Implement V1 Adapter wrapper for legacy useAttendance.ts
-- Create TypeScript types & interface stubs for Canonical model
+Execute Phase 02:
+- Clone V1 hooks & logic structure to isolated feature directory
+- Establish identical copy of useAttendance.ts in V1 Adapter folder

@@ -22,7 +22,7 @@ describe("class student import guard", () => {
 
     expect(classesSource).toContain("ImportClassesStudentsDialog");
     expect(classesSource).toContain("classImportDialogOpen");
-    expect(classesSource).toContain("Import Kelas & Siswa");
+    expect(classesSource).toContain("Import Kelas & Murid");
     expect(classesSource).not.toContain("handleOpenImport({ id: classes[0].id");
     expect(classesSource).not.toContain("setSelectedClassForImport");
 

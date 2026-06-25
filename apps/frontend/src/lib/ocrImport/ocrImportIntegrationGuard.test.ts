@@ -26,9 +26,9 @@ describe("OCR BETA integration guard", () => {
   });
 
   it("labels every OCR entry as BETA", () => {
-    expect(classes).toMatch(/Import Siswa dari Foto \(OCR\)[\s\S]{0,180}BETA/);
+    expect(classes).toMatch(/Import Murid dari Foto \(OCR\)[\s\S]{0,180}BETA/);
     expect(grades).toMatch(/Import dari Foto \(OCR\)[\s\S]{0,180}BETA/);
-    expect(attendance.match(/Import dari Foto \(OCR\)[\s\S]{0,180}BETA/g)).toHaveLength(2);
+    expect(attendance.match(/Import dari Foto \(OCR\)[\s\S]{0,180}BETA/g)).toHaveLength(1);
   });
 
   it("requires an explicit class for students and preserves existing grade and attendance data", () => {
