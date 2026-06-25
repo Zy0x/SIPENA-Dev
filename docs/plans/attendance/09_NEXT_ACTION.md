@@ -1,5 +1,5 @@
 # NEXT ACTION
 
-Execute Phase 03:
-- Define Canonical Model structure for attendance records, day events, holidays, and locks.
-- Implement Mapper helpers to bridge V1 data and Canonical structures.
+Execute Phase 04:
+- Define and implement isolated V2 Calendar Engine.
+- Evaluate effective day mappings, national holidays, and schedule adjustments in V2.
