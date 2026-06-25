@@ -409,7 +409,7 @@ export default function Subjects() {
               <div data-tour="subject-summary" className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
                 <Badge variant="outline" className="rounded-full px-2.5 py-1">{selectedClass.name}</Badge>
                 <Badge variant="secondary" className="rounded-full px-2.5 py-1">{subjects.length} mapel</Badge>
-                <Badge variant="secondary" className="rounded-full px-2.5 py-1">KKM kelas {selectedClass.class_kkm}</Badge>
+                <Badge variant="secondary" className="rounded-full px-2.5 py-1">KKM Kelas: {selectedClass.class_kkm ?? 70}</Badge>
               </div>
             )}
           </div>

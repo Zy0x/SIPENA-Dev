@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.5.0",
+    version: "2.5.0",
+    title: "Penyempurnaan Tampilan KKM Kelas Halaman Mapel",
+    description: "Menyempurnakan tampilan angka KKM kelas pada badge ringkasan halaman Mata Pelajaran dengan memberikan nilai default jika data KKM di database bernilai kosong (null).",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-25",
+    details: [
+      "Mengimplementasikan operator nullish coalescing (?? 70) pada pembacaan selectedClass.class_kkm.",
+      "Memastikan angka KKM kelas (default 70 jika belum diatur) selalu muncul di samping label 'KKM Kelas:' pada baris ringkasan kelas.",
+      "Menyelaraskan nilai default KKM kelas dengan KKM dialog tambah mata pelajaran baru."
+    ]
+  },
+  {
     id: "v2.4.99",
     version: "2.4.99",
     title: "Peningkatan Tour Guide Mata Pelajaran — Data Tiruan Hibrida",
