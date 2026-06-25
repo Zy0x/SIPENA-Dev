@@ -42,61 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
-    id: "v2.5.2",
-    version: "2.5.2",
-    title: "Peningkatan Panduan Interaktif Kelas & Murid",
-    description: "Peningkatan Tour Guide pada halaman Kelas & Murid dengan data tiruan (dummy) in-memory hibrida dinamis serta penyelarasan istilah 'Murid' di antarmuka Kelas.",
-    type: "improvement",
-    is_critical: false,
-    released_at: "2026-06-25",
-    details: [
-      "Mengimplementasikan dynamic dummy data injection (hybrid mocking) untuk memicu peringatan KKM dasar kelas (class-kkm-alert) agar disorot selama tour guide.",
-      "Menjamin zero database pollution dengan mengelola data tiruan sepenuhnya di memori dan memulihkan filter serta search query pencarian ke kondisi semula pasca-tour.",
-      "Menyelaraskan penggunaan istilah 'siswa' menjadi 'murid' secara menyeluruh di antarmuka halaman Kelas, dropdown menu import, dialog OCR, dan label tombol kartu kelas."
-    ]
-  },
-  {
-    id: "v2.5.1",
-    version: "2.5.1",
-    title: "Penanda Peringatan KKM Otomatis Halaman Mapel",
-    description: "Menambahkan indikator peringatan visual interaktif (ikon dan tooltip hover/press) pada KKM kelas di halaman Mata Pelajaran apabila belum diatur di database.",
-    type: "improvement",
-    is_critical: false,
-    released_at: "2026-06-25",
-    details: [
-      "Menampilkan ikon AlertTriangle berwarna amber di dalam badge KKM Kelas jika nilai KKM di database kosong (null/undefined).",
-      "Membungkus ikon peringatan dengan komponen Tooltip Radix UI yang dapat dipicu baik saat disentuh/ditekan (press/click) maupun diarahkan kursor (hover).",
-      "Memastikan interaksi sentuh pada perangkat seluler/PWA membuka tooltip dengan andal tanpa memicu form submit atau event page lainnya."
-    ]
-  },
-  {
-    id: "v2.5.0",
-    version: "2.5.0",
-    title: "Penyempurnaan Tampilan KKM Kelas Halaman Mapel",
-    description: "Menyempurnakan tampilan angka KKM kelas pada badge ringkasan halaman Mata Pelajaran dengan memberikan nilai default jika data KKM di database bernilai kosong (null).",
-    type: "improvement",
-    is_critical: false,
-    released_at: "2026-06-25",
-    details: [
-      "Mengimplementasikan operator nullish coalescing (?? 70) pada pembacaan selectedClass.class_kkm.",
-      "Memastikan angka KKM kelas (default 70 jika belum diatur) selalu muncul di samping label 'KKM Kelas:' pada baris ringkasan kelas.",
-      "Menyelaraskan nilai default KKM kelas dengan KKM dialog tambah mata pelajaran baru."
-    ]
-  },
-  {
     id: "v2.4.99",
     version: "2.4.99",
-    title: "Peningkatan Tour Guide Mata Pelajaran — Data Tiruan Hibrida",
-    description: "Meningkatkan panduan visual (Tour Guide) pada halaman Mata Pelajaran dengan mendeteksi ketersediaan data secara dinamis dan menyajikan data tiruan in-memory (kelas dan daftar mapel) jika data belum tersedia di database, serta pemulihan otomatis pasca-tour.",
+    title: "Peningkatan Tour Guide & KKM Otomatis Halaman Mapel & Kelas",
+    description: "Meningkatkan panduan visual (Tour Guide) secara hibrida in-memory pada halaman Mata Pelajaran dan Kelas & Murid, penanda KKM otomatis dengan tooltip interaktif, standardisasi dokumen panduan, serta penyelarasan istilah 'Murid'.",
     type: "feature",
     is_critical: false,
     released_at: "2026-06-25",
     details: [
-      "Penyediaan data tiruan hibrida: jika DB kosong, membangkitkan kelas 'Contoh Kelas VIIA' beserta 3 mapel dummy (Matematika, IPA, Bahasa Inggris) secara in-memory.",
-      "Penyediaan data parsial: jika kelas asli terpilih belum memiliki mapel, secara otomatis membuat 3 mapel dummy agar kartu mapel dapat dirender penuh dan disorot step tour.",
-      "Pemulihan status seleksi: pilihan kelas asli dikembalikan ke kondisi semula saat tur ditutup, selesai, atau dilewati.",
-      "Zero database pollution: menjamin seluruh mapel/kelas tiruan in-memory tidak pernah disimpan ke Supabase.",
-      "Perbaikan bahasa: menyelaraskan kata 'siswa' menjadi 'murid' di dalam selektor dropdown Kelas."
+      "Penyediaan data tiruan hibrida halaman Mapel: membangkitkan kelas 'Contoh Kelas VIIA' beserta 3 mapel dummy (Matematika, IPA, Bahasa Inggris) secara in-memory jika database kosong.",
+      "Penyediaan data tiruan hibrida halaman Kelas & Murid: menyuntikkan kelas dengan KKM lengkap dan kelas tanpa KKM (null) untuk mendemonstrasikan peringatan KKM dasar secara interaktif.",
+      "Penanda Peringatan KKM Otomatis: menampilkan ikon AlertTriangle berwarna amber di dalam badge KKM Kelas jika nilai KKM di database kosong (null/undefined) lengkap dengan Radix Tooltip hover/press.",
+      "Zero database pollution & pemulihan status seleksi: pilihan kelas asli, kueri pencarian, dan filter dikembalikan ke kondisi semula saat tur ditutup, selesai, atau dilewati.",
+      "Penyelarasan istilah: mengubah seluruh kata 'siswa' menjadi 'murid' secara menyeluruh di antarmuka Kelas, dropdown menu import, dialog OCR, dan label tombol kartu kelas.",
+      "Dokumentasi standar: menyusun standar teknis panduan interaktif baru (product-tour-dummy-standard.md) yang terintegrasi langsung ke AGENTS.md."
     ]
   },
   {
