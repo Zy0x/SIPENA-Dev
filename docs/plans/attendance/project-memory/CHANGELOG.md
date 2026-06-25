@@ -2,6 +2,8 @@
 
 ## [2.4.99] - 2026-06-26
 ### Added
+- Implemented V2 Calendar Engine (`calendarEngine.types.ts`, `calendarConflictResolver.ts`, `effectiveDayEngine.ts`, `calendarEngine.ts`, `calendarEngine.test.ts`)
+- Added V2 Calendar Engine specifications and edge cases documentation (`CALENDAR_ENGINE_SPEC.md`, `EFFECTIVE_DAY_RULES.md`, `CALENDAR_CONFLICT_PRIORITY.md`, `CALENDAR_EDGE_CASES.md`)
 - Implemented Attendance Canonical Model (`canonical.types.ts`, `canonical.mappers.ts`, `canonical.validation.ts`, `index.ts`)
 - Added Canonical Model specifications (`CANONICAL_MODEL_SPEC.md`, `CANONICAL_INVARIANTS.md`, `V1_MAPPING_SPEC.md`, `EXPORT_MAPPING_SPEC.md`)
 - Implemented V1 Wrapper/Adapter boundary (`AttendanceV1Wrapper.tsx`, `attendanceV1.adapter.ts`, `attendanceV1.types.ts`, `attendanceV1.guard.ts`)

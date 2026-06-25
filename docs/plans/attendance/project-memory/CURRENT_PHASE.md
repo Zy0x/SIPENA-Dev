@@ -1,11 +1,11 @@
 # CURRENT PHASE
 
-Phase: -1 (DISCOVERY)
+Phase: 04 (CALENDAR ENGINE)
 
-Status: IN PROGRESS
+Status: COMPLETED
 
 ---
 
 ## RULE
-No implementation allowed
-Only analysis and mapping
+No implementation allowed in V1.
+Build V2 engines in isolation.

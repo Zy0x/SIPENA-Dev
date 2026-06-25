@@ -1,16 +1,8 @@
 # NEXT ACTION
 
-Execute Phase -1:
+Execute Phase 05:
 
-1. Analyze Attendance V1 structure
-2. Map dependencies
-3. Identify export coupling
-4. Identify database risks
-5. Identify migration constraints
-
----
-
-## OUTPUT REQUIRED
-- System Map
-- Dependency Graph
-- Risk Report
+1. Design V2 Rule Engine interfaces and types
+2. Implement transition-state checks and default status logic
+3. Map validations for active/inactive school days
+4. Implement rule engine tests in isolation
