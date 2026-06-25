@@ -2993,37 +2993,27 @@ export default function Attendance() {
           breadcrumbs={[{ label: "Presensi" }]}
           actions={
             <div className="flex items-center gap-1.5">
-              {/* Mobile: all actions in single dropdown */}
+              {/* Mobile: import actions in dropdown */}
               <div className="sm:hidden">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-9 w-9">
-                      <Settings2 className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => setShowSettingsSheet(true)} className="gap-2 min-h-[44px]">
-                      <Settings2 className="w-4 h-4" />
-                      Pengaturan Presensi
-                    </DropdownMenuItem>
-                    {selectedClassId && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setShowImportAttendance(true)} className="gap-2 min-h-[44px]">
-                          <Upload className="w-4 h-4" />
-                          Import dari Excel
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setShowOCRAttendance(true)} className="gap-2 min-h-[44px]">
-                          <Camera className="w-4 h-4" />
-                          Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {hasData && (
-                      <DropdownMenuSeparator />
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {selectedClassId && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-9 w-9" title="Import data">
+                        <Upload className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => setShowImportAttendance(true)} className="gap-2 min-h-[44px]">
+                        <FileSpreadsheet className="w-4 h-4" />
+                        Import dari Excel
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowOCRAttendance(true)} className="gap-2 min-h-[44px]">
+                        <Camera className="w-4 h-4" />
+                        Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
 
               {hasData && (
@@ -3104,10 +3094,6 @@ export default function Attendance() {
 
               {/* Desktop: separate buttons */}
               <div className="hidden sm:flex items-center gap-1.5">
-                <Button variant="ghost" size="sm" className="h-9 px-2.5 gap-1.5 text-xs" onClick={() => setShowSettingsSheet(true)}>
-                  <Settings2 className="w-3.5 h-3.5" />
-                  Pengaturan
-                </Button>
                 {selectedClassId && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -3303,6 +3289,28 @@ export default function Attendance() {
               </Popover>
             </div>
           </div>
+          {selectedClassId && (
+            <div className="flex items-center justify-between p-3 sm:p-3.5 bg-muted/5">
+              <div className="flex items-center gap-3 min-w-0">
+                <Settings2 className="w-4 h-4 text-primary flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Pengaturan Kalender</Label>
+                  <p className="text-xs font-medium text-foreground truncate">
+                    {workDayFormat === "5days" ? "5 Hari Kerja" : "6 Hari Kerja"} • {holidays.length} Libur Kustom
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 text-[10px] rounded-lg border-primary/20 hover:border-primary/45 transition-colors"
+                onClick={() => setShowSettingsSheet(true)}
+              >
+                <Settings2 className="w-3 h-3 mr-1" />
+                Ubah
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Holiday Banner */}
