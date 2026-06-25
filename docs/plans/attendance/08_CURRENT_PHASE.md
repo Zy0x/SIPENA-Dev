@@ -1,0 +1,6 @@
+# CURRENT PHASE
+
+Phase: 00 (ARCHITECTURE)
+Status: COMPLETED
+
+NO CODING ALLOWED YET (Blueprint & Contracts Approved)
