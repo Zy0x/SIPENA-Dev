@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.5.1",
+    version: "2.5.1",
+    title: "Penanda Peringatan KKM Otomatis Halaman Mapel",
+    description: "Menambahkan indikator peringatan visual interaktif (ikon dan tooltip hover/press) pada KKM kelas di halaman Mata Pelajaran apabila belum diatur di database.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-25",
+    details: [
+      "Menampilkan ikon AlertTriangle berwarna amber di dalam badge KKM Kelas jika nilai KKM di database kosong (null/undefined).",
+      "Membungkus ikon peringatan dengan komponen Tooltip Radix UI yang dapat dipicu baik saat disentuh/ditekan (press/click) maupun diarahkan kursor (hover).",
+      "Memastikan interaksi sentuh pada perangkat seluler/PWA membuka tooltip dengan andal tanpa memicu form submit atau event page lainnya."
+    ]
+  },
+  {
     id: "v2.5.0",
     version: "2.5.0",
     title: "Penyempurnaan Tampilan KKM Kelas Halaman Mapel",

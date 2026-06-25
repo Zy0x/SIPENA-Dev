@@ -15,6 +15,7 @@ import {
   Loader2,
   ArrowUpDown,
   AlertCircle,
+  AlertTriangle,
   Copy,
   School,
   GraduationCap,
@@ -34,6 +35,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ProductTour, TourButton } from "@/components/ui/product-tour";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import gsap from "gsap";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 type SortOption = "name-asc" | "name-desc" | "kkm-asc" | "kkm-desc";
 const CREATE_CLASS_VALUE = "__create_class__";
@@ -409,7 +411,29 @@ export default function Subjects() {
               <div data-tour="subject-summary" className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
                 <Badge variant="outline" className="rounded-full px-2.5 py-1">{selectedClass.name}</Badge>
                 <Badge variant="secondary" className="rounded-full px-2.5 py-1">{subjects.length} mapel</Badge>
-                <Badge variant="secondary" className="rounded-full px-2.5 py-1">KKM Kelas: {selectedClass.class_kkm ?? 70}</Badge>
+                <Badge variant="secondary" className="rounded-full px-2.5 py-1 flex items-center gap-1.5">
+                  <span>KKM Kelas: {selectedClass.class_kkm ?? 70}</span>
+                  {(selectedClass.class_kkm === null || selectedClass.class_kkm === undefined) && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-amber-500 hover:text-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded p-0.5 -m-0.5 inline-flex items-center justify-center transition-colors cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          aria-label="KKM kelas belum ditentukan. Menggunakan KKM otomatis 70."
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500 animate-pulse" style={{ animationDuration: '3s' }} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[240px] text-xs leading-relaxed bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-900/60 dark:text-amber-200">
+                        KKM kelas belum diisi dan saat ini menggunakan KKM otomatis (70). Klik "Edit Kelas" jika ingin mengubah KKM dasar kelas.
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </Badge>
               </div>
             )}
           </div>
