@@ -43,7 +43,7 @@ export function PageHeader({ icon, title, subtitle, breadcrumbs, actions, classN
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-[12px] bg-primary/10 flex items-center justify-center flex-shrink-0">
             {icon}
@@ -55,7 +55,11 @@ export function PageHeader({ icon, title, subtitle, breadcrumbs, actions, classN
             )}
           </div>
         </div>
-        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+        {actions && (
+          <div className="flex items-center justify-end gap-1.5 shrink-0 w-full sm:w-auto">
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   );

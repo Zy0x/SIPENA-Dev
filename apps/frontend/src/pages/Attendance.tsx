@@ -32,8 +32,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useClasses } from "@/hooks/useClasses";
-import { useStudents } from "@/hooks/useStudents";
+import { useClasses, type Class } from "@/hooks/useClasses";
+import { useStudents, type Student } from "@/hooks/useStudents";
+import { useNavigate } from "react-router-dom";
 import { useAttendance, type AttendanceStatusValue, type DayEvent } from "@/hooks/useAttendance";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -50,6 +51,7 @@ import ImportAttendanceDialog from "@/components/import/ImportAttendanceDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 import { normalizeAttendanceStatus, normalizeOcrDate } from "@/lib/ocrImport";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProductTour, TourButton } from "@/components/ui/product-tour";
 import { createDefaultSignatureConfig, useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { SignatureExportPanel } from "@/components/export/SignatureExportPanel";
 import { UnifiedExportStudio, type ExportColumnOption, type ExportColumnTypographyOption, type ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
@@ -290,8 +292,21 @@ const ATTENDANCE_EXPORT_FORMATS: ExportStudioFormatOption[] = [
 ];
 
 export default function Attendance() {
+  const navigate = useNavigate();
   const { success: showSuccess, warning: showWarning } = useEnhancedToast();
-  const { classes } = useClasses();
+  const { classes: dbClasses } = useClasses();
+  const [isTourDummyActive, setIsTourDummyActive] = useState(false);
+  const [tourDummyClass, setTourDummyClass] = useState<Class | null>(null);
+  const [tourDummyStudents, setTourDummyStudents] = useState<Student[]>([]);
+  const preTourClassIdRef = useRef<string | null>(null);
+  const preTourActiveViewRef = useRef<"daily" | "monthly">("daily");
+
+  const classes = useMemo(() => {
+    if (isTourDummyActive && tourDummyClass) {
+      return dbClasses.length > 0 ? dbClasses : [tourDummyClass];
+    }
+    return dbClasses;
+  }, [dbClasses, isTourDummyActive, tourDummyClass]);
   const lastNotificationRef = useRef<number>(0);
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -365,15 +380,211 @@ export default function Attendance() {
     showSuccess("Format Diubah", `Format hari kerja diubah ke ${fmt === "5days" ? "5 hari (Senin-Jumat)" : "6 hari (Senin-Sabtu)"}`);
   }, [showSuccess]);
 
-  const { students } = useStudents(selectedClassId);
+  const { students: dbStudents } = useStudents(selectedClassId === "tour-dummy-class" ? "" : selectedClassId);
+  
+  const students = useMemo(() => {
+    if (isTourDummyActive && tourDummyStudents.length > 0) {
+      return tourDummyStudents;
+    }
+    return dbStudents;
+  }, [dbStudents, isTourDummyActive, tourDummyStudents]);
+
   const selectedClass = classes.find((c) => c.id === selectedClassId);
 
   const {
     attendanceRecords, holidays, dayEvents, isLocked, dbAvailable,
-    getAttendance, getAttendanceNote, getDayEvent, isHoliday, getHolidayDescription, getMonthStats, getDayStats, getYearlyData,
+    getAttendance: dbGetAttendance, getAttendanceNote: dbGetAttendanceNote, getDayEvent, isHoliday, getHolidayDescription, getMonthStats: dbGetMonthStats, getDayStats: dbGetDayStats, getYearlyData,
     setAttendance: setAttendanceDb, updateNote, bulkSetAttendance, toggleHoliday, upsertDayEvent, deleteDayEvent, toggleLock,
     isSaving, isLoading,
-  } = useAttendance(selectedClassId, currentMonth, workDayFormat);
+  } = useAttendance(selectedClassId === "tour-dummy-class" ? "" : selectedClassId, currentMonth, workDayFormat);
+
+  const getAttendance = useCallback((studentId: string, date: Date) => {
+    if (isTourDummyActive) {
+      const day = date.getDate();
+      if (day % 7 === 0) return "S";
+      if (day % 9 === 0) return "I";
+      if (day % 11 === 0) return "A";
+      if (day % 13 === 0) return "D";
+      return "H";
+    }
+    return dbGetAttendance(studentId, date);
+  }, [dbGetAttendance, isTourDummyActive]);
+
+  const getAttendanceNote = useCallback((studentId: string, date: Date) => {
+    if (isTourDummyActive) {
+      const day = date.getDate();
+      if (day % 7 === 0) return "Izin berobat ke dokter gigi";
+      if (day % 11 === 0) return "Tanpa keterangan (Alpha)";
+      return "";
+    }
+    return dbGetAttendanceNote(studentId, date);
+  }, [dbGetAttendanceNote, isTourDummyActive]);
+
+  const getDayStats = useCallback((date: Date) => {
+    if (isTourDummyActive) {
+      return { H: 4, S: 1, I: 0, A: 0, D: 0, total: 5 };
+    }
+    return dbGetDayStats(date);
+  }, [dbGetDayStats, isTourDummyActive]);
+
+  const getMonthStats = useCallback(() => {
+    if (isTourDummyActive) {
+      return { H: 85, S: 5, I: 2, A: 1, D: 2, total: 95 };
+    }
+    return dbGetMonthStats();
+  }, [dbGetMonthStats, isTourDummyActive]);
+
+  // Tour steps and lifecycle helpers
+  const attendanceTourSteps = useMemo(() => {
+    if (classes.length === 0) {
+      return [
+        {
+          target: "[data-tour='attendance-no-classes']",
+          title: "Buat Kelas Terlebih Dahulu",
+          description: "Presensi memerlukan data kelas dan murid. Silakan buat kelas baru terlebih dahulu melalui halaman Kelas & Murid.",
+        },
+      ];
+    }
+
+    const baseSteps = [
+      {
+        target: "[data-tour='class-select']",
+        title: "Pilih Kelas",
+        description: "Pilih kelas yang akan dikelola presensinya. Data murid akan dimuat setelah kelas dipilih.",
+      },
+      {
+        target: "[data-tour='view-switch']",
+        title: "Pilih Tampilan",
+        description: "Beralih antara tampilan Harian untuk mengisi presensi hari ini, atau Rekap Bulanan untuk melihat rekapitulasi kehadiran murid.",
+      },
+      {
+        target: "[data-tour='date-select']",
+        title: "Pilih Tanggal",
+        description: "Gunakan kalender untuk memilih tanggal presensi harian atau melihat bulan rekapitulasi yang berbeda.",
+      },
+      {
+        target: "[data-tour='calendar-settings']",
+        title: "Pengaturan Kalender",
+        description: "Atur format hari kerja (5 atau 6 hari kerja) serta kelola hari libur kustom dan libur nasional di sini.",
+      },
+      {
+        target: "[data-tour='import-attendance']",
+        title: "Import Presensi",
+        description: "Import data kehadiran dari file Excel atau gunakan fitur OCR Kamera (BETA) untuk memindai dokumen fisik presensi.",
+      },
+    ];
+
+    if (students.length === 0) {
+      return [
+        ...baseSteps,
+        {
+          target: "[data-tour='attendance-empty-cta']",
+          title: "Mulai Tambah Murid",
+          description: "Kelas ini belum memiliki murid. Silakan klik tombol di bawah untuk diarahkan ke halaman pengelolaan murid.",
+        },
+      ];
+    }
+
+    return [
+      ...baseSteps,
+      {
+        target: "[data-tour='export-attendance']",
+        title: "Ekspor Presensi",
+        description: "Ekspor rekapitulasi kehadiran bulanan ke file PDF (siap cetak), Excel, atau gambar PNG resolusi tinggi.",
+      },
+      {
+        target: "[data-tour='attendance-table']",
+        title: "Tabel Presensi",
+        description: "Klik status (H, S, I, A, D) pada murid untuk mengubah kehadiran, dan klik ikon teks di sebelah nama untuk menambahkan catatan/keterangan khusus.",
+      },
+    ];
+  }, [classes.length, students.length]);
+
+  const setupFullDummyData = () => {
+    setIsTourDummyActive(true);
+    const now = new Date().toISOString();
+
+    const dummyClass: Class = {
+      id: "tour-dummy-class",
+      user_id: "tour-user",
+      academic_year_id: "tour-year",
+      semester_id: "tour-semester",
+      name: "Contoh Kelas VIIA",
+      description: "Kelas contoh untuk panduan interaktif SIPENA.",
+      class_kkm: 75,
+      created_at: now,
+      updated_at: now,
+      student_count: 5,
+    };
+    setTourDummyClass(dummyClass);
+    setSelectedClassId("tour-dummy-class");
+
+    const dummyStuds: Student[] = [
+      { id: "tour-stud-1", class_id: "tour-dummy-class", name: "Ahmad Murid A", nisn: "1234567890", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+      { id: "tour-stud-2", class_id: "tour-dummy-class", name: "Budi Murid B", nisn: "1234567891", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+      { id: "tour-stud-3", class_id: "tour-dummy-class", name: "Citra Murid C", nisn: "1234567892", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+      { id: "tour-stud-4", class_id: "tour-dummy-class", name: "Dina Murid D", nisn: "1234567893", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+      { id: "tour-stud-5", class_id: "tour-dummy-class", name: "Eko Murid E", nisn: "1234567894", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+    ];
+    setTourDummyStudents(dummyStuds);
+  };
+
+  const setupDummyStudents = (classId: string) => {
+    setIsTourDummyActive(true);
+    const now = new Date().toISOString();
+
+    const dummyStuds: Student[] = [
+      { id: "tour-stud-1", class_id: classId, name: "Ahmad Murid A", nisn: "1234567890", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+      { id: "tour-stud-2", class_id: classId, name: "Budi Murid B", nisn: "1234567891", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+      { id: "tour-stud-3", class_id: classId, name: "Citra Murid C", nisn: "1234567892", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+      { id: "tour-stud-4", class_id: classId, name: "Dina Murid D", nisn: "1234567893", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+      { id: "tour-stud-5", class_id: classId, name: "Eko Murid E", nisn: "1234567894", is_bookmarked: false, created_at: now, updated_at: now, user_id: "tour-user" },
+    ];
+    setTourDummyStudents(dummyStuds);
+  };
+
+  const prepareAttendanceTour = async () => {
+    preTourClassIdRef.current = selectedClassId;
+    preTourActiveViewRef.current = activeView;
+    setActiveView("daily");
+
+    let activeClassId = selectedClassId;
+    if (!activeClassId) {
+      if (classes.length > 0) {
+        activeClassId = classes[0].id;
+        setSelectedClassId(activeClassId);
+        await new Promise<void>((resolve) => setTimeout(resolve, 150));
+      } else {
+        setupFullDummyData();
+        await new Promise<void>((resolve) => setTimeout(resolve, 300));
+        return;
+      }
+    }
+
+    if (students.length === 0) {
+      setupDummyStudents(activeClassId);
+      await new Promise<void>((resolve) => setTimeout(resolve, 300));
+    }
+  };
+
+  const cleanupAttendanceTour = () => {
+    setIsTourDummyActive(false);
+    setTourDummyClass(null);
+    setTourDummyStudents([]);
+
+    if (preTourClassIdRef.current !== null) {
+      setSelectedClassId(preTourClassIdRef.current);
+      preTourClassIdRef.current = null;
+    } else {
+      if (selectedClassId === "tour-dummy-class") {
+        setSelectedClassId("");
+      }
+    }
+
+    if (preTourActiveViewRef.current !== null) {
+      setActiveView(preTourActiveViewRef.current);
+    }
+  };
 
   // GSAP entrance
   useEffect(() => {
@@ -2989,40 +3200,44 @@ export default function Attendance() {
         <PageHeader
           icon={<CalendarDays className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />}
           title="Presensi"
-          subtitle="Kelola kehadiran siswa"
+          subtitle="Kelola kehadiran murid"
           breadcrumbs={[{ label: "Presensi" }]}
           actions={
-            <div className="flex items-center gap-1.5">
-              {/* Mobile: import actions in dropdown */}
-              <div className="sm:hidden">
-                {selectedClassId && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-9 w-9" title="Import data">
-                        <Upload className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => setShowImportAttendance(true)} className="gap-2 min-h-[44px]">
-                        <FileSpreadsheet className="w-4 h-4" />
-                        Import dari Excel
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowOCRAttendance(true)} className="gap-2 min-h-[44px]">
-                        <Camera className="w-4 h-4" />
-                        Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
+            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+              {/* 1. Import (excel/OCR) */}
+              {selectedClassId && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5 text-xs font-semibold" data-tour="import-attendance">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Import</span>
+                      <ChevronDown className="w-3 h-3 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setShowImportAttendance(true)} className="gap-2 min-h-[44px] sm:min-h-[38px] cursor-pointer">
+                      <FileSpreadsheet className="w-4 h-4" />
+                      Import dari Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowOCRAttendance(true)} className="gap-2 min-h-[44px] sm:min-h-[38px] cursor-pointer">
+                      <Camera className="w-4 h-4" />
+                      Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
+              {/* 2. Panduan (TourButton) */}
+              <TourButton tourKey="attendance" onBeforeStart={prepareAttendanceTour} />
+
+              {/* 3. Ekspor (UnifiedExportStudio) */}
               {hasData && (
-                <div className="sm:hidden">
+                <div data-tour="export-attendance">
                   <UnifiedExportStudio
                     title="Studio Ekspor Presensi"
                     description="Pilih format ekspor presensi dan kelola signature dari satu panel yang lebih mudah dipahami."
                     triggerLabel="Ekspor"
-                    triggerClassName="h-9 px-3 text-xs"
+                    triggerClassName="h-9 px-2.5 text-xs font-semibold"
                     open={attendanceStudioOpen}
                     onOpenChange={setAttendanceStudioOpen}
                     onTriggerClick={openAttendanceExportMonthDialog}
@@ -3091,110 +3306,12 @@ export default function Attendance() {
                   />
                 </div>
               )}
-
-              {/* Desktop: separate buttons */}
-              <div className="hidden sm:flex items-center gap-1.5">
-                {selectedClassId && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-9 px-2.5 gap-1.5 text-xs">
-                        <Upload className="w-3.5 h-3.5" />
-                        Import
-                        <ChevronDown className="w-3 h-3 opacity-60" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setShowImportAttendance(true)} className="gap-2">
-                        <FileSpreadsheet className="w-4 h-4" />
-                        Import dari Excel
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowOCRAttendance(true)} className="gap-2">
-                        <Camera className="w-4 h-4" />
-                        Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-                {hasData && (
-                  <UnifiedExportStudio
-                    title="Studio Ekspor Presensi"
-                    description="Pilih format ekspor presensi, aktifkan signature bila diperlukan, lalu unduh file dari satu studio."
-                    triggerLabel="Ekspor"
-                    triggerClassName="h-9 px-2.5 text-xs"
-                    open={attendanceStudioOpen}
-                    onOpenChange={setAttendanceStudioOpen}
-                    onTriggerClick={openAttendanceExportMonthDialog}
-                    formats={ATTENDANCE_EXPORT_FORMATS}
-                    selectedFormat={attendanceExportFormat}
-                    onFormatChange={handleAttendanceExportFormatChange}
-                    onExport={async ({ formatId, includeSignature: nextIncludeSignature, signatureConfig: nextSignatureConfig, paperSize: nextPaperSize, documentStyle: nextDocumentStyle, autoFitOnePage: nextAutoFitOnePage }) => {
-                      if (formatId === "excel") {
-                        await handleExportExcel(nextSignatureConfig, nextIncludeSignature, selectedAttendanceColumnKeys);
-                        return;
-                      }
-                      if (formatId === "pdf") {
-                        await handleExportPDFVector(nextSignatureConfig, nextIncludeSignature, nextDocumentStyle, nextAutoFitOnePage, nextPaperSize, selectedAttendanceColumnKeys);
-                        return;
-                      }
-                      await handleExportPNGV2(formatId === "png-4k" ? "4k" : "hd", nextSignatureConfig, nextIncludeSignature, nextDocumentStyle, nextAutoFitOnePage, nextPaperSize, selectedAttendanceColumnKeys);
-                    }}
-                    includeSignature={includeSignature}
-                    onIncludeSignatureChange={setIncludeSignature}
-                    signatureConfig={attendanceDefaultSignatureConfig}
-                    hasSignature={hasSignature}
-                    isLoading={signatureLoading}
-                    isSaving={signatureSaving}
-                    onSaveSignature={saveSignature}
-                    paperSize={paperSize}
-                    onPaperSizeChange={setPaperSize}
-                    documentStyle={documentStyle}
-                    onDocumentStyleChange={setDocumentStyle}
-                    autoFitOnePage={autoFitOnePage}
-                    onAutoFitOnePageChange={setAutoFitOnePage}
-                    showAutoFitPreset
-                    formatPanelExtra={attendanceDebugPanel}
-                    stylePanelExtra={attendanceStylePanelExtra}
-                    previewFooter={attendanceDebugPreviewFooter}
-                    columnOptions={attendanceColumnOptions}
-                    onColumnOptionChange={handleAttendanceColumnOptionChange}
-                    columnCount={selectedAttendanceColumnKeys.length}
-                    columnTypographyOptions={attendanceColumnTypographyOptions}
-                    onRestoreDefaultMode={resetAttendanceStudioDefaults}
-                    defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
-                    stylePresetMode="attendance"
-                    stylePresetBaseline={attendanceStylePresetBaseline}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
-                      <AttendanceExportPreviewV2
-                        previewFormat={previewFormat}
-                        draft={draft}
-                        setDraft={setDraft}
-                        previewDate={previewDate}
-                        includeSignature={previewIncludeSignature}
-                        data={attendancePreviewStudioData}
-                        paperSize={previewPaperSize}
-                        documentStyle={previewDocumentStyle ?? documentStyle}
-                        autoFitOnePage={previewAutoFitOnePage ?? autoFitOnePage}
-                        visibleColumnKeys={selectedAttendanceColumnKeys}
-                        debugEnabled={attendanceDebugEnabled}
-                        onTrace={(trace) => attendanceDebugEnabled && commitAttendanceTrace(trace)}
-                        liveEditMode={liveEditMode}
-                        highlightTarget={highlightTarget}
-                        onHighlightTargetHoverChange={onHighlightTargetHoverChange}
-                        onHighlightTargetSelect={onHighlightTargetSelect}
-                        annotationDisplayMode={attendanceAnnotationDisplayMode}
-                        eventAnnotationDisplayMode={attendanceEventAnnotationDisplayMode}
-                        inlineLabelStyle={attendanceInlineLabelStyle}
-                      />
-                    )}
-                  />
-                )}
-              </div>
             </div>
           }
         />
 
         <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
-          <div className="flex items-center gap-3 p-3 sm:p-3.5">
+          <div data-tour="class-select" className="flex items-center gap-3 p-3 sm:p-3.5">
             <School className="w-4 h-4 text-primary flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Kelas</Label>
@@ -3210,7 +3327,7 @@ export default function Attendance() {
               </Select>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 sm:p-3.5">
+          <div data-tour="date-select" className="flex items-center gap-3 p-3 sm:p-3.5">
             <CalendarIcon className="w-4 h-4 text-primary flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Tanggal</Label>
@@ -3290,7 +3407,7 @@ export default function Attendance() {
             </div>
           </div>
           {selectedClassId && (
-            <div className="flex items-center justify-between p-3 sm:p-3.5 bg-muted/5">
+            <div data-tour="calendar-settings" className="flex items-center justify-between p-3 sm:p-3.5 bg-muted/5">
               <div className="flex items-center gap-3 min-w-0">
                 <Settings2 className="w-4 h-4 text-primary flex-shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -3337,12 +3454,27 @@ export default function Attendance() {
 
         {/* Empty State */}
         {!selectedClassId && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div data-tour={classes.length === 0 ? "attendance-no-classes" : undefined} className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-[20px] bg-muted/60 flex items-center justify-center mb-4">
               <CalendarDays className="w-8 h-8 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground">Pilih Kelas</p>
-            <p className="text-xs text-muted-foreground mt-1 max-w-xs">Pilih kelas di atas untuk mulai mencatat kehadiran siswa.</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs">Pilih kelas di atas untuk mulai mencatat kehadiran murid.</p>
+          </div>
+        )}
+
+        {selectedClassId && students.length === 0 && (
+          <div data-tour="attendance-empty-cta" className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-[20px] bg-primary/10 flex items-center justify-center mb-4">
+              <Users className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="mb-1 text-base font-semibold text-foreground">Belum Ada Murid</h3>
+            <p className="mb-4 max-w-xs text-center text-xs text-muted-foreground">
+              Kelas ini belum memiliki data murid. Silakan tambahkan murid terlebih dahulu.
+            </p>
+            <Button variant="outline" onClick={() => navigate("/classes")} className="h-9 rounded-xl text-xs gap-1.5">
+              Kelola Murid
+            </Button>
           </div>
         )}
 
@@ -3350,7 +3482,7 @@ export default function Attendance() {
           <div className="rounded-3xl bg-card border border-border shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header Section */}
             <div className="p-4 sm:p-5 border-b border-border bg-muted/10">
-              <div className="flex rounded-2xl bg-muted/30 p-1.5 gap-1.5 border-2 border-muted/50 shadow-inner">
+              <div data-tour="view-switch" className="flex rounded-2xl bg-muted/30 p-1.5 gap-1.5 border-2 border-muted/50 shadow-inner">
                 {([
                   { key: "daily" as const, label: "Harian", icon: UserCheck },
                   { key: "monthly" as const, label: "Rekap Bulanan", icon: BarChart3 },
@@ -3449,15 +3581,12 @@ export default function Attendance() {
                       <span>= Hari libur kustom</span>
                     </div>
                   </div>
-                  <p className="text-[9px] text-muted-foreground/70 leading-relaxed">
-                    Ketuk tombol status untuk mencatat kehadiran. Ketuk lagi untuk membatalkan. Tekan ikon 💬 untuk menambah catatan.
-                  </p>
                 </div>
               </div>
 
               {/* DAILY VIEW */}
               {activeView === "daily" && (
-                <div className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden max-w-full">
+                <div data-tour="attendance-table" className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden max-w-full">
                 <div className="flex items-center justify-between gap-2 p-3 sm:p-3.5 border-b border-border">
                   <div className="flex items-center gap-2 min-w-0">
                     <Users className="w-4 h-4 text-primary flex-shrink-0" />
@@ -3467,7 +3596,7 @@ export default function Attendance() {
                   <div className="flex items-center gap-1.5">
                     <div className="relative">
                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-                      <Input placeholder="Cari siswa..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-7 h-8 text-xs w-24 sm:w-36 rounded-xl" />
+                      <Input placeholder="Cari murid..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-7 h-8 text-xs w-24 sm:w-36 rounded-xl" />
                     </div>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -3562,7 +3691,7 @@ export default function Attendance() {
                     {filteredStudents.length === 0 && (
                       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                         <Users className="w-8 h-8 mb-2 opacity-40" />
-                        <p className="text-xs">Tidak ada siswa ditemukan</p>
+                        <p className="text-xs">Tidak ada murid ditemukan</p>
                       </div>
                     )}
                   </div>
@@ -3607,11 +3736,11 @@ export default function Attendance() {
                   </div>
                 )}
 
-                <SmartScrollTable>
+                <SmartScrollTable data-tour="attendance-table">
                   <table className="w-full text-center border-collapse min-w-max">
                     <thead className="sticky top-0 z-10 bg-card">
                       <tr className="border-b border-border">
-                        <th className="sticky left-0 z-20 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r border-border min-w-[120px] sm:min-w-[160px]">No. Nama Siswa</th>
+                        <th className="sticky left-0 z-20 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r border-border min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
                         {monthDays.map(day => {
                           const dayNum = getDay(day);
                           const isSun = dayNum === 0;
@@ -3817,8 +3946,8 @@ export default function Attendance() {
           <DialogContent className="sm:max-w-md mx-3 rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-sm sm:text-base">Presensi Massal</DialogTitle>
-              <DialogDescription className="text-xs">
-                Set presensi untuk semua siswa pada {format(selectedDate, "d MMMM yyyy", { locale: idLocale })}
+              <DialogDescription>
+                Set presensi untuk semua murid pada {format(selectedDate, "d MMMM yyyy", { locale: idLocale })}
               </DialogDescription>
             </DialogHeader>
             
@@ -3830,7 +3959,7 @@ export default function Attendance() {
                   <div className="text-xs">
                     <p className="font-semibold text-grade-warning">Data presensi sudah ada!</p>
                     <p className="text-muted-foreground mt-0.5">
-                      {existingBulkStudents.length} dari {students.length} siswa sudah memiliki data presensi pada tanggal ini.
+                      {existingBulkStudents.length} dari {students.length} murid sudah memiliki data presensi pada tanggal ini.
                     </p>
                   </div>
                 </div>
@@ -3839,7 +3968,7 @@ export default function Attendance() {
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50 sticky top-0">
                       <tr>
-                        <th className="text-left px-3 py-1.5 font-medium">Nama Siswa</th>
+                        <th className="text-left px-3 py-1.5 font-medium">Nama Murid</th>
                         <th className="text-center px-2 py-1.5 font-medium">Status</th>
                       </tr>
                     </thead>
@@ -4894,6 +5023,7 @@ export default function Attendance() {
           };
         }}
       />
+      <ProductTour steps={attendanceTourSteps} tourKey="attendance" onComplete={cleanupAttendanceTour} />
     </>
   );
 }

@@ -44,17 +44,19 @@ export const changelogData: ChangelogEntry[] = [
   {
     id: "v2.4.99",
     version: "2.4.99",
-    title: "Peningkatan Tour Guide & KKM Otomatis Halaman Mapel & Kelas",
-    description: "Meningkatkan panduan visual (Tour Guide) secara hibrida in-memory pada halaman Mata Pelajaran dan Kelas & Murid, penanda KKM otomatis dengan tooltip interaktif, standardisasi dokumen panduan, serta penyelarasan istilah 'Murid'.",
+    title: "Peningkatan Tour Guide & Relokasi Layout Halaman Presensi Mobile",
+    description: "Peningkatan panduan visual (Tour Guide) in-memory halaman Mapel, Kelas, dan Presensi. Relokasi tombol aksi presensi pada mobile agar turun ke baris baru dengan urutan Import-Panduan-Ekspor, unifikasi tombol aksi, dan penyelarasan istilah 'Murid'.",
     type: "feature",
     is_critical: false,
     released_at: "2026-06-25",
     details: [
-      "Penyediaan data tiruan hibrida halaman Mapel: membangkitkan kelas 'Contoh Kelas VIIA' beserta 3 mapel dummy (Matematika, IPA, Bahasa Inggris) secara in-memory jika database kosong.",
+      "Penyediaan data tiruan hibrida halaman Mapel: membangkitkan kelas 'Contoh Kelas VIIA' beserta 3 mapel dummy secara in-memory jika database kosong.",
       "Penyediaan data tiruan hibrida halaman Kelas & Murid: menyuntikkan kelas dengan KKM lengkap dan kelas tanpa KKM (null) untuk mendemonstrasikan peringatan KKM dasar secara interaktif.",
-      "Penanda Peringatan KKM Otomatis: menampilkan ikon AlertTriangle berwarna amber di dalam badge KKM Kelas jika nilai KKM di database kosong (null/undefined) lengkap dengan Radix Tooltip hover/press.",
-      "Zero database pollution & pemulihan status seleksi: pilihan kelas asli, kueri pencarian, dan filter dikembalikan ke kondisi semula saat tur ditutup, selesai, atau dilewati.",
-      "Penyelarasan istilah: mengubah seluruh kata 'siswa' menjadi 'murid' secara menyeluruh di antarmuka Kelas, dropdown menu import, dialog OCR, dan label tombol kartu kelas.",
+      "Penanda Peringatan KKM Otomatis: menampilkan ikon AlertTriangle berwarna amber di dalam badge KKM Kelas jika nilai KKM di database kosong (null/undefined) lengkap dengan Radix Tooltip.",
+      "Mobile-First Layout Header Presensi: refactor komponen PageHeader agar men-stack tombol aksi di baris baru pada viewport mobile dan menyusunnya dalam urutan: Import, Panduan, dan Ekspor.",
+      "Unifikasi Aksi Presensi: menyatukan blok kode aksi mobile dan desktop untuk tombol Import dan Ekspor guna menghilangkan duplikasi kode secara drastis.",
+      "Panduan Interaktif Presensi: mengintegrasikan TourButton dengan 7 langkah panduan presensi harian/bulanan beserta injeksi data dummy hibrida (zero database pollution).",
+      "Penyelarasan Istilah Murid: mengubah kata 'siswa' menjadi 'murid' secara menyeluruh di halaman presensi (seperti Nama Murid, Cari Murid, dll.) sesuai standar SIPENA.",
       "Dokumentasi standar: menyusun standar teknis panduan interaktif baru (product-tour-dummy-standard.md) yang terintegrasi langsung ke AGENTS.md."
     ]
   },
