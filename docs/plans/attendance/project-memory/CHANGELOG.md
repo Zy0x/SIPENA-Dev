@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2.4.102] - 2026-06-26
+### Added
+- Hardened Phase 03 canonical Presensi contract with strict types for records, days, locks, notes, summaries, UI projection, export projection, validation issues, and shadow comparison.
+- Added canonical validation helpers for status, date/month formats, duplicate murid/date records, missing references, non-effective days, locked writes, and export leakage.
+- Added canonical mapper tests covering V1 mapping, UI/export projection, custom status validation, and debug metadata isolation.
+
+### Safety
+- V1 page and hook remain untouched.
+- Export implementation remains untouched; Phase 03 only adds an export-safe canonical payload.
+- Supabase schema remains untouched.
+
 ## [2.4.101] - 2026-06-26
 ### Added
 - Hardened Phase 02 V1 wrapper/adapter seam for Presensi.

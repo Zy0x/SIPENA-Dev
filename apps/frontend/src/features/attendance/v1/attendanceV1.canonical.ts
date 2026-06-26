@@ -34,10 +34,12 @@ export function mapV1RecordToCanonical(record: V1Record): AttendanceRecordCanoni
     date: record.date,
     status: mapV1StatusToCanonical(record.status),
     note: record.note ?? null,
-    createdAt: "",
-    updatedAt: "",
-    metadata: {
-      source: "attendance-v1",
+    createdAt: null,
+    updatedAt: null,
+    debug: {
+      sourceEngine: "v1",
+      sourceTable: "attendance_records",
+      rawId: record.id,
     },
   };
 }
@@ -77,6 +79,7 @@ export function mapV1SeamInputToCanonicalDataset(input: V1CanonicalSeamInput): A
     month: normalizeV1LockMonth(input.month),
     students: input.students,
     records: input.attendanceRecords.map(mapV1RecordToCanonical),
+    days: [],
     holidays: input.holidays.map(mapV1HolidayToCanonical),
     dayEvents: input.dayEvents.map(mapV1DayEventToCanonical),
     locks: input.locks.map(mapV1LockToCanonical),

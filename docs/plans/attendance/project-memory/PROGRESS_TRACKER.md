@@ -39,3 +39,14 @@ Progress is documentation-based, not implementation-based
 - Export/import/OCR/schema modified: no.
 - Runtime default: V1.
 - V2 activation: still blocked.
+
+## PHASE 03 IMPLEMENTATION CHECKPOINT - 2026-06-26
+
+- Canonical types: implemented under `apps/frontend/src/features/attendance/canonical/`.
+- Canonical mappers: implemented for V1-like records, holidays, day events, locks, UI projection, and export-safe projection.
+- Canonical validation: implemented for status, ISO date/month, murid/class references, duplicate murid/date records, non-effective days, locked writes, and export engine leakage.
+- Canonical docs: expanded in `docs/plans/attendance/canonical/`.
+- Targeted tests: canonical, V1 seam, and runtime tests passed.
+- V1 internals modified: no.
+- Export/import/OCR/schema modified: no.
+- Runtime default: V1.
