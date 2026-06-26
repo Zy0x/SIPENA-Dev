@@ -1,47 +1,103 @@
 # RUNTIME SWITCH BLUEPRINT: Attendance V2
 
-This document describes the design and specification of the **Runtime Switch** that toggles execution between V1 and V2 engines dynamically.
+## Objective
+Specify a config-controlled runtime switch that can choose V1 or V2 without editing V1, changing export format, rewriting schema, or requiring redeploy for rollback.
 
----
+## Evidence from actual repo files
+- `apps/frontend/src/features/attendance/runtime/attendanceRuntime.config.ts`: resolver already has env/localStorage concepts and defaults to `v1`.
+- `apps/frontend/src/features/attendance/runtime/attendanceRuntimeGuard.ts`: V2 is currently blocked by `IS_V2_IMPLEMENTED=false`.
+- `apps/frontend/src/features/attendance/runtime/AttendanceRuntimeProvider.tsx`: provider exists but is not mounted at `/attendance`.
+- `apps/frontend/src/app/App.tsx:114`: active route bypasses the runtime provider.
+- `docs/plans/attendance/03_RUNTIME_SWITCH.md`: switch must not require DB migration, code rewrite, or export change.
 
-## 1. Switch Configuration & Registry
+## Findings
+The runtime switch must be a route-level shell first, not a deep change inside V1. The switch may resolve V2 only when all guards pass. Until then, every config value must collapse to V1.
 
-The active engine is determined by a system configuration variable `ATTENDANCE_RUNTIME_ENGINE` which can be configured via:
-- Environment variable: `VITE_ATTENDANCE_ENGINE="v1 | v2"`
-- Database system config: a record in `system_settings` table (if available)
-- LocalStorage override: `attendance_engine_override="v1 | v2"` (for developer sandbox testing)
+## Runtime resolver priority
+1. Emergency remote config: `attendance_runtime_engine = "v1"` always wins when available.
+2. Developer override: `localStorage.attendance_engine_override`, only in non-production or explicit debug mode.
+3. Environment default: `VITE_ATTENDANCE_ENGINE`.
+4. Hard default: `v1`.
 
----
+Invalid values resolve to `v1`.
 
-## 2. Code Interface (Frontend)
+## Engine registry contract
+```ts
+export type AttendanceEngineId = "v1" | "v2";
 
-The `AttendanceRuntimeContext` wraps the page and routes the execution:
+export type AttendanceRuntimeMode =
+  | "v1-active"
+  | "v2-shadow"
+  | "v2-active";
 
-```typescript
-import { useAttendanceV1Adapter } from "../v1/useAttendanceV1Adapter";
-import { useAttendanceV2 } from "../v2/hooks/useAttendanceV2";
-
-export interface AttendanceRuntime {
-  engine: "v1" | "v2";
-  records: CanonicalRecord[];
-  holidays: CanonicalHoliday[];
-  getDayStats: (date: Date) => Stats;
-  setAttendance: (studentId: string, date: Date, status: string | null) => Promise<void>;
-  // ... (matches the seam contract)
+export interface AttendanceEngineDescriptor {
+  id: AttendanceEngineId;
+  mode: AttendanceRuntimeMode;
+  label: string;
+  isImplemented: boolean;
+  canRead: boolean;
+  canWrite: boolean;
+  canExport: boolean;
+  fallbackEngine: "v1" | null;
 }
 
-export function useAttendanceRuntime(classId: string, currentMonth: Date, workDayFormat: string): AttendanceRuntime {
-  const engine = resolveActiveEngine(); // checks LocalStorage -> Env -> Default (v1)
-
-  const v1 = useAttendanceV1Adapter(classId, currentMonth, workDayFormat, engine === "v1");
-  const v2 = useAttendanceV2(classId, currentMonth, workDayFormat, engine === "v2");
-
-  return engine === "v2" ? v2 : v1;
+export interface AttendanceRuntimeResolution {
+  requestedEngine: AttendanceEngineId;
+  resolvedEngine: AttendanceEngineId;
+  mode: AttendanceRuntimeMode;
+  reason: "config" | "guarded" | "invalid-config" | "fallback" | "emergency";
 }
 ```
 
----
+## Frontend runtime flow
+```mermaid
+sequenceDiagram
+  participant Route as AttendanceRuntimeRoute
+  participant Resolver as RuntimeResolver
+  participant Registry as EngineRegistry
+  participant V1 as V1Adapter
+  participant V2 as V2Engine
+  Route->>Resolver: resolve config
+  Resolver->>Registry: get descriptor
+  alt resolved v1
+    Registry->>V1: mount adapter
+  else resolved v2 and guard passes
+    Registry->>V2: mount engine
+  else v2 blocked/fails
+    Registry->>V1: fallback
+  end
+```
 
-## 3. Failure & Recovery Paths
-- **Safe Fallback**: If `useAttendanceV2` throws an initialization error, the runtime context catches it, logs a telemetry warning, and switches fallback state to `v1`.
-- **Hot Swap**: Switching engines does not require a database schema migration, because V2 operates in isolation. Switching configuration changes the active code paths instantly.
+## Backend runtime flow
+Backend runtime does not exist yet. When introduced, it must use the same descriptor semantics and reject V2 writes unless:
+- engine is implemented,
+- authenticated user owns the target class,
+- table compatibility decision is approved,
+- shadow mode is explicitly enabled or V2 is active.
+
+## Failure modes
+| Failure | Resolution |
+|---|---|
+| Missing config | `v1-active`, reason `config`. |
+| Unknown config value | `v1-active`, reason `invalid-config`. |
+| V2 requested but not implemented | `v1-active`, reason `guarded`. |
+| V2 render/init error | `v1-active`, reason `fallback`. |
+| Remote emergency flag says V1 | `v1-active`, reason `emergency`. |
+
+## Test gate
+- Unit: resolver priority and invalid values.
+- Unit: V2 guard always forces V1 until `IS_V2_IMPLEMENTED=true`.
+- Source guard: `/attendance` route imports only `AttendanceRuntimeRoute`, not V2 internals.
+- Browser smoke: `/attendance` renders identical V1 surface with default config.
+- Regression: export, import, OCR buttons still appear and call V1 behavior while resolved V1.
+
+## Risks
+- `BLOCKER`: mounting runtime inside `Attendance.tsx` violates V1 lock.
+- `HIGH`: fallback that silently switches during writes can hide data mismatch.
+- `MEDIUM`: localStorage override can confuse support if enabled in production.
+
+## Safe next action
+Phase 01 may implement `AttendanceRuntimeRoute` and wire `/attendance` to it, with V1 as the only operational engine.
+
+## Blockers
+- V2 cannot be enabled until the registry can prove implementation, canonical parity, export adapter parity, and table compatibility.

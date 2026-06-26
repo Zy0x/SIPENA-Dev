@@ -1,79 +1,129 @@
 # CANONICAL MODEL BLUEPRINT: Attendance V2
 
-This document defines the single source of truth schemas representing the **Canonical Attendance Model** consumed by UI components, export tools, and reports.
+## Objective
+Define the canonical model as the only shared interface for runtime, UI, export, import, reports, backend API, migration, shadow mode, and tests.
 
----
+## Evidence from actual repo files
+- `docs/plans/attendance/engines/CANONICAL_MODEL.md`: UI and export must read canonical model only and engine source is hidden.
+- `apps/frontend/src/features/attendance/canonical/canonical.types.ts`: canonical draft includes statuses, records, day events, holidays, locks, snapshot, and export dataset types.
+- `apps/frontend/src/hooks/useAttendance.ts`: V1 active status model is `H/I/S/A/D`, with holidays, day events, locks, and notes.
+- `apps/frontend/src/lib/ocrImport/validation.ts`: OCR normalization already has attendance-specific date/status validation.
+- `apps/frontend/src/components/export/AttendanceExportPreviewV2.tsx`: export needs a print dataset, not raw engine records.
 
-## 1. Core Entity Schemas
+## Findings
+The canonical model must be broader than a single attendance row. It must carry records, effective day context, holidays, day events, lock state, summaries, source metadata, and export-ready projections.
 
-All types reside in `packages/attendance-contracts/src/canonical.ts` to ensure frontend-backend synchrony.
+## Canonical ownership
+Preferred final owner:
+```txt
+packages/attendance-contracts/src/
+  canonical.ts
+  runtime.ts
+  api.ts
+  export.ts
+  import.ts
+  shadow.ts
+  errors.ts
+```
 
-```typescript
-export type CanonicalStatus = "H" | "S" | "I" | "A" | "D" | "L" | "-";
+Phase 01 may keep frontend-local canonical types if no package stubs are needed. Phase 03 should move or reconcile them into the package.
 
-export interface CanonicalRecord {
+## Core canonical types
+```ts
+export type CanonicalAttendanceStatus = "H" | "I" | "S" | "A" | "D" | "L" | "-";
+
+export type CanonicalEngineSource = "v1" | "v2" | "import" | "ocr" | "shadow";
+
+export interface CanonicalAttendanceRecord {
   id: string;
+  classId: string;
   studentId: string;
-  classId: string;
-  date: string; // Format: YYYY-MM-DD
-  status: CanonicalStatus;
+  date: string; // YYYY-MM-DD
+  status: CanonicalAttendanceStatus;
   note: string | null;
-  createdAt: string;
-  updatedAt: string;
+  sourceEngine: "v1" | "v2";
+  sourceTable: "attendance_records" | "attendance" | "v2_attendance_records" | "virtual";
+  createdAt: string | null;
+  updatedAt: string | null;
+  metadata: Record<string, unknown>;
 }
 
-export interface CanonicalHoliday {
-  date: string; // Format: YYYY-MM-DD
-  description: string;
-  isNational: boolean;
+export interface CanonicalAttendanceDayContext {
+  date: string;
+  isSchoolDay: boolean;
+  isWeekend: boolean;
+  workDayFormat: "5days" | "6days";
+  holiday: CanonicalHoliday | null;
+  dayEvent: CanonicalDayEvent | null;
+  lock: CanonicalAttendanceLock | null;
+  reason: "normal" | "weekend" | "holiday" | "event" | "locked";
 }
 
-export interface CanonicalDayEvent {
-  date: string; // Format: YYYY-MM-DD
-  label: string;
-  description: string | null;
-  color: string;
-}
-
-export interface CanonicalAttendanceLock {
+export interface CanonicalAttendanceSnapshot {
   classId: string;
-  month: string; // Format: YYYY-MM
-  isLocked: boolean;
-  lockedAt: string | null;
-  lockedBy: string | null;
+  academicYearId: string | null;
+  semesterId: string | null;
+  month: string; // YYYY-MM
+  records: CanonicalAttendanceRecord[];
+  holidays: CanonicalHoliday[];
+  dayEvents: CanonicalDayEvent[];
+  locks: CanonicalAttendanceLock[];
+  dayContexts: CanonicalAttendanceDayContext[];
+  summary: CanonicalAttendanceSummary;
+  sourceEngine: "v1" | "v2";
+  generatedAt: string;
 }
 ```
 
----
+## Data integrity rules
+- Date strings must be `YYYY-MM-DD`; month strings must be `YYYY-MM`.
+- `H/I/S/A/D` keep V1 semantics.
+- `L` and `-` are canonical/report values only until a write contract explicitly supports them.
+- Empty/missing status maps to `-` in read models and `null` in V1 write commands when clearing attendance.
+- A locked month blocks writes unless an admin override is explicitly designed later.
+- Sunday is non-school day; Saturday depends on `workDayFormat`.
+- Custom day event with holiday override must follow V1 behavior until V2 conflict rules are approved.
+- Source table must be included during migration to expose `attendance` vs `attendance_records` provenance.
 
-## 2. Standard Mappers
-
-Mappers map legacy database tables to the Canonical Model format:
-
-```typescript
-export function mapV1RecordToCanonical(record: any): CanonicalRecord {
-  return {
-    id: record.id,
-    studentId: record.student_id,
-    classId: record.class_id,
-    date: record.date,
-    status: record.status as CanonicalStatus,
-    note: record.note || null,
-    createdAt: record.created_at,
-    updatedAt: record.updated_at,
-  };
-}
-
-export function mapCanonicalToV1Record(canonical: CanonicalRecord): any {
-  return {
-    id: canonical.id,
-    student_id: canonical.studentId,
-    class_id: canonical.classId,
-    date: canonical.date,
-    status: canonical.status,
-    note: canonical.note,
-    created_at: canonical.createdAt,
-    updated_at: canonical.updatedAt,
-  };
+## Export projection contract
+Canonical export must not send raw records directly to the existing print renderer. It must produce:
+```ts
+export interface CanonicalAttendanceExportInput {
+  snapshot: CanonicalAttendanceSnapshot;
+  students: CanonicalAttendanceStudent[];
+  classInfo: CanonicalAttendanceClassInfo;
+  signature: CanonicalAttendanceSignature | null;
+  format: "daily" | "monthly" | "yearly";
 }
 ```
+
+The export adapter then maps this to the existing `AttendancePrintDataset`.
+
+## Error model
+```ts
+export interface CanonicalAttendanceIssue {
+  code: string;
+  severity: "info" | "warning" | "error" | "blocker";
+  field?: string;
+  message: string;
+  source?: CanonicalEngineSource;
+}
+```
+
+## Test gate
+- Unit tests for status normalization.
+- Unit tests for date/month validation.
+- Mapper tests from V1 active tables to canonical snapshot.
+- Export projection tests against fixture snapshots.
+- Shadow diff tests for matching/mismatching records.
+
+## Risks
+- `BLOCKER`: canonical model cannot hide the `attendance` vs `attendance_records` conflict during migration.
+- `HIGH`: adding statuses not supported by V1 writes can corrupt behavior if mapped incorrectly.
+- `MEDIUM`: source metadata can leak technical details if displayed directly to users.
+
+## Safe next action
+Freeze the canonical read model in Phase 03 after Phase 01 runtime shell is stable and Phase 02 proves V1 remains unchanged.
+
+## Blockers
+- Table compatibility decision is required before write commands can be canonicalized.
