@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.100";
+export const APP_VERSION = "2.4.101";
 export const VERSION_DATE = "2026-06-26";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.101": "Seam V1 Presensi diperkuat dengan wrapper, draft mapping canonical read-only, guard terstruktur, dan proof bahwa V1 tetap tidak disentuh.",
   "2.4.100": "Fondasi runtime switch Presensi ditambahkan dengan default tetap V1, guard V2 terkunci aman, dan dokumentasi rollback Phase 01.",
   "2.4.99": "Peningkatan Tour Guide Mata Pelajaran & Kelas dengan data tiruan in-memory hibrida, penanda KKM otomatis, standardisasi dokumen, dan penyelarasan istilah 'Murid'.",
   "2.4.98": "Memperbaiki cleanup Tour Guide Nilai agar mengembalikan status seleksi kelas/mapel asli ke keadaan semula saat tour ditutup atau dilewati.",

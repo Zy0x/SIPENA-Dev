@@ -28,3 +28,14 @@ Progress is documentation-based, not implementation-based
 - `/attendance` route shell: implemented via `AttendanceRuntimeRoute`.
 - V1 internals modified: no.
 - Export/import/OCR/schema modified: no.
+
+## PHASE 02 IMPLEMENTATION CHECKPOINT - 2026-06-26
+
+- V1 wrapper route: active and still renders locked `Attendance.tsx`.
+- V1 adapter seam: present, but not activated as a second lifecycle owner.
+- V1 canonical mapping draft: implemented as pure read-only helpers.
+- V1 canonical seam tests: implemented for status, records, holidays, day events, locks, dataset drafts, and wrapper guard.
+- V1 internals modified: no.
+- Export/import/OCR/schema modified: no.
+- Runtime default: V1.
+- V2 activation: still blocked.

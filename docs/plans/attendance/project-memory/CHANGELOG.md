@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2.4.101] - 2026-06-26
+### Added
+- Hardened Phase 02 V1 wrapper/adapter seam for Presensi.
+- Added pure read-only V1 canonical mapping helpers for records, holidays, day events, locks, and draft datasets.
+- Added targeted V1 canonical seam and wrapper guard tests.
+
+### Safety
+- V1 page and hook remain untouched.
+- Runtime default remains V1 and V2 remains blocked by guard.
+- Import, OCR, export, and Supabase schema remain untouched.
+
 ## [2.4.100] - 2026-06-26
 ### Added
 - Implemented Phase 01 runtime route foundation for Presensi.

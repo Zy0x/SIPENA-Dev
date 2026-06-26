@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.101",
+    version: "2.4.101",
+    title: "Seam V1 Presensi yang Aman",
+    description: "Memperkuat wrapper V1 Presensi dan menyiapkan draft mapping canonical read-only tanpa mengubah perilaku halaman Presensi lama.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-26",
+    details: [
+      "Menambahkan mapper canonical read-only untuk record, libur, kegiatan harian, lock, dan dataset draft V1.",
+      "Menambahkan pengujian mapper V1 agar status H/I/S/A/D tetap satu-ke-satu dan status kosong tetap menjadi tanda dash.",
+      "Memperjelas guard V1 dengan hasil terstruktur untuk memastikan wrapper hanya dipakai pada runtime V1.",
+      "Memperbarui dokumen Phase 02: implementasi wrapper, checklist preservasi, draft mapping, dan bukti V1 tidak disentuh."
+    ]
+  },
+  {
     id: "v2.4.100",
     version: "2.4.100",
     title: "Fondasi Runtime Switch Presensi",
