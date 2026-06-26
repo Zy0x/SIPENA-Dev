@@ -1,18 +1,44 @@
-# CALENDAR EDGE CASES SPECIFICATION
+# CALENDAR EDGE CASES: Attendance V2
 
-Edge-case scenarios and engine resolutions.
+## Objective
 
-## Edge Cases
+List the calendar edge cases covered by Phase 04 and the expected deterministic result for each case.
 
-1. **Sunday Holiday**:
-   - Sunday is normally weekend holiday. If a national holiday is scheduled on Sunday, it is resolved with `ConflictPriority.HOLIDAY` (priority 4) rather than `ConflictPriority.WEEKEND_RULE` (priority 5) to ensure the holiday name labels the day.
-2. **Saturday Inactive in 5-day / Active in 6-day**:
-   - Saturday in 5-day format resolves to a holiday. In 6-day format, it defaults to a school day.
-3. **Event on Holiday**:
-   - If an event is scheduled on a holiday, the event priority (class or school event) is higher than the holiday, so the day is marked as effective.
-4. **Class-Specific Event vs School-Wide Event**:
-   - A class-scoped event takes precedence for that class, resolving conflicts when both apply on the same day.
-5. **Month Boundary & Leap Year**:
-   - Date range loops use parseISO/addDays to seamlessly step across month boundaries and leap year February (Feb 29).
-6. **Locked Date**:
-   - If a lock exists for the month, the `blockedWriteState` output is true.
+## Evidence from actual repo files
+
+- Executable coverage exists in `apps/frontend/src/features/attendance/v2/calendar/calendarEngine.test.ts`.
+
+## Findings
+
+| Edge case | Expected result | Test coverage |
+| --- | --- | --- |
+| Default weekday | Effective, `DEFAULT_SCHOOL_DAY`. | Yes |
+| Sunday without event | Non-effective, `WEEKEND_SUNDAY`. | Yes |
+| Holiday on Sunday | Non-effective with holiday label, `HOLIDAY_RECORD`. | Yes |
+| Saturday in `5days` | Non-effective, `WEEKEND_SATURDAY`. | Yes |
+| Saturday in `6days` | Effective, `DEFAULT_SCHOOL_DAY`. | Yes |
+| Custom holiday | Non-effective with custom label. | Yes |
+| Event on holiday | Effective, event label wins, holiday IDs preserved for UI hint. | Yes |
+| Multiple events same day | Highest priority then stable ID wins. | Yes |
+| Class event vs school event | Matching class event wins. | Yes |
+| School-scoped event | Only matching `schoolScope.schoolId` applies. | Yes |
+| Administrative closure | Non-effective and write-blocked. | Yes |
+| Forced effective Sunday | Effective despite weekend rule. | Yes |
+| Month boundary | Inclusive generation crosses months. | Yes |
+| Leap year February | February 29 generated in leap year. | Yes |
+| Invalid date | Throws before generating result. | Yes |
+| Locked month | Keeps effective state but blocks writes. | Yes |
+| Retroactive change | Recomputes output from changed input; no stored truth. | Yes |
+
+## Risks
+
+- `MEDIUM`: Backend parity must reproduce the same edge-case results when backend calendar engine is introduced.
+- `LOW`: Current tests are unit tests only; browser UI wiring is intentionally out of scope for Phase 04.
+
+## Safe next action
+
+Phase 05 should use these cases as regression anchors when write/read rules are layered on top of calendar days.
+
+## Blockers
+
+None.

@@ -1,18 +1,19 @@
 import { parseISO, addDays, format } from "date-fns";
 import { CalendarEngineInputs, V2CalendarDay } from "./calendarEngine.types";
 import { computeEffectiveDay } from "./effectiveDayEngine";
+import { isIsoDateString } from "../../canonical/canonical.validation";
 
 /**
  * generateCalendarDays
  * Stateful-free, deterministic school calendar day generation for a range of dates (inclusive).
  */
 export function generateCalendarDays(inputs: CalendarEngineInputs): V2CalendarDay[] {
-  const start = parseISO(inputs.startDate);
-  const end = parseISO(inputs.endDate);
-  
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+  if (!isIsoDateString(inputs.startDate) || !isIsoDateString(inputs.endDate)) {
     throw new Error("Invalid start or end date format. Expected YYYY-MM-DD.");
   }
+
+  const start = parseISO(inputs.startDate);
+  const end = parseISO(inputs.endDate);
 
   if (start > end) {
     return [];
@@ -31,7 +32,8 @@ export function generateCalendarDays(inputs: CalendarEngineInputs): V2CalendarDa
       inputs.events,
       inputs.holidays,
       inputs.overrides,
-      inputs.locks
+      inputs.locks,
+      inputs.schoolScope
     );
 
     calendarDays.push(day);

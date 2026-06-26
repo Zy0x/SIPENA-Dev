@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { evaluateAttendanceRules } from "./ruleEngine";
 import { registerCustomStatus, resetToDefaults } from "./statusEngine";
 import { RuleEvaluationContext, RulePriority, AttendanceRule } from "./ruleEngine.types";
-import { V2CalendarDay } from "../calendar/calendarEngine.types";
+import { ConflictPriority, V2CalendarDay } from "../calendar/calendarEngine.types";
 
 describe("V2 Rules Engine - Core Evaluations", () => {
   const dummyStudent = { id: "student-1", name: "Budi", nisn: "12345" };
@@ -14,9 +14,17 @@ describe("V2 Rules Engine - Core Evaluations", () => {
     isEffective: true,
     isEffectiveDay: true,
     isHoliday: false,
-    eventPriority: 6, // DEFAULT_WEEKDAY
+    eventPriority: ConflictPriority.DEFAULT_WEEKDAY,
     blockedWriteState: false,
-    reasonCodes: ["DEFAULT_SCHOOL_DAY"]
+    reasonCodes: ["DEFAULT_SCHOOL_DAY"],
+    metadata: {
+      isLocked: false,
+      lockInfo: null,
+      appliedOverrideIds: [],
+      appliedEventIds: [],
+      appliedHolidayIds: [],
+      uiHint: "effective"
+    }
   };
 
   const baseContext: RuleEvaluationContext = {
@@ -57,7 +65,7 @@ describe("V2 Rules Engine - Core Evaluations", () => {
   it("should reject invalid status codes", () => {
     const context = {
       ...baseContext,
-      proposedStatus: "XYZ" as any
+      proposedStatus: "XYZ"
     };
     const output = evaluateAttendanceRules(context);
     expect(output.writeAllowed).toBe(false);
@@ -89,9 +97,17 @@ describe("V2 Rules Engine - Core Evaluations", () => {
       isEffective: false,
       isEffectiveDay: false,
       isHoliday: true,
-      eventPriority: 5,
+      eventPriority: ConflictPriority.WEEKEND_RULE,
       blockedWriteState: false,
-      reasonCodes: ["WEEKEND_SUNDAY"]
+      reasonCodes: ["WEEKEND_SUNDAY"],
+      metadata: {
+        isLocked: false,
+        lockInfo: null,
+        appliedOverrideIds: [],
+        appliedEventIds: [],
+        appliedHolidayIds: [],
+        uiHint: "holiday"
+      }
     };
     const context = {
       ...baseContext,
@@ -121,7 +137,7 @@ describe("V2 Rules Engine - Core Evaluations", () => {
 
     const context = {
       ...baseContext,
-      proposedStatus: "T" as any
+      proposedStatus: "T"
     };
     const output = evaluateAttendanceRules(context);
     expect(output.selectedStatus).toBe("T");

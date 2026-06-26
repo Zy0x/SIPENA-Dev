@@ -50,3 +50,14 @@ Progress is documentation-based, not implementation-based
 - V1 internals modified: no.
 - Export/import/OCR/schema modified: no.
 - Runtime default: V1.
+
+## PHASE 04 IMPLEMENTATION CHECKPOINT - 2026-06-26
+
+- Calendar engine types: hardened with scoped events, school scope, override scope, deterministic reason codes, and UI metadata.
+- Conflict resolver: deterministic priority implemented for administrative closures, forced overrides, class events, school events, holidays, weekend rules, and default school days.
+- Effective day engine: produces canonical day-compatible output with lock context and write-block state.
+- Calendar docs: expanded in `docs/plans/attendance/calendar/`.
+- Targeted tests: calendar and canonical tests passed.
+- V1 internals modified: no.
+- Export/import/OCR/schema modified: no.
+- Effective days stored as source of truth: no.

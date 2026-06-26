@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2.4.103] - 2026-06-26
+### Added
+- Hardened Phase 04 V2 Calendar Engine for Presensi with deterministic school/class scoped event handling.
+- Added stable conflict priority for administrative closures, forced overrides, class events, school events, holidays, weekend rules, and default school days.
+- Added calendar metadata for UI hints, lock context, applied event IDs, applied override IDs, and applied holiday IDs.
+- Expanded calendar unit tests for Sunday holiday, 5/6-day Saturday behavior, custom holidays, event-on-holiday, multiple events, class-vs-school events, school scope, month boundaries, leap year, locks, invalid dates, and retroactive changes.
+
+### Safety
+- V1 page and hook remain untouched.
+- Export/import/OCR and Supabase schema remain untouched.
+- Effective days remain computed from inputs and are not stored as permanent truth.
+
 ## [2.4.102] - 2026-06-26
 ### Added
 - Hardened Phase 03 canonical Presensi contract with strict types for records, days, locks, notes, summaries, UI projection, export projection, validation issues, and shadow comparison.

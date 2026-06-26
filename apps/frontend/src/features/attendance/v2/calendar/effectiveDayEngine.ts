@@ -1,10 +1,11 @@
 import {
   CalendarOverride,
+  CalendarSchoolScope,
+  CalendarScopedEvent,
   WorkDayFormat,
   V2CalendarDay
 } from "./calendarEngine.types";
 import {
-  AttendanceCalendarEventCanonical,
   AttendanceHolidayCanonical,
   AttendanceLockCanonical
 } from "../../canonical/canonical.types";
@@ -20,10 +21,11 @@ export function computeEffectiveDay(
   dateStr: string,
   classId: string,
   workDayFormat: WorkDayFormat,
-  events: AttendanceCalendarEventCanonical[],
+  events: CalendarScopedEvent[],
   holidays: AttendanceHolidayCanonical[],
   overrides: CalendarOverride[],
-  locks: AttendanceLockCanonical[]
+  locks: AttendanceLockCanonical[],
+  schoolScope: CalendarSchoolScope = {}
 ): V2CalendarDay {
   // Lock checking based on month boundary (YYYY-MM)
   const monthStr = dateStr.substring(0, 7); // extract YYYY-MM
@@ -37,7 +39,8 @@ export function computeEffectiveDay(
     workDayFormat,
     events,
     holidays,
-    overrides
+    overrides,
+    schoolScope
   );
 
   const dateObj = parseISO(dateStr);
@@ -52,21 +55,37 @@ export function computeEffectiveDay(
   // 1. The month/period is locked.
   // 2. An administrative closure is explicitly scheduled.
   const blockedWriteState = isLocked || resolved.reasonCodes.includes("ADMINISTRATIVE_CLOSURE");
+  const isWeekend = dayOfWeek === 0 || (dayOfWeek === 6 && workDayFormat === "5days");
+  const uiHint = isLocked
+    ? "locked"
+    : resolved.reasonCodes.includes("ADMINISTRATIVE_CLOSURE")
+      ? "closed"
+      : resolved.appliedEventIds.length > 0 || resolved.reasonCodes.includes("FORCED_EFFECTIVE_OVERRIDE")
+        ? "event"
+        : resolved.isHoliday
+          ? "holiday"
+          : "effective";
 
   return {
     date: dateStr,
     dayOfWeek,
+    isWeekend,
     isEffective: resolved.isEffective,
     isEffectiveDay: resolved.isEffective, // compatibility alias
     isHoliday: resolved.isHoliday,
     holidayName: resolved.holidayName,
     eventName: resolved.eventName,
+    lock: periodLock ?? null,
     eventPriority: resolved.priority,
     blockedWriteState,
     reasonCodes,
     metadata: {
       isLocked,
-      lockInfo: periodLock || null
+      lockInfo: periodLock || null,
+      appliedOverrideIds: resolved.appliedOverrideIds,
+      appliedEventIds: resolved.appliedEventIds,
+      appliedHolidayIds: resolved.appliedHolidayIds,
+      uiHint,
     }
   };
 }
