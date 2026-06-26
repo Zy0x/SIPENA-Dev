@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## [2.4.104] - 2026-06-26
+### Added
+- Implemented Phase 06 Core Attendance V2 orchestrator engine (`attendanceV2.types.ts`, `attendanceV2.audit.ts`, `attendanceV2.validation.ts`, `attendanceV2.shadow.ts`, `attendanceV2.engine.ts`, `attendanceV2.service.ts`).
+- `AttendanceV2Service` orchestrates Calendar + Rule + Mutation guard + Audit + Shadow comparison in a single safe pipeline.
+- `computeDailySummary`, `computeMonthlySummary`, `computeYearlySummary` are canonical, pure, side-effect-free.
+- Shadow mode compares V2 results against V1 raw records without writing to V1 tables.
+- Audit trail captures actor, action, before/after, reasonCode per mutation event.
+- Added Phase 06 V2 documentation (`V2_ENGINE_IMPLEMENTATION.md`, `V2_MUTATION_SAFETY.md`, `V2_SHADOW_MODE.md`, `V2_SUMMARY_SPEC.md`, `V2_AUDIT_SPEC.md`).
+- Fixed test: added missing `days: []` field to `AttendanceDatasetCanonical` fixture to satisfy strict canonical contract.
+
+### Safety
+- V1 page, hook, export, import, OCR, and Supabase schema remain fully untouched.
+- V2 engine cannot activate from frontend — still isolated behind runtime guard.
+- No V1 tables mutated in shadow mode.
+
 ## [2.4.103] - 2026-06-26
 ### Added
 - Hardened Phase 04 V2 Calendar Engine for Presensi with deterministic school/class scoped event handling.
