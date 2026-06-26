@@ -2,6 +2,8 @@
 
 ## [2.4.99] - 2026-06-26
 ### Added
+- Implemented V2 Rule Engine (`ruleEngine.types.ts`, `statusEngine.ts`, `conflictEngine.ts`, `defaultRules.ts`, `ruleEngine.ts`, `ruleEngine.test.ts`)
+- Added V2 Rule Engine specifications and decision table documentation (`RULE_ENGINE_SPEC.md`, `STATUS_ENGINE_SPEC.md`, `CONFLICT_ENGINE_SPEC.md`, `DEFAULT_RULES.md`, `RULE_DECISION_TABLE.md`)
 - Implemented V2 Calendar Engine (`calendarEngine.types.ts`, `calendarConflictResolver.ts`, `effectiveDayEngine.ts`, `calendarEngine.ts`, `calendarEngine.test.ts`)
 - Added V2 Calendar Engine specifications and edge cases documentation (`CALENDAR_ENGINE_SPEC.md`, `EFFECTIVE_DAY_RULES.md`, `CALENDAR_CONFLICT_PRIORITY.md`, `CALENDAR_EDGE_CASES.md`)
 - Implemented Attendance Canonical Model (`canonical.types.ts`, `canonical.mappers.ts`, `canonical.validation.ts`, `index.ts`)
