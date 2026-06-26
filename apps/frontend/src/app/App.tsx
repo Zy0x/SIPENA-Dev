@@ -25,7 +25,6 @@ import Index from "../pages/Index";
 import Auth from "../pages/Auth";
 import Dashboard from "../pages/Dashboard";
 import Classes from "../pages/Classes";
-import Attendance from "../pages/Attendance";
 import Subjects from "../pages/Subjects";
 import Grades from "../pages/Grades";
 import Reports from "../pages/Reports";
@@ -43,6 +42,7 @@ import ParentPortal from "../pages/ParentPortal";
 import PortalView from "../pages/PortalView";
 import MorpheChat from "../pages/MorpheChat";
 import Terms from "../pages/Terms";
+import AttendanceRuntimeRoute from "@/features/attendance/runtime/AttendanceRuntimeRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,7 +111,7 @@ const App = () => {
                         </ErrorBoundary>
                       } />
                       <Route path="/classes" element={<Classes />} />
-                      <Route path="/attendance" element={<Attendance />} />
+                      <Route path="/attendance" element={<AttendanceRuntimeRoute />} />
                       <Route path="/subjects" element={<Subjects />} />
                       <Route path="/grades" element={<Grades />} />
                       <Route path="/reports" element={<Reports />} />

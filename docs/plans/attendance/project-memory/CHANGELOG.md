@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [2.4.100] - 2026-06-26
+### Added
+- Implemented Phase 01 runtime route foundation for Presensi.
+- Added strict runtime guard tests for default V1, invalid config, disabled mode, and V2-not-implemented fallback.
+- Wired `/attendance` through `AttendanceRuntimeRoute` while keeping the rendered page as V1.
+
+### Safety
+- V2 remains disabled by guard and cannot activate from env or localStorage.
+- No V1 business logic, export logic, import/OCR flow, or database schema was changed.
+
 ## [2.4.99] - 2026-06-26
 ### Added
 - Implemented V2 Rule Engine (`ruleEngine.types.ts`, `statusEngine.ts`, `conflictEngine.ts`, `defaultRules.ts`, `ruleEngine.ts`, `ruleEngine.test.ts`)

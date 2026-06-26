@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.100",
+    version: "2.4.100",
+    title: "Fondasi Runtime Switch Presensi",
+    description: "Menambahkan fondasi runtime Presensi yang tetap menjalankan V1 secara default, dengan guard agar V2 tidak dapat aktif sebelum implementasi resmi.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-26",
+    details: [
+      "Menambahkan runtime config, provider, hook, guard, dan route shell untuk halaman Presensi tanpa mengubah perilaku V1.",
+      "Mengunci permintaan V2 agar selalu fallback ke V1 sampai engine V2 dinyatakan siap.",
+      "Menambahkan pengujian runtime guard untuk konfigurasi default, invalid, disabled, dan permintaan V2.",
+      "Menambahkan dokumentasi implementasi, guard, rollback, changelog, dan progress Phase 01 Attendance Runtime."
+    ]
+  },
+  {
     id: "v2.4.99",
     version: "2.4.99",
     title: "Peningkatan Tour Guide & Relokasi Layout Halaman Presensi Mobile",

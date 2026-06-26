@@ -5,22 +5,21 @@ import { guardRuntimeConfig } from "./attendanceRuntimeGuard";
 
 const AttendanceRuntimeContext = createContext<AttendanceRuntimeContextValue | null>(null);
 
+export function createAttendanceRuntimeContextValue(): AttendanceRuntimeContextValue {
+  const config = getRuntimeConfig();
+  const guardResult = guardRuntimeConfig(config);
+
+  return {
+    engine: guardResult.forcedEngine,
+    mode: guardResult.forcedMode,
+    source: config.source,
+    guardResult,
+    config,
+  };
+}
+
 export const AttendanceRuntimeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const value = useMemo<AttendanceRuntimeContextValue>(() => {
-    const config = getRuntimeConfig();
-    const guardResult = guardRuntimeConfig(config);
-    
-    // Resolve final active engine based on guard result
-    const activeEngine = guardResult.forcedEngine;
-    
-    return {
-      engine: activeEngine,
-      mode: activeEngine === "v1" ? "active" : config.mode,
-      source: config.source,
-      guardResult,
-      config,
-    };
-  }, []);
+  const value = useMemo<AttendanceRuntimeContextValue>(() => createAttendanceRuntimeContextValue(), []);
 
   return (
     <AttendanceRuntimeContext.Provider value={value}>
@@ -31,19 +30,5 @@ export const AttendanceRuntimeProvider: React.FC<{ children: React.ReactNode }> 
 
 export function useAttendanceRuntimeContext(): AttendanceRuntimeContextValue {
   const context = useContext(AttendanceRuntimeContext);
-  if (!context) {
-    // Graceful fallback to default config if used outside the provider
-    const config = getRuntimeConfig();
-    const guardResult = guardRuntimeConfig(config);
-    const activeEngine = guardResult.forcedEngine;
-    
-    return {
-      engine: activeEngine,
-      mode: activeEngine === "v1" ? "active" : config.mode,
-      source: config.source,
-      guardResult,
-      config,
-    };
-  }
-  return context;
+  return context ?? createAttendanceRuntimeContextValue();
 }
