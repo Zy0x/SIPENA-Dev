@@ -13,6 +13,7 @@
 - Phase 08 - Frontend Runtime/Canonical Integration: COMPLETE FOUNDATION
 - Phase 09 - Export Canonical Adapter: COMPLETE FOUNDATION
 - Phase 10 - Testing Matrix: COMPLETE FOUNDATION
+- Phase 11 - Fixing / Hardening: COMPLETE FOUNDATION
 - Engine Design: IN PROGRESS
 - Backend Design: IMPLEMENTED FOUNDATION
 - Frontend Design: IMPLEMENTED FOUNDATION
@@ -136,3 +137,16 @@ Progress is documentation-based, not implementation-based
 - Export renderer/layout/Excel path modified: no.
 - Import/OCR/schema modified: no.
 - Validation: `typecheck`, targeted Phase 10 Vitest, full frontend `test`, `lint`, frontend `build`, `verify:web:dist`, and `git diff --check` passed. Lint/build/test warnings are documented in `TEST_RUN_REPORT.md`.
+
+## PHASE 11 FIXING CHECKPOINT - 2026-06-27
+
+- Fix scope: limited to issues documented by Phase 10 reports.
+- Shadow parity: `compareWithV1CanonicalResult` now reports `record_order` drift for same-record/different-order datasets.
+- Export adapter: canonical bridge now carries explicit signature settings contract and blocks signature-enabled export when settings/signers are missing.
+- Export status safety: canonical bridge validation blocks unmapped custom status symbols before legacy export rendering.
+- Fix reports: generated under `docs/plans/attendance/fixing/`.
+- V1 internals modified: no.
+- Export renderer/layout/Excel path modified: no.
+- Import/OCR/schema modified: no.
+- Runtime default changed: no.
+- Deferred gates: binary signature rendering parity and browser UI regression remain pre-cutover risks.

@@ -225,5 +225,7 @@ export function buildAttendanceExportBridgeFromCanonical(
   return {
     previewData,
     printDataset: buildAttendancePrintDatasetFromLegacyPayload(previewData),
+    includeSignature: Boolean(settings.includeSignature),
+    signature: settings.signature ?? null,
   };
 }

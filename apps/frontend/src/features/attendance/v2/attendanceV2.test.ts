@@ -230,4 +230,24 @@ describe("Attendance V2 Core Orchestrator - Integration & Validation", () => {
     expect(shadowReport.mismatchCount).toBe(1);
     expect(shadowReport.mismatches[0].mismatchFields).toEqual(["status"]);
   });
+
+  it("reports record ordering drift for export-shadow parity", () => {
+    const v1 = [
+      createRecord({ id: "v1-1", studentId: student1.id, date: "2026-06-01", status: "H" }),
+      createRecord({ id: "v1-2", studentId: student2.id, date: "2026-06-01", status: "S" }),
+    ];
+    const v2 = [
+      createRecord({ id: "v2-2", studentId: student2.id, date: "2026-06-01", status: "S" }),
+      createRecord({ id: "v2-1", studentId: student1.id, date: "2026-06-01", status: "H" }),
+    ];
+
+    const shadowReport = compareWithV1CanonicalResult(v1, v2);
+
+    expect(shadowReport.match).toBe(false);
+    expect(shadowReport.mismatchCount).toBe(2);
+    expect(shadowReport.mismatches.map((mismatch) => mismatch.mismatchFields)).toEqual([
+      ["record_order"],
+      ["record_order"],
+    ]);
+  });
 });

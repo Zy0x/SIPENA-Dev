@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2.4.111] - 2026-06-27
+### Fixed
+- Hardened Presensi Phase 11 shadow comparison so same-record/different-order drift is reported as `record_order`.
+- Added canonical export signature contract fields (`includeSignature`, `signature`) and validation for missing signature settings or unusable signer.
+- Added canonical export validation that blocks unmapped custom status symbols before legacy export rendering.
+
+### Safety
+- V1 Presensi page, V1 hook, legacy export renderers, import/OCR, Supabase schema, and production data remain untouched.
+- Runtime default remains V1 and V2 remains inactive.
+- Signature rendering and browser UI parity remain documented as pre-cutover gates, not Phase 11 live behavior changes.
+
 ## [2.4.110] - 2026-06-27
 ### Added
 - Added Phase 10 Presensi migration-safety test harness under `apps/frontend/src/features/attendance/testing/`.

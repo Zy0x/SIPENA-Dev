@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AttendanceDatasetCanonical } from "../canonical";
+import type { SignatureSettingsConfig } from "@/hooks/useSignatureSettings";
 import { validateAttendanceCanonicalExportBridge } from "./attendanceExport.validation";
 import { buildAttendanceExportBridgeFromCanonical } from "./attendanceExportLegacyBridge";
 import { createAttendanceExportLegacyBridge } from "./attendanceExport.adapter";
@@ -82,6 +83,41 @@ function createCanonicalDataset(): AttendanceDatasetCanonical {
   };
 }
 
+function createSignatureSettings(): SignatureSettingsConfig {
+  return {
+    city: "Banjarmasin",
+    signers: [
+      {
+        id: "signer-1",
+        name: "Ali Ridho",
+        title: "Guru Kelas",
+        nip: "2210118210013",
+        school_name: "SIPENA",
+      },
+    ],
+    useCustomDate: false,
+    customDate: null,
+    fontSize: 10,
+    showSignatureLine: true,
+    signatureLinePosition: "above-name",
+    signatureLineLengthMode: "fixed",
+    signatureLineWidth: 50,
+    signatureSpacing: 20,
+    signatureAlignment: "right",
+    signatureOffsetX: 0,
+    signatureOffsetY: 0,
+    placementMode: "adaptive",
+    signaturePreset: "bottom-right",
+    manualXPercent: null,
+    manualYPercent: null,
+    snapToGrid: true,
+    gridSizeMm: 5,
+    lockSignaturePosition: false,
+    showDebugGuides: false,
+    signaturePageIndex: null,
+  };
+}
+
 describe("attendance canonical export bridge", () => {
   it("creates the legacy preview and print dataset shape without engine leakage", () => {
     const bridge = buildAttendanceExportBridgeFromCanonical(createCanonicalDataset(), {
@@ -140,5 +176,41 @@ describe("attendance canonical export bridge", () => {
 
     expect(bridge.previewData.className).toBe("VI-A");
     expect(bridge.printDataset.monthLabel).toBe("Juni 2026");
+  });
+
+  it("carries signature settings as an explicit export-side contract", () => {
+    const signature = createSignatureSettings();
+    const bridge = buildAttendanceExportBridgeFromCanonical(createCanonicalDataset(), {
+      includeSignature: true,
+      signature,
+    });
+
+    expect(bridge.includeSignature).toBe(true);
+    expect(bridge.signature?.signers[0].name).toBe("Ali Ridho");
+    expect(validateAttendanceCanonicalExportBridge(bridge)).toHaveLength(0);
+  });
+
+  it("blocks signature export when settings are missing", () => {
+    const bridge = buildAttendanceExportBridgeFromCanonical(createCanonicalDataset(), {
+      includeSignature: true,
+    });
+
+    expect(validateAttendanceCanonicalExportBridge(bridge)).toEqual([
+      expect.objectContaining({ code: "EXPORT_SIGNATURE_SETTINGS_MISSING" }),
+    ]);
+    expect(() => createAttendanceExportLegacyBridge(createCanonicalDataset(), { includeSignature: true })).toThrow(
+      "EXPORT_SIGNATURE_SETTINGS_MISSING"
+    );
+  });
+
+  it("blocks unmapped custom statuses before legacy export rendering", () => {
+    const dataset = createCanonicalDataset();
+    dataset.records[0] = { ...dataset.records[0], status: "K" };
+    const bridge = buildAttendanceExportBridgeFromCanonical(dataset);
+
+    expect(validateAttendanceCanonicalExportBridge(bridge)).toEqual([
+      expect.objectContaining({ code: "EXPORT_UNMAPPED_STATUS_CODE" }),
+    ]);
+    expect(() => createAttendanceExportLegacyBridge(dataset)).toThrow("EXPORT_UNMAPPED_STATUS_CODE");
   });
 });

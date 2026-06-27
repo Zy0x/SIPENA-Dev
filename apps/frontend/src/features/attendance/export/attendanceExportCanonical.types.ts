@@ -1,5 +1,6 @@
 import type { AttendanceStatusCode } from "../canonical";
 import type { AttendanceExportPreviewDataV2 } from "@/components/export/AttendanceExportPreviewV2";
+import type { SignatureSettingsConfig } from "@/hooks/useSignatureSettings";
 import type { AttendancePrintDataset } from "@/lib/attendancePrintLayout";
 
 export type AttendanceLegacyExportPayload = AttendanceExportPreviewDataV2;
@@ -13,9 +14,13 @@ export interface AttendanceCanonicalExportSettings {
   workDayFormatLabel?: string;
   effectiveDays?: number;
   jumlahStatusCodes?: readonly AttendanceExportJumlahStatusCode[];
+  includeSignature?: boolean;
+  signature?: SignatureSettingsConfig;
 }
 
 export interface AttendanceCanonicalExportBridgeResult {
   previewData: AttendanceLegacyExportPayload;
   printDataset: AttendanceLegacyPrintDataset;
+  includeSignature: boolean;
+  signature: SignatureSettingsConfig | null;
 }
