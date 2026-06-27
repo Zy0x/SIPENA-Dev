@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [2.4.106] - 2026-06-27
+### Added
+- Hardened Phase 06 Core Attendance V2 service after Phase 05 rule engine changes.
+- Added immutable canonical dataset orchestration for build/read/validate/apply/bulk/note/summary/shadow operations.
+- Expanded V2 patch results with canonical output dataset, rule explanation, audit events, validation issues, and optional shadow comparison.
+- Reworked V2 mutation validation so Calendar and Rule engines use the same resolved day context.
+- Expanded Phase 06 tests for dataset build, disabled writes, immutable patch application, non-effective days, locks, bulk patching, note updates, summaries, read operations, and shadow comparisons.
+- Rewrote Phase 06 V2 documentation for implementation, mutation safety, shadow mode, summary, and audit.
+
+### Safety
+- V1 page, hook, export, import, OCR, Supabase schema, and runtime default remain untouched.
+- V2 writes remain in-memory and disabled unless a service instance is explicitly active with write enabled.
+- Shadow mode remains read/compare only.
+
 ## [2.4.105] - 2026-06-27
 ### Added
 - Hardened Phase 05 V2 Rule Engine for Presensi with strict rule context, required audit metadata, condition-error capture, and deterministic conflict resolution.

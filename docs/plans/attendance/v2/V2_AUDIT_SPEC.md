@@ -1,85 +1,33 @@
-# V2 Audit Trail Specification
+# V2 AUDIT SPEC: Attendance V2
 
-## Purpose
+## Objective
+Define the audit event emitted by isolated Attendance V2 mutation operations.
 
-Every mutating action in V2 (CREATE, UPDATE) must produce a structured audit event. Audit events capture who did what, when, what changed, and what rule drove the decision.
+## Evidence from Actual Repo Files
+- Audit type: `apps/frontend/src/features/attendance/v2/attendanceV2.types.ts`
+- Audit factory: `apps/frontend/src/features/attendance/v2/attendanceV2.audit.ts`
+- Audit usage: `apps/frontend/src/features/attendance/v2/attendanceV2.service.ts`
+- Tests: `apps/frontend/src/features/attendance/v2/attendanceV2.test.ts`
 
----
+## Findings
+Audit events include:
+- ID and timestamp;
+- actor;
+- action: `CREATE`, `UPDATE`, `DELETE`, `BULK_UPDATE`, `NOTE_UPDATE`, or `VALIDATE`;
+- class, murid, and date scope;
+- before/after canonical record snapshots;
+- reason code from rule/validation path;
+- metadata for applied rule IDs, rule audit metadata, conflict notes, and optional shadow mismatch.
 
-## Audit Event Shape
+Phase 06 stores audit logs in memory on the service instance and exposes copies through `getAuditLogs()`. It does not persist audit logs to Supabase.
 
-```ts
-interface AttendanceAuditEventCanonical {
-  id: string;              // Unique event ID: "aud-{nanoid}"
-  actor: string;           // User ID or system agent label
-  action: "CREATE" | "UPDATE" | "DELETE";
-  classId: string;
-  studentId: string;
-  date: string;            // ISO date "YYYY-MM-DD"
-  timestamp: string;       // ISO datetime string
-  before: AttendanceRecordCanonical | null;  // Previous record (null on CREATE)
-  after: AttendanceRecordCanonical | null;   // Updated record (null on DELETE)
-  reasonCode: string;      // Rule engine reason code for this action
-  metadata?: Record<string, unknown>;  // Optional extra context (e.g. shadowClash)
-}
-```
+## Risks
+- `HIGH`: Backend Phase 07 must make audit persistence append-only and authorization-aware.
+- `MEDIUM`: Local audit ID generation is sufficient for tests, not for production audit authority.
+- `LOW`: Metadata is extensible and should be treated as diagnostic payload.
 
----
+## Safe Next Action
+Phase 07 should move audit persistence behind a server-side module and keep frontend audit events as local previews until backend confirmation.
 
-## Audit Factory Function
-
-File: `attendanceV2.audit.ts`
-
-```ts
-createAuditEvent(
-  actor: string,
-  action: "CREATE" | "UPDATE" | "DELETE",
-  classId: string,
-  studentId: string,
-  date: string,
-  before: AttendanceRecordCanonical | null,
-  after: AttendanceRecordCanonical | null,
-  reasonCode: string
-): AttendanceAuditEventCanonical
-```
-
----
-
-## When Audit Events Are Created
-
-| Trigger | Action | Before | After |
-|---|---|---|---|
-| New record created | CREATE | null | new record |
-| Existing record updated | UPDATE | old record | new record |
-| Record deleted | DELETE | old record | null |
-
----
-
-## Storage
-
-- Audit events are stored in-memory on the `AttendanceV2Service` instance.
-- Retrieved via `service.getAuditLogs()`.
-- V2 does not persist audit logs to Supabase in this phase (Phase 06).
-- Persistence will be handled in Phase 07 (Backend integration).
-
----
-
-## Shadow Clash Annotation
-
-If shadow mode is active and a V1/V2 mismatch is detected, the audit event's `metadata.shadowClash` field is populated with mismatch details:
-
-```ts
-auditEvent.metadata = {
-  shadowClash: [
-    { studentId, date, v1Status, v2Status, field }
-  ]
-}
-```
-
----
-
-## Security Notes
-
-- Audit events must never be exposed to frontend without role-based authorization.
-- Audit logs must not contain raw secrets or sensitive credentials.
-- In production, audit events must be append-only (no mutation after creation).
+## Blockers
+Production audit readiness is blocked until backend storage, RLS, and retention policy are implemented.

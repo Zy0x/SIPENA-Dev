@@ -73,3 +73,16 @@ Progress is documentation-based, not implementation-based
 - V1 internals modified: no.
 - Export/import/OCR/schema modified: no.
 - Runtime activation changed: no.
+
+## PHASE 06 IMPLEMENTATION CHECKPOINT - 2026-06-27
+
+- Core service: hardened as immutable canonical orchestrator for build, read, validate, apply, bulk apply, note update, summary, audit, and shadow compare operations.
+- Mutation validation: now receives the same resolved V2 calendar day used by the rule engine.
+- Patch output: includes canonical output dataset, rule explanation, audit events, validation issues, and optional shadow comparison.
+- Summary engine: computes daily, monthly, yearly, and class recap from canonical records.
+- Shadow mode: remains read/compare only and does not write to V1 or V2 storage.
+- Phase 06 docs: expanded in `docs/plans/attendance/v2/`.
+- Targeted tests: V2 service, rule, calendar, and canonical tests passed.
+- V1 internals modified: no.
+- Export/import/OCR/schema modified: no.
+- Runtime default changed: no.

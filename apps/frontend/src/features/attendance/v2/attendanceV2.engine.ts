@@ -1,116 +1,88 @@
-import {
+import type {
   AttendanceDatasetCanonical,
   AttendanceDailySummaryCanonical,
   AttendanceMonthlySummaryCanonical,
-  AttendanceYearlySummaryCanonical
+  AttendanceRecordCanonical,
+  AttendanceStatusCode,
+  AttendanceYearlySummaryCanonical,
 } from "../canonical/canonical.types";
+import type { AttendanceV2SummaryBundle } from "./attendanceV2.types";
 
-/**
- * computeDailySummary
- * Computes status counts (presents vs absences) for a single day.
- */
+function countRecord(
+  status: AttendanceStatusCode,
+  counts: Omit<AttendanceDailySummaryCanonical, "date" | "totalCount">
+): void {
+  switch (status) {
+    case "H":
+      counts.presentCount += 1;
+      break;
+    case "D":
+      counts.dispensationCount += 1;
+      counts.presentCount += 1;
+      break;
+    case "S":
+      counts.sickCount += 1;
+      break;
+    case "I":
+      counts.permissionCount += 1;
+      break;
+    case "A":
+      counts.absentCount += 1;
+      break;
+    case "L":
+      counts.leaveCount += 1;
+      break;
+    default:
+      break;
+  }
+}
+
+function emptyCounts(): Omit<AttendanceDailySummaryCanonical, "date" | "totalCount"> {
+  return {
+    presentCount: 0,
+    sickCount: 0,
+    permissionCount: 0,
+    absentCount: 0,
+    dispensationCount: 0,
+    leaveCount: 0,
+  };
+}
+
 export function computeDailySummary(
   dataset: AttendanceDatasetCanonical,
   dateStr: string
 ): AttendanceDailySummaryCanonical {
-  const dayRecords = dataset.records.filter((r) => r.date === dateStr);
-  let presentCount = 0;
-  let sickCount = 0;
-  let permissionCount = 0;
-  let absentCount = 0;
-  let dispensationCount = 0;
-  let leaveCount = 0;
-
-  dayRecords.forEach((r) => {
-    switch (r.status) {
-      case "H":
-        presentCount++;
-        break;
-      case "D":
-        dispensationCount++;
-        presentCount++;
-        break;
-      case "S":
-        sickCount++;
-        break;
-      case "I":
-        permissionCount++;
-        break;
-      case "A":
-        absentCount++;
-        break;
-      case "L":
-        leaveCount++;
-        break;
-    }
-  });
+  const counts = emptyCounts();
+  const dayRecords = dataset.records.filter((record) => record.date === dateStr);
+  dayRecords.forEach((record) => countRecord(record.status, counts));
 
   return {
     date: dateStr,
-    presentCount,
-    sickCount,
-    permissionCount,
-    absentCount,
-    dispensationCount,
-    leaveCount,
-    totalCount: dayRecords.length
+    ...counts,
+    totalCount: dayRecords.length,
   };
 }
 
-/**
- * computeMonthlySummary
- * Summarizes monthly attendance records for a single student.
- */
 export function computeMonthlySummary(
   dataset: AttendanceDatasetCanonical,
   studentId: string
 ): AttendanceMonthlySummaryCanonical {
-  const studentRecords = dataset.records.filter((r) => r.studentId === studentId);
-  
-  let present = 0;
-  let sick = 0;
-  let permission = 0;
-  let alpha = 0;
-  let dispensation = 0;
-  let leave = 0;
-
-  studentRecords.forEach((r) => {
-    switch (r.status) {
-      case "H":
-        present++;
-        break;
-      case "S":
-        sick++;
-        break;
-      case "I":
-        permission++;
-        break;
-      case "A":
-        alpha++;
-        break;
-      case "D":
-        dispensation++;
-        present++; // dispensation counts as presence
-        break;
-    }
-  });
+  const counts = emptyCounts();
+  const studentRecords = dataset.records.filter((record) => record.studentId === studentId);
+  studentRecords.forEach((record) => countRecord(record.status, counts));
 
   return {
     studentId,
-    presentCount: present,
-    sickCount: sick,
-    permissionCount: permission,
-    absentCount: alpha,
-    dispensationCount: dispensation,
-    leaveCount: leave,
-    totalDays: studentRecords.length
+    presentCount: counts.presentCount,
+    sickCount: counts.sickCount,
+    permissionCount: counts.permissionCount,
+    absentCount: counts.absentCount,
+    dispensationCount: counts.dispensationCount,
+    leaveCount: counts.leaveCount,
+    totalDays: studentRecords.length,
   };
 }
 
-/**
- * computeYearlySummary
- * Compiles monthly datasets to compute a student's yearly attendance percentage.
- */
 export function computeYearlySummary(
   monthlyDatasets: AttendanceDatasetCanonical[],
   studentId: string
@@ -123,7 +95,7 @@ export function computeYearlySummary(
     const summary = computeMonthlySummary(dataset, studentId);
     byMonth[dataset.month] = {
       presentCount: summary.presentCount,
-      totalDays: summary.totalDays
+      totalDays: summary.totalDays,
     };
     yearlyPresent += summary.presentCount;
     yearlyTotal += summary.totalDays;
@@ -134,6 +106,42 @@ export function computeYearlySummary(
     byMonth,
     yearlyPresentCount: yearlyPresent,
     yearlyTotalDays: yearlyTotal,
-    percentage: yearlyTotal > 0 ? Math.round((yearlyPresent / yearlyTotal) * 100) : 0
+    percentage: yearlyTotal > 0 ? Math.round((yearlyPresent / yearlyTotal) * 100) : 0,
   };
+}
+
+export function computeMonthlyClassRecap(dataset: AttendanceDatasetCanonical): AttendanceV2SummaryBundle["classRecap"] {
+  const counts = emptyCounts();
+  dataset.records.forEach((record) => countRecord(record.status, counts));
+
+  return {
+    ...counts,
+    totalCount: dataset.records.length,
+  };
+}
+
+export function computeSummaryBundle(
+  dataset: AttendanceDatasetCanonical,
+  yearlyDatasets: AttendanceDatasetCanonical[] = []
+): AttendanceV2SummaryBundle {
+  const dates = dataset.days.length > 0
+    ? dataset.days.map((day) => day.date)
+    : [...new Set(dataset.records.map((record) => record.date))].sort();
+
+  return {
+    daily: dates.map((date) => computeDailySummary(dataset, date)),
+    monthly: dataset.students.map((student) => computeMonthlySummary(dataset, student.id)),
+    yearly: yearlyDatasets.length > 0
+      ? dataset.students.map((student) => computeYearlySummary(yearlyDatasets, student.id))
+      : undefined,
+    classRecap: computeMonthlyClassRecap(dataset),
+  };
+}
+
+export function getDailyRecords(dataset: AttendanceDatasetCanonical, date: string): AttendanceRecordCanonical[] {
+  return dataset.records.filter((record) => record.date === date);
+}
+
+export function getMonthlyRecords(dataset: AttendanceDatasetCanonical, studentId?: string): AttendanceRecordCanonical[] {
+  return studentId ? dataset.records.filter((record) => record.studentId === studentId) : [...dataset.records];
 }

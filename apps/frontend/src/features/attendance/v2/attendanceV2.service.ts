@@ -1,187 +1,344 @@
-import {
+import type {
   AttendanceDatasetCanonical,
+  AttendanceRecordCanonical,
   AttendanceRecordPatch,
-  AttendanceRecordCanonical
+  AttendanceStudentCanonical,
 } from "../canonical/canonical.types";
+import { createAuditEvent } from "./attendanceV2.audit";
 import {
+  computeMonthlySummary,
+  computeSummaryBundle,
+  computeYearlySummary,
+  getDailyRecords,
+  getMonthlyRecords,
+} from "./attendanceV2.engine";
+import type {
+  AttendanceAuditEventCanonical,
+  AttendanceV2BuildDatasetInput,
+  AttendanceV2MutationOptions,
   AttendanceV2PatchResult,
-  AttendanceAuditEventCanonical
+  AttendanceV2RuntimeMode,
+  AttendanceV2SummaryBundle,
+  MutationValidationResult,
+  ShadowComparisonReport,
 } from "./attendanceV2.types";
 import { validatePatchMutation } from "./attendanceV2.validation";
-import { evaluateAttendanceRules } from "./rules/ruleEngine";
-import { createAuditEvent } from "./attendanceV2.audit";
-import { compareWithV1CanonicalResult } from "./attendanceV2.shadow";
+import { generateCalendarDays } from "./calendar/calendarEngine";
+import type { CalendarScopedEvent, V2CalendarDay } from "./calendar/calendarEngine.types";
 import { computeEffectiveDay } from "./calendar/effectiveDayEngine";
+import { compareWithV1CanonicalResult } from "./attendanceV2.shadow";
+import { evaluateAttendanceRules } from "./rules/ruleEngine";
+import type { RuleEvaluationOutput } from "./rules/ruleEngine.types";
 
-/**
- * AttendanceV2Service
- * Stateful-safe orchestration client for Attendance V2.
- * Couples Calendar and Rule engines with Mutation Guards, Audit logs, and Shadow mode checks.
- */
+function monthRange(month: string): { startDate: string; endDate: string } {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  return {
+    startDate: `${month}-01`,
+    endDate: `${month}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+function cloneRecord(record: AttendanceRecordCanonical): AttendanceRecordCanonical {
+  return {
+    ...record,
+    debug: record.debug ? { ...record.debug } : undefined,
+  };
+}
+
+function cloneDataset(dataset: AttendanceDatasetCanonical): AttendanceDatasetCanonical {
+  return {
+    ...dataset,
+    students: dataset.students.map((student) => ({ ...student })),
+    records: dataset.records.map(cloneRecord),
+    days: dataset.days.map((day) => ({ ...day })),
+    holidays: dataset.holidays.map((holiday) => ({ ...holiday })),
+    dayEvents: dataset.dayEvents.map((event) => ({ ...event })),
+    locks: dataset.locks.map((lock) => ({ ...lock })),
+    notes: dataset.notes?.map((note) => ({ ...note })),
+    monthlySummary: dataset.monthlySummary?.map((summary) => ({ ...summary })),
+    dailySummary: dataset.dailySummary?.map((summary) => ({ ...summary })),
+    yearlySummary: dataset.yearlySummary?.map((summary) => ({ ...summary, byMonth: { ...summary.byMonth } })),
+    debug: dataset.debug ? { ...dataset.debug } : undefined,
+  };
+}
+
+function isV2CalendarDay(day: AttendanceDatasetCanonical["days"][number] | undefined): day is V2CalendarDay {
+  return !!day && "blockedWriteState" in day && "metadata" in day && "reasonCodes" in day;
+}
+
+function buildFailureResult(
+  dataset: AttendanceDatasetCanonical,
+  reasonCode: string,
+  validation: MutationValidationResult | null,
+  ruleExplanation: RuleEvaluationOutput | null = null
+): AttendanceV2PatchResult {
+  return {
+    success: false,
+    reasonCode,
+    appliedRuleIds: ruleExplanation?.appliedRuleIds ?? [],
+    dataset: cloneDataset(dataset),
+    updatedRecord: null,
+    auditEvent: null,
+    auditEvents: [],
+    validationIssues: validation?.issues ?? [],
+    canonicalValidationIssues: validation?.validationIssues ?? [],
+    ruleExplanation,
+    shadowComparison: null,
+  };
+}
+
+function normalizeOptions(
+  actorOrOptions: string | AttendanceV2MutationOptions,
+  v1CanonicalRecords?: AttendanceRecordCanonical[]
+): AttendanceV2MutationOptions {
+  if (typeof actorOrOptions === "string") {
+    return { actor: actorOrOptions, v1CanonicalRecords };
+  }
+  return {
+    ...actorOrOptions,
+    v1CanonicalRecords: actorOrOptions.v1CanonicalRecords ?? v1CanonicalRecords,
+  };
+}
+
 export class AttendanceV2Service {
-  private isWriteEnabled: boolean = false;
-  private shadowModeActive: boolean = false;
+  private writeEnabled: boolean;
+  private runtimeMode: AttendanceV2RuntimeMode;
   private auditLogs: AttendanceAuditEventCanonical[] = [];
 
-  constructor(options?: { enableWrite?: boolean; enableShadow?: boolean }) {
-    this.isWriteEnabled = !!options?.enableWrite;
-    this.shadowModeActive = !!options?.enableShadow;
+  constructor(options?: { enableWrite?: boolean; enableShadow?: boolean; runtimeMode?: AttendanceV2RuntimeMode }) {
+    this.writeEnabled = !!options?.enableWrite;
+    this.runtimeMode = options?.runtimeMode ?? (options?.enableShadow ? "shadow" : this.writeEnabled ? "active" : "disabled");
   }
 
   setWriteEnabled(enabled: boolean): void {
-    this.isWriteEnabled = enabled;
+    this.writeEnabled = enabled;
   }
 
   setShadowModeActive(active: boolean): void {
-    this.shadowModeActive = active;
+    this.runtimeMode = active ? "shadow" : this.writeEnabled ? "active" : "disabled";
+  }
+
+  setRuntimeMode(mode: AttendanceV2RuntimeMode): void {
+    this.runtimeMode = mode;
   }
 
   getAuditLogs(): AttendanceAuditEventCanonical[] {
-    return this.auditLogs;
+    return this.auditLogs.map((event) => ({ ...event, metadata: event.metadata ? { ...event.metadata } : undefined }));
   }
 
-  /**
-   * applyPatch
-   * Applies an attendance record patch update under safety validation and rule constraints.
-   */
-  applyPatch(
-    dataset: AttendanceDatasetCanonical,
-    patch: AttendanceRecordPatch,
-    actor: string,
-    v1EquivalentRecords?: any[] // Optional V1 source for shadow matching comparisons
-  ): AttendanceV2PatchResult {
-    // 1. Run Pre-mutation validation checks
-    const valResult = validatePatchMutation(dataset, patch, this.isWriteEnabled);
-    if (!valResult.valid) {
-      return {
-        success: false,
-        reasonCode: valResult.reasonCode,
-        appliedRuleIds: [],
-        updatedRecord: null,
-        auditEvent: null,
-        validationIssues: valResult.issues
-      };
-    }
+  buildDataset(input: AttendanceV2BuildDatasetInput): AttendanceDatasetCanonical {
+    const { startDate, endDate } = input.startDate && input.endDate ? input : monthRange(input.month);
+    const days = generateCalendarDays({
+      startDate,
+      endDate,
+      classId: input.classId,
+      workDayFormat: input.workDayFormat ?? "6days",
+      events: input.dayEvents ?? [],
+      holidays: input.holidays ?? [],
+      overrides: input.overrides ?? [],
+      locks: input.locks ?? [],
+      schoolScope: input.schoolScope,
+    });
 
-    // Check if a record already exists for this student + date
-    const existing = dataset.records.find(
-      (r) => r.studentId === patch.studentId && r.date === patch.date
-    ) || null;
+    return {
+      classId: input.classId,
+      month: input.month,
+      students: input.students.map((student) => ({ ...student })),
+      records: (input.records ?? []).map(cloneRecord),
+      days,
+      holidays: (input.holidays ?? []).map((holiday) => ({ ...holiday })),
+      dayEvents: (input.dayEvents ?? []).map((event) => ({ ...event })),
+      locks: (input.locks ?? []).map((lock) => ({ ...lock })),
+    };
+  }
 
-    // Get Calendar Context Day details
-    const calendarDay = computeEffectiveDay(
-      patch.date,
+  getDailyAttendance(dataset: AttendanceDatasetCanonical, date: string): AttendanceRecordCanonical[] {
+    return getDailyRecords(dataset, date).map(cloneRecord);
+  }
+
+  getMonthlyAttendance(dataset: AttendanceDatasetCanonical, studentId?: string): AttendanceRecordCanonical[] {
+    return getMonthlyRecords(dataset, studentId).map(cloneRecord);
+  }
+
+  getYearlyAttendance(monthlyDatasets: AttendanceDatasetCanonical[], studentId: string) {
+    return computeYearlySummary(monthlyDatasets, studentId);
+  }
+
+  computeSummary(dataset: AttendanceDatasetCanonical, yearlyDatasets: AttendanceDatasetCanonical[] = []): AttendanceV2SummaryBundle {
+    return computeSummaryBundle(dataset, yearlyDatasets);
+  }
+
+  private resolveCalendarDay(dataset: AttendanceDatasetCanonical, date: string): V2CalendarDay | null {
+    const existingDay = dataset.days.find((day) => day.date === date);
+    if (isV2CalendarDay(existingDay)) return existingDay;
+
+    return computeEffectiveDay(
+      date,
       dataset.classId,
       "6days",
-      [],
+      dataset.dayEvents as CalendarScopedEvent[],
       dataset.holidays,
       [],
       dataset.locks
     );
+  }
 
-    // 2. Evaluate Rule Engine outcome
-    const ruleContext = {
-      student: dataset.students.find((s) => s.id === patch.studentId)!,
-      classId: dataset.classId,
-      date: patch.date,
-      proposedStatus: patch.status,
-      proposedNote: patch.note || null,
-      calendarDay,
-      locks: dataset.locks,
-      existingRecord: existing
-    };
+  validateMutation(dataset: AttendanceDatasetCanonical, patch: AttendanceRecordPatch): MutationValidationResult {
+    return validatePatchMutation(dataset, patch, this.writeEnabled && this.runtimeMode === "active", this.resolveCalendarDay(dataset, patch.date));
+  }
 
-    const ruleOutput = evaluateAttendanceRules(ruleContext);
+  compareWithV1CanonicalResult(
+    v1CanonicalRecords: AttendanceRecordCanonical[],
+    v2DatasetOrRecords: AttendanceDatasetCanonical | AttendanceRecordCanonical[]
+  ): ShadowComparisonReport {
+    const v2Records = Array.isArray(v2DatasetOrRecords) ? v2DatasetOrRecords : v2DatasetOrRecords.records;
+    return compareWithV1CanonicalResult(v1CanonicalRecords, v2Records);
+  }
 
-    // Rejection if rule engine disallows writing
-    if (!ruleOutput.writeAllowed) {
-      return {
-        success: false,
-        reasonCode: ruleOutput.reasonCode,
-        appliedRuleIds: ruleOutput.appliedRuleIds,
-        updatedRecord: null,
-        auditEvent: null,
-        validationIssues: [
-          `Rule Rejection: Write disallowed by rule engine. Reason: ${ruleOutput.reasonCode}`
-        ]
-      };
+  applyPatch(
+    dataset: AttendanceDatasetCanonical,
+    patch: AttendanceRecordPatch,
+    actorOrOptions: string | AttendanceV2MutationOptions,
+    v1CanonicalRecords?: AttendanceRecordCanonical[]
+  ): AttendanceV2PatchResult {
+    const options = normalizeOptions(actorOrOptions, v1CanonicalRecords);
+    const workingDataset = cloneDataset(dataset);
+    const calendarDay = this.resolveCalendarDay(workingDataset, patch.date);
+    const validation = validatePatchMutation(
+      workingDataset,
+      patch,
+      this.writeEnabled && this.runtimeMode === "active",
+      calendarDay
+    );
+
+    if (!validation.valid) {
+      return buildFailureResult(workingDataset, validation.reasonCode, validation);
     }
 
-    // 3. Create updated canonical record
-    const nowStr = new Date().toISOString();
-    const updatedRecord: AttendanceRecordCanonical = {
-      id: existing?.id || `rec-${Math.random().toString(36).substring(2, 11)}`,
-      studentId: patch.studentId,
-      classId: dataset.classId,
+    const student = workingDataset.students.find((item: AttendanceStudentCanonical) => item.id === patch.studentId);
+    if (!student) {
+      return buildFailureResult(workingDataset, "MISSING_STUDENT_REFERENCE", validation);
+    }
+
+    const existingRecords = workingDataset.records.filter(
+      (record) => record.studentId === patch.studentId && record.date === patch.date
+    );
+    const existing = existingRecords[0] ?? null;
+
+    const ruleExplanation = evaluateAttendanceRules({
+      student,
+      classId: workingDataset.classId,
       date: patch.date,
-      status: ruleOutput.selectedStatus || "H",
-      note: patch.note !== undefined ? patch.note : (existing?.note || null),
-      createdAt: existing?.createdAt || nowStr,
-      updatedAt: nowStr
+      proposedStatus: patch.status,
+      proposedNote: patch.note ?? null,
+      calendarDay,
+      locks: workingDataset.locks,
+      existingRecord: existing,
+      additionalContext: {
+        source: options.source ?? (this.runtimeMode === "shadow" ? "shadow" : "manual"),
+        isRetroactiveEdit: options.isRetroactiveEdit,
+      },
+    });
+
+    if (!ruleExplanation.writeAllowed) {
+      return buildFailureResult(workingDataset, ruleExplanation.reasonCode, validation, ruleExplanation);
+    }
+
+    const now = new Date().toISOString();
+    const updatedRecord: AttendanceRecordCanonical = {
+      id: existing?.id ?? `v2-rec-${now}-${patch.studentId}-${patch.date}`,
+      studentId: patch.studentId,
+      classId: workingDataset.classId,
+      date: patch.date,
+      status: ruleExplanation.selectedStatus ?? existing?.status ?? patch.status ?? "-",
+      note: patch.note !== undefined ? patch.note ?? null : existing?.note ?? null,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
     };
 
-    // Commit change locally in dataset records array
-    const updatedRecords = dataset.records.filter(
-      (r) => !(r.studentId === patch.studentId && r.date === patch.date)
-    );
-    updatedRecords.push(updatedRecord);
-    dataset.records = updatedRecords;
+    workingDataset.records = [
+      ...workingDataset.records.filter((record) => !(record.studentId === patch.studentId && record.date === patch.date)),
+      updatedRecord,
+    ].sort((left, right) => `${left.date}:${left.studentId}`.localeCompare(`${right.date}:${right.studentId}`));
 
-    // 4. Instantiate and log structured Audit Event
+    let shadowComparison: ShadowComparisonReport | null = null;
+    if (this.runtimeMode === "shadow" && options.v1CanonicalRecords) {
+      shadowComparison = compareWithV1CanonicalResult(options.v1CanonicalRecords, workingDataset.records);
+    }
+
     const auditEvent = createAuditEvent(
-      actor,
+      options.actor,
       existing ? "UPDATE" : "CREATE",
-      dataset.classId,
+      workingDataset.classId,
       patch.studentId,
       patch.date,
       existing,
       updatedRecord,
-      ruleOutput.reasonCode
+      ruleExplanation.reasonCode,
+      {
+        appliedRuleIds: ruleExplanation.appliedRuleIds,
+        ruleAudit: ruleExplanation.auditMetadata,
+        conflictNotes: ruleExplanation.conflictNotes,
+        shadowComparison: shadowComparison?.match === false ? shadowComparison : undefined,
+      }
     );
     this.auditLogs.push(auditEvent);
 
-    // 5. Shadow Mode check
-    if (this.shadowModeActive && v1EquivalentRecords) {
-      // Map V1 records to canonicals
-      const v1Mapped: AttendanceRecordCanonical[] = v1EquivalentRecords.map((r: any) => ({
-        id: r.id || "",
-        studentId: r.student_id,
-        classId: r.class_id,
-        date: r.date,
-        status: r.status,
-        note: r.note || null,
-        createdAt: r.created_at || "",
-        updatedAt: r.updated_at || ""
-      }));
-
-      const shadowResult = compareWithV1CanonicalResult(v1Mapped, dataset.records);
-      if (!shadowResult.match) {
-        auditEvent.metadata = {
-          ...auditEvent.metadata,
-          shadowClash: shadowResult.mismatches
-        };
-      }
-    }
-
     return {
       success: true,
-      reasonCode: ruleOutput.reasonCode,
-      appliedRuleIds: ruleOutput.appliedRuleIds,
+      reasonCode: ruleExplanation.reasonCode,
+      appliedRuleIds: ruleExplanation.appliedRuleIds,
+      dataset: workingDataset,
       updatedRecord,
       auditEvent,
-      validationIssues: []
+      auditEvents: [auditEvent],
+      validationIssues: [],
+      canonicalValidationIssues: [],
+      ruleExplanation,
+      shadowComparison,
     };
   }
 
-  /**
-   * bulkApplyPatch
-   * Atomically iterates patches to apply updates to multiple students.
-   */
   bulkApplyPatch(
     dataset: AttendanceDatasetCanonical,
     patches: AttendanceRecordPatch[],
-    actor: string
+    actorOrOptions: string | AttendanceV2MutationOptions
   ): AttendanceV2PatchResult[] {
-    return patches.map((patch) => this.applyPatch(dataset, patch, actor));
+    const options = normalizeOptions(actorOrOptions);
+    let workingDataset = cloneDataset(dataset);
+
+    return patches.map((patch) => {
+      const result = this.applyPatch(workingDataset, patch, options);
+      if (result.success) {
+        workingDataset = result.dataset;
+      }
+      return result;
+    });
+  }
+
+  updateNote(
+    dataset: AttendanceDatasetCanonical,
+    studentId: string,
+    date: string,
+    note: string | null,
+    actorOrOptions: string | AttendanceV2MutationOptions
+  ): AttendanceV2PatchResult {
+    const existing = dataset.records.find((record) => record.studentId === studentId && record.date === date);
+    if (!existing) {
+      return buildFailureResult(cloneDataset(dataset), "RECORD_NOT_FOUND_FOR_NOTE_UPDATE", null);
+    }
+
+    return this.applyPatch(
+      dataset,
+      {
+        studentId,
+        classId: dataset.classId,
+        date,
+        status: existing.status,
+        note,
+      },
+      actorOrOptions
+    );
   }
 }

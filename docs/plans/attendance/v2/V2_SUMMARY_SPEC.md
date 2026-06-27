@@ -1,85 +1,42 @@
-# V2 Summary Computation Spec
+# V2 SUMMARY SPEC: Attendance V2
 
-## Purpose
+## Objective
+Document canonical summary calculation for daily, monthly, yearly, class recap, and export-adjacent percentage needs.
 
-V2 provides three canonical summary functions that aggregate attendance records without depending on V1 aggregation logic. These functions live in `attendanceV2.engine.ts`.
+## Evidence from Actual Repo Files
+- Summary implementation: `apps/frontend/src/features/attendance/v2/attendanceV2.engine.ts`
+- Canonical summary types: `apps/frontend/src/features/attendance/canonical/canonical.types.ts`
+- Service summary facade: `apps/frontend/src/features/attendance/v2/attendanceV2.service.ts`
+- Tests: `apps/frontend/src/features/attendance/v2/attendanceV2.test.ts`
 
----
+## Findings
+Summary helpers are pure and deterministic:
+- `computeDailySummary(dataset, date)`;
+- `computeMonthlySummary(dataset, studentId)`;
+- `computeYearlySummary(monthlyDatasets, studentId)`;
+- `computeMonthlyClassRecap(dataset)`;
+- `computeSummaryBundle(dataset, yearlyDatasets?)`;
+- `getDailyRecords(dataset, date)`;
+- `getMonthlyRecords(dataset, studentId?)`.
 
-## Daily Summary
+Counting policy:
+- `H` counts present.
+- `D` counts as dispensation and present.
+- `S` counts sick.
+- `I` counts permission.
+- `A` counts absent.
+- `L` counts leave/day-off.
+- Unknown future custom statuses are ignored until a production custom-status summary policy exists.
 
-```ts
-computeDailySummary(
-  dataset: AttendanceDatasetCanonical,
-  date: string
-): AttendanceDailySummaryCanonical
-```
+`computeSummaryBundle` uses canonical days when available; otherwise it derives date rows from records. This preserves deterministic output for imported/shadow datasets with partial day lists.
 
-### Logic
-- Filters records for the given `date`.
-- Counts statuses across students in `dataset.students`.
-- `presentCount` = records where status is `H` or `D` (Dispensasi).
-- `absentCount` = records where status is `A` (Alpha).
-- `sickCount` = records where status is `S`.
-- `permissionCount` = records where status is `I`.
-- `lateCount` = records where status is `L`.
-- `totalStudents` = total students in dataset.
+## Risks
+- `HIGH`: Future custom statuses need explicit summary behavior before they are used in official reports.
+- `MEDIUM`: Current yearly percentage is based on records present in monthly datasets, not generated effective days without records.
+- `LOW`: Class recap is a V2 helper type, not yet part of the shared canonical package.
 
-### Output
-```ts
-interface AttendanceDailySummaryCanonical {
-  date: string;
-  classId: string;
-  totalStudents: number;
-  presentCount: number;
-  absentCount: number;
-  sickCount: number;
-  permissionCount: number;
-  lateCount: number;
-}
-```
+## Safe Next Action
+Phase 07 can reuse these summary helpers server-side or port them to shared contracts before persistence activation.
 
----
-
-## Monthly Summary
-
-```ts
-computeMonthlySummary(
-  dataset: AttendanceDatasetCanonical,
-  studentId: string
-): AttendanceMonthlySummaryCanonical
-```
-
-### Logic
-- Filters all records for the given `studentId`.
-- `totalDays` = total records (one per school day with a record).
-- `presentCount` = records with status `H`.
-- `sickCount` = records with status `S`.
-- `permissionCount` = records with status `I`.
-- `absentCount` = records with status `A`.
-- `lateCount` = records with status `L`.
-
----
-
-## Yearly Summary
-
-```ts
-computeYearlySummary(
-  datasets: AttendanceDatasetCanonical[],
-  studentId: string
-): AttendanceYearlySummaryCanonical
-```
-
-### Logic
-- Aggregates all monthly present counts across all datasets (months).
-- `yearlyPresentCount` = sum of presentCount per month.
-- `totalDays` = sum of totalDays.
-- `percentage` = `Math.round((yearlyPresentCount / totalDays) * 100)` or 0 if totalDays = 0.
-
----
-
-## Principles
-
-- No side effects. All functions are pure, deterministic.
-- No V1 table access. Input is canonical-shaped datasets only.
-- No formula duplication from V1 aggregation layer.
+## Blockers
+None for backend design. Official export integration remains deferred.

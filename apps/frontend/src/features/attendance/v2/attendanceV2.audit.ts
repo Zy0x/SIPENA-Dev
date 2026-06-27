@@ -1,22 +1,23 @@
-import { AttendanceAuditEventCanonical } from "./attendanceV2.types";
+import type { AttendanceRecordCanonical } from "../canonical/canonical.types";
+import type { AttendanceAuditEventCanonical, AttendanceV2AuditAction } from "./attendanceV2.types";
 
-/**
- * createAuditEvent
- * Instantiates a structured canonical audit event log.
- */
+function createAuditId(): string {
+  return `audit-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export function createAuditEvent(
   actor: string,
-  action: AttendanceAuditEventCanonical["action"],
+  action: AttendanceV2AuditAction,
   classId: string,
   studentId: string | undefined,
   date: string | undefined,
-  beforeState: Record<string, any> | null,
-  afterState: Record<string, any> | null,
+  beforeState: AttendanceRecordCanonical | AttendanceRecordCanonical[] | null,
+  afterState: AttendanceRecordCanonical | AttendanceRecordCanonical[] | null,
   reasonCode: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): AttendanceAuditEventCanonical {
   return {
-    id: `audit-${Math.random().toString(36).substring(2, 11)}`,
+    id: createAuditId(),
     timestamp: new Date().toISOString(),
     actor,
     action,
@@ -26,6 +27,6 @@ export function createAuditEvent(
     beforeState,
     afterState,
     reasonCode,
-    metadata
+    metadata,
   };
 }
