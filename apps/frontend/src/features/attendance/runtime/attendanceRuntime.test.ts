@@ -56,4 +56,14 @@ describe("Attendance Runtime Switch", () => {
     expect(guard.forcedEngine).toBe("v1");
     expect(guard.forcedMode).toBe("active");
   });
+
+  it("keeps invalid V2-like values on the V1 fallback path", () => {
+    const config = resolveRuntimeConfig({ remoteEngine: "v2-beta", mode: "shadow" });
+    const guard = guardRuntimeConfig(config);
+
+    expect(config.isValid).toBe(false);
+    expect(guard.reason).toBe("invalid-config");
+    expect(guard.forcedEngine).toBe("v1");
+    expect(guard.forcedMode).toBe("active");
+  });
 });

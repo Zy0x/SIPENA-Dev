@@ -10,9 +10,10 @@
 - Phase 05 - Rule Engine: COMPLETE
 - Phase 06 - Core Attendance V2: COMPLETE
 - Phase 07 - Backend Orchestration: COMPLETE FOUNDATION
+- Phase 08 - Frontend Runtime/Canonical Integration: COMPLETE FOUNDATION
 - Engine Design: IN PROGRESS
 - Backend Design: IMPLEMENTED FOUNDATION
-- Frontend Design: COMPLETE SPEC ONLY
+- Frontend Design: IMPLEMENTED FOUNDATION
 - Export Design: COMPLETE SPEC ONLY
 - Migration Design: COMPLETE SPEC ONLY
 
@@ -101,3 +102,14 @@ Progress is documentation-based, not implementation-based
 - Export/import/OCR/schema modified: no.
 - Validation: `typecheck`, full frontend `test`, `lint`, frontend `build`, backend workspace `build`, `verify:web:dist`, `git diff --check`, and forbidden-path guard passed.
 - Runtime limitation: direct `node apps/backend/dist/main.js` still fails due existing extensionless ESM import output. This is documented as a backend packaging blocker, not an attendance logic change.
+
+## PHASE 08 IMPLEMENTATION CHECKPOINT - 2026-06-27
+
+- Frontend route boundary: `/attendance` remains mounted through `AttendanceRuntimeRoute`, now with `AttendanceProvider` and `AttendanceRuntimeBoundary` outside the V1 wrapper.
+- Canonical provider: implemented as a read-only snapshot layer with stable idle state, canonical validation, UI projection, and export-safe projection.
+- Debug panel: implemented as opt-in only via `?attendanceDebug=1` or `localStorage.attendance_debug_panel=1`.
+- Frontend guard: added helper/tests documenting that future pure UI must not import V1 page/hook or V1/V2 internals directly.
+- V1 internals modified: no.
+- Export/import/OCR/schema modified: no.
+- Runtime default changed: no.
+- V2 activation changed: no.

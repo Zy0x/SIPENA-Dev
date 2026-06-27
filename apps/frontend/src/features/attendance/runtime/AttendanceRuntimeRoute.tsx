@@ -1,6 +1,8 @@
 import { AttendanceRuntimeProvider } from "./AttendanceRuntimeProvider";
 import { useAttendanceRuntime } from "./useAttendanceRuntime";
 import AttendanceV1Wrapper from "../v1/AttendanceV1Wrapper";
+import { AttendanceProvider } from "../provider/AttendanceProvider";
+import { AttendanceRuntimeBoundary } from "../ui/AttendanceRuntimeBoundary";
 
 function ResolvedAttendanceRuntime() {
   const runtime = useAttendanceRuntime();
@@ -17,7 +19,11 @@ function ResolvedAttendanceRuntime() {
 export function AttendanceRuntimeRoute() {
   return (
     <AttendanceRuntimeProvider>
-      <ResolvedAttendanceRuntime />
+      <AttendanceProvider>
+        <AttendanceRuntimeBoundary>
+          <ResolvedAttendanceRuntime />
+        </AttendanceRuntimeBoundary>
+      </AttendanceProvider>
     </AttendanceRuntimeProvider>
   );
 }

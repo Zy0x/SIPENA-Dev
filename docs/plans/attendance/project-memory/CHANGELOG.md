@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2.4.108] - 2026-06-27
+### Added
+- Added Phase 08 frontend Presensi canonical provider boundary around the existing runtime route.
+- Added read-only canonical provider snapshot creation with UI/export-safe projections and validation issue tracking.
+- Added debug-only runtime/canonical panel gated by URL/localStorage opt-in.
+- Added frontend import guard helpers and tests to document blocked direct V1/V2 imports from future pure UI.
+- Added Phase 08 frontend documentation for integration report, canonical provider spec, UI migration plan, and regression checklist.
+
+### Safety
+- V1 page, V1 hook, export, import, OCR, Supabase schema, and runtime default remain untouched.
+- `/attendance` still renders `AttendanceV1Wrapper`; V2 remains blocked by runtime guard.
+- Normal users do not see runtime or canonical debug output.
+
 ## [2.4.107] - 2026-06-27
 ### Added
 - Added Phase 07 backend Presensi orchestration module under `apps/backend/src/modules/attendance/`.
