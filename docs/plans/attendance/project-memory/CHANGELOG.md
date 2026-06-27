@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2.4.107] - 2026-06-27
+### Added
+- Added Phase 07 backend Presensi orchestration module under `apps/backend/src/modules/attendance/`.
+- Added backend runtime guard with V1 as default, V2 env-gated, admin-gated runtime override, and debug/admin-gated shadow report access.
+- Added canonical backend API route family for dataset, patch, bulk patch, note patch, daily/monthly summary, export dataset, runtime, and shadow report.
+- Added request validation for class, month, date, status, note, and bulk patch payloads.
+- Added backend documentation for implementation report, final API contract, runtime middleware, database extension proposal, and security checklist.
+
+### Safety
+- V1 page, hook, export, import, OCR, Supabase schema, migrations, and V1 data tables remain untouched.
+- Backend write endpoints fail closed until V2 persistence, auth, scope validation, RLS, and cutover are approved.
+- Backend V1/V2 adapters return canonical contract placeholders only; no database read/write adapter was connected in this phase.
+
 ## [2.4.106] - 2026-06-27
 ### Added
 - Hardened Phase 06 Core Attendance V2 service after Phase 05 rule engine changes.

@@ -8,8 +8,10 @@
 - Phase 03 - Canonical Model: COMPLETE
 - Phase 04 - Calendar Engine: COMPLETE
 - Phase 05 - Rule Engine: COMPLETE
+- Phase 06 - Core Attendance V2: COMPLETE
+- Phase 07 - Backend Orchestration: COMPLETE FOUNDATION
 - Engine Design: IN PROGRESS
-- Backend Design: COMPLETE SPEC ONLY
+- Backend Design: IMPLEMENTED FOUNDATION
 - Frontend Design: COMPLETE SPEC ONLY
 - Export Design: COMPLETE SPEC ONLY
 - Migration Design: COMPLETE SPEC ONLY
@@ -86,3 +88,16 @@ Progress is documentation-based, not implementation-based
 - V1 internals modified: no.
 - Export/import/OCR/schema modified: no.
 - Runtime default changed: no.
+
+## PHASE 07 IMPLEMENTATION CHECKPOINT - 2026-06-27
+
+- Backend attendance module: implemented under `apps/backend/src/modules/attendance/` using the repo's existing `node:http` style.
+- Runtime guard: implemented with V1 default, invalid-config fallback, V2 env gate, write env gate, admin runtime override guard, and debug/admin shadow guard.
+- API routes: `/api/attendance`, `/api/attendance/bulk`, `/api/attendance/note`, `/api/attendance/summary/daily`, `/api/attendance/summary/monthly`, `/api/attendance/export-dataset`, `/api/attendance/runtime`, and `/api/attendance/shadow/report`.
+- Request validation: class, month, date, status, note, and bulk patch payloads.
+- Write behavior: fail-closed until V2 persistence, auth, scope validation, RLS, and cutover are approved.
+- Database schema modified: no.
+- V1 internals modified: no.
+- Export/import/OCR/schema modified: no.
+- Validation: `typecheck`, full frontend `test`, `lint`, frontend `build`, backend workspace `build`, `verify:web:dist`, `git diff --check`, and forbidden-path guard passed.
+- Runtime limitation: direct `node apps/backend/dist/main.js` still fails due existing extensionless ESM import output. This is documented as a backend packaging blocker, not an attendance logic change.
