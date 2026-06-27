@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [2.4.112] - 2026-06-27
+### Fixed
+- Added regression test for `updateNote` missing-record path: confirms `RECORD_NOT_FOUND_FOR_NOTE_UPDATE` is returned with no audit event when the target record is absent.
+- Added regression tests for `computeSummaryBundle` edge cases: empty-record dataset produces correct zero summaries, and dispensation (D) counts toward both `presentCount` and `dispensationCount` without inflation.
+
+### Safety
+- V1 Presensi page, V1 hook, legacy export renderers, import/OCR, Supabase schema, and production data remain untouched.
+- No V2 logic changed; only regression tests added to document and guard existing behavior.
+- Runtime default remains V1 and V2 remains inactive.
+
 ## [2.4.111] - 2026-06-27
 ### Fixed
 - Hardened Presensi Phase 11 shadow comparison so same-record/different-order drift is reported as `record_order`.

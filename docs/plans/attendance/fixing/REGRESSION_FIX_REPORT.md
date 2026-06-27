@@ -25,13 +25,13 @@ npm test -- --run apps/frontend/src/features/attendance/export/attendanceExportG
 
 Result:
 - PASS: `attendanceExportGolden.test.ts` - 7 tests
-- PASS: `attendanceV2.test.ts` - 12 tests
+- PASS: `attendanceV2.test.ts` - 15 tests
 - PASS: `attendancePhase10.test.ts` - 7 tests
-- Total: 3 files, 26 tests
+- Total: 3 files, 29 tests
 
 Full validation:
 - PASS: `npm run typecheck`
-- PASS: `npm test` - 68 files, 566 tests
+- PASS: `npm test` - 68 files, 569 tests
 - PASS: `npm run lint` - 0 errors, 401 existing warnings
 - PASS: `npm run build`
 - PASS: `npm run verify:web:dist`
@@ -43,6 +43,9 @@ New regression coverage:
 - missing signature settings blocks canonical export bridge;
 - unmapped custom status blocks canonical export bridge;
 - shadow comparison reports `record_order` drift;
+- `updateNote` with no matching record returns `RECORD_NOT_FOUND_FOR_NOTE_UPDATE`, no audit event;
+- empty-record dataset produces correct zero summaries for all students and class recap;
+- dispensation (D) counts toward `presentCount` and `dispensationCount` without double-counting;
 - Phase 10 harness remains green.
 
 ## Risks

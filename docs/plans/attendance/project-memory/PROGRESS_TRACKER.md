@@ -144,6 +144,8 @@ Progress is documentation-based, not implementation-based
 - Shadow parity: `compareWithV1CanonicalResult` now reports `record_order` drift for same-record/different-order datasets.
 - Export adapter: canonical bridge now carries explicit signature settings contract and blocks signature-enabled export when settings/signers are missing.
 - Export status safety: canonical bridge validation blocks unmapped custom status symbols before legacy export rendering.
+- updateNote safety: regression test added for `RECORD_NOT_FOUND_FOR_NOTE_UPDATE` when target record is absent from dataset.
+- Summary correctness: regression tests added for empty-record dataset zero-summary and dispensation (D) double-count guard.
 - Fix reports: generated under `docs/plans/attendance/fixing/`.
 - V1 internals modified: no.
 - Export renderer/layout/Excel path modified: no.

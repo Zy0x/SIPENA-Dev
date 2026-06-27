@@ -250,4 +250,42 @@ describe("Attendance V2 Core Orchestrator - Integration & Validation", () => {
       ["record_order"],
     ]);
   });
+  it("[P11-004] returns RECORD_NOT_FOUND_FOR_NOTE_UPDATE when updateNote targets a missing record", () => {
+    const service = new AttendanceV2Service({ enableWrite: true });
+    const dataset = createDataset();
+
+    const result = service.updateNote(dataset, student1.id, "2026-06-01", "Catatan baru", "operator-1");
+
+    expect(result.success).toBe(false);
+    expect(result.reasonCode).toBe("RECORD_NOT_FOUND_FOR_NOTE_UPDATE");
+    expect(result.auditEvent).toBeNull();
+    expect(service.getAuditLogs()).toHaveLength(0);
+  });
+
+  it("[P11-005] computeSummaryBundle handles dataset with no records without crashing", () => {
+    const service = new AttendanceV2Service();
+    const emptyDataset = createDataset([]);
+
+    const bundle = service.computeSummary(emptyDataset);
+
+    expect(bundle.daily).toHaveLength(30); // June has 30 days
+    expect(bundle.monthly).toHaveLength(2); // 2 students
+    expect(bundle.monthly.every((summary) => summary.presentCount === 0)).toBe(true);
+    expect(bundle.classRecap.totalCount).toBe(0);
+  });
+
+  it("[P11-005b] computeSummaryBundle class recap counts D as dispensation, not double-H", () => {
+    const dataset = createDataset([
+      createRecord({ id: "h", studentId: student1.id, date: "2026-06-01", status: "H" }),
+      createRecord({ id: "d", studentId: student2.id, date: "2026-06-01", status: "D" }),
+      createRecord({ id: "a", studentId: student1.id, date: "2026-06-02", status: "A" }),
+    ]);
+
+    const recap = computeMonthlyClassRecap(dataset);
+
+    expect(recap.presentCount).toBe(2); // H + D both count as present
+    expect(recap.dispensationCount).toBe(1); // D counted separately
+    expect(recap.absentCount).toBe(1); // A counted
+    expect(recap.totalCount).toBe(3); // total raw records
+  });
 });
