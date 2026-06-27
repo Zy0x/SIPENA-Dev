@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [2.4.109] - 2026-06-27
+### Added
+- Added Phase 09 Presensi export canonical adapter under `apps/frontend/src/features/attendance/export/`.
+- Added canonical-to-legacy export bridge for `AttendanceExportPreviewDataV2` and `AttendancePrintDataset`.
+- Added export bridge validation to prevent engine/debug metadata leakage and row/day shape mismatch.
+- Added golden structured export tests for status cells, totals, configurable `Jumlah`, notes, holidays, events, and print-preview parity.
+- Added Phase 09 export documentation for adapter implementation, golden test plan, backward compatibility, and engine-agnostic proof.
+
+### Safety
+- V1 Presensi page, V1 hook, existing export renderers, Excel export path, import, OCR, and Supabase schema remain untouched.
+- Live export behavior remains unchanged; Phase 09 adds a validated adapter seam but does not switch the studio to canonical output yet.
+
 ## [2.4.108] - 2026-06-27
 ### Added
 - Added Phase 08 frontend Presensi canonical provider boundary around the existing runtime route.

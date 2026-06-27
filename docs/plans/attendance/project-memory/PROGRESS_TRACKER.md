@@ -11,10 +11,11 @@
 - Phase 06 - Core Attendance V2: COMPLETE
 - Phase 07 - Backend Orchestration: COMPLETE FOUNDATION
 - Phase 08 - Frontend Runtime/Canonical Integration: COMPLETE FOUNDATION
+- Phase 09 - Export Canonical Adapter: COMPLETE FOUNDATION
 - Engine Design: IN PROGRESS
 - Backend Design: IMPLEMENTED FOUNDATION
 - Frontend Design: IMPLEMENTED FOUNDATION
-- Export Design: COMPLETE SPEC ONLY
+- Export Design: IMPLEMENTED FOUNDATION
 - Migration Design: COMPLETE SPEC ONLY
 
 ---
@@ -113,3 +114,13 @@ Progress is documentation-based, not implementation-based
 - Export/import/OCR/schema modified: no.
 - Runtime default changed: no.
 - V2 activation changed: no.
+
+## PHASE 09 IMPLEMENTATION CHECKPOINT - 2026-06-27
+
+- Export adapter: implemented as a canonical-to-legacy bridge under `apps/frontend/src/features/attendance/export/`.
+- Legacy shape: adapter emits `AttendanceExportPreviewDataV2` and `AttendancePrintDataset` without changing the renderer.
+- Golden tests: added structured tests for day count, murid row count, cells, totals, configurable `Jumlah`, notes, holiday/event items, and engine leakage.
+- Live export behavior changed: no.
+- V1 page/hook modified: no.
+- Export renderer/layout/Excel path modified: no.
+- Import/OCR/schema modified: no.
