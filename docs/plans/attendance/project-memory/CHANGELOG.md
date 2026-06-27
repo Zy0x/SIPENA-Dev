@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [2.4.105] - 2026-06-27
+### Added
+- Hardened Phase 05 V2 Rule Engine for Presensi with strict rule context, required audit metadata, condition-error capture, and deterministic conflict resolution.
+- Expanded status validation for V1 statuses and future custom statuses, including note-required behavior and present/absence conflict rejection.
+- Expanded default rules for missing calendar context, invalid status, required notes, locks, non-effective days, manual writes, retroactive edits, event days, and normal school days.
+- Expanded rule tests for normal days, non-effective days, locked dates, administrative closure, class events, retroactive updates, invalid status, custom status validation, competing rules, missing calendar context, and thrown rule conditions.
+- Rewrote Phase 05 rule documentation with current contracts, decision table, risks, and safe next action for Phase 06.
+
+### Safety
+- V1 page, hook, export, import, OCR, Supabase schema, and runtime activation path remain untouched.
+- Rule engine remains isolated under `apps/frontend/src/features/attendance/v2/rules/`.
+- No production UI is routed to V2 by this change.
+
 ## [2.4.104] - 2026-06-26
 ### Added
 - Implemented Phase 06 Core Attendance V2 orchestrator engine (`attendanceV2.types.ts`, `attendanceV2.audit.ts`, `attendanceV2.validation.ts`, `attendanceV2.shadow.ts`, `attendanceV2.engine.ts`, `attendanceV2.service.ts`).

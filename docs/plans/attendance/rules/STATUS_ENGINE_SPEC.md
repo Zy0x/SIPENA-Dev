@@ -1,27 +1,50 @@
-# STATUS ENGINE SPECIFICATION: Attendance V2
+# STATUS ENGINE SPEC: Attendance V2
 
-Dynamic status manager for predefined V1 codes and custom school status extensions.
+## Objective
+Document the status registry used by Attendance V2 rules while preserving V1 status codes and allowing validated future custom statuses.
 
-## Core Schema
-Every status (both default and custom) must conform to:
-```typescript
-interface AttendanceStatusDefinitionV2 {
-  code: string;
-  label: string;
-  weight: number; // e.g., 1.0 = Present, 0.0 = Absent
-  countsAsPresent: boolean;
-  countsAsAbsence: boolean;
-  exportCode: string;
-  colorToken: string;
-  behaviorFlags: string[]; // e.g., ['REQUIRES_NOTE', 'RETROACTIVE_ONLY']
-}
-```
+## Evidence from Actual Repo Files
+- Status implementation: `apps/frontend/src/features/attendance/v2/rules/statusEngine.ts`
+- Status type: `apps/frontend/src/features/attendance/v2/rules/ruleEngine.types.ts`
+- Canonical status allowance: `apps/frontend/src/features/attendance/canonical/canonical.types.ts`
+- Tests: `apps/frontend/src/features/attendance/v2/rules/ruleEngine.test.ts`
 
-## Predefined Defaults
-- **`H`**: Hadir (weight: 1.0, countsAsPresent: true, countsAsAbsence: false)
-- **`I`**: Izin (weight: 0.0, countsAsPresent: false, countsAsAbsence: true, flag: REQUIRES_NOTE)
-- **`S`**: Sakit (weight: 0.0, countsAsPresent: false, countsAsAbsence: true, flag: REQUIRES_NOTE)
-- **`A`**: Alpha (weight: 0.0, countsAsPresent: false, countsAsAbsence: true)
-- **`D`**: Dispensasi (weight: 1.0, countsAsPresent: true, countsAsAbsence: false, flag: REQUIRES_NOTE)
-- **`L`**: Libur (weight: 0.0, countsAsPresent: false, countsAsAbsence: false, flag: READ_ONLY)
-- **`-`**: Belum Diisi (weight: 0.0, countsAsPresent: false, countsAsAbsence: false)
+## Findings
+Default status codes are:
+
+| Code | Label | Counts Present | Counts Absence | Export Code | Flags |
+| --- | --- | --- | --- | --- | --- |
+| `H` | Hadir | yes | no | `H` | `COUNTS_AS_PRESENT` |
+| `I` | Izin | no | yes | `I` | `REQUIRES_NOTE`, `COUNTS_AS_ABSENCE` |
+| `S` | Sakit | no | yes | `S` | `REQUIRES_NOTE`, `COUNTS_AS_ABSENCE` |
+| `A` | Alpha | no | yes | `A` | `COUNTS_AS_ABSENCE` |
+| `D` | Dispensasi | yes | no | `D` | `REQUIRES_NOTE`, `COUNTS_AS_PRESENT` |
+| `L` | Libur | no | no | `L` | `READ_ONLY` |
+| `-` | Belum Diisi | no | no | `-` | none |
+
+Custom statuses must provide:
+- non-empty code and label;
+- finite non-negative weight;
+- export code;
+- color token;
+- no simultaneous `countsAsPresent` and `countsAsAbsence`.
+
+The registry exposes:
+- `getStatusDefinition(code)`;
+- `registerCustomStatus(definition)`;
+- `listAllStatuses()`;
+- `resetToDefaults()`;
+- `countsAsPresent(code)`;
+- `countsAsAbsence(code)`;
+- `requiresNote(code)`.
+
+## Risks
+- `HIGH`: Custom status definitions must be synchronized with backend/export semantics before production activation.
+- `MEDIUM`: Export currently remains V1-stable; future custom statuses require explicit export mapping policy.
+- `LOW`: Color tokens are strings and not yet validated against a design-token registry.
+
+## Safe Next Action
+Phase 06 may use status helpers for validation and summary calculation, but must keep V1 export unchanged until export accepts canonical status contracts.
+
+## Blockers
+None for isolated V2 work. Production custom status persistence is not implemented in Phase 05.

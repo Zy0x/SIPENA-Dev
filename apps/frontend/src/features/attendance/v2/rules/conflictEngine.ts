@@ -1,123 +1,128 @@
-import { AttendanceRule, RuleEvaluationContext, RuleEffect } from "./ruleEngine.types";
+import type { AttendanceRule, RuleEffect, RuleEvaluationContext, RulePriority, RuleScope } from "./ruleEngine.types";
 
 export interface ConflictResolutionResult {
   appliedRules: AttendanceRule[];
   resolvedEffect: RuleEffect | null;
   conflictNotes: string[];
+  resolvedPriority: RulePriority | null;
 }
 
-/**
- * resolveRuleConflicts
- * Evaluates matching rules against a priority hierarchy and specificity weights.
- * Returns the resolved effect and notes regarding resolved or clashing rules.
- */
+function specificityScore(scope: RuleScope): number {
+  switch (scope) {
+    case "student":
+      return 5;
+    case "class":
+      return 4;
+    case "status":
+      return 3;
+    case "date":
+      return 2;
+    case "school":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function sortRulesDeterministically(left: AttendanceRule, right: AttendanceRule): number {
+  const priorityDelta = left.priority - right.priority;
+  if (priorityDelta !== 0) return priorityDelta;
+
+  const specificityDelta = specificityScore(right.scope) - specificityScore(left.scope);
+  if (specificityDelta !== 0) return specificityDelta;
+
+  return left.id.localeCompare(right.id);
+}
+
+function selectedStatusKey(effect: RuleEffect): string {
+  return effect.selectedStatus === undefined ? "__undefined__" : String(effect.selectedStatus);
+}
+
 export function resolveRuleConflicts(
   matchingRules: AttendanceRule[],
   context: RuleEvaluationContext
 ): ConflictResolutionResult {
   if (matchingRules.length === 0) {
-    return { appliedRules: [], resolvedEffect: null, conflictNotes: [] };
+    return { appliedRules: [], resolvedEffect: null, conflictNotes: [], resolvedPriority: null };
   }
 
-  // Group rules by priority
-  const groupedByPriority: Record<number, AttendanceRule[]> = {};
-  matchingRules.forEach((rule) => {
-    if (!groupedByPriority[rule.priority]) {
-      groupedByPriority[rule.priority] = [];
-    }
-    groupedByPriority[rule.priority].push(rule);
-  });
-
-  // Find the highest priority group (lowest numerical value)
-  const sortedPriorities = Object.keys(groupedByPriority)
-    .map(Number)
-    .sort((a, b) => a - b);
-  
-  const highestPriority = sortedPriorities[0];
-  const rulesAtPriority = groupedByPriority[highestPriority];
-
-  // If there's only one rule at this priority, return it immediately
-  if (rulesAtPriority.length === 1) {
-    const singleRule = rulesAtPriority[0];
-    return {
-      appliedRules: [singleRule],
-      resolvedEffect: singleRule.effect(context),
-      conflictNotes: [],
-    };
-  }
-
-  // Evaluate the effects of all rules in this group
+  const orderedRules = [...matchingRules].sort(sortRulesDeterministically);
+  const highestPriority = orderedRules[0].priority;
+  const rulesAtPriority = orderedRules.filter((rule) => rule.priority === highestPriority);
   const evaluated = rulesAtPriority.map((rule) => ({
     rule,
     effect: rule.effect(context),
   }));
 
-  // Check if they disagree on the proposed selectedStatus
-  const uniqueStatusOutcomes = new Set(
-    evaluated.map((ev) => ev.effect.selectedStatus).filter((s) => s !== undefined)
-  );
-
-  // If they agree (0 or 1 unique status outcome), merge the write permissions and use the status
-  if (uniqueStatusOutcomes.size <= 1) {
-    const finalEffect: RuleEffect = {
-      writeAllowed: evaluated.every((ev) => ev.effect.writeAllowed),
-      reasonCode: evaluated[0].effect.reasonCode,
-      selectedStatus: evaluated.find((ev) => ev.effect.selectedStatus !== undefined)?.effect.selectedStatus ?? null,
-    };
+  const blockingEffect = evaluated.find((item) => item.rule.conflictBehavior === "block" || !item.effect.writeAllowed);
+  if (blockingEffect) {
     return {
-      appliedRules: rulesAtPriority,
-      resolvedEffect: finalEffect,
+      appliedRules: [blockingEffect.rule],
+      resolvedEffect: blockingEffect.effect,
       conflictNotes: [],
+      resolvedPriority: highestPriority,
     };
   }
 
-  // Clashing conflict detected! Disagreement on selectedStatus.
-  // Resolve by specificity: student > class > school > other
-  const specificityScore = (scope: string) => {
-    switch (scope) {
-      case "student": return 3;
-      case "class": return 2;
-      case "school": return 1;
-      default: return 0;
+  const uniqueStatusOutcomes = new Set(evaluated.map((item) => selectedStatusKey(item.effect)));
+  if (uniqueStatusOutcomes.size <= 1) {
+    const selectedStatus = evaluated.find((item) => item.effect.selectedStatus !== undefined)?.effect.selectedStatus;
+    const validationIssues = evaluated.flatMap((item) => item.effect.validationIssues ?? []);
+    const auditMetadata = evaluated.reduce<Record<string, unknown>>((metadata, item) => {
+      return { ...metadata, ...(item.effect.auditMetadata ?? {}) };
+    }, {});
+    const resolvedEffect: RuleEffect = {
+      writeAllowed: evaluated.every((item) => item.effect.writeAllowed),
+      reasonCode: evaluated[0].effect.reasonCode,
+      validationIssues,
+      auditMetadata,
+    };
+
+    if (selectedStatus !== undefined) {
+      resolvedEffect.selectedStatus = selectedStatus;
     }
-  };
 
-  const sortedBySpecificity = [...evaluated].sort(
-    (a, b) => specificityScore(b.rule.scope) - specificityScore(a.rule.scope)
-  );
+    return {
+      appliedRules: evaluated.map((item) => item.rule),
+      resolvedEffect,
+      conflictNotes: [],
+      resolvedPriority: highestPriority,
+    };
+  }
 
-  const highestSpecificityScore = specificityScore(sortedBySpecificity[0].rule.scope);
-  const highestSpecificityRules = sortedBySpecificity.filter(
-    (ev) => specificityScore(ev.rule.scope) === highestSpecificityScore
-  );
+  const highestSpecificity = Math.max(...evaluated.map((item) => specificityScore(item.rule.scope)));
+  const highestSpecificityRules = evaluated
+    .filter((item) => specificityScore(item.rule.scope) === highestSpecificity)
+    .sort((left, right) => left.rule.id.localeCompare(right.rule.id));
 
-  // If specificity resolved the clash
   if (highestSpecificityRules.length === 1) {
     const resolved = highestSpecificityRules[0];
     const clashingRuleNames = evaluated
-      .filter((ev) => ev.rule.id !== resolved.rule.id)
-      .map((ev) => `'${ev.rule.name}'`)
+      .filter((item) => item.rule.id !== resolved.rule.id)
+      .map((item) => `'${item.rule.name}'`)
       .join(", ");
+
     return {
       appliedRules: [resolved.rule],
       resolvedEffect: resolved.effect,
       conflictNotes: [
-        `Resolved potential clash on date '${context.date}' using specificity. Rule '${resolved.rule.name}' took precedence over ${clashingRuleNames}.`,
+        `Resolved rule clash on date '${context.date}' by specificity. Rule '${resolved.rule.name}' took precedence over ${clashingRuleNames}.`,
       ],
+      resolvedPriority: highestPriority,
     };
   }
 
-  // If there is still a tie (same priority, same specificity, different status outcomes)
-  // Apply the first rule but return a warning conflict report
   const resolved = highestSpecificityRules[0];
   const clashes = highestSpecificityRules
-    .map((ev) => `'${ev.rule.name}' (status: ${ev.effect.selectedStatus})`)
+    .map((item) => `'${item.rule.name}' (status: ${selectedStatusKey(item.effect)})`)
     .join(" vs ");
+
   return {
-    appliedRules: highestSpecificityRules.map((h) => h.rule),
+    appliedRules: highestSpecificityRules.map((item) => item.rule),
     resolvedEffect: resolved.effect,
     conflictNotes: [
-      `RULE_CLASH_WARNING: Multiple competing rules clashing at priority ${highestPriority} on date '${context.date}': ${clashes}. Arbitrarily applied '${resolved.rule.name}'.`,
+      `RULE_CLASH_WARNING: Multiple competing rules clashing at priority ${highestPriority} on date '${context.date}': ${clashes}. Deterministically applied '${resolved.rule.name}' by rule id.`,
     ],
+    resolvedPriority: highestPriority,
   };
 }

@@ -1,6 +1,31 @@
-import { RuleEvaluationContext, RuleEvaluationOutput, AttendanceRule } from "./ruleEngine.types";
+import {
+  AttendanceRule,
+  RuleConditionError,
+  RuleEvaluationAuditMetadata,
+  RuleEvaluationContext,
+  RuleEvaluationOutput,
+} from "./ruleEngine.types";
 import { defaultRulesList } from "./defaultRules";
 import { resolveRuleConflicts } from "./conflictEngine";
+
+function createAuditMetadata(
+  context: RuleEvaluationContext,
+  matchingRules: AttendanceRule[],
+  conditionErrors: RuleConditionError[],
+  overrides: Partial<RuleEvaluationAuditMetadata> = {}
+): RuleEvaluationAuditMetadata {
+  return {
+    totalMatchingRules: matchingRules.length,
+    matchingRuleIds: matchingRules.map((rule) => rule.id),
+    conditionErrors,
+    validationIssues: [],
+    resolvedPriority: null,
+    appliedRuleScopes: [],
+    source: context.additionalContext?.source,
+    isRetroactiveEdit: context.additionalContext?.isRetroactiveEdit,
+    ...overrides,
+  };
+}
 
 /**
  * evaluateAttendanceRules
@@ -11,15 +36,17 @@ export function evaluateAttendanceRules(
   context: RuleEvaluationContext,
   customRules: AttendanceRule[] = []
 ): RuleEvaluationOutput {
-  // Combine default rules and any class/school-specific custom rules
   const allRules = [...defaultRulesList, ...customRules].filter((r) => r.enabled);
+  const conditionErrors: RuleConditionError[] = [];
 
-  // Filter rules whose conditions are met
   const matchingRules = allRules.filter((rule) => {
     try {
       return rule.condition(context);
-    } catch (e) {
-      console.error(`Error evaluating condition for rule '${rule.id}':`, e);
+    } catch (error) {
+      conditionErrors.push({
+        ruleId: rule.id,
+        message: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
   });
@@ -31,10 +58,10 @@ export function evaluateAttendanceRules(
       reasonCode: "NO_RULES_MATCHED",
       appliedRuleIds: [],
       conflictNotes: [],
+      auditMetadata: createAuditMetadata(context, matchingRules, conditionErrors),
     };
   }
 
-  // Delegate rule resolution to the conflict resolver
   const resolution = resolveRuleConflicts(matchingRules, context);
 
   if (!resolution.resolvedEffect) {
@@ -44,15 +71,16 @@ export function evaluateAttendanceRules(
       reasonCode: "NO_EFFECT_RESOLVED",
       appliedRuleIds: resolution.appliedRules.map((r) => r.id),
       conflictNotes: resolution.conflictNotes,
+      auditMetadata: createAuditMetadata(context, matchingRules, conditionErrors, {
+        resolvedPriority: resolution.resolvedPriority,
+        appliedRuleScopes: resolution.appliedRules.map((rule) => rule.scope),
+      }),
     };
   }
 
   const effect = resolution.resolvedEffect;
-  
-  // Use resolved status if defined, otherwise fall back to existing record or null
-  const selectedStatus = effect.selectedStatus !== undefined 
-    ? effect.selectedStatus 
-    : (context.existingRecord ? context.existingRecord.status : null);
+  const selectedStatus =
+    effect.selectedStatus !== undefined ? effect.selectedStatus : context.existingRecord ? context.existingRecord.status : null;
 
   return {
     selectedStatus,
@@ -60,10 +88,11 @@ export function evaluateAttendanceRules(
     reasonCode: effect.reasonCode,
     appliedRuleIds: resolution.appliedRules.map((r) => r.id),
     conflictNotes: resolution.conflictNotes,
-    auditMetadata: {
-      totalMatchingRules: matchingRules.length,
-      matchingRuleIds: matchingRules.map((r) => r.id),
-      validationIssues: effect.validationIssues || []
-    }
+    auditMetadata: createAuditMetadata(context, matchingRules, conditionErrors, {
+      validationIssues: effect.validationIssues ?? [],
+      resolvedPriority: resolution.resolvedPriority,
+      appliedRuleScopes: resolution.appliedRules.map((rule) => rule.scope),
+      ...(effect.auditMetadata ?? {}),
+    }),
   };
 }

@@ -61,3 +61,15 @@ Progress is documentation-based, not implementation-based
 - V1 internals modified: no.
 - Export/import/OCR/schema modified: no.
 - Effective days stored as source of truth: no.
+
+## PHASE 05 IMPLEMENTATION CHECKPOINT - 2026-06-27
+
+- Rule engine types: hardened with nullable calendar context, status behavior flags, conflict behavior, condition errors, and required audit metadata.
+- Status engine: validates default/custom status definitions and preserves V1 codes `H`, `I`, `S`, `A`, `D` plus derived `L` and `-`.
+- Conflict engine: deterministic priority, specificity, merge, block, and same-specificity clash reporting implemented.
+- Default rules: expanded for missing calendar context, invalid status, required notes, locks, non-effective days, manual writes, retroactive edits, event defaults, and normal school days.
+- Rule docs: expanded in `docs/plans/attendance/rules/`.
+- Targeted tests: rule, calendar, and canonical tests passed.
+- V1 internals modified: no.
+- Export/import/OCR/schema modified: no.
+- Runtime activation changed: no.
