@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2.4.110] - 2026-06-27
+### Added
+- Added Phase 10 Presensi migration-safety test harness under `apps/frontend/src/features/attendance/testing/`.
+- Added generated testing documentation for matrix, datasets, run report, regression risks, and Phase 10 summary.
+- Covered canonical corruption, 5/6-day effective-day datasets, runtime fallback, locked/disabled V2 writes, V1 seam mapping, shadow drift, and canonical export payload compatibility.
+
+### Safety
+- V1 Presensi page, V1 hook, export renderers, import, OCR, Supabase schema, and production data remain untouched.
+- Phase 10 tests use deterministic in-memory fixtures only.
+- Signature rendering remains documented as a manual/spec gate until export UI settings are adapted into canonical export input.
+
 ## [2.4.109] - 2026-06-27
 ### Added
 - Added Phase 09 Presensi export canonical adapter under `apps/frontend/src/features/attendance/export/`.

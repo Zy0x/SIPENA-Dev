@@ -12,6 +12,7 @@
 - Phase 07 - Backend Orchestration: COMPLETE FOUNDATION
 - Phase 08 - Frontend Runtime/Canonical Integration: COMPLETE FOUNDATION
 - Phase 09 - Export Canonical Adapter: COMPLETE FOUNDATION
+- Phase 10 - Testing Matrix: COMPLETE FOUNDATION
 - Engine Design: IN PROGRESS
 - Backend Design: IMPLEMENTED FOUNDATION
 - Frontend Design: IMPLEMENTED FOUNDATION
@@ -124,3 +125,14 @@ Progress is documentation-based, not implementation-based
 - V1 page/hook modified: no.
 - Export renderer/layout/Excel path modified: no.
 - Import/OCR/schema modified: no.
+
+## PHASE 10 TESTING CHECKPOINT - 2026-06-27
+
+- Test matrix: generated under `docs/plans/attendance/testing/generated/`.
+- Phase 10 harness: added under `apps/frontend/src/features/attendance/testing/`.
+- Coverage: canonical corruption, 5/6-day calendar behavior, holiday/event/lock datasets, runtime V1 fallback, V2 mutation guard, V1 seam mapping, shadow mismatch report, export adapter engine-agnostic payload, moved-murid/missing-reference guard.
+- Data safety: tests are in-memory only and do not touch V1 production storage.
+- V1 page/hook modified: no.
+- Export renderer/layout/Excel path modified: no.
+- Import/OCR/schema modified: no.
+- Validation: `typecheck`, targeted Phase 10 Vitest, full frontend `test`, `lint`, frontend `build`, `verify:web:dist`, and `git diff --check` passed. Lint/build/test warnings are documented in `TEST_RUN_REPORT.md`.
