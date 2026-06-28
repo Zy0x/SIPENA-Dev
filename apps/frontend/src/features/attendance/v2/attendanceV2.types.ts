@@ -106,3 +106,30 @@ export interface AttendanceV2SummaryBundle {
     totalCount: number;
   };
 }
+
+export interface AttendanceLockPatch {
+  classId: string;
+  month: string;
+  isLocked: boolean;
+}
+
+export interface AttendanceHolidayPatch {
+  date: string;
+  description?: string;
+}
+
+export interface AttendanceDayEventPatch {
+  date: string;
+  label?: string;
+  description?: string | null;
+  color?: string | null;
+  action: "upsert" | "delete";
+}
+
+export interface AttendanceNotePatchBody {
+  studentId: string;
+  classId: string;
+  date: string;
+  note: string | null;
+}
+
