@@ -159,3 +159,34 @@ ACE mengatasi masalah ini melalui mekanisme **Rekonsiliasi & Notifikasi Inkonsis
 ```
 
 Dengan desain modular Academic Calendar Engine ini, SIPENA akan memiliki basis logika penanggalan yang kokoh, tangguh terhadap anomali lokal, dan ramah terhadap perubahan mendadak di lapangan.
+
+---
+
+## 7. Celah Logika & Kasus Riil Sekolah Lain yang Belum Terfasilitasi
+
+Selain masalah di atas, terdapat beberapa kasus operasional sekolah di dunia nyata yang belum diakomodasi baik di V1 maupun rencana awal V2:
+
+### A. Mutasi Murid Lintas Kelas di Tengah Semester (Mid-Semester Mutations)
+*   **Kasus**: Seorang murid dipindahkan kelasnya (misal dari Kelas 5A ke Kelas 5B) di tengah bulan (misal tanggal 15 September).
+*   **Masalah**: SIPENA mengikat murid secara statis ke satu `class_id` di tabel `students`. Jika guru mengubah kelas murid tersebut di tengah tahun ajaran, maka seluruh riwayat presensi murid tersebut dari bulan Juli s.d. Agustus seolah-olah ikut bermutasi ke kelas baru. Hal ini merusak rekap presensi bulanan resmi di kelas lama (5A) dan merusak konsistensi rekap nilai kehadiran di rapor kelas baru (5B).
+*   **Rencana Solusi**: Perlu adanya tabel relasional penghubung `student_class_history` yang mencatat tanggal masuk dan keluar murid di suatu kelas, sehingga kalkulasi presensi membatasi rentang tanggal aktif murid di kelas tersebut secara historis.
+
+### B. Keterlambatan Logis & Akumulasi Sanksi (Late Attendance Tolerances)
+*   **Kasus**: Sekolah membedakan antara murid yang "Hadir Tepat Waktu" dengan "Hadir Terlambat" (terlambat > 15 menit). Beberapa sekolah menerapkan sanksi administratif (misal: 3 kali terlambat dihitung setara dengan 1 hari Alpha).
+*   **Masalah**: SIPENA hanya merekam status biner kehadiran (`H`, `I`, `S`, `A`, `D`). Keterlambatan tidak tercatat sebagai metrik numerik waktu melainkan hanya berupa note teks bebas yang tidak bisa dihitung secara otomatis oleh sistem rekapitulasi.
+*   **Rencana Solusi**: Menambahkan sub-status atau metrik `minutes_late` pada tabel `attendance_records` untuk pelaporan keterlambatan murid secara statistik.
+
+### C. Presensi per Sesi / Jam Pelajaran (Period-Based Attendance)
+*   **Kasus**: Pada tingkat SMP/SMA/SMK, pencatatan kehadiran tidak lagi dilakukan sekali per hari (harian), melainkan dicatat **per jam pelajaran / mata pelajaran**. Seorang murid mungkin hadir pada jam pelajaran pertama (Matematika) namun membolos di jam pelajaran ketiga (Sejarah).
+*   **Masalah**: SIPENA saat ini didesain murni sebagai sistem presensi harian (*Daily Attendance*). Sistem tidak memiliki kapabilitas untuk memetakan presensi per slot jadwal mata pelajaran (*period-based*).
+*   **Rencana Solusi**: Menyediakan opsi konfigurasi mode presensi sekolah: Mode Harian (untuk SD) atau Mode Sesi/Jadwal Pelajaran (untuk SMP/SMA).
+
+### D. Otomatisasi Sakit / Izin Jangka Panjang (Long-Term Medical Leaves)
+*   **Kasus**: Murid yang mengalami sakit keras (opname) atau izin khusus (lomba internasional) yang berlangsung selama 2 s.d. 3 minggu berturut-turut.
+*   **Masalah**: Guru harus mengeklik sel tanggal murid tersebut satu per satu sebanyak 15 s.d. 18 kali secara manual untuk mengeset status `'S'` atau `'I'` dan mengisi catatan alasan yang sama berulang kali.
+*   **Rencana Solusi**: Menyediakan fitur "Registrasi Cuti Presensi Murid" (Pengecualian Individual) di mana guru cukup menginput nama murid, rentang tanggal mulai-selesai, status presensi, dan alasan sekali saja untuk otomatis mengisi sel-sel di kalender efektif.
+
+### E. Presensi Kegiatan Ekstrakurikuler Wajib & Pilihan
+*   **Kasus**: Rekapitulasi kehadiran murid pada kegiatan ekstrakurikuler (seperti Pramuka, Futsal, Seni Musik) yang wajib dinilai di akhir semester dalam rapor.
+*   **Masalah**: Sistem presensi SIPENA hanya merekam kehadiran kelas akademik utama. Tidak ada ruang pencatatan kehadiran terpisah untuk program ekstrakurikuler.
+*   **Rencana Solusi**: Menambahkan sub-modul "Presensi Ekstrakurikuler" yang berorientasi pada jadwal latihan mingguan kelompok ekskul.
