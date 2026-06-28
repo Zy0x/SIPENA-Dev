@@ -14,6 +14,7 @@
 - Phase 09 - Export Canonical Adapter: COMPLETE FOUNDATION
 - Phase 10 - Testing Matrix: COMPLETE FOUNDATION
 - Phase 11 - Fixing / Hardening: COMPLETE FOUNDATION
+- Phase 12 - Final Cutover: COMPLETE — SHADOW_ONLY mode chosen
 - Engine Design: IN PROGRESS
 - Backend Design: IMPLEMENTED FOUNDATION
 - Frontend Design: IMPLEMENTED FOUNDATION
@@ -152,3 +153,19 @@ Progress is documentation-based, not implementation-based
 - Import/OCR/schema modified: no.
 - Runtime default changed: no.
 - Deferred gates: binary signature rendering parity and browser UI regression remain pre-cutover risks.
+
+## PHASE 12 CUTOVER CHECKPOINT - 2026-06-28
+
+- Cutover mode: SHADOW_ONLY.
+- Final gate evaluation: 12/14 PASS; 2 deferred (signature render parity, browser E2E).
+- Runtime config: `VITE_ATTENDANCE_ENGINE=v2`, `VITE_ATTENDANCE_MODE=shadow`.
+- Runtime before: `{ engine: "v1", mode: "active", source: "default" }`.
+- Runtime after: `{ engine: "v2", mode: "shadow", source: "env" }`.
+- V1 internals modified: no.
+- Export renderer/layout/Excel/PDF/PNG path modified: no.
+- Import/OCR/schema modified: no.
+- Supabase writes by V2: none.
+- Release documents: created under `docs/plans/attendance/release/`.
+- Test baseline: 571/571 tests pass, 0 TypeScript errors.
+- Rollback: config-only — remove `VITE_ATTENDANCE_ENGINE` env var (< 2 min).
+- Next milestone: Phase 13 — Playwright E2E + PDF render parity → `CLASS_ROLLOUT`.

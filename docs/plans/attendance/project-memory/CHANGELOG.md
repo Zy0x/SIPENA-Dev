@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## [2.4.114] - 2026-06-28
+### Release Decision
+- **Phase 12 CUTOVER MODE: `SHADOW_ONLY`**
+- V2 engine promoted from isolated development to shadow mode.
+- V1 remains the exclusive source of truth for all user output, writes, and exports.
+- Shadow mode runs V2 in parallel for comparison only — zero user impact.
+
+### Release Documents Created
+- `docs/plans/attendance/release/FINAL_ACCEPTANCE_REPORT.md`
+- `docs/plans/attendance/release/CUTOVER_DECISION.md`
+- `docs/plans/attendance/release/ROLLBACK_RUNBOOK.md`
+- `docs/plans/attendance/release/POST_CUTOVER_MONITORING.md`
+- `docs/plans/attendance/release/RELEASE_NOTES.md`
+
+### Deferred Gates (not blocking shadow mode)
+- BLOCKER-1: PDF/PNG binary signature render parity — deferred to Phase 13
+- BLOCKER-2: Playwright E2E browser regression suite — deferred to Phase 13
+- Canonical export studio wiring — deferred to Phase 13
+- Backend ESM packaging blocker — deferred to Phase 14
+
+### Safety
+- V1 Presensi page, V1 hook, legacy export renderers, import/OCR, Supabase schema: untouched
+- Rollback: remove `VITE_ATTENDANCE_ENGINE` env var (config-only, < 2 min)
+- No database writes, no schema changes, no data loss risk
+
 ## [2.4.113] - 2026-06-28
 ### Fixed
 - **BUG-22** `conflictEngine.ts`: `blockingEffect` predicate used `||` causing rules with `conflictBehavior:"block"` but `writeAllowed:true` to incorrectly halt conflict resolution. Fixed to `&&`.
