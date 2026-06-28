@@ -1,90 +1,117 @@
-# DEEP AUDIT, ARCHITECTURE REVIEW & ROADMAP: Modul Presensi (Attendance) SIPENA
+# PROPOSAL PARADIGMA DOMAIN: Dari "Holiday System" Menuju "Academic Calendar Engine" (ACE) SIPENA
 
-Dokumen ini menyajikan pembedahan mendalam terhadap **Modul Presensi** SIPENA. Dokumen ini meninjau keunggulan arsitektur, mengidentifikasi kelemahan logika (terutama mengenai tata kelola hari libur kustom dan kompleksitas komponen), serta memetakan rencana pengembangan (*roadmap*) fitur-fitur masa depan agar modul ini siap menjadi standar emas sistem presensi akademik.
-
----
-
-## 1. Analisis Arsitektur & Alur Data Saat Ini
-
-Arsitektur presensi SIPENA dirancang secara berlapis dengan pemisahan tanggung jawab (*separation of concerns*) yang baik:
-
-```
-UI (Pages/Components) 
-    ↓
-Hooks (useAttendance / useAttendanceV2Dataset)
-    ↓
-API & Service Layer (attendanceV2Api / Supabase client)
-    ↓
-Business Engines (Calendar, Rule, Status, Summary Engines)
-    ↓
-Persistence Layer (Database V1 & V2 Tables)
-```
-
-### Kelebihan Utama:
-*   **Model Data Komprehensif**: Berbeda dengan aplikasi sekolah biasa yang hanya mencatat status hadir/tidak hadir, SIPENA mendukung rekaman presensi (`AttendanceRecord`), pencatatan libur (`HolidayRecord`), kegiatan harian sekolah (`DayEvent`), dan mekanisme penguncian rekapitulasi bulanan (`AttendanceLock`).
-*   **Dukungan Dispensasi (`'D'`)**: Penanganan status dispensasi yang setara dengan kehadiran penuh, namun secara ketat mewajibkan pengisian catatan alasan (`note`), mencerminkan kebutuhan administrasi sekolah yang nyata.
-*   **Dokumentasi Terstruktur**: Adanya folder `/docs` khusus untuk memandu skema basis data dan pengujian otomatis menunjukkan tingkat maturitas rekayasa yang tinggi.
+Dokumen ini merangkum pergeseran paradigma domain model untuk tata kelola kalender dan presensi di SIPENA. Alih-alih memperlakukan hari libur sebagai "tempelan di kalender", proposal ini mendesain ulang model domain presensi dengan memperkenalkan **Academic Calendar Engine (ACE)**—sebuah mesin kalender akademik terpadu berbasis Google Calendar Model yang menjadi sumber kebenaran tunggal (*source of truth*) untuk menentukan hari efektif, kegiatan sekolah, dan status presensi murid secara otomatis.
 
 ---
 
-## 2. Analisis Kelemahan Sistem & Potensi Bottleneck
+## 1. Pergeseran Paradigma: Mengapa "Holiday System" Runtuh?
 
-### A. Masalah Hari Libur Kustom (Custom Holidays)
-*   **Tidak Adanya Batasan Lingkup Kelas**: Tabel `attendance_holidays` mengaitkan libur kustom langsung ke `user_id` (guru) tanpa kolom `class_id`. Akibatnya, hari libur kustom yang dibuat guru otomatis berlaku untuk **seluruh kelas** yang diajarkan oleh guru tersebut. Perbedaan hari libur antar-kelas tidak dapat dikonfigurasi.
-*   **Overhead Kinerja (*Memory & Rendering Bloat*)**: Kueri memuat semua hari libur tanpa batasan rentang waktu atau penapisan tahun ajaran aktif. Grid tabel presensi yang besar (Jumlah Murid $\times$ Jumlah Hari) rentan mengalami lag render parah saat mencocokkan status `isHoliday` untuk ribuan data libur.
-*   **Risiko Pembagian dengan Nol (*Division by Zero*)**: Jika guru mendaftarkan terlalu banyak libur kustom sehingga total hari efektif dalam sebulan menjadi `0`, perhitungan persentase kehadiran murid akan menghasilkan nilai `NaN%` atau `Infinity%`, yang berpotensi merusak layout perenderan PDF/Excel.
+Pada sistem tradisional, hari libur disimpan sebagai data pasif (`attendance_holidays`) yang terpisah dari kegiatan sekolah (`attendance_day_events`). Paradigma ini runtuh ketika dihadapkan pada skenario nyata sekolah yang sangat dinamis:
 
-### B. Tantangan "God Component" pada `Attendance.tsx` (V1)
-*   **Masalah**: Halaman `Attendance.tsx` versi V1 mengimpor puluhan dependensi (ekspor PDF/Excel, import OCR, sinkronisasi libur, diagram statistik, tabel gulir, layout tanda tangan, dsb) dalam satu file raksasa berukuran ribuan baris.
-*   **Dampak**: Menurunkan tingkat keterbacaan (*readability*), menyulitkan pembuatan pengujian unit (*unit testing*), serta meningkatkan risiko konflik kode saat dikerjakan oleh beberapa pengembang secara paralel.
+*   **Kegiatan khusus tidak selalu berarti libur** (misalnya P5 atau Ujian Akhir, murid tetap masuk dan presensi tetap dicatat).
+*   **Lingkup (*Scope*) yang sangat bervariasi**: Libur atau kegiatan bisa berlaku hanya untuk satu murid (dispensasi khusus), satu kelas (study tour), satu tingkat kelas (asesmen nasional), atau seluruh sekolah (libur nasional).
+*   **Tumpang Tindih & Bentrokan**: Pada tanggal yang sama, bisa terdapat beberapa aturan kalender yang bertabrakan. Tanpa adanya sistem prioritas yang jelas, perhitungan hari efektif akan menjadi tidak deterministik.
 
 ---
 
-## 3. Solusi & Pola Dekopling Modular (V2 Solution)
+## 2. Struktur Domain Model Baru: `CalendarEvent`
 
-Dalam perancangan V2, tantangan "God Component" diselesaikan dengan memecah halaman utama menjadi komponen-komponen kecil yang terfokus:
+Sebagai solusi struktural, kita menghapus tabel `attendance_holidays` dan `attendance_day_events` secara bertahap, lalu menggantikannya dengan satu entitas tunggal bernama `CalendarEvent`.
 
-*   **`AttendanceV2Page`**: Bertindak sebagai dirigen (*orchestrator*) yang mengatur komunikasi state, dialog modal, dan koordinasi mutasi.
-*   **`AttendanceV2Toolbar`**: Mengelola masukan filter pemilih kelas, navigasi bulan, serta pemicu aksi impor/ekspor.
-*   **`AttendanceV2Table` & `AttendanceV2Cell`**: Berfokus murni pada perenderan kisi murid dan penanganan interaksi sel.
-*   **`AttendanceV2SummaryCards`**: Menampilkan rekapitulasi data kehadiran murid secara real-time.
-*   **`AttendanceV2AuditPanel`**: Menampilkan riwayat mutasi presensi langsung pada halaman guru demi asas transparansi data.
+### Skema Tabel Basis Data `calendar_events`:
+
+| Nama Kolom | Tipe Data | Keterangan |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Identifier unik event |
+| `title` | `varchar` | Nama kegiatan/libur |
+| `description` | `text` | Deskripsi detail kegiatan |
+| `event_type` | `enum` | `HOLIDAY \| EXAM \| P5 \| MEETING \| ASSEMBLY \| STUDY_TOUR \| FIELD_TRIP \| SPORT \| CUSTOM` |
+| `scope` | `enum` | `GLOBAL \| SCHOOL \| GRADE \| CLASS \| STUDENT \| TEACHER` |
+| `target` | `varchar` | Nilai target scope (misal: ID kelas, ID murid, angka tingkat 1-6, atau NULL jika global) |
+| `priority` | `int` | Bobot prioritas (makin tinggi angka, makin memenangkan konflik) |
+| `start_date` | `date` | Tanggal mulai event (mendukung rentang hari) |
+| `end_date` | `date` | Tanggal selesai event (Nullable) |
+| `repeat_rule` | `varchar` | Aturan pengulangan kegiatan (misal: `weekly`, `monthly`, atau NULL) |
+| `is_working_day` | `boolean` | Menentukan apakah hari tersebut wajib mencatat presensi (`true` = hari masuk, `false` = hari libur) |
+| `color` | `varchar` | Kode warna visual di kalender |
+| `created_by` | `uuid` (FK) | ID Pembuat |
 
 ---
 
-## 4. Peta Jalan Fitur Unggulan Masa Depan (Future Roadmap)
+## 3. Resolusi 8 Skenario Sekolah dengan `CalendarEvent`
 
-Untuk membuat modul presensi SIPENA semakin unggul, berikut adalah peta jalan fitur yang direkomendasikan untuk dikembangkan:
+Model domain baru ini menyelesaikan seluruh skenario kompleks sekolah dengan sangat elegan:
 
-### A. Jurnal Transparansi & Riwayat Presensi (Attendance Timeline / Audit Trail)
-Menyediakan lini masa perubahan status presensi untuk mendeteksi tindakan manipulasi atau kesalahan input.
+### Skenario 1: Hari Libur per Kelas (Study Tour Kelas 5A)
+*   **Konfigurasi**: `scope = CLASS`, `target = "id_kelas_5A"`, `is_working_day = false`, `event_type = STUDY_TOUR`.
+*   **Hasil**: Kelas 5A non-efektif (tidak mencatat presensi), sementara Kelas 5B dan 5C tetap belajar seperti biasa.
+
+### Skenario 2: Libur Seluruh Sekolah (Hari Raya)
+*   **Konfigurasi**: `scope = SCHOOL`, `target = NULL`, `is_working_day = false`, `event_type = HOLIDAY`.
+*   **Hasil**: Berlaku global untuk semua murid di sekolah tersebut.
+
+### Skenario 3: Libur Tingkat (Field Trip Tingkat 1)
+*   **Konfigurasi**: `scope = GRADE`, `target = "1"`, `is_working_day = false`, `event_type = FIELD_TRIP`.
+*   **Hasil**: Seluruh kelas di tingkat 1 (1A, 1B, 1C) menjadi non-efektif.
+
+### Skenario 4: Kegiatan Khusus Mapel / Pengisi Jam
+*   **Konfigurasi**: Diatasi dengan integrasi event ke tingkat jadwal pelajaran (*schedule integration*) tanpa harus membuat pengecualian manual di grid kehadiran harian.
+
+### Skenario 5: Kegiatan Individual (Dispensasi Murid Ahmad mengikuti O2SN)
+*   **Konfigurasi**: `scope = STUDENT`, `target = "id_murid_ahmad"`, `is_working_day = true`, `event_type = SPORT`.
+*   **Hasil**: Hanya murid Ahmad yang otomatis tercatat dalam tugas luar/dispensasi pada hari tersebut tanpa memengaruhi murid lain di kelasnya.
+
+### Skenario 6: Libur/Kegiatan Berulang (Senam Jumat Pagi)
+*   **Konfigurasi**: `repeat_rule = "weekly"`, `start_date = "2026-07-03"` (hari Jumat).
+*   **Hasil**: Sistem otomatis memetakan kegiatan senam setiap hari Jumat tanpa membuat record berulang di database.
+
+### Skenario 7: Rentang Hari (Pesantren Ramadan)
+*   **Konfigurasi**: `start_date = "2026-03-01"`, `end_date = "2026-03-18"`, `is_working_day = true` (kegiatan wajib masuk).
+*   **Hasil**: Sistem menghasilkan rentang 18 hari efektif bermerek Pesantren Ramadan hanya dari **1 baris record** database.
+
+### Skenario 8: Konflik Tanggal (Bentrokan Libur Nasional vs Study Tour)
+*   **Konfigurasi**:
+    - Event A: Hari Libur Nasional (`priority = 100`, `is_working_day = false`)
+    - Event B: Study Tour Kelas 5 (`priority = 80`, `is_working_day = true`)
+*   **Hasil**: Rule engine memilih prioritas tertinggi (Event A: `100`), sehingga hari tersebut tetap libur sekolah.
+
+---
+
+## 4. Desain Logika Rule Engine Kalender Akademik
+
+Generator presensi tidak lagi melakukan kueri langsung ke tabel libur secara ad-hoc, melainkan berkonsultasi kepada **Academic Calendar Engine (ACE)** untuk mendapatkan status hari efektif:
+
 ```
-08:00 WIB - Hadir ('H') oleh Sistem (Default)
-08:15 WIB - Sakit ('S') oleh Ibu Guru Budi (Dilengkapi Catatan: "Demam Tinggi")
-08:20 WIB - Dispensasi ('D') oleh Guru Piket (Catatan Diperbarui: "Mewakili Lomba Catur")
-15:00 WIB - Dikunci ('Locked') oleh Kepala Sekolah
+                  [ Permintaan Cek Tanggal & Murid ]
+                                  ↓
+                  [ Cari Semua Event yang Aktif ]
+                 (Cocokkan Tanggal, Kelas, & Murid)
+                                  ↓
+                [ Filter Berdasarkan Prioritas ]
+                 (Urutkan priority: Tinggi -> Rendah)
+                                  ↓
+                  [ Ambil Event Pemenang Teratas ]
+                                  ↓
+                    [ Baca is_working_day ]
+                   /                      \
+               [ true ]                [ false ]
+                 /                          \
+   [ Hari Efektif Masuk ]           [ Hari Non-Efektif (Libur) ]
+  (Presensi Wajib Dicatat)            (Sel Grid Diarsir / Skip)
 ```
 
-### B. Pengisian Cepat Sekali Klik (Bulk Fill & One-Click Normalization)
-Untuk menghemat waktu guru saat mengajar kelas dengan jumlah murid yang banyak (30-40 murid per kelas):
-*   Sistem secara otomatis mengeset status awal seluruh murid sebagai Hadir (`'H'`).
-*   Guru cukup memfokuskan perhatian untuk mengubah status murid-murid yang tidak hadir (Sakit, Izin, atau Alpha). Ini memangkas jumlah interaksi klik hingga 90%.
+### Penanganan Masalah "Terlalu Banyak Hari Libur" (1000 Custom Holidays):
+Dengan memisahkan model domain menjadi `CalendarEvent`, penumpukan record libur diatasi secara cerdas:
+1.  **Event Bulanan**: Sistem membatasi penayangan kalender hanya untuk rentang bulan/tahun ajaran aktif menggunakan indeks `start_date` dan `end_date`.
+2.  **Rentang & Pengulangan**: 1000 hari libur yang sebelumnya dibuat satu per satu kini diringkas menggunakan `repeat_rule` dan `end_date` (misal 1 record mencakup libur semester 2 minggu), mengurangi jumlah baris data hingga 95%.
 
-### C. Navigasi Papan Ketik Pintar (Smart Keyboard Input)
-Memungkinkan guru melakukan pengisian presensi secara beruntun menggunakan keyboard tanpa menyentuh mouse:
-*   Gunakan tombol panah (`↑`, `↓`, `←`, `→`) untuk berpindah antar-sel presensi murid.
-*   Gunakan tombol shortcut karakter (`H` untuk Hadir, `I` untuk Izin, `S` untuk Sakit, `A` untuk Alpha, `D` untuk Dispensasi) untuk langsung mengisi status sel yang sedang terpilih.
+---
 
-### D. Indikator Penyimpanan Otomatis (Autosave Indicator & Offline Recovery)
-Meningkatkan rasa aman pengguna saat sistem bekerja pada kondisi jaringan internet sekolah yang lambat:
-*   Menampilkan status visual `Menyimpan...` di bagian toolbar saat mutasi dikirim, berubah menjadi `Tersimpan ✓` saat database V2 sukses mencatat data.
-*   Menyimpan transaksi presensi secara lokal (*IndexedDB/Cache*) apabila koneksi internet terputus mendadak, lalu menyinkronkannya kembali secara otomatis (*background sync*) saat jaringan kembali pulih.
+## 5. Rencana Transisi & Dekopling Bertahap
 
-### E. Heatmap Distribusi Kehadiran Murid (Attendance Heatmap)
-Menyajikan visualisasi grafis berbentuk blok warna bulanan untuk mendeteksi pola ketidakhadiran murid secara cepat:
-```
-Murid A: 🟩🟩🟩🟩🟩🟩🟩 (Konsisten Hadir)
-Murid B: 🟩🟩🟥🟩🟩🟨🟩 (Kerap tidak hadir di hari Rabu)
-(Keterangan: 🟩 Hadir/Dispen, 🟨 Izin/Sakit, 🟥 Alpha)
-```
-Guru dapat mendeteksi murid-murid yang rentan membolos pada hari-hari tertentu secara sekilas.
+Untuk mengubah sistem tanpa merusak fungsionalitas Attendance V1 yang sedang aktif di produksi:
+
+*   **Langkah 1**: Buat tabel baru `calendar_events` dan `calendar_event_rules`.
+*   **Langkah 2**: Buat adapter pembaca V1 (`HolidayV1Adapter`) yang secara transparan membaca data dari tabel `calendar_events` (tipe `HOLIDAY`) dan menyajikannya dalam format lama `HolidayRecord[]` agar V1 tetap berjalan normal.
+*   **Langkah 3**: Lakukan migrasi data dari tabel lama `attendance_holidays` ke `calendar_events` dengan tipe `'HOLIDAY'` dan `scope = 'SCHOOL'`.
+*   **Langkah 4**: Alihkan hook presensi secara bertahap untuk murni mendengarkan keputusan dari mesin ACE.
