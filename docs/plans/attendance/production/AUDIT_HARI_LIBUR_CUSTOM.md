@@ -1,117 +1,130 @@
-# PROPOSAL PARADIGMA DOMAIN: Dari "Holiday System" Menuju "Academic Calendar Engine" (ACE) SIPENA
+# ARSITEKTUR MESIN KALENDER AKADEMIK (ACADEMIC CALENDAR ENGINE - ACE) SIPENA
 
-Dokumen ini merangkum pergeseran paradigma domain model untuk tata kelola kalender dan presensi di SIPENA. Alih-alih memperlakukan hari libur sebagai "tempelan di kalender", proposal ini mendesain ulang model domain presensi dengan memperkenalkan **Academic Calendar Engine (ACE)**—sebuah mesin kalender akademik terpadu berbasis Google Calendar Model yang menjadi sumber kebenaran tunggal (*source of truth*) untuk menentukan hari efektif, kegiatan sekolah, dan status presensi murid secara otomatis.
-
----
-
-## 1. Pergeseran Paradigma: Mengapa "Holiday System" Runtuh?
-
-Pada sistem tradisional, hari libur disimpan sebagai data pasif (`attendance_holidays`) yang terpisah dari kegiatan sekolah (`attendance_day_events`). Paradigma ini runtuh ketika dihadapkan pada skenario nyata sekolah yang sangat dinamis:
-
-*   **Kegiatan khusus tidak selalu berarti libur** (misalnya P5 atau Ujian Akhir, murid tetap masuk dan presensi tetap dicatat).
-*   **Lingkup (*Scope*) yang sangat bervariasi**: Libur atau kegiatan bisa berlaku hanya untuk satu murid (dispensasi khusus), satu kelas (study tour), satu tingkat kelas (asesmen nasional), atau seluruh sekolah (libur nasional).
-*   **Tumpang Tindih & Bentrokan**: Pada tanggal yang sama, bisa terdapat beberapa aturan kalender yang bertabrakan. Tanpa adanya sistem prioritas yang jelas, perhitungan hari efektif akan menjadi tidak deterministik.
+Dokumen ini merangkum perancangan ulang model domain dan mesin logika presensi untuk SIPENA. Proposal ini menggeser paradigma dari sistem yang *berorientasi pada tahun ajaran / hari libur* menjadi sistem **Academic Calendar Engine (ACE)** yang fleksibel, dinamis, dan berbasis pada kondisi riil sekolah di Indonesia.
 
 ---
 
-## 2. Struktur Domain Model Baru: `CalendarEvent`
+## 1. Pergeseran Paradigma Filosofis
 
-Sebagai solusi struktural, kita menghapus tabel `attendance_holidays` dan `attendance_day_events` secara bertahap, lalu menggantikannya dengan satu entitas tunggal bernama `CalendarEvent`.
+Pada sistem tradisional, terdapat asumsi bahwa *Kalender mengikuti Tahun Ajaran*. Namun di dunia nyata, yang terjadi justru sebaliknya: **Tahun Ajaran mengikuti Kalender Akademik yang ditetapkan oleh masing-masing sekolah**.
 
-### Skema Tabel Basis Data `calendar_events`:
+### Perbandingan Paradigma Relasi Domain:
+```text
+Paradigma Tradisional (Terbatas & Kaku):
+Tahun Ajaran ──> Semester ──> Hari Libur (Pasif) ──> Presensi Murid
 
-| Nama Kolom | Tipe Data | Keterangan |
+Paradigma Baru (ACE - Fleksibel & Dinamis):
+Kalender Akademik (Aturan Utama)
+       │
+       ▼
+Tahun Ajaran (Identitas Administratif)
+       │
+       ▼
+Calendar Events (Scope, Prioritas, & is_working_day) ──> Rule Engine ──> Perhitungan Hari Efektif
+                                                                               │
+                                                                               ▼
+                                                                        Presensi Murid
+```
+
+---
+
+## 2. Arsitektur 4-Layer Academic Calendar Engine (ACE)
+
+Mesin Kalender Akademik dirancang sebagai empat lapisan terpisah namun saling terintegrasi secara modular:
+
+```mermaid
+graph TD
+  AY[1. Academic Year - Batas Administratif] -->|Mengikat Rentang| AC[2. Academic Calendar - Konfigurasi Pola Sekolah]
+  AC -->|Memproses Rentang Tanggal & Pola Kerja| CE[3. Calendar Events - Kejadian & Pengecualian]
+  CE -->|Evaluasi Aturan & Prioritas| AE[4. Attendance Engine - Generator Presensi Dinamis]
+  AE -->|Output Hasil Evaluasi| PM[Presensi Murid-Murid]
+```
+
+### Layer 1: Academic Year (Tahun Ajaran)
+Mendefinisikan batas administratif sekolah tanpa mengetahui hari libur maupun semester:
+- Tanggal mulai dan tanggal selesai tahun ajaran (misal: 13 Juli 2026 s.d. 18 Juni 2027).
+- Status keaktifan administratif.
+
+### Layer 2: Academic Calendar (Kalender Akademik Sekolah)
+Mengatur aturan dasar operasional harian sekolah pada satu tahun ajaran:
+- Pola Hari Kerja: 5 Hari Kerja (Senin–Jumat) atau 6 Hari Kerja (Senin–Sabtu).
+- Konfigurasi Default Kegiatan: Apakah kegiatan Projek Penguatan Profil Pelajar Pancasila (P5) wajib mencatat presensi? Apakah Class Meeting dihitung sebagai hari sekolah?
+- Zona waktu operasional sekolah.
+
+### Layer 3: Calendar Events (Kejadian & Pengecualian)
+Menyimpan semua kejadian akademik/non-akademik menggunakan model satu entitas dinamis (Google Calendar Model) dengan kolom:
+- **`scope`**: `GLOBAL | SCHOOL | GRADE | CLASS | STUDENT | TEACHER`
+- **`target`**: Mengidentifikasi ID target scope (ID murid, ID kelas, ID jenjang).
+- **`priority`**: Skala prioritas numerik untuk menyelesaikan bentrokan pada hari yang sama.
+- **`is_working_day`**: Penentu apakah hari tersebut wajib mencatat presensi atau non-efektif.
+- **`repeat_rule` & `date_range`**: Mendukung penanganan event berulang (seperti Senam Jumat) dan rentang hari (seperti Pesantren Ramadan) tanpa duplikasi baris data.
+
+### Layer 4: Attendance Engine (Mesin Evaluasi Dinamis)
+Mesin logika bisnis (*Rule Engine*) yang mengevaluasi seluruh event pada tanggal kueri secara real-time untuk menentukan status akhir hari sekolah. **Jumlah hari efektif tidak disimpan di database**, melainkan dihitung secara dinamis demi menjaga konsistensi kalkulasi.
+
+---
+
+## 3. Resolusi Kasus Riil Sekolah di Indonesia
+
+Menggunakan ACE, seluruh skenario kompleks di dunia sekolah diselesaikan tanpa percabangan `if-else` ad-hoc pada kode program:
+
+| Skenario Kasus | Konfigurasi Event | Dampak Evaluasi pada Presensi |
 | :--- | :--- | :--- |
-| `id` | `uuid` (PK) | Identifier unik event |
-| `title` | `varchar` | Nama kegiatan/libur |
-| `description` | `text` | Deskripsi detail kegiatan |
-| `event_type` | `enum` | `HOLIDAY \| EXAM \| P5 \| MEETING \| ASSEMBLY \| STUDY_TOUR \| FIELD_TRIP \| SPORT \| CUSTOM` |
-| `scope` | `enum` | `GLOBAL \| SCHOOL \| GRADE \| CLASS \| STUDENT \| TEACHER` |
-| `target` | `varchar` | Nilai target scope (misal: ID kelas, ID murid, angka tingkat 1-6, atau NULL jika global) |
-| `priority` | `int` | Bobot prioritas (makin tinggi angka, makin memenangkan konflik) |
-| `start_date` | `date` | Tanggal mulai event (mendukung rentang hari) |
-| `end_date` | `date` | Tanggal selesai event (Nullable) |
-| `repeat_rule` | `varchar` | Aturan pengulangan kegiatan (misal: `weekly`, `monthly`, atau NULL) |
-| `is_working_day` | `boolean` | Menentukan apakah hari tersebut wajib mencatat presensi (`true` = hari masuk, `false` = hari libur) |
-| `color` | `varchar` | Kode warna visual di kalender |
-| `created_by` | `uuid` (FK) | ID Pembuat |
+| **Bencana Alam (Banjir / Kabut Asap)** | `scope = SCHOOL`<br>`priority = 95`<br>`is_working_day = false`<br>`event_type = SCHOOL_CLOSURE` | Kalender dinonaktifkan sementara untuk semua kelas pada hari kejadian. Presensi tidak dibuka. |
+| **Ujian Akhir Kelas 6 (Kelas 1-5 Libur)** | **Event 1**: Kelas 6 Masuk<br>`scope = GRADE`, `target = 6`<br>`priority = 80`, `is_working_day = true`<br><br>**Event 2**: Kelas 1-5 Belajar Dirumah<br>`scope = SCHOOL`, `target = NULL`<br>`priority = 70`, `is_working_day = false` | Murid-murid Kelas 6 tetap dihitung hari efektif (presensi aktif). Murid-murid kelas 1-5 non-efektif (grid abu-abu). |
+| **Study Tour Kelas 5A (5B Masuk Biasa)** | `scope = CLASS`<br>`target = "id_kelas_5A"`<br>`priority = 85`<br>`is_working_day = true`<br>`event_type = STUDY_TOUR` | Kelas 5A tetap dihitung hari belajar efektif (presensi tetap berjalan dengan penyesuaian lokasi/daring), kelas 5B normal. |
+| **Rapat Koordinasi Guru (Murid Dipulangkan)** | `scope = SCHOOL`<br>`priority = 75`<br>`is_working_day = true`<br>`event_type = MEETING` | Hari tersebut tetap dihitung sebagai hari sekolah efektif bagi murid (presensi terisi hadir otomatis). |
+| **Kegiatan Keagamaan Madrasah / Swasta** | `scope = SCHOOL`<br>`event_type = HOLIDAY` | Libur khusus yayasan/keagamaan disesuaikan mandiri per sekolah tanpa bentrok dengan sekolah lain dalam satu server. |
 
 ---
 
-## 3. Resolusi 8 Skenario Sekolah dengan `CalendarEvent`
+## 4. Mesin Evaluasi Aturan Hari Efektif (Effective Days Calculation Flow)
 
-Model domain baru ini menyelesaikan seluruh skenario kompleks sekolah dengan sangat elegan:
-
-### Skenario 1: Hari Libur per Kelas (Study Tour Kelas 5A)
-*   **Konfigurasi**: `scope = CLASS`, `target = "id_kelas_5A"`, `is_working_day = false`, `event_type = STUDY_TOUR`.
-*   **Hasil**: Kelas 5A non-efektif (tidak mencatat presensi), sementara Kelas 5B dan 5C tetap belajar seperti biasa.
-
-### Skenario 2: Libur Seluruh Sekolah (Hari Raya)
-*   **Konfigurasi**: `scope = SCHOOL`, `target = NULL`, `is_working_day = false`, `event_type = HOLIDAY`.
-*   **Hasil**: Berlaku global untuk semua murid di sekolah tersebut.
-
-### Skenario 3: Libur Tingkat (Field Trip Tingkat 1)
-*   **Konfigurasi**: `scope = GRADE`, `target = "1"`, `is_working_day = false`, `event_type = FIELD_TRIP`.
-*   **Hasil**: Seluruh kelas di tingkat 1 (1A, 1B, 1C) menjadi non-efektif.
-
-### Skenario 4: Kegiatan Khusus Mapel / Pengisi Jam
-*   **Konfigurasi**: Diatasi dengan integrasi event ke tingkat jadwal pelajaran (*schedule integration*) tanpa harus membuat pengecualian manual di grid kehadiran harian.
-
-### Skenario 5: Kegiatan Individual (Dispensasi Murid Ahmad mengikuti O2SN)
-*   **Konfigurasi**: `scope = STUDENT`, `target = "id_murid_ahmad"`, `is_working_day = true`, `event_type = SPORT`.
-*   **Hasil**: Hanya murid Ahmad yang otomatis tercatat dalam tugas luar/dispensasi pada hari tersebut tanpa memengaruhi murid lain di kelasnya.
-
-### Skenario 6: Libur/Kegiatan Berulang (Senam Jumat Pagi)
-*   **Konfigurasi**: `repeat_rule = "weekly"`, `start_date = "2026-07-03"` (hari Jumat).
-*   **Hasil**: Sistem otomatis memetakan kegiatan senam setiap hari Jumat tanpa membuat record berulang di database.
-
-### Skenario 7: Rentang Hari (Pesantren Ramadan)
-*   **Konfigurasi**: `start_date = "2026-03-01"`, `end_date = "2026-03-18"`, `is_working_day = true` (kegiatan wajib masuk).
-*   **Hasil**: Sistem menghasilkan rentang 18 hari efektif bermerek Pesantren Ramadan hanya dari **1 baris record** database.
-
-### Skenario 8: Konflik Tanggal (Bentrokan Libur Nasional vs Study Tour)
-*   **Konfigurasi**:
-    - Event A: Hari Libur Nasional (`priority = 100`, `is_working_day = false`)
-    - Event B: Study Tour Kelas 5 (`priority = 80`, `is_working_day = true`)
-*   **Hasil**: Rule engine memilih prioritas tertinggi (Event A: `100`), sehingga hari tersebut tetap libur sekolah.
-
----
-
-## 4. Desain Logika Rule Engine Kalender Akademik
-
-Generator presensi tidak lagi melakukan kueri langsung ke tabel libur secara ad-hoc, melainkan berkonsultasi kepada **Academic Calendar Engine (ACE)** untuk mendapatkan status hari efektif:
+Ketika guru memuat halaman presensi untuk suatu kelas pada suatu tanggal, sistem akan memproses fungsi kalkulasi dinamis berikut:
 
 ```
-                  [ Permintaan Cek Tanggal & Murid ]
-                                  ↓
-                  [ Cari Semua Event yang Aktif ]
-                 (Cocokkan Tanggal, Kelas, & Murid)
-                                  ↓
-                [ Filter Berdasarkan Prioritas ]
-                 (Urutkan priority: Tinggi -> Rendah)
-                                  ↓
-                  [ Ambil Event Pemenang Teratas ]
-                                  ↓
-                    [ Baca is_working_day ]
-                   /                      \
-               [ true ]                [ false ]
-                 /                          \
-   [ Hari Efektif Masuk ]           [ Hari Non-Efektif (Libur) ]
-  (Presensi Wajib Dicatat)            (Sel Grid Diarsir / Skip)
+1. Cari Kalender Akademik kelas tujuan.
+2. Identifikasi Pola Hari Kerja kelas (5 atau 6 hari sekolah).
+3. Apakah tanggal kueri merupakan akhir pekan tidak aktif? (Sabtu/Minggu).
+   ├── Ya: Tandai non-efektif.
+   └── Tidak: Lanjutkan ke langkah 4.
+4. Kueri semua data `CalendarEvent` yang mencakup tanggal kueri dan memiliki:
+   - scope = GLOBAL, atau
+   - scope = SCHOOL, atau
+   - scope = GRADE (sesuai tingkat kelas), atau
+   - scope = CLASS (sesuai ID kelas), atau
+   - scope = STUDENT (mencakup murid di kelas tersebut).
+5. Apakah ada event yang ditemukan?
+   ├── Tidak: Gunakan default Hari Belajar Normal (Efektif).
+   └── Ya: Sortir semua event berdasarkan `priority` terbesar (Pemenang).
+       └── Baca kolom `is_working_day` dari event pemenang:
+           ├── true: Hari efektif belajar (Presensi dibuka).
+           └── false: Hari non-efektif/Libur (Presensi ditutup).
 ```
-
-### Penanganan Masalah "Terlalu Banyak Hari Libur" (1000 Custom Holidays):
-Dengan memisahkan model domain menjadi `CalendarEvent`, penumpukan record libur diatasi secara cerdas:
-1.  **Event Bulanan**: Sistem membatasi penayangan kalender hanya untuk rentang bulan/tahun ajaran aktif menggunakan indeks `start_date` dan `end_date`.
-2.  **Rentang & Pengulangan**: 1000 hari libur yang sebelumnya dibuat satu per satu kini diringkas menggunakan `repeat_rule` dan `end_date` (misal 1 record mencakup libur semester 2 minggu), mengurangi jumlah baris data hingga 95%.
 
 ---
 
-## 5. Rencana Transisi & Dekopling Bertahap
+## 5. Mekanisme Pergeseran Kalender & Rekonsiliasi Data
 
-Untuk mengubah sistem tanpa merusak fungsionalitas Attendance V1 yang sedang aktif di produksi:
+Salah satu masalah terbesar sekolah adalah **perubahan kalender secara mendadak di tengah tahun ajaran** (misal: pergeseran akhir semester akibat bencana). 
 
-*   **Langkah 1**: Buat tabel baru `calendar_events` dan `calendar_event_rules`.
-*   **Langkah 2**: Buat adapter pembaca V1 (`HolidayV1Adapter`) yang secara transparan membaca data dari tabel `calendar_events` (tipe `HOLIDAY`) dan menyajikannya dalam format lama `HolidayRecord[]` agar V1 tetap berjalan normal.
-*   **Langkah 3**: Lakukan migrasi data dari tabel lama `attendance_holidays` ke `calendar_events` dengan tipe `'HOLIDAY'` dan `scope = 'SCHOOL'`.
-*   **Langkah 4**: Alihkan hook presensi secara bertahap untuk murni mendengarkan keputusan dari mesin ACE.
+ACE mengatasi masalah ini melalui mekanisme **Rekonsiliasi & Notifikasi Inkonsistensi Data**:
+
+```
+                       [ Perubahan Kalender Disimpan ]
+                                      ↓
+                [ Jalankan Pengecekan Mundur (Reconciliation) ]
+               (Bandingkan status presensi historis vs aturan baru)
+                                      ↓
+                      [ Temukan Selisih (Mismatches) ]
+                  /                                      \
+    [ Presensi Terisi di Hari Libur ]       [ Hari Efektif Baru Tanpa Presensi ]
+                   │                                       │
+                   ▼                                       ▼
+     [ Tampilkan Dialog Peringatan ]          [ Tandai Kolom Kuning / Indikator ]
+      (Guru diberi pilihan untuk):            (Guru diingatkan untuk melakukan):
+  - Hapus data presensi hari tersebut       - Input susulan data presensi murid
+  - Biarkan data tetap ada (Pengecualian)
+```
+
+Dengan desain modular Academic Calendar Engine ini, SIPENA akan memiliki basis logika penanggalan yang kokoh, tangguh terhadap anomali lokal, dan ramah terhadap perubahan mendadak di lapangan.
