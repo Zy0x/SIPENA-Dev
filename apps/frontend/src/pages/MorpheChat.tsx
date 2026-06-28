@@ -34,6 +34,9 @@ import gsap from "gsap";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import morpheIcon from "@/icon/icon_morphe.png";
 import morpheIconPure from "@/icon/icon_morphe_pure.png";
+import { useClasses } from "@/hooks/useClasses";
+import { useSubjects } from "@/hooks/useSubjects";
+import { useAcademicYear } from "@/contexts/AcademicYearContext";
 
 type ChatMode = "chat" | "sipena";
 
@@ -75,39 +78,88 @@ const DYNAMIC_PROMPTS_SIPENA_BANK = [
   { icon: "🌟", text: "Rekomendasikan kegiatan pembelajaran berbasis game (gamifikasi) untuk materi IPA", trend: "Rekomendasi" }
 ];
 
-// Fungsi untuk mendapatkan rekomendasi prompt dinamis berdasarkan hari ini
-function getDynamicPrompts(chatMode: ChatMode): { icon: string; text: string; trend?: string }[] {
-  const bank = chatMode === "sipena" ? DYNAMIC_PROMPTS_SIPENA_BANK : DYNAMIC_PROMPTS_CHAT_BANK;
-  
+// Fungsi penolong untuk mengambil elemen random berdasarkan seed matematika
+const getRandomElement = <T,>(arr: T[], seed: number): T => {
+  return arr[Math.abs(Math.floor(Math.sin(seed) * arr.length)) % arr.length];
+};
+
+// Fungsi untuk mendapatkan rekomendasi prompt dinamis berbasis konteks data nyata pengguna
+function getDynamicPrompts(
+  chatMode: ChatMode,
+  classesList: any[],
+  subjectsList: any[],
+  activeSemester: number | null
+): { icon: string; text: string; trend?: string }[] {
   // Menggunakan tanggal hari ini sebagai seed pengacak agar berganti secara berkala setiap hari
   const today = new Date();
   const dateSeed = today.getDate() + today.getMonth() + today.getFullYear();
-  
-  // Ambil 4 item dari bank data menggunakan seed matematika
-  const result: { icon: string; text: string; trend?: string }[] = [];
-  const indicesUsed = new Set<number>();
-  
-  let attempts = 0;
-  // Batasi maksimum iterasi ke 100 untuk menghindari infinite loop
-  while (result.length < 4 && result.length < bank.length && attempts < 100) {
-    const index = Math.abs(Math.floor(Math.sin(dateSeed + attempts) * bank.length)) % bank.length;
-    if (!indicesUsed.has(index)) {
-      result.push(bank[index]);
-      indicesUsed.add(index);
+
+  if (chatMode === "sipena") {
+    // Tentukan Nama Kelas & Mapel Acak dari data nyata guru
+    const randomClass = classesList.length > 0 ? getRandomElement(classesList, dateSeed).name : "kelas binaan saya";
+    const randomSubject = subjectsList.length > 0 ? getRandomElement(subjectsList, dateSeed + 5).name : "mata pelajaran aktif";
+    const currentSem = activeSemester ? `Semester ${activeSemester}` : "semester ini";
+
+    const dynamicSipenaBank = [
+      { icon: "📊", text: `Analisis rata-rata nilai kelas ${randomClass} untuk melihat kesiapan materi baru`, trend: "Populer" },
+      { icon: "🎯", text: `Siapa murid di kelas ${randomClass} yang menunjukkan peningkatan belajar paling konsisten?`, trend: "Banyak Dicari" },
+      { icon: "📚", text: `Buatkan 5 soal pilihan ganda interaktif beserta pembahasan untuk materi ${randomSubject}`, trend: "Hits Hari Ini" },
+      { icon: "✏️", text: `Buat rancangan rubrik penilaian proyek kelompok kelas ${randomClass} bertema kerja sama`, trend: "Rekomendasi" },
+      { icon: "🏆", text: `Tampilkan murid dengan perolehan nilai tertinggi di kelas ${randomClass} saat ini`, trend: "Sering Dicari" },
+      { icon: "⚠️", text: `Siswa mana di kelas ${randomClass} yang nilai rata-ratanya masih di bawah KKM?`, trend: "Penting" },
+      { icon: "❓", text: `Bantu analisis butir soal ujian materi ${randomSubject} kemarin, mengapa rata-rata nilai rendah?`, trend: "Populer" },
+      { icon: "📝", text: `Bagaimana cara memberi feedback yang memotivasi untuk murid dengan nilai rendah di kelas ${randomClass}?`, trend: "Bantuan" },
+      { icon: "📈", text: `Buat rekapitulasi persentase kehadiran murid kelas ${randomClass} selama ${currentSem}`, trend: "Trending" },
+      { icon: "💡", text: `Berikan saran metode pengajaran interaktif materi ${randomSubject} untuk murid yang sulit fokus`, trend: "Populer" },
+      { icon: "🤝", text: `Buat draf laporan singkat perkembangan belajar kelas ${randomClass} untuk dibagikan ke orang tua`, trend: "Banyak Dicari" },
+      { icon: "🌟", text: `Rekomendasikan kegiatan pembelajaran berbasis game (gamifikasi) untuk materi ${randomSubject}`, trend: "Rekomendasi" }
+    ];
+
+    const result: { icon: string; text: string; trend?: string }[] = [];
+    const indicesUsed = new Set<number>();
+    let attempts = 0;
+    
+    while (result.length < 4 && result.length < dynamicSipenaBank.length && attempts < 100) {
+      const index = Math.abs(Math.floor(Math.sin(dateSeed + attempts) * dynamicSipenaBank.length)) % dynamicSipenaBank.length;
+      if (!indicesUsed.has(index)) {
+        result.push(dynamicSipenaBank[index]);
+        indicesUsed.add(index);
+      }
+      attempts++;
     }
-    attempts++;
-  }
-  
-  // Fallback jika karena alasan tertentu hasil kurang dari 4 dan bank masih memiliki sisa item
-  if (result.length < 4 && bank.length >= 4) {
-    for (let i = 0; i < bank.length; i++) {
-      if (!indicesUsed.has(i) && result.length < 4) {
-        result.push(bank[i]);
+
+    if (result.length < 4 && dynamicSipenaBank.length >= 4) {
+      for (let i = 0; i < dynamicSipenaBank.length; i++) {
+        if (!indicesUsed.has(i) && result.length < 4) {
+          result.push(dynamicSipenaBank[i]);
+        }
       }
     }
+    return result;
+  } else {
+    // Mode Chat AI Umum
+    const result: { icon: string; text: string; trend?: string }[] = [];
+    const indicesUsed = new Set<number>();
+    let attempts = 0;
+    
+    while (result.length < 4 && result.length < DYNAMIC_PROMPTS_CHAT_BANK.length && attempts < 100) {
+      const index = Math.abs(Math.floor(Math.sin(dateSeed + attempts) * DYNAMIC_PROMPTS_CHAT_BANK.length)) % DYNAMIC_PROMPTS_CHAT_BANK.length;
+      if (!indicesUsed.has(index)) {
+        result.push(DYNAMIC_PROMPTS_CHAT_BANK[index]);
+        indicesUsed.add(index);
+      }
+      attempts++;
+    }
+
+    if (result.length < 4 && DYNAMIC_PROMPTS_CHAT_BANK.length >= 4) {
+      for (let i = 0; i < DYNAMIC_PROMPTS_CHAT_BANK.length; i++) {
+        if (!indicesUsed.has(i) && result.length < 4) {
+          result.push(DYNAMIC_PROMPTS_CHAT_BANK[i]);
+        }
+      }
+    }
+    return result;
   }
-  
-  return result;
 }
 
 const SYSTEM_PRESETS = [
@@ -129,6 +181,9 @@ export default function MorpheChat() {
     updateSystemPrompt, sendMessage, stopStreaming, sessionsLoading, messagesLoading,
     exportSessions, importSessions,
   } = useMorpheChat();
+  const { classes } = useClasses();
+  const { subjects } = useSubjects();
+  const { activeYear, activeSemesterNumber } = useAcademicYear();
   const { success, error: showError } = useEnhancedToast();
   const prefersReducedMotion = useReducedMotion();
   const navigate = useNavigate();
@@ -395,7 +450,7 @@ export default function MorpheChat() {
   const unpinnedSessions = sessions.filter((s) => !s.is_pinned);
   const lastMsg = allMessages[allMessages.length - 1];
   const lastMsgIsError = lastMsg?.role === "assistant" && lastMsg?.content?.startsWith("⚠️");
-  const quickPrompts = useMemo(() => getDynamicPrompts(chatMode), [chatMode]);
+  const quickPrompts = useMemo(() => getDynamicPrompts(chatMode, classes, subjects, activeSemesterNumber), [chatMode, classes, subjects, activeSemesterNumber]);
 
   const tokenEstimate = allMessages.reduce((acc, m) => acc + Math.ceil(m.content.length / 4), 0);
   const currentModel = MORPHE_MODELS.find(m => m.id === (activeSession?.model || "llama-3.3-70b-versatile"));
