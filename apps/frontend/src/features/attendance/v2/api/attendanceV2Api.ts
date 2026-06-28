@@ -24,6 +24,13 @@ export const attendanceV2Api = {
     );
   },
 
+  getExportDataset: async (classId: string, month: string, token: string) => {
+    return httpRequest<{ data: AttendanceDatasetCanonical; issues: any[] }>(
+      `/attendance/v2/export-dataset?classId=${classId}&month=${month}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  },
+
   applyPatch: async (patch: AttendanceRecordPatch, token: string) => {
     return httpRequest<{ data: any; error?: any }>("/attendance/v2/record", {
       method: "POST",
