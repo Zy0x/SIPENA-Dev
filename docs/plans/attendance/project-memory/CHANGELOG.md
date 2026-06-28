@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.4.118] - 2026-06-28
+### Added
+- **Attendance V2 Persistence Adapter:** Implemented `useAttendanceV2Adapter` to handle backend query caching, validation rules, and mutations (presensi status, dispensasi 'D', notes, class lock, holiday toggling, and day events) using V2 engines.
+- **Shadow Mode Drift Auditing:** Configured comparative validation checks in shadow mode that intercept V1 writes to detect mismatches with V2 engines and record drift logs directly to `activity_logs`.
+- **Production Routing Integration:** Enabled dynamic routing switcher (`ResolvedAttendanceRuntime`) to serve `<AttendanceV2 />` when engine config is set to V2, while preserving legacy V1 routing.
+- **Adapter Integration Verification:** Created `attendanceV2.adapter.test.ts` to test hook instantiation and mock React Query mutations. Verified Vitest passing all 572 tests.
+
 ## [2.4.117] - 2026-06-28
 ### Added
 - **Backend Supabase Client & Auth Parser:** Set up a lightweight database module (`supabase.ts`) supporting Service Role client mapping and user Bearer Token queries. Integrated JWT validation in `attendance.controller.ts` via `supabase.auth.getUser()`.

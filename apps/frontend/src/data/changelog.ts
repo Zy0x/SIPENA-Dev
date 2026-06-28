@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.118",
+    version: "2.4.118",
+    title: "Presensi V2 Persistence Adapter & Active Switch",
+    description: "Adapter persistence Attendance V2 selesai dengan runtime switch, shadow mode drift audit, dan 572 vitest passing.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-06-28",
+    details: [
+      "Mengintegrasikan useAttendanceV2Adapter dengan caching react-query dan validasi rules/calendar V2.",
+      "Menyambungkan status Dispensasi ('D') dan penulisan catatan murid di backend persistence.",
+      "Mengonfigurasi Shadow Mode audit drift comparation yang mencatat mismatch langsung ke activity_logs database.",
+      "Menyambungkan routing ResolvedAttendanceRuntime agar memuat halaman V2 saat engine bernilai v2.",
+      "Membuat pengujian integrasi useAttendanceV2Adapter.test.ts dan memverifikasi seluruh 572 tests hijau."
+    ]
+  },
+  {
     id: "v2.4.101",
     version: "2.4.101",
     title: "Seam V1 Presensi yang Aman",
