@@ -20,10 +20,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useClasses } from "@/hooks/useClasses";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { Link } from "react-router-dom";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { RankingSemesterSelector, useRankingSemesterFilter } from "@/components/reports/RankingSemesterSelector";
 import { useStudentRankings } from "@/hooks/useStudentRankings";
 import {
@@ -41,6 +43,12 @@ import {
   Layers,
   Check,
   X,
+  Users,
+  BookOpen,
+  GraduationCap,
+  Filter,
+  TrendingUp,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
@@ -141,15 +149,12 @@ export default function StudentRankings() {
     ? "Ranking memakai seluruh mata pelajaran kelas ini."
     : "Ranking hanya memakai mata pelajaran yang dipilih.";
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageLimit, setPageLimit] = useState(20);
 
-  // Export column selection state
   const [exportColumns, setExportColumns] = useState<RankingColumn[]>([]);
   const [selectedExportColumnIds, setSelectedExportColumnIds] = useState<string[]>([]);
 
-  // Initialize export columns when subjects change
   useEffect(() => {
     const newColumns = buildRankingExportColumns(subjects);
     setExportColumns(newColumns);
@@ -184,7 +189,6 @@ export default function StudentRankings() {
     setCurrentPage(1);
   };
 
-  // Responsive rank badge with dynamic text sizing
   const getRankBadge = (rank: number) => {
     const baseClasses = "shrink-0 whitespace-nowrap";
     
@@ -483,29 +487,41 @@ export default function StudentRankings() {
     toast({ title: "Ekspor berhasil", description: `File ${RANKING_EXPORT_FORMATS.find((item) => item.id === formatId)?.label || formatId.toUpperCase()} telah diunduh` });
   };
 
+  const podiumEntries = useMemo(() => [
+    overallRankings.find((r) => r.rank === 2) ?? null,
+    overallRankings.find((r) => r.rank === 1) ?? null,
+    overallRankings.find((r) => r.rank === 3) ?? null,
+  ], [overallRankings]);
+
+  const hasTopThree = overallRankings.length >= 1;
+
   return (
     <>
       <div className="app-page">
-        {/* Header - Responsive */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Button variant="ghost" size="icon" asChild className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
-              <Link to="/reports">
-                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+
+        {/* ── Page Header ─────────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" asChild className="shrink-0 h-8 w-8">
+              <Link to="/reports" aria-label="Kembali ke Laporan">
+                <ArrowLeft className="w-4 h-4" />
               </Link>
             </Button>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-foreground truncate">
-                Ranking Siswa
-              </h1>
-              <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground truncate">
-                Peringkat keseluruhan berdasarkan mapel yang dipilih
-              </p>
-            </div>
+            <PageHeader
+              icon={<Trophy className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-amber-500" />}
+              title="Ranking Siswa"
+              subtitle={
+                activeYear
+                  ? `${activeYear.name} · ${rankingPeriodShortLabel}`
+                  : "Peringkat keseluruhan siswa per kelas"
+              }
+              breadcrumbs={[
+                { label: "Laporan", href: "/reports" },
+                { label: "Ranking Siswa" },
+              ]}
+            />
           </div>
-          
-          {/* Semester Selector - Responsive */}
-          <div className="flex justify-end sm:justify-start shrink-0">
+          <div className="flex items-center gap-2 shrink-0 pl-10 sm:pl-0">
             <RankingSemesterSelector
               value={semesterFilter}
               onChange={setSemesterFilter}
@@ -514,315 +530,437 @@ export default function StudentRankings() {
           </div>
         </div>
 
-        {/* Active Period Indicator - Responsive */}
-        {activeYear && (
-          <div className="flex items-center gap-2 text-xs sm:text-sm animate-fade-in overflow-x-auto pb-1">
-            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-primary/5 border border-primary/10 shrink-0">
-              {isCombinedView ? (
-                <Layers className="h-3 w-3 sm:h-4 sm:w-4 text-primary shrink-0" />
-              ) : (
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-primary shrink-0" />
-              )}
-              <span className="text-muted-foreground text-[10px] sm:text-xs whitespace-nowrap">Data:</span>
-              <Badge variant="secondary" className="font-medium text-[10px] sm:text-xs whitespace-nowrap">
-                {activeYear.name} • {rankingPeriodShortLabel}
-              </Badge>
-            </div>
-          </div>
-        )}
-
-        {/* Class Selection */}
-        <Card className="animate-fade-in-up">
-          <CardContent className="pt-4 sm:pt-6">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        {/* ── Kelas Selection Card ─────────────────────────────────────────── */}
+        <Card className="animate-fade-in-up border-border">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
               <div className="flex-1 min-w-0">
-                <Label className="text-xs mb-1.5 block">Pilih Kelas</Label>
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Pilih Kelas</Label>
                 <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-                  <SelectTrigger className="h-9 sm:h-10 text-sm">
+                  <SelectTrigger className="h-10 text-sm">
                     <School className="w-4 h-4 mr-2 shrink-0 text-muted-foreground" />
-                    <SelectValue placeholder="Pilih kelas" />
+                    <SelectValue placeholder="— Pilih kelas untuk melihat ranking —" />
                   </SelectTrigger>
                   <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
                     {classes.map((cls) => (
                       <SelectItem key={cls.id} value={cls.id} className="text-sm">
-                        {cls.name}
+                        <span className="font-medium">{cls.name}</span>
+                        {cls.student_count ? (
+                          <span className="text-muted-foreground ml-2 text-xs">
+                            · {cls.student_count} murid
+                          </span>
+                        ) : null}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
+              {selectedClassId && !gradesLoading && (
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted/50 border border-border">
+                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">{overallRankings.length}</span>
+                    <span className="text-[11px] text-muted-foreground">murid</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted/50 border border-border">
+                    <BookOpen className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">{activeSubjectCount}</span>
+                    <span className="text-[11px] text-muted-foreground">mapel</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted/50 border border-border">
+                    <GraduationCap className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-foreground">KKM {classKkm}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
+        {/* ── Content Area ────────────────────────────────────────────────── */}
         {selectedClassId && (
           <div className="space-y-4">
             {gradesLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <div className="space-y-3">
+                <Skeleton className="h-40 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <Skeleton className="h-64 w-full rounded-xl" />
               </div>
             ) : subjects.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  <p>Belum ada mata pelajaran di kelas ini</p>
+              <Card className="border-dashed">
+                <CardContent className="py-12 flex flex-col items-center gap-3 text-center">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                    <BookOpen className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Belum ada mata pelajaran</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tambahkan mata pelajaran ke kelas ini di halaman Mata Pelajaran terlebih dahulu.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/subjects">
+                      Kelola Mata Pelajaran
+                      <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
               <>
-            <Card className="overflow-hidden border-primary/10 bg-gradient-to-br from-primary/5 via-background to-background">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary" className="gap-1.5 rounded-full">
-                        <Trophy className="h-3.5 w-3.5 text-primary" />
-                        Ranking Keseluruhan
-                      </Badge>
-                      <Badge variant="outline" className="rounded-full">
+                {/* ── Export + Meta Header Card ───────────────────────────── */}
+                <Card className="overflow-hidden border-amber-200/60 dark:border-amber-800/30 bg-gradient-to-br from-amber-50/60 via-background to-background dark:from-amber-950/20">
+                  <div className="h-[3px] bg-gradient-to-r from-amber-500 to-orange-400 w-full" />
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <Trophy className="h-4 w-4 text-amber-500" />
+                            <span className="text-sm font-bold text-foreground">Ranking Keseluruhan</span>
+                          </div>
+                          <Badge variant="outline" className="rounded-full text-[11px]">
+                            {subjectScopeLabel}
+                          </Badge>
+                          <Badge
+                            variant="secondary"
+                            className="rounded-full text-[11px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                          >
+                            {rankingPeriodShortLabel}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {subjectScopeDescription} Kelas{" "}
+                          <span className="font-semibold text-foreground">{selectedClass?.name}</span>.
+                        </p>
+                      </div>
+                      <UnifiedExportStudio
+                        title="Studio Ekspor Ranking Keseluruhan"
+                        description="Pilih format ekspor ranking keseluruhan dan kelola signature dari satu panel yang sama."
+                        triggerLabel="Ekspor Ranking"
+                        triggerClassName="h-9 gap-2 text-xs shrink-0"
+                        formats={RANKING_EXPORT_FORMATS}
+                        selectedFormat={exportFormat}
+                        onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
+                        onExport={exportOverallRanking}
+                        includeSignature={includeSignature}
+                        onIncludeSignatureChange={setIncludeSignature}
+                        signatureConfig={signatureConfig}
+                        hasSignature={hasSignature}
+                        isLoading={signatureLoading}
+                        isSaving={signatureSaving}
+                        onSaveSignature={saveSignature}
+                        paperSize={paperSize}
+                        onPaperSizeChange={setPaperSize}
+                        documentStyle={documentStyle}
+                        onDocumentStyleChange={setDocumentStyle}
+                        autoFitOnePage={autoFitOnePage}
+                        onAutoFitOnePageChange={setAutoFitOnePage}
+                        showAutoFitPreset
+                        columnOptions={overallColumnOptions}
+                        onColumnOptionChange={handleOverallColumnOptionChange}
+                        columnCount={selectedOverallColumns.length}
+                        columnTypographyOptions={overallColumnTypographyOptions}
+                        renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
+                          if (!overallExportConfig) return null;
+                          return (
+                            <ExportPreviewRenderer
+                              previewFormat={previewFormat}
+                              draft={draft}
+                              setDraft={setDraft}
+                              previewDate={previewDate}
+                              liveEditMode={liveEditMode}
+                              highlightTarget={highlightTarget}
+                              onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                              onHighlightTargetSelect={onHighlightTargetSelect}
+                              previewData={{
+                                ...overallExportConfig,
+                                includeSignature: previewIncludeSignature && hasSignature,
+                                signature: buildExportSignature(draft),
+                                paperSize: previewPaperSize,
+                                documentStyle: buildCompactRankingDocumentStyle(
+                                  previewDocumentStyle ?? documentStyle,
+                                  overallExportConfig.columns,
+                                  previewPaperSize,
+                                  overallExportConfig.data,
+                                ),
+                                autoFitOnePage: previewAutoFit ?? autoFitOnePage,
+                              }}
+                            />
+                          );
+                        }}
+                      />
+                    </div>
+                  </CardHeader>
+
+                  {/* ── Podium Top 3 ───────────────────────────────────────── */}
+                  {hasTopThree && overallRankings.length >= 1 && (
+                    <CardContent className="pb-5">
+                      <div className="flex items-end justify-center gap-2 sm:gap-4 mt-1">
+                        {/* Rank 2 */}
+                        <div className="flex flex-col items-center gap-1.5 flex-1 max-w-[120px]">
+                          {podiumEntries[0] ? (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-300 flex items-center justify-center shadow-md">
+                                <Medal className="w-5 h-5 text-white" />
+                              </div>
+                              <p className="text-[11px] font-semibold text-foreground text-center leading-tight px-1 line-clamp-2 break-words w-full">
+                                {podiumEntries[0].student.name}
+                              </p>
+                              <span className="text-xs font-bold text-gray-600 dark:text-gray-300 tabular-nums">
+                                {formatGrade(podiumEntries[0].overallAverage)}
+                              </span>
+                              <div className="w-full h-16 bg-gradient-to-b from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-t-lg flex items-center justify-center">
+                                <span className="text-lg font-black text-gray-500 dark:text-gray-400">2</span>
+                              </div>
+                            </>
+                          ) : <div className="w-full h-16 bg-muted/30 rounded-t-lg" />}
+                        </div>
+
+                        {/* Rank 1 */}
+                        <div className="flex flex-col items-center gap-1.5 flex-1 max-w-[140px]">
+                          {podiumEntries[1] ? (
+                            <>
+                              <Crown className="w-5 h-5 text-amber-400" />
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 flex items-center justify-center shadow-lg shadow-amber-400/30">
+                                <Trophy className="w-6 h-6 text-white" />
+                              </div>
+                              <p className="text-[11px] font-bold text-foreground text-center leading-tight px-1 line-clamp-2 break-words w-full">
+                                {podiumEntries[1].student.name}
+                              </p>
+                              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+                                {formatGrade(podiumEntries[1].overallAverage)}
+                              </span>
+                              <div className="w-full h-24 bg-gradient-to-b from-amber-200 to-amber-100 dark:from-amber-900/60 dark:to-amber-900/30 rounded-t-lg flex items-center justify-center">
+                                <span className="text-2xl font-black text-amber-500 dark:text-amber-400">1</span>
+                              </div>
+                            </>
+                          ) : <div className="w-full h-24 bg-muted/30 rounded-t-lg" />}
+                        </div>
+
+                        {/* Rank 3 */}
+                        <div className="flex flex-col items-center gap-1.5 flex-1 max-w-[120px]">
+                          {podiumEntries[2] ? (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-700 to-amber-600 flex items-center justify-center shadow-md">
+                                <Award className="w-5 h-5 text-white" />
+                              </div>
+                              <p className="text-[11px] font-semibold text-foreground text-center leading-tight px-1 line-clamp-2 break-words w-full">
+                                {podiumEntries[2].student.name}
+                              </p>
+                              <span className="text-xs font-bold text-amber-700 dark:text-amber-500 tabular-nums">
+                                {formatGrade(podiumEntries[2].overallAverage)}
+                              </span>
+                              <div className="w-full h-12 bg-gradient-to-b from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-900/20 rounded-t-lg flex items-center justify-center">
+                                <span className="text-base font-black text-amber-600 dark:text-amber-500">3</span>
+                              </div>
+                            </>
+                          ) : <div className="w-full h-12 bg-muted/30 rounded-t-lg" />}
+                        </div>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+
+                {/* ── Filter Mapel Card ─────────────────────────────────────── */}
+                <Card className="border-border">
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <CardTitle className="text-sm sm:text-base">Filter Mata Pelajaran</CardTitle>
+                          <CardDescription className="text-xs mt-0.5">
+                            {subjectScopeDescription}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant={isAllSubjectsMode || areAllSubjectsSelected ? "default" : "outline"}
+                          size="sm"
+                          aria-pressed={isAllSubjectsMode || areAllSubjectsSelected}
+                          onClick={selectAllSubjects}
+                          className="h-8 text-xs px-3 touch-manipulation"
+                        >
+                          Semua
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-label="Hapus semua pilihan mapel"
+                          disabled={!hasExplicitSubjectSelection}
+                          onClick={clearSubjectSelection}
+                          className="h-8 gap-1.5 text-xs px-3 touch-manipulation"
+                        >
+                          <X className="h-3 w-3" />
+                          Hapus
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2">
+                      <span className="text-xs text-muted-foreground">Cakupan ranking saat ini</span>
+                      <Badge
+                        variant={isAllSubjectsMode ? "secondary" : "outline"}
+                        className="shrink-0 rounded-full text-[11px]"
+                      >
                         {subjectScopeLabel}
                       </Badge>
                     </div>
-                    <CardTitle className="text-base sm:text-lg">Peringkat gabungan satu kelas</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      {subjectScopeDescription} Kelas {selectedClass?.name}.
-                    </CardDescription>
-                  </div>
-                  <UnifiedExportStudio
-                    title="Studio Ekspor Ranking Keseluruhan"
-                    description="Pilih format ekspor ranking keseluruhan dan kelola signature dari satu panel yang sama."
-                    triggerLabel="Ekspor"
-                    triggerClassName="h-9 gap-2 text-xs shrink-0"
-                    formats={RANKING_EXPORT_FORMATS}
-                    selectedFormat={exportFormat}
-                    onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
-                    onExport={exportOverallRanking}
-                    includeSignature={includeSignature}
-                    onIncludeSignatureChange={setIncludeSignature}
-                    signatureConfig={signatureConfig}
-                    hasSignature={hasSignature}
-                    isLoading={signatureLoading}
-                    isSaving={signatureSaving}
-                    onSaveSignature={saveSignature}
-                    paperSize={paperSize}
-                    onPaperSizeChange={setPaperSize}
-                    documentStyle={documentStyle}
-                    onDocumentStyleChange={setDocumentStyle}
-                    autoFitOnePage={autoFitOnePage}
-                    onAutoFitOnePageChange={setAutoFitOnePage}
-                    showAutoFitPreset
-                    columnOptions={overallColumnOptions}
-                    onColumnOptionChange={handleOverallColumnOptionChange}
-                    columnCount={selectedOverallColumns.length}
-                    columnTypographyOptions={overallColumnTypographyOptions}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
-                      if (!overallExportConfig) return null;
-                      return (
-                        <ExportPreviewRenderer
-                          previewFormat={previewFormat}
-                          draft={draft}
-                          setDraft={setDraft}
-                          previewDate={previewDate}
-                          liveEditMode={liveEditMode}
-                          highlightTarget={highlightTarget}
-                          onHighlightTargetHoverChange={onHighlightTargetHoverChange}
-                          onHighlightTargetSelect={onHighlightTargetSelect}
-                          previewData={{
-                            ...overallExportConfig,
-                            includeSignature: previewIncludeSignature && hasSignature,
-                            signature: buildExportSignature(draft),
-                            paperSize: previewPaperSize,
-                            documentStyle: buildCompactRankingDocumentStyle(
-                              previewDocumentStyle ?? documentStyle,
-                              overallExportConfig.columns,
-                              previewPaperSize,
-                              overallExportConfig.data,
-                            ),
-                            autoFitOnePage: previewAutoFit ?? autoFitOnePage,
-                          }}
-                        />
-                      );
-                    }}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div className="rounded-lg border bg-background/80 px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Siswa</p>
-                    <p className="text-lg font-bold">{overallRankings.length}</p>
-                  </div>
-                  <div className="rounded-lg border bg-background/80 px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Mapel Aktif</p>
-                    <p className="text-lg font-bold">{activeSubjectCount}</p>
-                  </div>
-                  <div className="rounded-lg border bg-background/80 px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">KKM Kelas</p>
-                    <p className="text-lg font-bold">{classKkm}</p>
-                  </div>
-                  <div className="rounded-lg border bg-background/80 px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Periode</p>
-                    <p className="truncate text-sm font-semibold">{rankingPeriodShortLabel}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-              {/* Subject Filter */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <CardTitle className="text-sm sm:text-base">Mapel yang Dihitung</CardTitle>
-                      <CardDescription className="text-xs sm:text-sm">
-                        {subjectScopeDescription}
-                      </CardDescription>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {subjects.map((subject) => {
+                        const isSubjectActive = selectedSubjectIds.includes(subject.id);
+                        return (
+                          <Button
+                            key={subject.id}
+                            type="button"
+                            variant={isSubjectActive ? "default" : "outline"}
+                            aria-pressed={isSubjectActive}
+                            data-selected={isSubjectActive}
+                            onClick={() => toggleSubjectSelection(subject.id)}
+                            className={cn(
+                              "sipena-ranking-subject-button h-auto min-h-12 justify-between gap-3 whitespace-normal break-words px-3 py-2 text-left touch-manipulation",
+                              isSubjectActive
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                                : "border-border bg-background text-foreground hover:border-primary/40",
+                            )}
+                          >
+                            <span className="min-w-0 flex-1 break-words text-sm font-semibold">{subject.name}</span>
+                            <span className={cn(
+                              "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                              isSubjectActive
+                                ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+                                : "border-border bg-muted text-muted-foreground",
+                            )}>
+                              {isSubjectActive && <Check className="h-3 w-3" />}
+                              KKM {subject.kkm}
+                            </span>
+                          </Button>
+                        );
+                      })}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
-                      <Button
-                        type="button"
-                        variant={isAllSubjectsMode || areAllSubjectsSelected ? "default" : "outline"}
-                        size="sm"
-                        aria-pressed={isAllSubjectsMode || areAllSubjectsSelected}
-                        onClick={selectAllSubjects}
-                        className="h-9 text-xs touch-manipulation"
-                      >
-                        Semua Mapel
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        aria-label="Hapus semua pilihan mapel"
-                        disabled={!hasExplicitSubjectSelection}
-                        onClick={clearSubjectSelection}
-                        className="h-9 gap-1.5 text-xs touch-manipulation"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                        Hapus Pilihan
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2">
-                    <span className="text-xs font-medium text-muted-foreground">Cakupan ranking</span>
-                    <Badge variant={isAllSubjectsMode ? "secondary" : "outline"} className="shrink-0 rounded-full">
-                      {subjectScopeLabel}
-                    </Badge>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {subjects.map((subject) => {
-                      const isSubjectActive = selectedSubjectIds.includes(subject.id);
-                      return (
-                        <Button
-                          key={subject.id}
-                          type="button"
-                          variant={isSubjectActive ? "default" : "outline"}
-                          aria-pressed={isSubjectActive}
-                          data-selected={isSubjectActive}
-                          onClick={() => toggleSubjectSelection(subject.id)}
-                          className={cn(
-                            "sipena-ranking-subject-button h-auto min-h-12 justify-between gap-3 whitespace-normal break-words px-3 py-2 text-left touch-manipulation",
-                            isSubjectActive
-                              ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                              : "border-border bg-background text-foreground hover:border-primary/40",
-                          )}
-                        >
-                          <span className="min-w-0 flex-1 break-words text-sm font-semibold">{subject.name}</span>
-                          <span className={cn(
-                            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                            isSubjectActive
-                              ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
-                              : "border-border bg-muted text-muted-foreground",
-                          )}>
-                            {isSubjectActive && <Check className="h-3 w-3" />}
-                            KKM {subject.kkm}
-                          </span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Overall Ranking Table with Pagination */}
-              <Card>
-                <CardHeader className="pb-2 sm:pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                        <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                        Ranking Keseluruhan
-                      </CardTitle>
-                      <CardDescription className="text-[10px] sm:text-xs">
-                        {isAllSubjectsMode
-                          ? "Semua mata pelajaran"
-                          : `${selectedSubjectIds.length} mata pelajaran dipilih`}
-                        {" • "}{overallRankings.length} siswa • KKM Kelas: {classKkm}
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-0 sm:px-6">
-                  {gradesLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                    </div>
-                  ) : (
-                    <>
-                      <div className="divide-y sm:hidden">
-                        {paginatedRankings.map((ranking) => {
-                          const isPassing = ranking.overallAverage >= classKkm;
-                          return (
-                            <div key={ranking.student.id} className="flex items-center gap-3 px-4 py-3">
-                              <div className="shrink-0">{getRankBadge(ranking.rank)}</div>
-                              <div className="min-w-0 flex-1">
-                                <p className="whitespace-normal break-words text-sm font-semibold leading-snug">
-                                  {ranking.student.name}
-                                </p>
-                                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                  NISN {ranking.student.nisn || "-"}
-                                </p>
-                              </div>
-                              <span className={cn(
-                                "inline-flex min-w-14 shrink-0 justify-center rounded-full border px-2 py-1 text-xs font-bold",
-                                isPassing
-                                  ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
-                                  : "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
-                              )}>
-                                {formatGrade(ranking.overallAverage)}
-                              </span>
-                            </div>
-                          );
-                        })}
+                {/* ── Ranking Table ────────────────────────────────────────── */}
+                <Card className="border-border">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-primary" />
+                          Daftar Ranking Lengkap
+                        </CardTitle>
+                        <CardDescription className="text-[10px] sm:text-xs mt-0.5">
+                          {isAllSubjectsMode
+                            ? `Semua ${subjects.length} mata pelajaran`
+                            : `${selectedSubjectIds.length} dari ${subjects.length} mata pelajaran dipilih`}
+                          {" · "}
+                          <span className="font-medium text-foreground">{overallRankings.length} murid</span>
+                          {" · KKM "}
+                          <span className="font-medium text-foreground">{classKkm}</span>
+                        </CardDescription>
                       </div>
+                      {overallRankings.length > 0 && (
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                            Lulus KKM
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-400" />
+                            Belum KKM
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-0 sm:px-6">
+                    {/* Mobile list view */}
+                    <div className="divide-y sm:hidden">
+                      {paginatedRankings.map((ranking) => {
+                        const isPassing = ranking.overallAverage >= classKkm;
+                        const isTop3 = ranking.rank <= 3;
+                        return (
+                          <div
+                            key={ranking.student.id}
+                            className={cn(
+                              "flex items-center gap-3 px-4 py-3 transition-colors",
+                              isTop3 && "bg-amber-50/60 dark:bg-amber-950/20"
+                            )}
+                          >
+                            <div className="shrink-0 w-12">{getRankBadge(ranking.rank)}</div>
+                            <div className="min-w-0 flex-1">
+                              <p className={cn(
+                                "whitespace-normal break-words text-sm leading-snug",
+                                isTop3 ? "font-bold text-foreground" : "font-semibold text-foreground"
+                              )}>
+                                {ranking.student.name}
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                NISN {ranking.student.nisn || "—"}
+                              </p>
+                            </div>
+                            <span className={cn(
+                              "inline-flex min-w-[3rem] shrink-0 justify-center rounded-full border px-2 py-1 text-xs font-bold tabular-nums",
+                              isPassing
+                                ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                                : "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
+                            )}>
+                              {formatGrade(ranking.overallAverage)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                      <div className="hidden overflow-x-auto sm:block">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-16 text-[10px] sm:text-xs">Rank</TableHead>
-                              <TableHead className="text-[10px] sm:text-xs">Nama</TableHead>
-                              <TableHead className="text-[10px] sm:text-xs hidden sm:table-cell">NISN</TableHead>
-                              <TableHead className="text-right text-[10px] sm:text-xs">Rata-rata</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {paginatedRankings.map((ranking) => (
-                              <TableRow key={ranking.student.id} className="hover:bg-primary/5">
-                                <TableCell className="py-2 sm:py-3">
+                    {/* Desktop table view */}
+                    <div className="hidden overflow-x-auto sm:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="w-[72px] text-[11px] font-semibold">Rank</TableHead>
+                            <TableHead className="text-[11px] font-semibold">Nama Siswa</TableHead>
+                            <TableHead className="text-[11px] font-semibold hidden md:table-cell">NISN</TableHead>
+                            <TableHead className="text-right text-[11px] font-semibold">Rata-rata</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedRankings.map((ranking) => {
+                            const isPassing = ranking.overallAverage >= classKkm;
+                            const isTop3 = ranking.rank <= 3;
+                            return (
+                              <TableRow
+                                key={ranking.student.id}
+                                className={cn(
+                                  "transition-colors",
+                                  isTop3
+                                    ? "bg-amber-50/60 hover:bg-amber-50 dark:bg-amber-950/20 dark:hover:bg-amber-950/30"
+                                    : "hover:bg-primary/5"
+                                )}
+                              >
+                                <TableCell className="py-2.5">
                                   {getRankBadge(ranking.rank)}
                                 </TableCell>
-                                <TableCell className="max-w-[160px] whitespace-normal break-words py-2 text-xs font-semibold sm:max-w-none sm:py-3 sm:text-sm">
+                                <TableCell
+                                  className={cn(
+                                    "max-w-[180px] whitespace-normal break-words py-2.5 sm:max-w-none",
+                                    isTop3 ? "text-sm font-bold" : "text-sm font-medium"
+                                  )}
+                                >
                                   {ranking.student.name}
                                 </TableCell>
-                                <TableCell className="text-xs sm:text-sm py-2 sm:py-3 hidden sm:table-cell">
-                                  {ranking.student.nisn}
+                                <TableCell className="py-2.5 text-xs text-muted-foreground hidden md:table-cell">
+                                  {ranking.student.nisn || "—"}
                                 </TableCell>
-                                <TableCell className="text-right py-2 sm:py-3">
+                                <TableCell className="text-right py-2.5">
                                   <span className={cn(
-                                    "inline-flex min-w-14 justify-center rounded-full border px-2 py-1 text-xs font-bold sm:text-sm",
-                                    ranking.overallAverage >= classKkm
+                                    "inline-flex min-w-[3rem] justify-center rounded-full border px-2.5 py-1 text-xs font-bold tabular-nums",
+                                    isPassing
                                       ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
                                       : "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
                                   )}>
@@ -830,25 +968,24 @@ export default function StudentRankings() {
                                   </span>
                                 </TableCell>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
 
-                      {/* Pagination Controls */}
-                      <PaginationControls
-                        currentPage={safeCurrentPage}
-                        totalPages={totalRankingPages}
-                        totalItems={rankingTotalItems}
-                        limit={pageLimit}
-                        onPageChange={(p) => setCurrentPage(p)}
-                        onLimitChange={(l) => { setPageLimit(l); setCurrentPage(1); }}
-                        className="border-t border-border/30"
-                      />
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+                    {/* Pagination */}
+                    <PaginationControls
+                      currentPage={safeCurrentPage}
+                      totalPages={totalRankingPages}
+                      totalItems={rankingTotalItems}
+                      limit={pageLimit}
+                      onPageChange={(p) => setCurrentPage(p)}
+                      onLimitChange={(l) => { setPageLimit(l); setCurrentPage(1); }}
+                      className="border-t border-border/30"
+                    />
+                  </CardContent>
+                </Card>
               </>
             )}
           </div>
