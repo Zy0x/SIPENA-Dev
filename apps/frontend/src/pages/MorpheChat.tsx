@@ -87,11 +87,23 @@ function getDynamicPrompts(chatMode: ChatMode): { icon: string; text: string; tr
   const result: { icon: string; text: string; trend?: string }[] = [];
   const indicesUsed = new Set<number>();
   
-  while (result.length < 4 && result.length < bank.length) {
-    const index = Math.abs(Math.floor(Math.sin(dateSeed + result.length) * bank.length)) % bank.length;
+  let attempts = 0;
+  // Batasi maksimum iterasi ke 100 untuk menghindari infinite loop
+  while (result.length < 4 && result.length < bank.length && attempts < 100) {
+    const index = Math.abs(Math.floor(Math.sin(dateSeed + attempts) * bank.length)) % bank.length;
     if (!indicesUsed.has(index)) {
       result.push(bank[index]);
       indicesUsed.add(index);
+    }
+    attempts++;
+  }
+  
+  // Fallback jika karena alasan tertentu hasil kurang dari 4 dan bank masih memiliki sisa item
+  if (result.length < 4 && bank.length >= 4) {
+    for (let i = 0; i < bank.length; i++) {
+      if (!indicesUsed.has(i) && result.length < 4) {
+        result.push(bank[i]);
+      }
     }
   }
   
