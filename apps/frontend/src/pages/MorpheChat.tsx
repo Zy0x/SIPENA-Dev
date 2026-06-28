@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,19 +37,66 @@ import morpheIconPure from "@/icon/icon_morphe_pure.png";
 
 type ChatMode = "chat" | "sipena";
 
-const QUICK_PROMPTS_CHAT = [
-  { icon: "🤖", text: "Jelaskan cara kerja Large Language Model secara sederhana" },
-  { icon: "🐍", text: "Buatkan REST API sederhana menggunakan Flask" },
-  { icon: "⚡", text: "Apa kelebihan Groq LPU dibanding GPU untuk AI?" },
-  { icon: "📊", text: "Analisis tren perkembangan AI dari 2020 hingga sekarang" },
+// Bank Data Prompt Dinamis untuk Chat Mode (AI Umum)
+const DYNAMIC_PROMPTS_CHAT_BANK = [
+  // Senin / Selasa (Productivity & Learning)
+  { icon: "🤖", text: "Jelaskan cara kerja Large Language Model secara sederhana", trend: "Hits Hari Ini" },
+  { icon: "🐍", text: "Buatkan REST API sederhana menggunakan Python FastAPI", trend: "Banyak Dicari" },
+  { icon: "⚡", text: "Apa perbedaan dan keunggulan Groq LPU dibanding GPU?", trend: "Populer" },
+  { icon: "📚", text: "Berikan tips teknik belajar Feynman untuk konsep fisika quantum", trend: "Rekomendasi" },
+  // Rabu / Kamis (Problem Solving & Code)
+  { icon: "💻", text: "Tulis fungsi TypeScript untuk debouncing input pencarian", trend: "Sering Ditanyakan" },
+  { icon: "🛡️", text: "Bagaimana cara mencegah SQL Injection pada aplikasi Node.js?", trend: "Penting" },
+  { icon: "🎨", text: "Berikan ide palet warna modern bertema glassmorphism untuk website sekolah", trend: "Hits" },
+  { icon: "📝", text: "Tulis draf email penawaran kerja sama yang profesional tapi persuasif", trend: "Populer" },
+  // Jumat / Sabtu / Minggu (Creativity & Fun)
+  { icon: "📊", text: "Bagaimana tren perkembangan AI dari tahun 2024 hingga masa depan?", trend: "Trending" },
+  { icon: "🧠", text: "Berikan latihan logika coding sederhana untuk murid tingkat pemula", trend: "Rekomendasi" },
+  { icon: "✈️", text: "Buat itinerary perjalanan wisata edukatif 3 hari ke Yogyakarta", trend: "Populer" },
+  { icon: "✍️", text: "Buat cerita fiksi ilmiah pendek tentang AI yang menemukan emosi manusia", trend: "Kreatif" }
 ];
 
-const QUICK_PROMPTS_SIPENA = [
-  { icon: "📊", text: "Analisis rata-rata nilai seluruh kelas saya" },
-  { icon: "📈", text: "Rekap presensi siswa bulan ini" },
-  { icon: "🏆", text: "Siapa siswa dengan nilai tertinggi di kelas?" },
-  { icon: "⚠️", text: "Siswa mana yang berisiko tidak mencapai KKM?" },
+// Bank Data Prompt Dinamis untuk SIPENA Mode (Akademik & Sekolah)
+const DYNAMIC_PROMPTS_SIPENA_BANK = [
+  // Senin / Selasa (Analisis & Persiapan Awal)
+  { icon: "📊", text: "Analisis rata-rata nilai kelas untuk melihat kesiapan materi baru", trend: "Populer" },
+  { icon: "🎯", text: "Siapa siswa yang menunjukkan peningkatan belajar paling konsisten?", trend: "Banyak Dicari" },
+  { icon: "📚", text: "Buatkan 5 soal pilihan ganda interaktif beserta pembahasan untuk materi pecahan", trend: "Hits Hari Ini" },
+  { icon: "✏️", text: "Buat rancangan rubrik penilaian proyek kelompok IPS bertema kerja sama", trend: "Rekomendasi" },
+  // Rabu / Kamis (Evaluasi & KKM)
+  { icon: "🏆", text: "Tampilkan siswa dengan perolehan nilai tertinggi di kelas saat ini", trend: "Sering Dicari" },
+  { icon: "⚠️", text: "Siswa mana yang nilai rata-ratanya masih di bawah KKM kelas?", trend: "Penting" },
+  { icon: "❓", text: "Bantu analisis butir soal ujian kemarin, mengapa rata-rata nilai rendah?", trend: "Populer" },
+  { icon: "📝", text: "Bagaimana cara memberi feedback yang memotivasi untuk siswa nilai rendah?", trend: "Bantuan" },
+  // Jumat / Sabtu / Minggu (Rekap & Saran)
+  { icon: "📈", text: "Buat rekapitulasi persentase kehadiran siswa selama bulan berjalan", trend: "Trending" },
+  { icon: "💡", text: "Berikan saran metode pengajaran interaktif untuk murid yang sulit fokus", trend: "Populer" },
+  { icon: "🤝", text: "Buat draf laporan singkat perkembangan belajar siswa untuk dibagikan ke orang tua", trend: "Banyak Dicari" },
+  { icon: "🌟", text: "Rekomendasikan kegiatan pembelajaran berbasis game (gamifikasi) untuk materi IPA", trend: "Rekomendasi" }
 ];
+
+// Fungsi untuk mendapatkan rekomendasi prompt dinamis berdasarkan hari ini
+function getDynamicPrompts(chatMode: ChatMode): { icon: string; text: string; trend?: string }[] {
+  const bank = chatMode === "sipena" ? DYNAMIC_PROMPTS_SIPENA_BANK : DYNAMIC_PROMPTS_CHAT_BANK;
+  
+  // Menggunakan tanggal hari ini sebagai seed pengacak agar berganti secara berkala setiap hari
+  const today = new Date();
+  const dateSeed = today.getDate() + today.getMonth() + today.getFullYear();
+  
+  // Ambil 4 item dari bank data menggunakan seed matematika
+  const result: { icon: string; text: string; trend?: string }[] = [];
+  const indicesUsed = new Set<number>();
+  
+  while (result.length < 4 && result.length < bank.length) {
+    const index = Math.abs(Math.floor(Math.sin(dateSeed + result.length) * bank.length)) % bank.length;
+    if (!indicesUsed.has(index)) {
+      result.push(bank[index]);
+      indicesUsed.add(index);
+    }
+  }
+  
+  return result;
+}
 
 const SYSTEM_PRESETS = [
   { label: "🤖 Asisten SIPENA", text: "Kamu adalah Morphe, asisten AI cerdas untuk guru di SIPENA (Sistem Informasi Penilaian Akademik). Bantu guru menganalisis data nilai, presensi, membuat soal, dan memberikan saran pengajaran. Gunakan Bahasa Indonesia yang jelas dan profesional." },
@@ -336,7 +383,7 @@ export default function MorpheChat() {
   const unpinnedSessions = sessions.filter((s) => !s.is_pinned);
   const lastMsg = allMessages[allMessages.length - 1];
   const lastMsgIsError = lastMsg?.role === "assistant" && lastMsg?.content?.startsWith("⚠️");
-  const quickPrompts = chatMode === "sipena" ? QUICK_PROMPTS_SIPENA : QUICK_PROMPTS_CHAT;
+  const quickPrompts = useMemo(() => getDynamicPrompts(chatMode), [chatMode]);
 
   const tokenEstimate = allMessages.reduce((acc, m) => acc + Math.ceil(m.content.length / 4), 0);
   const currentModel = MORPHE_MODELS.find(m => m.id === (activeSession?.model || "llama-3.3-70b-versatile"));
@@ -534,10 +581,19 @@ export default function MorpheChat() {
                     <button
                       key={i}
                       onClick={() => handleQuickPrompt(qp.text)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card/50 hover:bg-muted/60 text-left text-sm transition-all hover:border-primary/30 hover:shadow-sm"
+                      className="group relative flex flex-col justify-between gap-2 px-4 py-3 rounded-xl border border-border bg-card/50 hover:bg-muted/60 text-left transition-all hover:border-primary/30 hover:shadow-sm"
                     >
-                      <span className="text-base">{qp.icon}</span>
-                      <span className="text-muted-foreground text-xs line-clamp-2">{qp.text}</span>
+                      <div className="flex items-start gap-3">
+                        <span className="text-base shrink-0 mt-0.5">{qp.icon}</span>
+                        <span className="text-muted-foreground text-xs line-clamp-2 leading-relaxed group-hover:text-foreground transition-colors">{qp.text}</span>
+                      </div>
+                      {qp.trend && (
+                        <div className="flex justify-end mt-1">
+                          <span className="inline-flex items-center text-[9px] font-bold text-amber-500/90 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20 shadow-sm">
+                            🔥 {qp.trend}
+                          </span>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
