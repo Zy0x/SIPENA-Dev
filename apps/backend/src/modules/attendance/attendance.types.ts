@@ -24,6 +24,7 @@ export interface AttendanceRuntimeContext {
   isAdmin: boolean;
   isDebug: boolean;
   user?: User;
+  token?: string;
 }
 
 export interface AttendanceValidationIssue {

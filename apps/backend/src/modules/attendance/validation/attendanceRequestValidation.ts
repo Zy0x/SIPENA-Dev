@@ -129,3 +129,96 @@ export function validateNotePatchBody(body: unknown): {
     issues,
   };
 }
+
+export function validateLockPatchBody(body: unknown): {
+  valid: boolean;
+  lockPatch: any;
+  issues: AttendanceValidationIssue[];
+} {
+  const value = body as any;
+  const issues: AttendanceValidationIssue[] = [];
+
+  if (!value || typeof value !== "object") {
+    return { valid: false, lockPatch: null, issues: [issue("BODY_INVALID", "Body wajib berupa objek JSON.")] };
+  }
+
+  if (!value.classId) issues.push(issue("CLASS_ID_REQUIRED", "classId wajib dikirim.", "classId"));
+  if (!value.month || !ISO_MONTH_RE.test(value.month)) {
+    issues.push(issue("MONTH_INVALID", "month wajib berformat YYYY-MM.", "month"));
+  }
+  if (typeof value.isLocked !== "boolean") {
+    issues.push(issue("IS_LOCKED_REQUIRED", "isLocked wajib berupa boolean.", "isLocked"));
+  }
+
+  return {
+    valid: issues.length === 0,
+    lockPatch: issues.length === 0 ? {
+      classId: String(value.classId),
+      month: String(value.month),
+      isLocked: Boolean(value.isLocked)
+    } : null,
+    issues
+  };
+}
+
+export function validateHolidayPatchBody(body: unknown): {
+  valid: boolean;
+  holidayPatch: any;
+  issues: AttendanceValidationIssue[];
+} {
+  const value = body as any;
+  const issues: AttendanceValidationIssue[] = [];
+
+  if (!value || typeof value !== "object") {
+    return { valid: false, holidayPatch: null, issues: [issue("BODY_INVALID", "Body wajib berupa objek JSON.")] };
+  }
+
+  if (!value.date || !ISO_DATE_RE.test(value.date)) {
+    issues.push(issue("DATE_INVALID", "date wajib berformat YYYY-MM-DD.", "date"));
+  }
+
+  return {
+    valid: issues.length === 0,
+    holidayPatch: issues.length === 0 ? {
+      date: String(value.date),
+      description: value.description ? String(value.description) : undefined
+    } : null,
+    issues
+  };
+}
+
+export function validateDayEventPatchBody(body: unknown): {
+  valid: boolean;
+  dayEventPatch: any;
+  issues: AttendanceValidationIssue[];
+} {
+  const value = body as any;
+  const issues: AttendanceValidationIssue[] = [];
+
+  if (!value || typeof value !== "object") {
+    return { valid: false, dayEventPatch: null, issues: [issue("BODY_INVALID", "Body wajib berupa objek JSON.")] };
+  }
+
+  if (!value.date || !ISO_DATE_RE.test(value.date)) {
+    issues.push(issue("DATE_INVALID", "date wajib berformat YYYY-MM-DD.", "date"));
+  }
+  if (value.action !== "upsert" && value.action !== "delete") {
+    issues.push(issue("ACTION_INVALID", "action wajib bernilai 'upsert' atau 'delete'.", "action"));
+  }
+  if (value.action === "upsert" && !value.label) {
+    issues.push(issue("LABEL_REQUIRED", "label wajib dikirim untuk aksi upsert.", "label"));
+  }
+
+  return {
+    valid: issues.length === 0,
+    dayEventPatch: issues.length === 0 ? {
+      date: String(value.date),
+      label: value.label ? String(value.label) : undefined,
+      description: value.description ? String(value.description) : null,
+      color: value.color ? String(value.color) : null,
+      action: value.action
+    } : null,
+    issues
+  };
+}
+

@@ -8,60 +8,105 @@ import type {
   AttendanceHolidayCanonical,
   AttendanceCalendarEventCanonical,
   AttendanceLockCanonical,
+  AttendanceRecordPatch,
+  AttendanceLockPatch,
+  AttendanceHolidayPatch,
+  AttendanceDayEventPatch,
 } from "../attendance.types";
-import { AttendanceV1Adapter } from "../v1/attendanceV1.adapter";
 import { generateCalendarDays } from "../../../../../frontend/src/features/attendance/v2/calendar/calendarEngine";
 import { evaluateAttendanceRules } from "../../../../../frontend/src/features/attendance/v2/rules/ruleEngine";
 import { computeSummaryBundle } from "../../../../../frontend/src/features/attendance/v2/attendanceV2.engine";
-import { parse, startOfMonth, endOfMonth, format } from "date-fns";
+import { createSupabaseUserClient, supabaseAdmin } from "../../../database/supabase";
+import { parse, startOfMonth, endOfMonth, format, startOfYear, endOfYear } from "date-fns";
 
 export class AttendanceV2Adapter {
-  private v1Adapter = new AttendanceV1Adapter();
-
   async getDataset(
     query: AttendanceDatasetQuery,
     runtime: AttendanceRuntimeContext
   ): Promise<{ dataset: AttendanceDatasetCanonical; issues: AttendanceValidationIssue[] }> {
-    // 1. Fetch raw dataset dari database via V1 Adapter
-    const { dataset: rawDataset, issues: fetchIssues } = await this.v1Adapter.getDataset(query, runtime);
+    const { classId, month } = query;
+    const userId = runtime.user?.id;
+    const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
 
-    if (fetchIssues.some((issue) => issue.severity === "error")) {
-      return { dataset: rawDataset, issues: fetchIssues };
+    if (!userId) {
+      return {
+        dataset: { classId, month, students: [], records: [], days: [], holidays: [], dayEvents: [], locks: [] },
+        issues: [{ severity: "error", code: "UNAUTHORIZED", message: "User tidak terautentikasi untuk mengambil data." }],
+      };
     }
 
     try {
-      const { classId, month } = query;
-
-      // 2. Tentukan range tanggal untuk calendar engine
       const parsedMonth = parse(month, "yyyy-MM", new Date());
+      const yearStart = format(startOfYear(parsedMonth), "yyyy-MM-dd");
+      const yearEnd = format(endOfYear(parsedMonth), "yyyy-MM-dd");
+
+      // Query parallel to V2 database tables
+      const [studentsRes, recordsRes, holidaysRes, dayEventsRes, locksRes] = await Promise.all([
+        client.from("students").select("id, name, nisn").eq("class_id", classId),
+        client.from("attendance_v2_records").select("id, student_id, class_id, date, status, note, created_at, updated_at").eq("class_id", classId).gte("date", yearStart).lte("date", yearEnd),
+        client.from("attendance_v2_holidays").select("id, date, description, is_national").eq("user_id", userId).gte("date", yearStart).lte("date", yearEnd),
+        client.from("attendance_v2_day_events").select("id, date, label, description, color, priority").eq("user_id", userId).gte("date", yearStart).lte("date", yearEnd).then(r => r, () => ({ data: [] })),
+        client.from("attendance_v2_locks").select("class_id, month, is_locked, locked_at, locked_by").eq("class_id", classId).eq("month", month).maybeSingle(),
+      ]);
+
+      const students = (studentsRes.data || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        nisn: s.nisn || "",
+      })) as AttendanceStudentCanonical[];
+
+      const records = (recordsRes.data || []).map((r: any) => ({
+        id: r.id,
+        studentId: r.student_id,
+        classId: r.class_id,
+        date: r.date,
+        status: r.status,
+        note: r.note || null,
+        createdAt: r.created_at || null,
+        updatedAt: r.updated_at || null,
+      })) as AttendanceRecordCanonical[];
+
+      const holidays = (holidaysRes.data || []).map((h: any) => ({
+        id: h.id,
+        date: h.date,
+        description: h.description || "",
+        isNational: h.is_national || false,
+      })) as AttendanceHolidayCanonical[];
+
+      const dayEvents = ((dayEventsRes as any).data || []).map((e: any) => ({
+        id: e.id,
+        date: e.date,
+        label: e.label,
+        description: e.description || null,
+        color: e.color || "blue",
+        priority: e.priority || 0,
+      })) as AttendanceCalendarEventCanonical[];
+
+      const locks = locksRes.data
+        ? [
+            {
+              classId: locksRes.data.class_id,
+              month: locksRes.data.month,
+              isLocked: locksRes.data.is_locked,
+              lockedAt: locksRes.data.locked_at || null,
+              lockedBy: locksRes.data.locked_by || null,
+            } as AttendanceLockCanonical,
+          ]
+        : [];
+
+      // 3. Generate Calendar Days using V2 Calendar Engine
       const startDate = format(startOfMonth(parsedMonth), "yyyy-MM-dd");
       const endDate = format(endOfMonth(parsedMonth), "yyyy-MM-dd");
 
-      // 3. Generate Calendar Days menggunakan V2 Calendar Engine
-      // Kita konversi types agar compatible dengan CalendarEngineInputs di frontend
       const calendarDays = generateCalendarDays({
         startDate,
         endDate,
         classId,
-        workDayFormat: "5days",
-        events: rawDataset.dayEvents.map((e) => ({
-          ...e,
-          classId: null,
-          schoolId: null,
-          priority: null,
-        })),
-        holidays: rawDataset.holidays.map((h) => ({
-          ...h,
-          isNational: h.isNational,
-        })),
+        workDayFormat: "6days",
+        events: dayEvents.map((e: any) => ({ ...e, classId: null, schoolId: null })),
+        holidays: holidays.map((h) => ({ ...h, isNational: h.isNational })),
         overrides: [],
-        locks: rawDataset.locks.map((l) => ({
-          classId: l.classId,
-          month: l.month,
-          isLocked: l.isLocked,
-          lockedAt: l.lockedAt,
-          lockedBy: l.lockedBy,
-        })),
+        locks: locks.map((l) => ({ ...l })),
       });
 
       const mappedDays = calendarDays.map((day) => ({
@@ -73,9 +118,9 @@ export class AttendanceV2Adapter {
         eventName: day.eventName || undefined,
       }));
 
-      // 4. Evaluasi aturan presensi & tambahkan flag evaluasi per record
-      const evaluatedRecords = rawDataset.records.map((record) => {
-        const student = rawDataset.students.find((s) => s.id === record.studentId) || {
+      // 4. Evaluate attendance rules
+      const evaluatedRecords = records.map((record) => {
+        const student = students.find((s) => s.id === record.studentId) || {
           id: record.studentId,
           name: "Unknown Student",
           nisn: "",
@@ -89,13 +134,7 @@ export class AttendanceV2Adapter {
           proposedStatus: record.status,
           proposedNote: record.note,
           calendarDay: day || null,
-          locks: rawDataset.locks.map((l) => ({
-            classId: l.classId,
-            month: l.month,
-            isLocked: l.isLocked,
-            lockedAt: l.lockedAt,
-            lockedBy: l.lockedBy,
-          })),
+          locks: locks.map((l) => ({ ...l })),
           existingRecord: record,
         });
 
@@ -114,33 +153,173 @@ export class AttendanceV2Adapter {
       });
 
       const processedDataset: AttendanceDatasetCanonical = {
-        ...rawDataset,
-        days: mappedDays,
+        classId,
+        month,
+        students,
         records: evaluatedRecords,
+        days: mappedDays,
+        holidays,
+        dayEvents,
+        locks,
       };
 
-      // 5. Hitung ringkasan Summary Bundle secara server-side
+      // 5. Compute summary bundles server-side
       const summaryBundle = computeSummaryBundle(processedDataset);
-
       processedDataset.dailySummary = summaryBundle.daily;
       processedDataset.monthlySummary = summaryBundle.monthly;
 
-      return {
-        dataset: processedDataset,
-        issues: fetchIssues,
-      };
+      return { dataset: processedDataset, issues: [] };
     } catch (err: any) {
       return {
-        dataset: rawDataset,
-        issues: [
-          ...fetchIssues,
-          {
-            severity: "error",
-            code: "V2_COMPUTATION_FAILED",
-            message: `Gagal memproses V2 dataset: ${err.message || err}`,
-          },
-        ],
+        dataset: { classId, month, students: [], records: [], days: [], holidays: [], dayEvents: [], locks: [] },
+        issues: [{ severity: "error", code: "DATABASE_FETCH_FAILED", message: `Gagal memuat data presensi dari database V2: ${err.message || err}` }],
       };
     }
+  }
+
+  async applyPatch(patch: AttendanceRecordPatch, runtime: AttendanceRuntimeContext) {
+    const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+    const { data, error } = await client.rpc("upsert_attendance_record", {
+      p_user_id: runtime.user?.id,
+      p_class_id: patch.classId,
+      p_student_id: patch.studentId,
+      p_date: patch.date,
+      p_status: patch.status,
+      p_note: patch.note || null,
+      p_source: "manual",
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  async toggleLock(patch: AttendanceLockPatch, runtime: AttendanceRuntimeContext) {
+    const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+    const { data: existing } = await client
+      .from("attendance_v2_locks")
+      .select("id")
+      .eq("class_id", patch.classId)
+      .eq("month", patch.month)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await client
+        .from("attendance_v2_locks")
+        .update({
+          is_locked: patch.isLocked,
+          locked_at: patch.isLocked ? new Date().toISOString() : null,
+          locked_by: patch.isLocked ? runtime.user?.id : null,
+        })
+        .eq("id", existing.id);
+      if (error) throw error;
+    } else {
+      const { error } = await client
+        .from("attendance_v2_locks")
+        .insert({
+          user_id: runtime.user?.id,
+          class_id: patch.classId,
+          month: patch.month,
+          is_locked: patch.isLocked,
+          locked_at: patch.isLocked ? new Date().toISOString() : null,
+          locked_by: patch.isLocked ? runtime.user?.id : null,
+        });
+      if (error) throw error;
+    }
+    return { success: true };
+  }
+
+  async toggleHoliday(patch: AttendanceHolidayPatch, runtime: AttendanceRuntimeContext) {
+    const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+    const { data: existing } = await client
+      .from("attendance_v2_holidays")
+      .select("id")
+      .eq("user_id", runtime.user?.id)
+      .eq("date", patch.date)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await client
+        .from("attendance_v2_holidays")
+        .delete()
+        .eq("id", existing.id);
+      if (error) throw error;
+      return { action: "deleted" };
+    } else {
+      const { error } = await client
+        .from("attendance_v2_holidays")
+        .insert({
+          user_id: runtime.user?.id,
+          date: patch.date,
+          description: patch.description || "Hari Libur",
+        });
+      if (error) throw error;
+      return { action: "added" };
+    }
+  }
+
+  async upsertDayEvent(patch: AttendanceDayEventPatch, runtime: AttendanceRuntimeContext) {
+    const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+    const { data: existing } = await client
+      .from("attendance_v2_day_events")
+      .select("id")
+      .eq("user_id", runtime.user?.id)
+      .eq("date", patch.date)
+      .maybeSingle();
+
+    if (existing) {
+      if (patch.action === "delete") {
+        const { error } = await client
+          .from("attendance_v2_day_events")
+          .delete()
+          .eq("id", existing.id);
+        if (error) throw error;
+        return { action: "deleted" };
+      } else {
+        const { error } = await client
+          .from("attendance_v2_day_events")
+          .update({
+            label: patch.label,
+            description: patch.description || null,
+            color: patch.color || "blue",
+          })
+          .eq("id", existing.id);
+        if (error) throw error;
+        return { action: "updated" };
+      }
+    } else {
+      if (patch.action === "delete") return { action: "ignored" };
+      const { error } = await client
+        .from("attendance_v2_day_events")
+        .insert({
+          user_id: runtime.user?.id,
+          date: patch.date,
+          label: patch.label || "Event",
+          description: patch.description || null,
+          color: patch.color || "blue",
+        });
+      if (error) throw error;
+      return { action: "added" };
+    }
+  }
+
+  async getAuditLogs(classId: string, runtime: AttendanceRuntimeContext) {
+    const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+    const { data, error } = await client
+      .from("attendance_v2_audit_logs")
+      .select("*")
+      .eq("class_id", classId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getShadowReport(runtime: AttendanceRuntimeContext) {
+    const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+    const { data, error } = await client
+      .from("attendance_v2_audit_logs")
+      .select("*")
+      .eq("action", "PRESENSI_SHADOW_MISMATCH")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
   }
 }

@@ -7,6 +7,9 @@ import {
   validateDatasetQuery,
   validateNotePatchBody,
   validatePatchBody,
+  validateLockPatchBody,
+  validateHolidayPatchBody,
+  validateDayEventPatchBody,
 } from "./validation/attendanceRequestValidation";
 import type { AttendanceApiError, AttendanceApiSuccess, AttendanceValidationIssue } from "./attendance.types";
 
@@ -73,8 +76,10 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
   }
 
   runtime.user = user;
+  runtime.token = token;
 
   try {
+    // 1. Runtime Config Endpoints
     if (method === "GET" && pathname === "/attendance/runtime") {
       sendJson(res, 200, {
         data: {
@@ -105,7 +110,8 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
       return true;
     }
 
-    if (method === "GET" && pathname === "/attendance") {
+    // 2. Fetch Dataset (V1/V2 mapped)
+    if (method === "GET" && (pathname === "/attendance" || pathname === "/attendance/v2")) {
       const validation = validateDatasetQuery(params);
       if (!validation.valid) {
         sendValidationError(res, validation.issues);
@@ -117,7 +123,8 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
       return true;
     }
 
-    if (method === "POST" && pathname === "/attendance") {
+    // 3. Single Write / Mutate (V1/V2 mapped)
+    if (method === "POST" && (pathname === "/attendance" || pathname === "/attendance/v2/record")) {
       const validation = validatePatchBody(await readJson(req));
       if (!validation.valid || !validation.patch) {
         sendValidationError(res, validation.issues);
@@ -132,40 +139,14 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
       return true;
     }
 
-    if (method === "POST" && pathname === "/attendance/bulk") {
+    // 4. Bulk Write / Mutate (V1/V2 mapped)
+    if (method === "POST" && (pathname === "/attendance/bulk" || pathname === "/attendance/v2/bulk")) {
       const validation = validateBulkPatchBody(await readJson(req));
       if (!validation.valid || !validation.bulk) {
         sendValidationError(res, validation.issues);
         return true;
       }
-      const results = await Promise.all(
-        validation.bulk.patches.map((patch) => attendanceService.applyPatch(patch, runtime))
-      );
-      const failed = results.find((r) => r.statusCode !== 200);
-      if (failed) {
-        sendJson(res, failed.statusCode, { error: failed.error });
-        return true;
-      }
-      sendJson(res, 200, { data: { success: true } });
-      return true;
-    }
-
-    if (method === "PATCH" && pathname === "/attendance/note") {
-      const validation = validateNotePatchBody(await readJson(req));
-      if (!validation.valid || !validation.notePatch) {
-        sendValidationError(res, validation.issues);
-        return true;
-      }
-      const result = await attendanceService.applyPatch(
-        {
-          studentId: validation.notePatch.studentId,
-          classId: validation.notePatch.classId,
-          date: validation.notePatch.date,
-          status: "H",
-          note: validation.notePatch.note,
-        },
-        runtime
-      );
+      const result = await attendanceService.applyBulkPatch(validation.bulk.patches, runtime);
       if (result.error) {
         sendJson(res, result.statusCode, { error: result.error });
       } else {
@@ -174,7 +155,88 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
       return true;
     }
 
-    if (method === "GET" && pathname === "/attendance/summary/daily") {
+    // 5. Update Catatan (V1/V2 mapped)
+    if (method === "PATCH" && (pathname === "/attendance/note" || pathname === "/attendance/v2/note")) {
+      const validation = validateNotePatchBody(await readJson(req));
+      if (!validation.valid || !validation.notePatch) {
+        sendValidationError(res, validation.issues);
+        return true;
+      }
+      const result = await attendanceService.updateNote(validation.notePatch, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
+    // 6. Holiday Operations V2
+    if ((method === "POST" || method === "DELETE") && pathname === "/attendance/v2/holiday") {
+      const validation = validateHolidayPatchBody(await readJson(req));
+      if (!validation.valid || !validation.holidayPatch) {
+        sendValidationError(res, validation.issues);
+        return true;
+      }
+      const result = await attendanceService.toggleHoliday(validation.holidayPatch, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
+    // 7. Day Event Operations V2
+    if (method === "POST" && pathname === "/attendance/v2/day-event") {
+      const validation = validateDayEventPatchBody(await readJson(req));
+      if (!validation.valid || !validation.dayEventPatch) {
+        sendValidationError(res, validation.issues);
+        return true;
+      }
+      const result = await attendanceService.upsertDayEvent(validation.dayEventPatch, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
+    if (method === "DELETE" && pathname === "/attendance/v2/day-event") {
+      const body = (await readJson(req)) as any;
+      const date = body?.date;
+      if (!date) {
+        sendValidationError(res, [{ severity: "error", code: "DATE_REQUIRED", message: "date wajib dikirim.", field: "date" }]);
+        return true;
+      }
+      const result = await attendanceService.upsertDayEvent({ date, action: "delete" }, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
+    // 8. Lock Operations V2
+    if (method === "POST" && pathname === "/attendance/v2/lock") {
+      const validation = validateLockPatchBody(await readJson(req));
+      if (!validation.valid || !validation.lockPatch) {
+        sendValidationError(res, validation.issues);
+        return true;
+      }
+      const result = await attendanceService.toggleLock(validation.lockPatch, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
+    // 9. Daily Summary
+    if (method === "GET" && (pathname === "/attendance/summary/daily" || pathname === "/attendance/v2/summary/daily")) {
       const validation = validateDailySummaryQuery(params);
       if (!validation.valid) {
         sendValidationError(res, validation.issues);
@@ -185,7 +247,8 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
       return true;
     }
 
-    if (method === "GET" && pathname === "/attendance/summary/monthly") {
+    // 10. Monthly Summary
+    if (method === "GET" && (pathname === "/attendance/summary/monthly" || pathname === "/attendance/v2/summary/monthly")) {
       const validation = validateDatasetQuery(params);
       if (!validation.valid) {
         sendValidationError(res, validation.issues);
@@ -196,7 +259,20 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
       return true;
     }
 
-    if (method === "GET" && pathname === "/attendance/export-dataset") {
+    // 11. Yearly Summary V2
+    if (method === "GET" && pathname === "/attendance/v2/summary/yearly") {
+      const validation = validateDatasetQuery(params);
+      if (!validation.valid) {
+        sendValidationError(res, validation.issues);
+        return true;
+      }
+      const result = await attendanceService.getDataset(validation.query, runtime);
+      sendJson(res, 200, { data: { yearlySummary: [] }, issues: result.issues });
+      return true;
+    }
+
+    // 12. Export Dataset
+    if (method === "GET" && (pathname === "/attendance/export-dataset" || pathname === "/attendance/v2/export-dataset")) {
       const validation = validateDatasetQuery(params);
       if (!validation.valid) {
         sendValidationError(res, validation.issues);
@@ -207,20 +283,29 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
       return true;
     }
 
-    if (method === "GET" && pathname === "/attendance/shadow/report") {
-      const result = attendanceService.getShadowReport(runtime);
-      if ("error" in result) {
-        sendJson(res, result.statusCode, { error: result.error });
+    // 13. Audit Log Fetch V2
+    if (method === "GET" && pathname === "/attendance/v2/audit") {
+      const classId = params.get("classId")?.trim() ?? "";
+      if (!classId) {
+        sendValidationError(res, [{ severity: "error", code: "CLASS_ID_REQUIRED", message: "classId wajib dikirim.", field: "classId" }]);
         return true;
       }
-      sendJson(res, result.statusCode, { data: result.data });
+      const result = await attendanceService.getAuditLogs(classId, runtime);
+      sendJson(res, result.statusCode, { data: result.data, error: result.error });
+      return true;
+    }
+
+    // 14. Shadow Report
+    if (method === "GET" && (pathname === "/attendance/shadow/report" || pathname === "/attendance/v2/shadow/report")) {
+      const result = await attendanceService.getShadowReport(runtime);
+      sendJson(res, result.statusCode, { data: result.data, error: result.error });
       return true;
     }
   } catch (err: any) {
     sendJson(res, 400, {
       error: {
         code: "ATTENDANCE_REQUEST_PARSE_FAILED",
-        message: `Body JSON tidak bisa dibaca: ${err.message || err}`,
+        message: `Body JSON tidak bisa dibaca atau terhambat: ${err.message || err}`,
       },
     });
     return true;
