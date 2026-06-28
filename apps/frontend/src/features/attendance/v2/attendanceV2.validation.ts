@@ -53,10 +53,19 @@ export function validatePatchMutation(
     );
   }
 
-  if (patch.status !== null && !getStatusDefinition(patch.status)) {
-    validationIssues.push(
-      validationIssue("INVALID_STATUS_CODE", `Status '${patch.status}' is not registered in the V2 status engine.`, "status")
-    );
+  if (patch.status !== null) {
+    const statusDef = getStatusDefinition(patch.status);
+    if (!statusDef) {
+      validationIssues.push(
+        validationIssue("INVALID_STATUS_CODE", `Status '${patch.status}' is not registered in the V2 status engine.`, "status")
+      );
+    } else if (statusDef.behaviorFlags.includes("REQUIRES_NOTE")) {
+      if (!patch.note || !patch.note.trim()) {
+        validationIssues.push(
+          validationIssue("NOTE_REQUIRED", `Status '${patch.status}' (${statusDef.label}) memerlukan catatan alasan.`, "note")
+        );
+      }
+    }
   }
 
   if (!calendarDay) {
