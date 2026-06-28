@@ -25,7 +25,6 @@ import { useClasses } from "@/hooks/useClasses";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import { Link } from "react-router-dom";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { RankingSemesterSelector, useRankingSemesterFilter } from "@/components/reports/RankingSemesterSelector";
 import { useStudentRankings } from "@/hooks/useStudentRankings";
 import {
@@ -49,6 +48,7 @@ import {
   Filter,
   TrendingUp,
   ChevronRight,
+  Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
@@ -500,33 +500,48 @@ export default function StudentRankings() {
       <div className="app-page">
 
         {/* ── Page Header ─────────────────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 animate-fade-in">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" asChild className="shrink-0 h-8 w-8">
-              <Link to="/reports" aria-label="Kembali ke Laporan">
-                <ArrowLeft className="w-4 h-4" />
-              </Link>
-            </Button>
-            <PageHeader
-              icon={<Trophy className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-amber-500" />}
-              title="Ranking Siswa"
-              subtitle={
-                activeYear
-                  ? `${activeYear.name} · ${rankingPeriodShortLabel}`
-                  : "Peringkat keseluruhan siswa per kelas"
-              }
-              breadcrumbs={[
-                { label: "Laporan", href: "/reports" },
-                { label: "Ranking Siswa" },
-              ]}
-            />
-          </div>
-          <div className="flex items-center gap-2 shrink-0 pl-10 sm:pl-0">
-            <RankingSemesterSelector
-              value={semesterFilter}
-              onChange={setSemesterFilter}
-              showIndicator={false}
-            />
+        <div className="animate-fade-in space-y-2">
+          {/* Breadcrumb row */}
+          <nav aria-label="breadcrumb" className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground overflow-x-auto scrollbar-none">
+            <Link to="/dashboard" className="flex items-center gap-1 hover:text-foreground transition-colors shrink-0">
+              <Home className="w-3 h-3" />
+              <span className="hidden sm:inline">Beranda</span>
+            </Link>
+            <ChevronRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+            <Link to="/reports" className="hover:text-foreground transition-colors shrink-0 truncate max-w-[80px] sm:max-w-none">
+              Laporan
+            </Link>
+            <ChevronRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+            <span className="font-medium text-foreground shrink-0">Ranking Siswa</span>
+          </nav>
+
+          {/* Title + Semester row */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button variant="ghost" size="icon" asChild className="shrink-0 h-8 w-8">
+                <Link to="/reports" aria-label="Kembali ke Laporan">
+                  <ArrowLeft className="w-4 h-4" />
+                </Link>
+              </Button>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-[10px] bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center shrink-0">
+                  <Trophy className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-amber-500" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-lg font-bold text-foreground leading-tight">Ranking Siswa</h1>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
+                    {activeYear ? `${activeYear.name} · ${rankingPeriodShortLabel}` : "Peringkat keseluruhan siswa per kelas"}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="shrink-0">
+              <RankingSemesterSelector
+                value={semesterFilter}
+                onChange={setSemesterFilter}
+                showIndicator={false}
+              />
+            </div>
           </div>
         </div>
 
@@ -811,7 +826,39 @@ export default function StudentRankings() {
                         {subjectScopeLabel}
                       </Badge>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+                    {/* Mobile: horizontal scroll chips */}
+                    <div className="flex gap-2 overflow-x-auto pb-1 sm:hidden scrollbar-none -mx-1 px-1">
+                      {subjects.map((subject) => {
+                        const isSubjectActive = selectedSubjectIds.includes(subject.id);
+                        return (
+                          <button
+                            key={subject.id}
+                            type="button"
+                            aria-pressed={isSubjectActive}
+                            onClick={() => toggleSubjectSelection(subject.id)}
+                            className={cn(
+                              "sipena-ranking-subject-button flex-shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-[12px] font-medium whitespace-nowrap touch-manipulation transition-colors",
+                              isSubjectActive
+                                ? "bg-primary border-primary text-primary-foreground shadow-sm"
+                                : "bg-background border-border text-foreground hover:border-primary/50",
+                            )}
+                          >
+                            {isSubjectActive && <Check className="w-3 h-3 shrink-0" />}
+                            <span>{subject.name}</span>
+                            <span className={cn(
+                              "text-[10px] opacity-75",
+                              isSubjectActive ? "text-primary-foreground" : "text-muted-foreground"
+                            )}>
+                              {subject.kkm}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop: grid */}
+                    <div className="hidden sm:grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {subjects.map((subject) => {
                         const isSubjectActive = selectedSubjectIds.includes(subject.id);
                         return (
@@ -823,7 +870,7 @@ export default function StudentRankings() {
                             data-selected={isSubjectActive}
                             onClick={() => toggleSubjectSelection(subject.id)}
                             className={cn(
-                              "sipena-ranking-subject-button h-auto min-h-12 justify-between gap-3 whitespace-normal break-words px-3 py-2 text-left touch-manipulation",
+                              "sipena-ranking-subject-button h-auto min-h-[44px] justify-between gap-3 whitespace-normal break-words px-3 py-2 text-left touch-manipulation",
                               isSubjectActive
                                 ? "border-primary bg-primary text-primary-foreground shadow-sm"
                                 : "border-border bg-background text-foreground hover:border-primary/40",
