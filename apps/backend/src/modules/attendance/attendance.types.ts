@@ -13,6 +13,8 @@ export interface AttendanceRuntimeGuardResult {
   forcedMode: AttendanceRuntimeMode;
 }
 
+import type { User } from "@supabase/supabase-js";
+
 export interface AttendanceRuntimeContext {
   engine: AttendanceRuntimeEngine;
   mode: AttendanceRuntimeMode;
@@ -21,6 +23,7 @@ export interface AttendanceRuntimeContext {
   writesEnabled: boolean;
   isAdmin: boolean;
   isDebug: boolean;
+  user?: User;
 }
 
 export interface AttendanceValidationIssue {

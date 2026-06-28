@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.4.117] - 2026-06-28
+### Added
+- **Backend Supabase Client & Auth Parser:** Set up a lightweight database module (`supabase.ts`) supporting Service Role client mapping and user Bearer Token queries. Integrated JWT validation in `attendance.controller.ts` via `supabase.auth.getUser()`.
+- **V1 & V2 Database Query Adapters:** Built complete query handlers to extract actual students, records, holidays, Locks, and events from Supabase. The V2 adapter executes rules and calendar day calculations server-side.
+- **Backend Write Persistence & Validation:** Connected `applyPatch` mutations to direct database updates (inserts, updates, deletes) in `attendance.service.ts`, guarded by server-side V2 business validation checks.
+- **esbuild Monorepo Bundling:** Configured `esbuild.config.js` to bundle the backend app into a single ESM file, eliminating extensionless import resolution issues in the Node environment.
+
 ## [2.4.116] - 2026-06-28
 ### Added
 - **Engine-Agnostic V1 UI:** Integrated the V2 Engine calculations and validation checks directly into the shared `useAttendance.ts` hook. When the runtime engine is set to `v2`, the hook dynamically proxies read stats, holiday checks, note queries, and status lookups to the V2 service while keeping the UI render paths of `Attendance.tsx` untouched. This achieves 100% visual parity between V1 and V2 without any duplicate JSX markup.

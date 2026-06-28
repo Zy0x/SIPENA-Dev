@@ -6,8 +6,12 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": "../..",
     "target": "ES2022"
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "../frontend/src/features/attendance/v2/**/*",
+    "../frontend/src/features/attendance/canonical/**/*"
+  ]
 }

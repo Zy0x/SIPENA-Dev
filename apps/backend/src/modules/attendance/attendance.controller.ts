@@ -41,10 +41,38 @@ function routePath(req: IncomingMessage): { pathname: string; params: URLSearchP
   return { pathname: url.pathname.replace(/^\/api/, ""), params: url.searchParams };
 }
 
+import { supabaseAdmin } from "../../database/supabase";
+
 export async function attendanceController(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   const { pathname, params } = routePath(req);
   const method = req.method ?? "GET";
   const runtime = resolveAttendanceRuntime(req);
+
+  const authHeader = req.headers["authorization"] || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : "";
+
+  if (!token) {
+    sendJson(res, 401, {
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Header Authorization Bearer token wajib dikirim.",
+      },
+    });
+    return true;
+  }
+
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+  if (authError || !user) {
+    sendJson(res, 401, {
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Token tidak valid atau kedaluwarsa.",
+      },
+    });
+    return true;
+  }
+
+  runtime.user = user;
 
   try {
     if (method === "GET" && pathname === "/attendance/runtime") {
@@ -84,7 +112,7 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
         return true;
       }
 
-      const result = attendanceService.getDataset(validation.query, runtime);
+      const result = await attendanceService.getDataset(validation.query, runtime);
       sendJson(res, 200, { data: result.dataset, issues: result.issues });
       return true;
     }
@@ -95,8 +123,12 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
         sendValidationError(res, validation.issues);
         return true;
       }
-      const result = attendanceService.applyPatch(validation.patch, runtime);
-      sendJson(res, result.statusCode, { error: result.error });
+      const result = await attendanceService.applyPatch(validation.patch, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
       return true;
     }
 
@@ -106,8 +138,15 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
         sendValidationError(res, validation.issues);
         return true;
       }
-      const result = attendanceService.applyPatch(validation.bulk.patches[0], runtime);
-      sendJson(res, result.statusCode, { error: result.error });
+      const results = await Promise.all(
+        validation.bulk.patches.map((patch) => attendanceService.applyPatch(patch, runtime))
+      );
+      const failed = results.find((r) => r.statusCode !== 200);
+      if (failed) {
+        sendJson(res, failed.statusCode, { error: failed.error });
+        return true;
+      }
+      sendJson(res, 200, { data: { success: true } });
       return true;
     }
 
@@ -117,7 +156,7 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
         sendValidationError(res, validation.issues);
         return true;
       }
-      const result = attendanceService.applyPatch(
+      const result = await attendanceService.applyPatch(
         {
           studentId: validation.notePatch.studentId,
           classId: validation.notePatch.classId,
@@ -127,7 +166,11 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
         },
         runtime
       );
-      sendJson(res, result.statusCode, { error: result.error });
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
       return true;
     }
 
@@ -137,7 +180,7 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
         sendValidationError(res, validation.issues);
         return true;
       }
-      const result = attendanceService.getDailySummary(validation.query, runtime);
+      const result = await attendanceService.getDailySummary(validation.query, runtime);
       sendJson(res, 200, { data: result.summary, issues: result.issues });
       return true;
     }
@@ -148,7 +191,7 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
         sendValidationError(res, validation.issues);
         return true;
       }
-      const result = attendanceService.getMonthlySummary(validation.query, runtime);
+      const result = await attendanceService.getMonthlySummary(validation.query, runtime);
       sendJson(res, 200, { data: result.summary, issues: result.issues });
       return true;
     }
@@ -159,7 +202,7 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
         sendValidationError(res, validation.issues);
         return true;
       }
-      const result = attendanceService.getExportDataset(validation.query, runtime);
+      const result = await attendanceService.getExportDataset(validation.query, runtime);
       sendJson(res, 200, { data: result.exportDataset, issues: result.issues });
       return true;
     }
@@ -173,11 +216,11 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
       sendJson(res, result.statusCode, { data: result.data });
       return true;
     }
-  } catch {
+  } catch (err: any) {
     sendJson(res, 400, {
       error: {
         code: "ATTENDANCE_REQUEST_PARSE_FAILED",
-        message: "Body JSON tidak bisa dibaca.",
+        message: `Body JSON tidak bisa dibaca: ${err.message || err}`,
       },
     });
     return true;

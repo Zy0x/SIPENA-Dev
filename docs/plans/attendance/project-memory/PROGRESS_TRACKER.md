@@ -181,3 +181,11 @@ Progress is documentation-based, not implementation-based
 - Routing: Restored `ResolvedAttendanceRuntime` to render `AttendanceV1Wrapper` for both engines.
 - Test Suite: 571/571 passed, 0 TypeScript errors.
 - Version: 2.4.116.
+
+## BACKEND INTEGRATION & V2 PERSISTENCE CHECKPOINT (PHASE 07) - 2026-06-28
+- Auth parsing: Extract and validate user Bearer token using supabase.auth.getUser() server-side.
+- Database Adapters: Implemented real query adapters for both V1 and V2 engines using Supabase SDK.
+- V2 Persistence: Enabled secure database updates with server-side business rules pre-validation.
+- esbuild Bundler: Introduced esbuild backend packaging to eliminate ESM resolution issues.
+- Test baseline: 571/571 passed, 0 TypeScript errors.
+- Version: 2.4.117.
