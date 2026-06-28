@@ -42,7 +42,7 @@ import ParentPortal from "../pages/ParentPortal";
 import PortalView from "../pages/PortalView";
 import MorpheChat from "../pages/MorpheChat";
 import Terms from "../pages/Terms";
-import AttendanceRuntimeRoute from "@/features/attendance/runtime/AttendanceRuntimeRoute";
+import Attendance from "../pages/Attendance";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,7 +111,7 @@ const App = () => {
                         </ErrorBoundary>
                       } />
                       <Route path="/classes" element={<Classes />} />
-                      <Route path="/attendance" element={<AttendanceRuntimeRoute />} />
+                      <Route path="/attendance" element={<Attendance />} />
                       <Route path="/subjects" element={<Subjects />} />
                       <Route path="/grades" element={<Grades />} />
                       <Route path="/reports" element={<Reports />} />
