@@ -1,192 +1,142 @@
-# ARSITEKTUR MESIN KALENDER AKADEMIK (ACADEMIC CALENDAR ENGINE - ACE) SIPENA
+# BLUEPRINT DOKUMEN DESAIN: MESIN KALENDER AKADEMIK & ATURAN PRESENSI (ACE) SIPENA
 
-Dokumen ini merangkum perancangan ulang model domain dan mesin logika presensi untuk SIPENA. Proposal ini menggeser paradigma dari sistem yang *berorientasi pada tahun ajaran / hari libur* menjadi sistem **Academic Calendar Engine (ACE)** yang fleksibel, dinamis, dan berbasis pada kondisi riil sekolah di Indonesia.
-
----
-
-## 1. Pergeseran Paradigma Filosofis
-
-Pada sistem tradisional, terdapat asumsi bahwa *Kalender mengikuti Tahun Ajaran*. Namun di dunia nyata, yang terjadi justru sebaliknya: **Tahun Ajaran mengikuti Kalender Akademik yang ditetapkan oleh masing-masing sekolah**.
-
-Setiap sekolah memiliki tanggal mulai, tanggal selesai, libur keagamaan, dan penyesuaian darurat yang unik. Hubungan administrasi yang benar adalah menempatkan Kalender Akademik sebagai sumber kebenaran tunggal (*source of truth*), di mana tahun ajaran dan semester hanyalah bagian penanda administrasi dari kalender tersebut.
+Dokumen cetak biru (*blueprint*) ini memetakan rancangan arsitektur domain presensi komprehensif pada SIPENA untuk bertransisi dari *Holiday-Oriented System* menuju **Academic Calendar Engine (ACE)** dan **Attendance Rule Engine**. Dokumen ini dirancang untuk menjawab 28 kasus operasional riil sekolah di Indonesia (Kategori A s.d. P) agar platform SIPENA siap menangani multi-sekolah, multi-kebijakan, dan integrasi data eksternal secara tangguh.
 
 ---
 
-## 2. Arsitektur 4-Layer Academic Calendar Engine (ACE)
+## 1. Tiga Pilar Prioritas Utama Arsitektur (Architect's Priority)
 
-Mesin Kalender Akademik dirancang sebagai empat lapisan terpisah namun saling terintegrasi secara modular:
-
-```mermaid
-graph TD
-  AY[1. Academic Year - Batas Administratif] -->|Mengikat Rentang| AC[2. Academic Calendar - Konfigurasi Pola Sekolah]
-  AC -->|Memproses Rentang Tanggal & Pola Kerja| CE[3. Calendar Events - Kejadian & Pengecualian]
-  CE -->|Evaluasi Aturan & Prioritas| AE[4. Attendance Engine - Generator Presensi Dinamis]
-  AE -->|Output Hasil Evaluasi| PM[Presensi Murid-Murid]
-```
-
-### Layer 1: Academic Year (Tahun Ajaran)
-Mendefinisikan batas administratif sekolah tanpa mengetahui hari libur maupun semester:
-- Tahun ajaran (misal: 2026/2027).
-- Tanggal mulai dan tanggal selesai tahun ajaran.
-- Status keaktifan administratif.
-
-### Layer 2: Academic Calendar (Kalender Akademik Sekolah)
-Mengatur aturan dasar operasional harian sekolah pada satu tahun ajaran:
-- Pola Hari Kerja: 5 Hari Kerja (Senin–Jumat) atau 6 Hari Kerja (Senin–Sabtu).
-- Aturan Default Hari Efektif: Apakah Projek Penguatan Profil Pelajar Pancasila (P5) wajib mencatat presensi? Apakah Class Meeting dihitung sebagai hari sekolah?
-- Zona waktu operasional sekolah.
-
-### Layer 3: Calendar Events (Kejadian & Pengecualian)
-Menyimpan semua kejadian akademik/non-akademik menggunakan model satu entitas dinamis (Google Calendar Model) dengan kolom:
-- **`scope`**: `GLOBAL | SCHOOL | GRADE | CLASS | STUDENT | TEACHER`
-- **`target`**: Mengidentifikasi ID target scope (ID murid, ID kelas, ID jenjang).
-- **`priority`**: Skala prioritas numerik untuk menyelesaikan bentrokan pada hari yang sama.
-- **`is_working_day`**: Penentu apakah hari tersebut wajib mencatat presensi atau non-efektif.
-- **`repeat_rule` & `date_range`**: Mendukung penanganan event berulang (seperti Senam Jumat) dan rentang hari (seperti Pesantren Ramadan) tanpa duplikasi baris data.
-
-### Layer 4: Attendance Engine (Mesin Evaluasi Dinamis)
-Mesin logika bisnis (*Rule Engine*) yang mengevaluasi seluruh event pada tanggal kueri secara real-time untuk menentukan status akhir hari sekolah. **Jumlah hari efektif tidak disimpan di database**, melainkan dihitung secara dinamis demi menjaga konsistensi kalkulasi.
-
----
-
-## 3. Pemetaan Solusi Terhadap 9 Skenario Riil Sekolah
-
-Model domain baru ini menyelesaikan seluruh skenario kompleks sekolah dengan sangat elegan:
-
-### Skenario 1: Hari Libur per Kelas (Study Tour Kelas 5A)
-*   **Konfigurasi**: `scope = CLASS`, `target = "id_kelas_5A"`, `is_working_day = false`, `event_type = STUDY_TOUR`.
-*   **Hasil**: Kelas 5A non-efektif (tidak mencatat presensi), sementara Kelas 5B dan 5C tetap belajar seperti biasa.
-
-### Skenario 2: Libur Seluruh Sekolah (Hari Raya)
-*   **Konfigurasi**: `scope = SCHOOL`, `target = NULL`, `is_working_day = false`, `event_type = HOLIDAY`.
-*   **Hasil**: Berlaku global untuk semua murid di sekolah tersebut.
-
-### Skenario 3: Libur Tingkat (Field Trip Tingkat 1)
-*   **Konfigurasi**: `scope = GRADE`, `target = "1"`, `is_working_day = false`, `event_type = FIELD_TRIP`.
-*   **Hasil**: Seluruh kelas di tingkat 1 (1A, 1B, 1C) menjadi non-efektif.
-
-### Skenario 4: Libur Mata Pelajaran
-*   **Konfigurasi**: `scope = SUBJECT`, `target = "id_mapel_matematika"`, `is_working_day = false`.
-*   **Hasil**: Hari efektif pada jam mata pelajaran matematika tersebut dinonaktifkan (misal karena guru pendamping/peserta olimpiade), sedangkan jam mapel IPS/IPA lain pada hari yang sama tetap berjalan normal.
-
-### Skenario 5: Kegiatan/Libur Individual (Dispensasi Murid Ahmad mengikuti O2SN)
-*   **Konfigurasi**: `scope = STUDENT`, `target = "id_murid_ahmad"`, `is_working_day = true`, `event_type = SPORT`.
-*   **Hasil**: Hanya murid Ahmad yang otomatis tercatat dalam tugas luar/dispensasi pada hari tersebut tanpa memengaruhi murid lain di kelasnya.
-
-### Skenario 6: Libur/Kegiatan Berulang (Senam Jumat Pagi)
-*   **Konfigurasi**: `repeat_rule = "weekly"`, `start_date = "2026-07-03"` (hari Jumat).
-*   **Hasil**: Sistem otomatis memetakan kegiatan senam setiap hari Jumat tanpa membuat record berulang di database.
-
-### Skenario 7: Rentang Hari (Pesantren Ramadan)
-*   **Konfigurasi**: `start_date = "2026-03-01"`, `end_date = "2026-03-18"`, `is_working_day = true` (kegiatan wajib masuk).
-*   **Hasil**: Sistem menghasilkan rentang 18 hari efektif bermerek Pesantren Ramadan hanya dari **1 baris record** database.
-
-### Skenario 8: Konflik Tanggal & Bentrokan Prioritas
-*   **Konfigurasi**:
-    - Event A: Hari Libur Nasional (`priority = 100`, `is_working_day = false`)
-    - Event B: Study Tour Kelas 5 (`priority = 80`, `is_working_day = true`)
-*   **Hasil**: Rule engine memilih prioritas tertinggi (Event A: `100`), sehingga hari tersebut tetap libur sekolah.
-
-### Skenario 9: Penanganan "Terlalu Banyak Hari Libur" (1000 Custom Holidays)
-*   **Solusi**:
-    - Mengganti entitas `Holiday` & `Event` pasif menjadi entitas tunggal `CalendarEvent` yang mendukung `repeat_rule` dan rentang tanggal (`start_date` & `end_date`).
-    - Hal ini memangkas ribuan baris data kustom menjadi beberapa record terstruktur, menghemat memori, mengoptimalkan database, dan mencegah rendering lag pada UI grid presensi.
-
----
-
-## 4. Evaluasi Kasus Kompleks Riil Sekolah Lainnya
-
-Sistem ACE juga dirancang untuk menangani berbagai kondisi operasional nyata di Indonesia yang sering diabaikan:
-
-*   **Sekolah A / B / C / D (Perbedaan Tanggal Mulai & Akhir Semester)**:
-    - Kalender akademik sekolah didesain secara independen. Setiap sekolah dapat menentukan tanggal *start* dan *end* tahun ajaran mereka sendiri di bawah relasi `Academic Calendar` masing-masing, sehingga pergeseran semester di Madrasah (karena Ramadan/Lebaran) tidak memengaruhi sekolah negeri lainnya dalam server yang sama.
-*   **Bencana Alam / Force Majeure (Banjir, Kabut Asap, Rapat Guru Mendadak, Pemilu TPS)**:
-    - Ditangani dengan mendaftarkan event tipe `SCHOOL_CLOSURE` dengan `is_working_day = false` dan prioritas sangat tinggi (`95`). Sistem otomatis menghentikan kewajiban presensi pada hari tersebut secara aman.
-*   **Belajar Daring / Hybrid / Covid-19 / Double Shift**:
-    - Event tipe `ONLINE_LEARNING` diatur dengan `is_working_day = true` (tetap presensi berjalan). Untuk model Hybrid, event diset dengan `scope = CLASS` pada kelas yang belajar di rumah, sedangkan kelas lain berjalan tatap muka normal.
-*   **Kalender Yayasan vs Kalender Daerah**:
-    - Perbedaan hari libur yayasan (swasta) atau hari jadi kabupaten/kota (daerah) diselesaikan dengan mengatur event pada `scope = SCHOOL` untuk yayasan bersangkutan, atau menggunakan aturan regional tanpa memicu konflik global.
-
----
-
-## 5. Mesin Evaluasi Aturan Hari Efektif (Effective Days Calculation Flow)
-
-Ketika guru memuat halaman presensi untuk suatu kelas pada suatu tanggal, sistem akan memproses fungsi kalkulasi dinamis berikut:
+Untuk mengatasi kompleksitas tata kelola sekolah, arsitektur presensi dibangun di atas tiga pilar mesin utama:
 
 ```
-1. Cari Kalender Akademik kelas tujuan.
-2. Identifikasi Pola Hari Kerja kelas (5 atau 6 hari sekolah).
-3. Apakah tanggal kueri merupakan akhir pekan tidak aktif? (Sabtu/Minggu).
-   ├── Ya: Tandai non-efektif.
-   └── Tidak: Lanjutkan ke langkah 4.
-4. Kueri semua data `CalendarEvent` yang mencakup tanggal kueri dan memiliki:
-   - scope = GLOBAL, atau
-   - scope = SCHOOL, atau
-   - scope = GRADE (sesuai tingkat kelas), atau
-   - scope = CLASS (sesuai ID kelas), atau
-   - scope = STUDENT (mencakup murid di kelas tersebut).
-5. Apakah ada event yang ditemukan?
-   ├── Tidak: Gunakan default Hari Belajar Normal (Efektif).
-   └── Ya: Sortir semua event berdasarkan `priority` terbesar (Pemenang).
-       └── Baca kolom `is_working_day` dari event pemenang:
-           ├── true: Hari efektif belajar (Presensi dibuka).
-           └── false: Hari non-efektif/Libur (Presensi ditutup).
+┌────────────────────────────────────────────────────────┐
+│             ACADEMIC CALENDAR ENGINE (ACE)             │
+│   (Satu CalendarEvent untuk libur, event, & pengecualian)│
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│             ATTENDANCE RULE ENGINE (ARE)               │
+│  (Evaluasi prioritas, scope, target, & working_day)    │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│              AUDIT & HISTORY ENGINE (AHE)              │
+│    (Timeline presensi, pencegahan tabrakan & restore)  │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 6. Mekanisme Pergeseran Kalender & Rekonsiliasi Data
+## 2. Resolusi Kategori A s.d. P: Kasus Riil Sekolah di Indonesia
 
-Salah satu masalah terbesar sekolah adalah **perubahan kalender secara mendadak di tengah tahun ajaran** (misal: pergeseran akhir semester akibat bencana). 
+Seluruh kasus operasional sekolah dikelompokkan dan diselesaikan secara arsitektural:
 
-ACE mengatasi masalah ini melalui mekanisme **Rekonsiliasi & Notifikasi Inkonsistensi Data**:
+### A. Kasus Perubahan Struktur Akademik
+*   **Kasus 1: Mutasi Murid di Tengah Semester**:
+    - **Masalah**: Murid berpindah kelas (misal Kelas 5A ke 5B pada tanggal 15 September).
+    - **Solusi**: Dibuat tabel `student_class_history` (mengaitkan `student_id`, `class_id`, `start_date`, dan `end_date`). Evaluasi kehadiran murid pada tanggal tertentu hanya menanyakan kelas murid *pada tanggal tersebut*. Wali kelas lama mengedit data sebelum 15 September, wali kelas baru mengedit data sejak 15 September.
+*   **Kasus 2: Naik Kelas Sebelum Tahun Ajaran Selesai (Kelulusan)**:
+    - **Solusi**: Murid kelas 6 yang sudah lulus/TO diposisikan dalam status kalender non-efektif melalui pembuatan `CalendarEvent` dengan `scope = GRADE`, `target = 6`, dan `is_working_day = false`, menghentikan penulisan presensi secara aman tanpa merusak rekap bulanan sebelumnya.
+*   **Kasus 3 & 4: Penggabungan & Pemecahan Kelas (5A + 5B $\rightarrow$ 5AB / 5A $\rightarrow$ 5A & 5B)**:
+    - **Solusi**: Peta kehadiran murid diikat berdasarkan UUID Murid (`student_id`), bukan UUID Kelas. Jika kelas digabung atau dipecah, data presensi historis pada tanggal lama tetap merujuk pada `class_id` lama murid, sementara penulisan presensi baru merujuk pada `class_id` baru yang terdaftar di `student_class_history`.
 
-```
-                       [ Perubahan Kalender Disimpan ]
-                                      ↓
-                [ Jalankan Pengecekan Mundur (Reconciliation) ]
-               (Bandingkan status presensi historis vs aturan baru)
-                                      ↓
-                      [ Temukan Selisih (Mismatches) ]
-                  /                                      \
-    [ Presensi Terisi di Hari Libur ]       [ Hari Efektif Baru Tanpa Presensi ]
-                   │                                       │
-                   ▼                                       ▼
-     [ Tampilkan Dialog Peringatan ]          [ Tandai Kolom Kuning / Indikator ]
-      (Guru diberi pilihan untuk):            (Guru diingatkan untuk melakukan):
-  - Hapus data presensi hari tersebut       - Input susulan data presensi murid
-  - Biarkan data tetap ada (Pengecualian)
-```
+### B. Kasus Kalender & Force Majeure
+*   **Kasus 5: Perubahan Kalender Pasca Presensi Terisi**:
+    - **Solusi**: Pemicuan **Mekanisme Rekonsiliasi Mundur**. Jika suatu hari diubah menjadi Libur Sekolah padahal sudah ada data presensi yang terisi:
+      - Sistem mendeteksi inkonsistensi (*mismatch*).
+      - Guru diberikan dialog konfirmasi: (1) Otomatis hapus data presensi lama, atau (2) Tetap simpan sebagai pengecualian khusus kelas.
+*   **Kasus 6: Libur Mendadak (Banjir, Gempa, Kabut Asap, Pemilu TPS)**:
+    - **Solusi**: Pembuatan event tipe `SCHOOL_CLOSURE` dengan prioritas tinggi (`95`) dan `is_working_day = false`. Mengunci sel kehadiran secara global di pagi hari kejadian.
+*   **Kasus 7: Hari Belajar Pengganti (Sabtu Mengganti Senin)**:
+    - **Solusi**: Pembuatan `CalendarEvent` bertipe `FORCED_EFFECTIVE` dengan `is_working_day = true` khusus pada hari Sabtu tersebut. Rule engine akan melompati aturan weekend normal dan membuka grid presensi.
 
-Dengan desain modular Academic Calendar Engine ini, SIPENA akan memiliki basis logika penanggalan yang kokoh, tangguh terhadap anomali lokal, dan ramah terhadap perubahan mendadak di lapangan.
+### C. Kasus Presensi Kompleks
+*   **Kasus 8: Presensi Setengah Hari (Sakit/Pulang di Tengah Jam)**:
+    - **Solusi**: Perhitungan diserahkan ke konfigurasi sekolah. Sistem mendukung status transisi (misal: murid masuk, lalu pulang sakit, status dicatat sebagai Sakit `'S'` namun dengan catatan waktu kepulangan di kolom metadata).
+*   **Kasus 9 & 10: Terlambat & Pulang Cepat**:
+    - **Solusi**: Penambahan atribut `minutes_late` (menit terlambat) dan `early_departure_time` pada tabel `attendance_records` untuk mendukung data kepulangan/keterlambatan secara presisi demi evaluasi kedisiplinan murid.
+*   **Kasus 11: Tidak Ikut Kegiatan Tertentu (Upacara Bolos, Belajar Ikut)**:
+    - **Solusi**: Penanganan presensi multi-sesi di mana status kehadiran dipecah per sesi kegiatan (Sesi 1: Upacara, Sesi 2: Belajar Kelas).
+
+### D. Penanganan Konflik Guru & Concurrency
+*   **Kasus 12: Guru Pengganti / Wali Kelas Pengganti**:
+    - **Solusi**: Tabel `attendance_records` mencatat audit `created_by` dan `updated_by`. Jika Guru B mengisi presensi menggantikan Guru A yang sakit, log audit mencatat UUID Guru B secara transparan.
+*   **Kasus 13: Dua Guru Mengedit Bersamaan (Concurrency Control)**:
+    - **Solusi**: Penerapan **Optimistic Locking** di backend. Setiap baris record presensi memiliki kolom `version` (integer) atau `updated_at`. Jika Guru A dan Operator mengirim pembaruan pada waktu bersamaan, pengirim kedua akan ditolak jika versinya tidak cocok, memaksa reload data terbaru untuk mencegah kehilangan data (*lost update protection*).
+
+### E. Penyesuaian Semester
+*   **Kasus 14 & 15: Semester Diperpanjang / Dipersingkat**:
+    - **Solusi**: Semester tidak menyimpan data tanggal statis di tabel presensi, melainkan membaca data relasi tanggal dinamis dari `Academic Calendar`. Perubahan tanggal akhir semester otomatis memperbarui batas penarikan laporan rapor murid secara real-time.
+
+### F. Rekapitulasi & Formula Bobot Pelanggaran
+*   **Kasus 16: Rumus Kehadiran Berbeda Antar-Sekolah**:
+    - **Solusi**: Status presensi tidak lagi di-hardcode (`H`, `I`, `S`, `A`, `D`). Sekolah memiliki kebebasan membuat status kustom (misal: status `'TL'` untuk Tugas Luar, `'BD'` untuk Belajar Daring). Setiap status memiliki kolom konfigurasi `is_present` (dihitung hadir), `requires_note` (wajib isi catatan), dan `weight` (bobot persentase).
+*   **Kasus 17: Alpha Berbobot (Poin Pelanggaran)**:
+    - **Solusi**: Konfigurasi bobot status presensi (misal: Alpha `'A'` = bobot `2` poin sanksi). Sistem menghitung akumulasi poin pelanggaran kehadiran murid secara otomatis untuk dashboard guru piket.
+
+### G. Hak Akses (Multi-Role Permissions)
+*   **Kasus 18, 19, & 20: Guru vs Operator vs Kepala Sekolah vs Wali Kelas**:
+    - **Solusi**: Penerapan otorisasi RLS Supabase & Backend API:
+      - **Operator**: Memiliki akses tulis (`Write`) penuh untuk semua kelas.
+      - **Wali Kelas**: Memiliki akses tulis khusus untuk murid-murid di kelas bimbingannya.
+      - **Guru Mapel**: Memiliki akses tulis presensi khusus untuk kelas/jam mengajar pelajaran mereka.
+      - **Kepala Sekolah**: Akses baca (`Read-Only`) dan tombol persetujuan kunci bulanan (*Approve Lock*).
+
+### H. Integrasi Dapodik & Sinkronisasi Data
+*   **Kasus 21: Murid Dihapus di Dapodik**:
+    - **Solusi**: Penerapan **Soft Delete / Archiving** pada tabel `students`. Jika murid dihapus dari Dapodik, murid ditandai sebagai `deleted_at`, tetapi data presensi historis murid tersebut pada bulan-bulan sebelumnya tetap dipertahankan di database untuk laporan keuangan/rekap sekolah.
+*   **Kasus 22: Perubahan Nama Murid**:
+    - **Solusi**: Data presensi merujuk pada UUID murid (`student_id`), bukan nama. Nama di-resolve dinamis dari tabel profil murid saat dirender.
+
+### I. Audit Trail & Kemampuan Undo
+*   **Kasus 23: Audit Trail Log**:
+    - **Solusi**: Pencatatan riwayat perubahan presensi murid di tabel audit secara granular: siapa, kapan, nilai sebelum, nilai sesudah, dan alasan perubahan.
+*   **Kasus 24: Restore / Undo**:
+    - **Solusi**: Tombol "Kembalikan" (*Restore*) pada panel audit untuk membatalkan perubahan presensi ke kondisi versi sebelumnya berdasarkan snapshot log audit.
+
+### J. Bentrokan Kalender & Sub-Hari
+*   **Kasus 25: Dua Event dalam Satu Hari**:
+    - **Solusi**: Evaluasi bertingkat memilih event dengan prioritas (`priority`) tertinggi.
+*   **Kasus 26: Event Jam Tertentu (Sesi Pagi/Siang)**:
+    - **Solusi**: Pembedaan jam mulai (*start_time*) dan jam selesai (*end_time*) pada event untuk membatasi ruang lingkup pengecualian hari belajar efektif.
+
+### K. Penguncian Data Historis
+*   **Kasus 27 & 28: Kunci Tahun Ajaran Lama & Koreksi Operator**:
+    - **Solusi**: Tahun ajaran yang telah berakhir otomatis dikunci menjadi *read-only* bagi semua guru. Hanya Operator/Admin dengan izin khusus yang dapat membuka gembok pelindung tahun lampau untuk koreksi data darurat.
+
+### L. Multi-Sekolah (Multi-Tenancy)
+*   **Kasus**: Yayasan memiliki SD, SMP, SMA dengan kalender berbeda.
+*   **Solusi**: Penggunaan arsitektur **Multi-Tenancy** berbasis `school_id`. Kalender akademik, pola hari kerja, dan hari libur dievaluasi secara terisolasi per `school_id`.
+
+### M. Zona Waktu (Timezone)
+*   **Solusi**: Semua stempel waktu disimpan dalam format `TIMESTAMP WITH TIME ZONE (UTC)` di PostgreSQL. Frontend mengonversi dan menampilkan tanggal/jam sesuai dengan zona waktu lokal sekolah tujuan.
+
+### N. Resolusi Konflik Sinkronisasi Offline-Online
+*   **Kasus**: Guru A offline mengisi presensi murid B, Guru B online mengisi presensi murid B, lalu Guru A sinkronisasi online.
+*   **Solusi**: Resolusi konflik berbasis stempel waktu perubahan terakhir (*Last-Write-Wins* berdasarkan `updated_at` lokal klien) atau menampilkan dialog pilihan data mana yang ingin dipertahankan jika waktu perubahan sangat berdekatan.
+
+### O. Backup & Restore Mandiri
+*   **Solusi**: Modul ekspor menghasilkan file cadangan data presensi bulanan/tahunan terenkripsi. Jika operator melakukan penghapusan tidak sengaja, file cadangan dapat diunggah kembali ke sistem untuk pemulihan parsial.
 
 ---
 
-## 7. Celah Logika & Kasus Riil Sekolah Lain yang Belum Terfasilitasi
+## 3. Desain Konfigurasi Status Presensi Dinamis Per Sekolah
 
-Selain masalah di atas, terdapat beberapa kasus operasional sekolah di dunia nyata yang belum diakomodasi baik di V1 maupun rencana awal V2:
+Untuk menghilangkan keterbatasan hardcode status `H`, `I`, `S`, `A`, `D`, sistem beralih menggunakan tabel konfigurasi `attendance_status_settings`:
 
-### A. Mutasi Murid Lintas Kelas di Tengah Semester (Mid-Semester Mutations)
-*   **Kasus**: Seorang murid dipindahkan kelasnya (misal dari Kelas 5A ke Kelas 5B) di tengah bulan (misal tanggal 15 September).
-*   **Masalah**: SIPENA mengikat murid secara statis ke satu `class_id` di tabel `students`. Jika guru mengubah kelas murid tersebut di tengah tahun ajaran, maka seluruh riwayat presensi murid tersebut dari bulan Juli s.d. Agustus seolah-olah ikut bermutasi ke kelas baru. Hal ini merusak rekap presensi bulanan resmi di kelas lama (5A) dan merusak konsistensi rekap nilai kehadiran di rapor kelas baru (5B).
-*   **Rencana Solusi**: Perlu adanya tabel relasional penghubung `student_class_history` yang mencatat tanggal masuk dan keluar murid di suatu kelas, sehingga kalkulasi presensi membatasi rentang tanggal aktif murid di kelas tersebut secara historis.
+```json
+{
+  "school_id": "school-uuid-123",
+  "status_code": "TL",
+  "status_name": "Tugas Luar",
+  "is_present": true,
+  "weight": 1.0,
+  "requires_note": true,
+  "color": "#3b82f6",
+  "is_active": true
+}
+```
 
-### B. Keterlambatan Logis & Akumulasi Sanksi (Late Attendance Tolerances)
-*   **Kasus**: Sekolah membedakan antara murid yang "Hadir Tepat Waktu" dengan "Hadir Terlambat" (terlambat > 15 menit). Beberapa sekolah menerapkan sanksi administratif (misal: 3 kali terlambat dihitung setara dengan 1 hari Alpha).
-*   **Masalah**: SIPENA hanya merekam status biner kehadiran (`H`, `I`, `S`, `A`, `D`). Keterlambatan tidak tercatat sebagai metrik numerik waktu melainkan hanya berupa note teks bebas yang tidak bisa dihitung secara otomatis oleh sistem rekapitulasi.
-*   **Rencana Solusi**: Menambahkan sub-status atau metrik `minutes_late` pada tabel `attendance_records` untuk pelaporan keterlambatan murid secara statistik.
-
-### C. Presensi per Sesi / Jam Pelajaran (Period-Based Attendance)
-*   **Kasus**: Pada tingkat SMP/SMA/SMK, pencatatan kehadiran tidak lagi dilakukan sekali per hari (harian), melainkan dicatat **per jam pelajaran / mata pelajaran**. Seorang murid mungkin hadir pada jam pelajaran pertama (Matematika) namun membolos di jam pelajaran ketiga (Sejarah).
-*   **Masalah**: SIPENA saat ini didesain murni sebagai sistem presensi harian (*Daily Attendance*). Sistem tidak memiliki kapabilitas untuk memetakan presensi per slot jadwal mata pelajaran (*period-based*).
-*   **Rencana Solusi**: Menyediakan opsi konfigurasi mode presensi sekolah: Mode Harian (untuk SD) atau Mode Sesi/Jadwal Pelajaran (untuk SMP/SMA).
-
-### D. Otomatisasi Sakit / Izin Jangka Panjang (Long-Term Medical Leaves)
-*   **Kasus**: Murid yang mengalami sakit keras (opname) atau izin khusus (lomba internasional) yang berlangsung selama 2 s.d. 3 minggu berturut-turut.
-*   **Masalah**: Guru harus mengeklik sel tanggal murid tersebut satu per satu sebanyak 15 s.d. 18 kali secara manual untuk mengeset status `'S'` atau `'I'` dan mengisi catatan alasan yang sama berulang kali.
-*   **Rencana Solusi**: Menyediakan fitur "Registrasi Cuti Presensi Murid" (Pengecualian Individual) di mana guru cukup menginput nama murid, rentang tanggal mulai-selesai, status presensi, dan alasan sekali saja untuk otomatis mengisi sel-sel di kalender efektif.
-
-### E. Presensi Kegiatan Ekstrakurikuler Wajib & Pilihan
-*   **Kasus**: Rekapitulasi kehadiran murid pada kegiatan ekstrakurikuler (seperti Pramuka, Futsal, Seni Musik) yang wajib dinilai di akhir semester dalam rapor.
-*   **Masalah**: Sistem presensi SIPENA hanya merekam kehadiran kelas akademik utama. Tidak ada ruang pencatatan kehadiran terpisah untuk program ekstrakurikuler.
-*   **Rencana Solusi**: Menambahkan sub-modul "Presensi Ekstrakurikuler" yang berorientasi pada jadwal latihan mingguan kelompok ekskul.
+Setiap kueri generator presensi akan memuat status-status aktif yang diizinkan untuk sekolah tersebut secara dinamis, sehingga SIPENA dapat digunakan oleh ribuan sekolah dengan kebijakan yang berbeda tanpa perlu melakukan refactoring kode program.
