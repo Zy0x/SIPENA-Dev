@@ -31,18 +31,16 @@ describe("Attendance Runtime Switch", () => {
     expect(guard.forcedEngine).toBe("v1");
   });
 
-  it("forces V1 when V2 is requested but not implemented", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("allows V2 when V2 is requested and implemented", () => {
     const config = resolveRuntimeConfig({ envEngine: "v2" });
     const guard = guardRuntimeConfig(config);
 
-    expect(IS_ATTENDANCE_V2_IMPLEMENTED).toBe(false);
+    expect(IS_ATTENDANCE_V2_IMPLEMENTED).toBe(true);
     expect(config.engine).toBe("v2");
     expect(config.source).toBe("env");
-    expect(guard.isSafe).toBe(false);
-    expect(guard.reason).toBe("v2-not-implemented");
-    expect(guard.forcedEngine).toBe("v1");
-    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(guard.isSafe).toBe(true);
+    expect(guard.reason).toBe("safe");
+    expect(guard.forcedEngine).toBe("v2");
   });
 
   it("rejects disabled mode for user-facing runtime execution", () => {

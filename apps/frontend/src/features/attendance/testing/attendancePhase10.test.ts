@@ -115,21 +115,17 @@ describe("Attendance Phase 10 migration safety matrix", () => {
     expect(holidayEventLockDataset.days.every((day) => day.lock?.isLocked === true)).toBe(true);
   });
 
-  it("keeps runtime fallback locked to V1 when V2 is requested during migration", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("resolves V2 runtime config safely when V2 is requested and active", () => {
     const requested = resolveRuntimeConfig({ envEngine: "v2", mode: "active" });
-
     const guard = guardRuntimeConfig(requested);
 
     expect(requested.engine).toBe("v2");
     expect(guard).toMatchObject({
-      isSafe: false,
-      reason: "v2-not-implemented",
-      forcedEngine: "v1",
+      isSafe: true,
+      reason: "safe",
+      forcedEngine: "v2",
       forcedMode: "active",
     });
-
-    warnSpy.mockRestore();
   });
 
   it("blocks unsafe V2 mutations and reports shadow drift without user-facing writes", () => {

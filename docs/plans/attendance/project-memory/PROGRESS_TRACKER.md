@@ -169,3 +169,9 @@ Progress is documentation-based, not implementation-based
 - Test baseline: 571/571 tests pass, 0 TypeScript errors.
 - Rollback: config-only — remove `VITE_ATTENDANCE_ENGINE` env var (< 2 min).
 - Next milestone: Phase 13 — Playwright E2E + PDF render parity → `CLASS_ROLLOUT`.
+
+## RELEASE V2 VISUALIZER CHECKPOINT - 2026-06-28
+- Safety Lock: IS_ATTENDANCE_V2_IMPLEMENTED set to `true`.
+- UI Integration: `AttendanceRuntimeRoute` updated to render `AttendanceV2Visualizer` for `engine === "v2"`.
+- Test Baseline: 571/571 passed, 0 TypeScript errors.
+- Version: 2.4.115.

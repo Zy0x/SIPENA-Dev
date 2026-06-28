@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [2.4.115] - 2026-06-28
+### Added
+- **V2 Frontend Visualizer:** Created an interactive matrix visualizer component (`AttendanceV2Visualizer.tsx`) for live testing of V2 engines in production builds. Features include calendar-aware grids, month/class selector, explainability tooltip for rules, monthly recap, and a live toggle to switch runtime engine directly from the UI.
+- **V2 Safety Unlock:** Unlocked the runtime switch guard (`IS_ATTENDANCE_V2_IMPLEMENTED = true`) to enable routing to the visualizer when V2 is active.
+
+### Fixed
+- Updated Vitest unit tests in `attendanceRuntime.test.ts` and `attendancePhase10.test.ts` to reflect V2's active status.
+- Resolved typecheck compilation errors in V2 visualizer (types for useAttendance hook, v2Service constructor options, and status colorToken).
+
 ## [2.4.114] - 2026-06-28
 ### Release Decision
 - **Phase 12 CUTOVER MODE: `SHADOW_ONLY`**

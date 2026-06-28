@@ -1,7 +1,7 @@
 import { AttendanceRuntimeConfig, AttendanceRuntimeGuardResult } from "./attendanceRuntime.types";
 
 // Phase 01 safety lock: V2 files may exist, but production UI must never activate V2 yet.
-export const IS_ATTENDANCE_V2_IMPLEMENTED = false;
+export const IS_ATTENDANCE_V2_IMPLEMENTED = true;
 
 function warnInDevelopment(message: string) {
   if (import.meta.env.DEV) {
