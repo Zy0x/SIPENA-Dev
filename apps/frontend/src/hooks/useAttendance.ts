@@ -3,6 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal as supabase, EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, startOfMonth, endOfMonth, getDay } from "date-fns";
+import { useMemo } from "react";
+import { useAttendanceRuntime } from "@/features/attendance/runtime/useAttendanceRuntime";
+import { AttendanceV2Service } from "@/features/attendance/v2/attendanceV2.service";
+import {
+  mapV1RecordToCanonical,
+  mapV1HolidayToCanonical,
+  mapV1DayEventToCanonical,
+  mapV1LockToCanonical,
+} from "@/features/attendance/canonical/canonical.mappers";
 
 export interface AttendanceRecord {
   id?: string;
@@ -142,6 +151,141 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
   const dayEvents = dbAvailable ? (dayEventsQuery.data || []) : localDayEvents;
   const isLocked = dbAvailable ? (lockQuery.data?.is_locked ?? true) : localLocked;
 
+  const runtime = useAttendanceRuntime();
+  const v2Service = useMemo(() => new AttendanceV2Service({ enableWrite: true, runtimeMode: "active" }), []);
+
+  // Build V2 canonical dataset dynamically
+  const v2Dataset = useMemo(() => {
+    if (runtime.engine !== "v2" || !classId) return null;
+
+    // Fetch student data from react-query cache to map student details
+    const studentsData = queryClient.getQueryData<any[]>(["students", classId]) || [];
+    const canonicalStudents = studentsData.map((s) => ({
+      id: s.id,
+      name: s.name,
+      nisn: s.nisn,
+    }));
+
+    const canonicalRecords = attendanceRecords.map(mapV1RecordToCanonical);
+    const canonicalHolidays = holidays.map(mapV1HolidayToCanonical);
+    const canonicalEvents = dayEvents.map(mapV1DayEventToCanonical);
+    const canonicalLocks = [{
+      classId,
+      month: monthStart.slice(0, 7),
+      isLocked,
+      lockedAt: null,
+      lockedBy: null,
+    }];
+
+    return v2Service.buildDataset({
+      classId,
+      month: monthStart.slice(0, 7),
+      students: canonicalStudents,
+      records: canonicalRecords,
+      holidays: canonicalHolidays,
+      dayEvents: canonicalEvents,
+      locks: canonicalLocks,
+      workDayFormat,
+    });
+  }, [runtime.engine, classId, attendanceRecords, holidays, dayEvents, isLocked, workDayFormat, monthStart, queryClient]);
+
+  const getAttendanceV2 = useCallback(
+    (studentId: string, date: Date): AttendanceStatusValue | null => {
+      if (!v2Dataset) return null;
+      const dateStr = format(date, "yyyy-MM-dd");
+      const record = v2Dataset.records.find(
+        (r) => r.studentId === studentId && r.date === dateStr
+      );
+      return (record?.status as AttendanceStatusValue) ?? null;
+    },
+    [v2Dataset]
+  );
+
+  const getAttendanceNoteV2 = useCallback(
+    (studentId: string, date: Date): string | null => {
+      if (!v2Dataset) return null;
+      const dateStr = format(date, "yyyy-MM-dd");
+      const record = v2Dataset.records.find(
+        (r) => r.studentId === studentId && r.date === dateStr
+      );
+      return record?.note ?? null;
+    },
+    [v2Dataset]
+  );
+
+  const isHolidayV2 = useCallback(
+    (date: Date): boolean => {
+      if (!v2Dataset) {
+        // Fallback if V2 dataset is not built yet
+        const dayOfWeek = getDay(date);
+        if (dayOfWeek === 0) return true;
+        if (workDayFormat === "5days" && dayOfWeek === 6) return true;
+        const dateStr = format(date, "yyyy-MM-dd");
+        return holidays.some((h) => h.date === dateStr);
+      }
+      const dateStr = format(date, "yyyy-MM-dd");
+      const day = v2Dataset.days.find((d) => d.date === dateStr);
+      return day ? !day.isEffective : false;
+    },
+    [v2Dataset, holidays, workDayFormat]
+  );
+
+  const getHolidayDescriptionV2 = useCallback(
+    (date: Date): string | null => {
+      if (!v2Dataset) {
+        const dayOfWeek = getDay(date);
+        if (dayOfWeek === 0) return "Hari Minggu";
+        if (workDayFormat === "5days" && dayOfWeek === 6) return "Hari Sabtu (Libur)";
+        const dateStr = format(date, "yyyy-MM-dd");
+        const holiday = holidays.find((h) => h.date === dateStr);
+        return holiday?.description || null;
+      }
+      const dateStr = format(date, "yyyy-MM-dd");
+      const day = v2Dataset.days.find((d) => d.date === dateStr);
+      if (!day) return null;
+      if (day.holidayName) return day.holidayName;
+      if (!day.isEffective) {
+        const dayOfWeek = getDay(date);
+        if (dayOfWeek === 0) return "Hari Minggu";
+        if (workDayFormat === "5days" && dayOfWeek === 6) return "Hari Sabtu (Libur)";
+        return "Libur Non-Efektif";
+      }
+      return null;
+    },
+    [v2Dataset, holidays, workDayFormat]
+  );
+
+  const getMonthStatsV2 = useCallback(() => {
+    const stats = { H: 0, I: 0, S: 0, A: 0, D: 0, total: 0 };
+    if (!v2Dataset) return stats;
+    v2Dataset.records.forEach((record) => {
+      const status = record.status;
+      if (status === "H") { stats.H++; stats.total++; }
+      else if (status === "I") { stats.I++; stats.total++; }
+      else if (status === "S") { stats.S++; stats.total++; }
+      else if (status === "A") { stats.A++; stats.total++; }
+      else if (status === "D") { stats.D++; stats.total++; }
+    });
+    return stats;
+  }, [v2Dataset]);
+
+  const getDayStatsV2 = useCallback((date: Date) => {
+    const stats = { H: 0, I: 0, S: 0, A: 0, D: 0, total: 0 };
+    if (!v2Dataset) return stats;
+    const dateStr = format(date, "yyyy-MM-dd");
+    v2Dataset.records.forEach((record) => {
+      if (record.date === dateStr) {
+        const status = record.status;
+        if (status === "H") { stats.H++; stats.total++; }
+        else if (status === "I") { stats.I++; stats.total++; }
+        else if (status === "S") { stats.S++; stats.total++; }
+        else if (status === "A") { stats.A++; stats.total++; }
+        else if (status === "D") { stats.D++; stats.total++; }
+      }
+    });
+    return stats;
+  }, [v2Dataset]);
+
   const getAttendance = useCallback(
     (studentId: string, date: Date): AttendanceStatusValue | null => {
       const dateStr = format(date, "yyyy-MM-dd");
@@ -206,6 +350,20 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
       note?: string | null;
     }) => {
       if (!user || !classId) throw new Error("User or class not set");
+
+      // V2 Validation Interception
+      if (runtime.engine === "v2" && v2Dataset) {
+        const validation = v2Service.validateMutation(v2Dataset, {
+          studentId,
+          classId,
+          date,
+          status,
+          note,
+        });
+        if (!validation.valid) {
+          throw new Error(validation.issues[0] || "Validasi V2 menolak perubahan ini.");
+        }
+      }
 
       if (!dbAvailable) {
         setLocalAttendance((prev) => {
@@ -279,6 +437,21 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     mutationFn: async ({ studentId, date, note }: { studentId: string; date: string; note: string | null }) => {
       if (!user || !classId) throw new Error("User or class not set");
 
+      // V2 Validation Interception
+      if (runtime.engine === "v2" && v2Dataset) {
+        const record = v2Dataset.records.find(r => r.studentId === studentId && r.date === date);
+        const validation = v2Service.validateMutation(v2Dataset, {
+          studentId,
+          classId,
+          date,
+          status: record?.status ?? null,
+          note,
+        });
+        if (!validation.valid) {
+          throw new Error(validation.issues[0] || "Validasi V2 menolak perubahan ini.");
+        }
+      }
+
       if (!dbAvailable) {
         setLocalAttendance((prev) => {
           const idx = prev.findIndex(r => r.student_id === studentId && r.date === date);
@@ -325,6 +498,21 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
       status: AttendanceStatusValue;
     }) => {
       if (!user || !classId) throw new Error("User or class not set");
+
+      // V2 Validation Interception
+      if (runtime.engine === "v2" && v2Dataset) {
+        for (const studentId of studentIds) {
+          const validation = v2Service.validateMutation(v2Dataset, {
+            studentId,
+            classId,
+            date,
+            status,
+          });
+          if (!validation.valid) {
+            throw new Error(validation.issues[0] || "Validasi V2 menolak perubahan massal ini.");
+          }
+        }
+      }
 
       if (!dbAvailable) {
         setLocalAttendance((prev) => {
@@ -543,10 +731,18 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     };
   }, [user, classId, dbAvailable, localAttendance, localHolidays, localDayEvents]);
 
+  const isV2 = runtime.engine === "v2";
+
   return {
     attendanceRecords, holidays, dayEvents, isLocked, dbAvailable,
-    getAttendance, getAttendanceNote, getDayEvent,
-    isHoliday, getHolidayDescription, getMonthStats, getDayStats, getYearlyData,
+    getAttendance: isV2 ? getAttendanceV2 : getAttendance,
+    getAttendanceNote: isV2 ? getAttendanceNoteV2 : getAttendanceNote,
+    getDayEvent,
+    isHoliday: isV2 ? isHolidayV2 : isHoliday,
+    getHolidayDescription: isV2 ? getHolidayDescriptionV2 : getHolidayDescription,
+    getMonthStats: isV2 ? getMonthStatsV2 : getMonthStats,
+    getDayStats: isV2 ? getDayStatsV2 : getDayStats,
+    getYearlyData,
     isLoading: attendanceQuery.isLoading || holidaysQuery.isLoading,
     isLoadingLock: lockQuery.isLoading,
     setAttendance: async (params: { studentId: string; date: string; status: AttendanceStatusValue | null; note?: string | null }) => {

@@ -7,12 +7,6 @@ import { AttendanceRuntimeBoundary } from "../ui/AttendanceRuntimeBoundary";
 import { AttendanceV2Visualizer } from "../ui/AttendanceV2Visualizer";
 
 function ResolvedAttendanceRuntime() {
-  const runtime = useAttendanceRuntime();
-
-  if (runtime.engine === "v2") {
-    return <AttendanceV2Visualizer />;
-  }
-
   return <AttendanceV1Wrapper />;
 }
 

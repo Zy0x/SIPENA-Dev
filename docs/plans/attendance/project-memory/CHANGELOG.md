@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.4.116] - 2026-06-28
+### Added
+- **Engine-Agnostic V1 UI:** Integrated the V2 Engine calculations and validation checks directly into the shared `useAttendance.ts` hook. When the runtime engine is set to `v2`, the hook dynamically proxies read stats, holiday checks, note queries, and status lookups to the V2 service while keeping the UI render paths of `Attendance.tsx` untouched. This achieves 100% visual parity between V1 and V2 without any duplicate JSX markup.
+- **V2 Mutation Interception:** Hook mutations (`setAttendance`, `updateNote`, `bulkSetAttendance`) now run validation against V2 rule engine before making database updates, rendering descriptive error toasts for disallowed edits.
+
 ## [2.4.115] - 2026-06-28
 ### Added
 - **V2 Frontend Visualizer:** Created an interactive matrix visualizer component (`AttendanceV2Visualizer.tsx`) for live testing of V2 engines in production builds. Features include calendar-aware grids, month/class selector, explainability tooltip for rules, monthly recap, and a live toggle to switch runtime engine directly from the UI.

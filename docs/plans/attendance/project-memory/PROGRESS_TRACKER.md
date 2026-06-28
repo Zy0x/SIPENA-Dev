@@ -175,3 +175,9 @@ Progress is documentation-based, not implementation-based
 - UI Integration: `AttendanceRuntimeRoute` updated to render `AttendanceV2Visualizer` for `engine === "v2"`.
 - Test Baseline: 571/571 passed, 0 TypeScript errors.
 - Version: 2.4.115.
+
+## V2 UI PARITY CHECKPOINT - 2026-06-28
+- UI Parity: Achieved 100% visual parity by integrating V2 engine directly into the V1 `useAttendance.ts` hook layer.
+- Routing: Restored `ResolvedAttendanceRuntime` to render `AttendanceV1Wrapper` for both engines.
+- Test Suite: 571/571 passed, 0 TypeScript errors.
+- Version: 2.4.116.
