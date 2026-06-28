@@ -190,34 +190,37 @@ export default function StudentRankings() {
   };
 
   const getRankBadge = (rank: number) => {
-    const baseClasses = "shrink-0 whitespace-nowrap";
+    const baseClasses = "shrink-0 whitespace-nowrap transition-all duration-200";
     
     if (rank === 1) {
       return (
-        <Badge className={cn(baseClasses, "bg-gradient-to-r from-amber-500 to-yellow-400 text-white gap-1 shadow-lg shadow-amber-500/30 text-[10px] sm:text-xs px-1.5 sm:px-2.5")}>
-          <Crown className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
-          <span className="truncate">Juara 1</span>
+        <Badge className={cn(baseClasses, "bg-gradient-to-r from-amber-500 to-yellow-400 text-white gap-1 shadow-md shadow-amber-500/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1")}>
+          <Crown className="w-3 h-3 shrink-0" />
+          <span className="hidden sm:inline text-xs">Juara 1</span>
+          <span className="sm:hidden text-[10px] font-bold">1</span>
         </Badge>
       );
     }
     if (rank === 2) {
       return (
-        <Badge className={cn(baseClasses, "bg-gradient-to-r from-gray-400 to-gray-300 text-gray-800 gap-1 shadow-lg shadow-gray-400/30 text-[10px] sm:text-xs px-1.5 sm:px-2.5")}>
-          <Medal className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
-          <span className="truncate">Juara 2</span>
+        <Badge className={cn(baseClasses, "bg-gradient-to-r from-gray-400 to-gray-300 text-gray-800 gap-1 shadow-md shadow-gray-400/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1")}>
+          <Medal className="w-3 h-3 shrink-0" />
+          <span className="hidden sm:inline text-xs">Juara 2</span>
+          <span className="sm:hidden text-[10px] font-bold">2</span>
         </Badge>
       );
     }
     if (rank === 3) {
       return (
-        <Badge className={cn(baseClasses, "bg-gradient-to-r from-amber-700 to-amber-600 text-white gap-1 shadow-lg shadow-amber-700/30 text-[10px] sm:text-xs px-1.5 sm:px-2.5")}>
-          <Award className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
-          <span className="truncate">Juara 3</span>
+        <Badge className={cn(baseClasses, "bg-gradient-to-r from-amber-700 to-amber-600 text-white gap-1 shadow-md shadow-amber-700/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1")}>
+          <Award className="w-3 h-3 shrink-0" />
+          <span className="hidden sm:inline text-xs">Juara 3</span>
+          <span className="sm:hidden text-[10px] font-bold">3</span>
         </Badge>
       );
     }
     return (
-      <Badge variant="outline" className={cn(baseClasses, "text-[10px] sm:text-xs px-1.5 sm:px-2")}>
+      <Badge variant="outline" className={cn(baseClasses, "text-[10px] sm:text-xs px-2 py-0.5 sm:py-1 text-muted-foreground border-muted-foreground/30")}>
         #{rank}
       </Badge>
     );
@@ -940,7 +943,7 @@ export default function StudentRankings() {
                               isTop3 && "bg-amber-50/60 dark:bg-amber-950/20"
                             )}
                           >
-                            <div className="shrink-0 w-12">{getRankBadge(ranking.rank)}</div>
+                            <div className="shrink-0 w-10 flex items-center justify-start">{getRankBadge(ranking.rank)}</div>
                             <div className="min-w-0 flex-1">
                               <p className={cn(
                                 "whitespace-normal break-words text-sm leading-snug",
