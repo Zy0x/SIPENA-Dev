@@ -150,6 +150,7 @@ export class AttendanceV2Service {
       holidays: (input.holidays ?? []).map((holiday) => ({ ...holiday })),
       dayEvents: (input.dayEvents ?? []).map((event) => ({ ...event })),
       locks: (input.locks ?? []).map((lock) => ({ ...lock })),
+      workDayFormat: input.workDayFormat ?? "6days",
     };
   }
 
@@ -173,10 +174,11 @@ export class AttendanceV2Service {
     const existingDay = dataset.days.find((day) => day.date === date);
     if (isV2CalendarDay(existingDay)) return existingDay;
 
+    // Use the dataset's own workDayFormat so 5-day schools don't treat Saturday as effective.
     return computeEffectiveDay(
       date,
       dataset.classId,
-      "6days",
+      dataset.workDayFormat ?? "6days",
       dataset.dayEvents as CalendarScopedEvent[],
       dataset.holidays,
       [],

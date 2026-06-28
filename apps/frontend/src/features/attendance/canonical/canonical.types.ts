@@ -139,6 +139,8 @@ export interface AttendanceDatasetCanonical {
   holidays: AttendanceHolidayCanonical[];
   dayEvents: AttendanceCalendarEventCanonical[];
   locks: AttendanceLockCanonical[];
+  /** Work-day format used when generating calendar days for this dataset. Defaults to "6days". */
+  workDayFormat?: "5days" | "6days";
   notes?: AttendanceNoteCanonical[];
   monthlySummary?: AttendanceMonthlySummaryCanonical[];
   dailySummary?: AttendanceDailySummaryCanonical[];

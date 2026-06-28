@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [2.4.113] - 2026-06-28
+### Fixed
+- **BUG-22** `conflictEngine.ts`: `blockingEffect` predicate used `||` causing rules with `conflictBehavior:"block"` but `writeAllowed:true` to incorrectly halt conflict resolution. Fixed to `&&`.
+- **BUG-05** `attendanceV2.service.ts`: `resolveCalendarDay` fallback hardcoded `"6days"` — 5-day schools treated Saturday as effective. Fixed by persisting `workDayFormat` in `AttendanceDatasetCanonical` and reading it in the fallback.
+- **BUG-11** `attendanceExportLegacyBridge.ts`: Plain weekends (`isEffective=false`, no `holidayName`) were flagged `isHoliday:true` in export. Fixed to use explicit-holiday check (`holidayName || holidaysByDate.has()`) in both cell and day-header mapping.
+- **BUG-10** `attendanceExportLegacyBridge.ts`: Existing attendance records on holiday days (e.g. makeup class) were silently overwritten with `"L"`. Fixed to preserve explicit records, using `"L"` only as fallback when no record exists.
+- **BUG-12** `canonical.validation.ts`: `lockedMonths` was computed but never passed to `validateCanonicalRecord`, so `LOCKED_WRITE_ATTEMPT` was never surfaced at dataset validation level. Fixed by passing `lockedMonths` through.
+- **BUG-20** `statusEngine.ts`: `resetToDefaults()` shallow-copied `defaultStatuses` without deep-cloning values. A `registerCustomStatus` call could mutate the `defaultStatuses` source object, corrupting subsequent resets. Fixed with per-entry deep clone.
+
+### Tests Added
+- Regression test `[BUG-11]`: weekend day must not be flagged `isHoliday` in export output.
+- Regression test `[BUG-10]`: record on holiday day is preserved as cell value; day header remains `isHoliday:true`.
+
+### Safety
+- V1 Presensi page, V1 hook, legacy export renderers, import/OCR, Supabase schema, and production data remain untouched.
+- Runtime default remains V1 and V2 remains inactive.
+
 ## [2.4.112] - 2026-06-27
 ### Fixed
 - Added regression test for `updateNote` missing-record path: confirms `RECORD_NOT_FOUND_FOR_NOTE_UPDATE` is returned with no audit event when the target record is absent.

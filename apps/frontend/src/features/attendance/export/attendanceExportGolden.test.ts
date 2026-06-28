@@ -213,4 +213,39 @@ describe("attendance canonical export bridge", () => {
     ]);
     expect(() => createAttendanceExportLegacyBridge(dataset)).toThrow("EXPORT_UNMAPPED_STATUS_CODE");
   });
+  it("[BUG-11] weekend days (isEffective=false, no holidayName) must NOT be flagged as isHoliday in export", () => {
+    const dataset = createCanonicalDataset();
+    // Add a plain weekend day — no holidayName, no entry in holidays array
+    dataset.days.push({ date: "2026-06-07", dayOfWeek: 0, isEffective: false }); // Sunday
+    const bridge = buildAttendanceExportBridgeFromCanonical(dataset);
+
+    // previewData.days items use 'key' field (= date string)
+    const sundayDayHeader = bridge.previewData.days.find((day) => day.key === "2026-06-07");
+    expect(sundayDayHeader).toBeDefined();
+    expect(sundayDayHeader!.isHoliday).toBe(false);
+  });
+
+  it("[BUG-10] existing record on a holiday day is preserved in the cell value, not overwritten with L", () => {
+    const dataset = createCanonicalDataset();
+    // June 03 is in holidays array; add a makeup-class record for murid-1 on that holiday
+    dataset.records.push({
+      id: "rec-holiday",
+      studentId: "murid-1",
+      classId: "class-vi-a",
+      date: "2026-06-03",
+      status: "H",
+      note: "Pengganti kelas",
+      createdAt: null,
+      updatedAt: null,
+    });
+    const bridge = buildAttendanceExportBridgeFromCanonical(dataset);
+    // previewData.days items use 'key' field (= date string)
+    const holidayDayIndex = bridge.previewData.days.findIndex((day) => day.key === "2026-06-03");
+    expect(holidayDayIndex).toBeGreaterThanOrEqual(0);
+    const cellForMurid1 = bridge.previewData.rows[0].cells[holidayDayIndex];
+
+    // The explicit record must be preserved; the day header is still flagged as holiday in legend
+    expect(cellForMurid1.value).toBe("H");
+    expect(bridge.previewData.days[holidayDayIndex].isHoliday).toBe(true);
+  });
 });

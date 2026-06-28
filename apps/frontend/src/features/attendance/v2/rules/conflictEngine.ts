@@ -54,7 +54,7 @@ export function resolveRuleConflicts(
     effect: rule.effect(context),
   }));
 
-  const blockingEffect = evaluated.find((item) => item.rule.conflictBehavior === "block" || !item.effect.writeAllowed);
+  const blockingEffect = evaluated.find((item) => item.rule.conflictBehavior === "block" && !item.effect.writeAllowed);
   if (blockingEffect) {
     return {
       appliedRules: [blockingEffect.rule],

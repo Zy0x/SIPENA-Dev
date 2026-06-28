@@ -125,7 +125,12 @@ export function listAllStatuses(): AttendanceStatusDefinitionV2[] {
 }
 
 export function resetToDefaults(): void {
-  activeStatuses = { ...defaultStatuses };
+  activeStatuses = Object.fromEntries(
+    Object.entries(defaultStatuses).map(([code, definition]) => [
+      code,
+      { ...definition, behaviorFlags: [...definition.behaviorFlags] },
+    ])
+  );
 }
 
 export function countsAsPresent(code: string): boolean {

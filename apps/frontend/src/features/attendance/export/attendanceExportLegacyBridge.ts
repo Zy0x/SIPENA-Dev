@@ -133,12 +133,19 @@ export function buildAttendanceLegacyExportPayloadFromCanonical(
   const rows = dataset.students.map((student, index) => {
     const totals = { H: 0, S: 0, I: 0, A: 0, D: 0, total: 0 };
     const cells = days.map((day) => {
-      const holiday = !day.isEffective || !!day.holidayName || holidaysByDate.has(day.date);
+      // A true holiday is one explicitly named or in the holidays map.
+      // Plain weekends (!isEffective because Sat/Sun) are NOT holidays.
+      const isExplicitHoliday = !!day.holidayName || holidaysByDate.has(day.date);
+      const isNonEffective = !day.isEffective;
       const event = !!day.eventName || eventsByDate.has(day.date);
       const record = recordsByStudentDate.get(buildRecordKey(student.id, day.date));
-      const value = holiday ? "L" : record?.status ?? "-";
 
-      if (!holiday && isCountableStatus(value)) {
+      // Preserve explicit records even on holidays (e.g. makeup class on a public holiday).
+      // Only fall back to "L" when the day is non-effective and no record exists.
+      const value = record?.status ?? (isNonEffective ? "L" : "-");
+      const holiday = isExplicitHoliday;
+
+      if (!isNonEffective && isCountableStatus(value)) {
         totals[value] += 1;
         if (jumlahStatuses.has(value)) {
           totals.total += 1;
@@ -182,13 +189,14 @@ export function buildAttendanceLegacyExportPayloadFromCanonical(
     rows,
     days: days.map((day) => {
       const dayOfWeek = getDayOfWeek(day.date, day.dayOfWeek);
-      const holiday = !day.isEffective || !!day.holidayName || holidaysByDate.has(day.date);
+      // Only flag as holiday if explicitly named or in the holidays map — plain weekends are not holidays.
+      const isExplicitHoliday = !!day.holidayName || holidaysByDate.has(day.date);
       const event = !!day.eventName || eventsByDate.has(day.date);
       return {
         key: day.date,
         dayName: DAY_NAMES[dayOfWeek] ?? "",
         dateLabel: String(parseIsoDateParts(day.date).day),
-        isHoliday: holiday,
+        isHoliday: isExplicitHoliday,
         hasEvent: event,
       };
     }),

@@ -162,7 +162,7 @@ export function validateCanonicalDataset(dataset: AttendanceDatasetCanonical): A
   }
 
   for (const record of dataset.records) {
-    issues.push(...validateCanonicalRecord(record, { validStudentIds, validClassIds, effectiveDayMap }));
+    issues.push(...validateCanonicalRecord(record, { validStudentIds, validClassIds, effectiveDayMap, lockedMonths }));
 
     const key = `${record.classId}:${record.studentId}:${record.date}`;
     if (uniqueKeys.has(key)) {
@@ -181,9 +181,7 @@ export function validateCanonicalDataset(dataset: AttendanceDatasetCanonical): A
     issues.push(issue("DEBUG_METADATA_PRESENT", "Canonical dataset contains debug metadata; this is allowed only before UI/export projection.", "info", "debug"));
   }
 
-  if (lockedMonths.size > 0) {
-    // Locks block writes, not reads. Dataset read validation reports only malformed records above.
-  }
+  // Note: lockedMonths blocks writes, not reads. LOCKED_WRITE_ATTEMPT is reported per-record above.
 
   return issues;
 }
