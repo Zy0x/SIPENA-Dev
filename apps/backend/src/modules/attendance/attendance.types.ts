@@ -178,8 +178,57 @@ export interface AttendanceNotePatchBody {
   note: string | null;
 }
 
+export interface AttendanceLockPatch {
+  classId: string;
+  month: string; // YYYY-MM
+  isLocked: boolean;
+}
+
+export interface AttendanceHolidayPatch {
+  date: string; // YYYY-MM-DD
+  description?: string;
+}
+
+export interface AttendanceDayEventPatch {
+  date: string; // YYYY-MM-DD
+  label?: string;
+  description?: string | null;
+  color?: string | null;
+  action: "upsert" | "delete";
+}
+
+export interface AttendanceAuditEventCanonical {
+  id: string;
+  actor: string | null;
+  action: string;
+  classId: string;
+  studentId: string;
+  date: string;
+  beforeState: any;
+  afterState: any;
+  reasonCode: string;
+  metadata?: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface ShadowComparisonMismatch {
+  studentId: string;
+  date: string;
+  v1Status: AttendanceStatusCode | null;
+  v2Status: AttendanceStatusCode | null;
+  mismatchFields: string[];
+}
+
+export interface ShadowComparisonReport {
+  match: boolean;
+  dateChecked: string;
+  mismatchCount: number;
+  mismatches: ShadowComparisonMismatch[];
+}
+
 export interface AttendanceShadowReport {
   enabled: boolean;
   mismatchCount: number;
-  reports: unknown[];
+  reports: ShadowComparisonReport[];
 }
+
