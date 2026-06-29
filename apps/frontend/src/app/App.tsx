@@ -105,7 +105,7 @@ const App = () => {
                         <Admin />
                       </AdminRouteGuard>
                     } />
-                    <Route path="/changelog" element={<Changelog />} />
+                    <Route path="/changelog" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.changelog}><Changelog /></FeatureRouteGuard>} />
                     <Route path="/portal/:code" element={<PortalView />} />
                     <Route path="/terms" element={<Terms />} />
 
@@ -129,7 +129,7 @@ const App = () => {
                       } />
                       <Route path="/classes" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.classes}><Classes /></FeatureRouteGuard>} />
                       <Route path="/attendance" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.attendance}><AttendanceRuntimeRoute forcedEngine="v1" /></FeatureRouteGuard>} />
-                      <Route path="/attendance-v2" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.attendance}><AttendanceRuntimeRoute forcedEngine="v2" /></FeatureRouteGuard>} />
+                      <Route path="/attendance-v2" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.attendanceV2}><AttendanceRuntimeRoute forcedEngine="v2" /></FeatureRouteGuard>} />
                       <Route path="/subjects" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.subjects}><Subjects /></FeatureRouteGuard>} />
                       <Route path="/grades" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.grades}><Grades /></FeatureRouteGuard>} />
                       <Route path="/reports" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.reports}><Reports /></FeatureRouteGuard>} />

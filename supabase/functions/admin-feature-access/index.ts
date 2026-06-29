@@ -32,6 +32,17 @@ interface FeatureAudienceRow {
   enabled: boolean;
 }
 
+interface FeatureCatalogEntry {
+  featureKey: string;
+  name: string;
+  description: string;
+  featureType: "page" | "feature" | "runtime";
+  defaultEnabled: boolean;
+  globalKillSwitch: boolean;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  metadata: Record<string, unknown>;
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -111,6 +122,34 @@ function summarizeAudience(audiences: FeatureAudienceRow[]) {
     userIds: audiences
       .filter((audience) => audience.enabled && audience.target_type === "user" && audience.target_value)
       .map((audience) => audience.target_value),
+  };
+}
+
+function normalizeCatalogEntry(value: unknown): FeatureCatalogEntry | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Record<string, unknown>;
+  const featureKey = typeof item.featureKey === "string" ? item.featureKey.trim() : "";
+  const name = typeof item.name === "string" ? item.name.trim() : "";
+  const description = typeof item.description === "string" ? item.description.trim() : "";
+  const featureType = item.featureType;
+  const riskLevel = item.riskLevel;
+  const metadata = item.metadata && typeof item.metadata === "object" && !Array.isArray(item.metadata)
+    ? item.metadata as Record<string, unknown>
+    : {};
+
+  if (!featureKey || !name) return null;
+  if (!["page", "feature", "runtime"].includes(String(featureType))) return null;
+  if (!["low", "medium", "high", "critical"].includes(String(riskLevel))) return null;
+
+  return {
+    featureKey,
+    name,
+    description,
+    featureType: featureType as FeatureCatalogEntry["featureType"],
+    defaultEnabled: Boolean(item.defaultEnabled),
+    globalKillSwitch: item.globalKillSwitch !== false,
+    riskLevel: riskLevel as FeatureCatalogEntry["riskLevel"],
+    metadata,
   };
 }
 
@@ -225,6 +264,76 @@ serve(async (req) => {
         }));
 
       return json({ success: true, flags, audiences, roles: [...validRoles, ...defaultTeacherRoles], audits, users });
+    }
+
+    if (action === "sync-feature-catalog") {
+      const catalog = Array.isArray(body.payload?.catalog)
+        ? body.payload.catalog.map(normalizeCatalogEntry).filter(Boolean) as FeatureCatalogEntry[]
+        : [];
+
+      if (!catalog.length) {
+        return json({ success: false, error: "Katalog fitur kosong atau tidak valid" }, 400);
+      }
+
+      const { data: existingRows, error: existingError } = await supabaseAdmin
+        .from("feature_flags")
+        .select("feature_key, metadata")
+        .in("feature_key", catalog.map((entry) => entry.featureKey));
+
+      if (existingError) return json({ success: false, error: existingError.message }, 500);
+
+      const existingMetadata = new Map(
+        (existingRows || []).map((row: { feature_key: string; metadata: Record<string, unknown> | null }) => [
+          row.feature_key,
+          row.metadata || {},
+        ]),
+      );
+      const existingKeys = new Set(existingMetadata.keys());
+      const created: string[] = [];
+      const updated: string[] = [];
+
+      for (const entry of catalog) {
+        if (existingKeys.has(entry.featureKey)) {
+          const { error: updateError } = await supabaseAdmin
+            .from("feature_flags")
+            .update({
+              name: entry.name,
+              description: entry.description,
+              feature_type: entry.featureType,
+              risk_level: entry.riskLevel,
+              metadata: { ...(existingMetadata.get(entry.featureKey) || {}), ...entry.metadata },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("feature_key", entry.featureKey);
+
+          if (updateError) return json({ success: false, error: updateError.message }, 500);
+          updated.push(entry.featureKey);
+          continue;
+        }
+
+        const { error: insertError } = await supabaseAdmin.from("feature_flags").insert({
+          feature_key: entry.featureKey,
+          name: entry.name,
+          description: entry.description,
+          feature_type: entry.featureType,
+          default_enabled: entry.defaultEnabled,
+          global_kill_switch: entry.globalKillSwitch,
+          risk_level: entry.riskLevel,
+          metadata: entry.metadata,
+        });
+
+        if (insertError) return json({ success: false, error: insertError.message }, 500);
+        created.push(entry.featureKey);
+      }
+
+      await supabaseAdmin.from("feature_audit_logs").insert({
+        action: "sync-feature-catalog",
+        actor_email: "admin-panel",
+        before_state: { source: "feature-registry" },
+        after_state: { created, updated },
+      });
+
+      return json({ success: true, created, updated });
     }
 
     if (action === "save-feature") {

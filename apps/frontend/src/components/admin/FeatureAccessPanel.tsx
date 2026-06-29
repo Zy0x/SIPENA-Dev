@@ -51,6 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FEATURE_CATALOG_SYNC_PAYLOAD } from "@/app/providers/featureAccess";
 import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -327,6 +328,9 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
     if (!adminPassword) return;
     setLoading(true);
     try {
+      await requestAdminFeatureAccess("sync-feature-catalog", {
+        catalog: FEATURE_CATALOG_SYNC_PAYLOAD,
+      });
       const result = await requestAdminFeatureAccess("get-admin-data");
       const nextFlags = result.flags || [];
       const nextUsers = result.users || [];

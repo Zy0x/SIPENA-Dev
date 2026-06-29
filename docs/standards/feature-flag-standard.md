@@ -6,50 +6,39 @@ Dokumen ini mendefinisikan standar wajib bagi pengembang (AI maupun manusia) dal
 
 ## 1. Alur Pendaftaran Feature Flag Baru
 
-Setiap kali membuat halaman atau fitur baru:
+Setiap kali membuat halaman atau fitur indukan baru, daftarkan hanya di **Feature Registry**. Jangan membuat flag untuk tombol kecil, variasi visual, atau panel minor kecuali fitur tersebut berisiko tinggi atau perlu rollout terpisah.
 
-### Langkah 1: Daftarkan Key di Frontend
-Tambahkan entri key baru pada objek `FEATURE_KEYS` di [featureAccess.ts](file:///E:/Data/GitHub/SIPENA/tessipena3-f7e2575d/apps/frontend/src/app/providers/featureAccess.ts):
-
-```typescript
-export const FEATURE_KEYS = {
-  // ... key existing ...
-  myNewFeature: "feature.my-new-feature", // Gunakan prefix 'page.' untuk halaman, 'feature.' untuk tombol/aksi
-} as const;
-```
-
-Daftarkan pula definisi default-nya di array `DEFAULT_FEATURE_DEFINITIONS` dalam file yang sama:
+### Langkah 1: Daftarkan di `FEATURE_REGISTRY`
+Tambahkan satu entri baru pada `FEATURE_REGISTRY` di [featureAccess.ts](file:///E:/Data/GitHub/SIPENA/tessipena3-f7e2575d/apps/frontend/src/app/providers/featureAccess.ts):
 
 ```typescript
-export const DEFAULT_FEATURE_DEFINITIONS: FeatureFlagDefinition[] = [
-  // ...
-  { 
-    key: FEATURE_KEYS.myNewFeature, 
-    name: "Nama Fitur Baru", 
-    type: "feature", // "page" | "feature" | "runtime"
-    defaultEnabled: false, // Selalu set false untuk rilis aman/tahap uji coba
-    globalKillSwitch: true, 
-    riskLevel: "low", // "low" | "medium" | "high" | "critical"
-    metadata: { description: "Penjelasan singkat fitur baru" }
-  }
-];
+{
+  id: "myNewPage",
+  key: "page.my-new-page",
+  name: "Nama Halaman Baru",
+  description: "Deskripsi singkat yang mudah dipahami admin.",
+  type: "page",
+  defaultEnabled: false,
+  globalKillSwitch: true,
+  riskLevel: "medium",
+  owner: "academic",
+  isMajor: true,
+  metadata: { route: "/my-new-page", owner: "academic", isMajor: true },
+}
 ```
 
-### Langkah 2: Daftarkan di Database Supabase
-Buat migration script SQL (atau jalankan di SQL Editor Supabase) untuk menyisipkan baris flag baru ke tabel `public.feature_flags` agar tersinkronisasi di backend:
+`FEATURE_KEYS`, `DEFAULT_FEATURE_DEFINITIONS`, dan payload sinkronisasi Admin Panel dihasilkan dari registry ini. Jangan menduplikasi key secara manual di tempat lain.
 
-```sql
-INSERT INTO public.feature_flags (feature_key, name, description, feature_type, default_enabled, global_kill_switch, risk_level)
-VALUES (
-  'feature.my-new-feature',
-  'Nama Fitur Baru',
-  'Deskripsi kegunaan fitur baru.',
-  'feature',
-  false,
-  true,
-  'low'
-) ON CONFLICT (feature_key) DO NOTHING;
-```
+### Langkah 2: Sinkronisasi Otomatis Admin Panel
+Saat admin membuka tab **Kontrol Fitur**, frontend mengirim `FEATURE_CATALOG_SYNC_PAYLOAD` ke Edge Function `admin-feature-access` dengan action `sync-feature-catalog`.
+
+Sinkronisasi ini:
+- menambahkan flag baru yang belum ada di `public.feature_flags`;
+- memperbarui metadata aman seperti nama, deskripsi, tipe, risiko, dan metadata;
+- tidak menghapus atau mengubah audience role/user yang sudah admin atur;
+- tidak membutuhkan SQL manual untuk fitur indukan baru.
+
+SQL/migration manual hanya diperlukan jika ada perubahan struktur tabel, bukan untuk mendaftarkan flag fitur indukan biasa.
 
 ---
 
@@ -99,6 +88,26 @@ export function MyComponent() {
   return <button>Aksi Khusus Fitur Baru</button>;
 }
 ```
+
+---
+
+## 3. Standar Penamaan dan Batasan Scope
+
+Gunakan pola key berikut:
+- `page.<slug>` untuk halaman utama.
+- `feature.<slug>` untuk fitur indukan lintas halaman.
+- `<domain>.<feature>.runtime` untuk runtime/engine yang berisiko tinggi.
+
+Default:
+- halaman lama/stabil boleh `defaultEnabled: true`;
+- fitur baru, eksperimental, engine baru, atau rollout bertahap wajib `defaultEnabled: false`;
+- Presensi V2 memakai `page.attendance-v2` dan `attendance.v2.runtime`, keduanya default mati.
+
+Jangan membuat flag untuk:
+- tombol kecil;
+- tab kecil;
+- variasi copy/warna;
+- sub-panel yang tidak berdiri sebagai fitur indukan.
 
 ---
 

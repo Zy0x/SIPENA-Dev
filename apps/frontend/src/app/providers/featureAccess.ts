@@ -38,39 +38,62 @@ export interface FeatureFlagDefinition {
   metadata?: Record<string, unknown>;
 }
 
-export const FEATURE_KEYS = {
-  dashboard: "page.dashboard",
-  classes: "page.classes",
-  subjects: "page.subjects",
-  grades: "page.grades",
-  attendance: "page.attendance",
-  reports: "page.reports",
-  gradeReports: "page.reports.grades",
-  rankings: "page.reports.rankings",
-  parentPortal: "page.reports.portal",
-  settings: "page.settings",
-  help: "page.help",
-  about: "page.about",
-  morphe: "feature.morphe",
-  attendanceV2Runtime: "attendance.v2.runtime",
-} as const;
+export interface FeatureRegistryEntry extends FeatureFlagDefinition {
+  id: string;
+  description: string;
+  owner: string;
+  isMajor: boolean;
+}
 
-export const DEFAULT_FEATURE_DEFINITIONS: FeatureFlagDefinition[] = [
-  { key: FEATURE_KEYS.dashboard, name: "Dashboard", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "low", metadata: { route: "/dashboard" } },
-  { key: FEATURE_KEYS.classes, name: "Kelas & Murid", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", metadata: { route: "/classes" } },
-  { key: FEATURE_KEYS.subjects, name: "Mata Pelajaran", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", metadata: { route: "/subjects" } },
-  { key: FEATURE_KEYS.grades, name: "Input Nilai", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "high", metadata: { route: "/grades" } },
-  { key: FEATURE_KEYS.attendance, name: "Presensi", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "high", metadata: { route: "/attendance" } },
-  { key: FEATURE_KEYS.reports, name: "Laporan", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", metadata: { route: "/reports" } },
-  { key: FEATURE_KEYS.gradeReports, name: "Laporan Nilai", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "high", metadata: { route: "/reports/grades" } },
-  { key: FEATURE_KEYS.rankings, name: "Ranking Murid", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "high", metadata: { route: "/reports/rankings" } },
-  { key: FEATURE_KEYS.parentPortal, name: "Portal Orang Tua", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", metadata: { route: "/reports/portal" } },
-  { key: FEATURE_KEYS.settings, name: "Pengaturan", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", metadata: { route: "/settings" } },
-  { key: FEATURE_KEYS.help, name: "Panduan", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "low", metadata: { route: "/help" } },
-  { key: FEATURE_KEYS.about, name: "Tentang", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "low", metadata: { route: "/about" } },
-  { key: FEATURE_KEYS.morphe, name: "Morphe AI", type: "feature", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", metadata: { route: "/morphe" } },
-  { key: FEATURE_KEYS.attendanceV2Runtime, name: "Presensi V2 Runtime", type: "runtime", defaultEnabled: false, globalKillSwitch: true, riskLevel: "critical", metadata: { engine: "v2", fallback: "v1" } },
-];
+export const FEATURE_REGISTRY = [
+  { id: "dashboard", key: "page.dashboard", name: "Dashboard", description: "Halaman ringkasan utama.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "low", owner: "core", isMajor: true, metadata: { route: "/dashboard", owner: "core", isMajor: true } },
+  { id: "classes", key: "page.classes", name: "Kelas & Murid", description: "Halaman pengelolaan kelas dan murid.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", owner: "academic", isMajor: true, metadata: { route: "/classes", owner: "academic", isMajor: true } },
+  { id: "subjects", key: "page.subjects", name: "Mata Pelajaran", description: "Halaman pengelolaan mata pelajaran dan KKM.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", owner: "academic", isMajor: true, metadata: { route: "/subjects", owner: "academic", isMajor: true } },
+  { id: "grades", key: "page.grades", name: "Input Nilai", description: "Halaman input nilai dan spreadsheet nilai.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "high", owner: "grades", isMajor: true, metadata: { route: "/grades", owner: "grades", isMajor: true } },
+  { id: "attendance", key: "page.attendance", name: "Presensi", description: "Halaman presensi utama. V1 tetap menjadi default dan fallback.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "high", owner: "attendance", isMajor: true, metadata: { route: "/attendance", owner: "attendance", isMajor: true, engine: "v1" } },
+  { id: "attendanceV2", key: "page.attendance-v2", name: "Presensi V2 (Mirror V1)", description: "Halaman uji Presensi V2. Tampilan harus identik dengan V1 sampai engine V2 siap.", type: "page", defaultEnabled: false, globalKillSwitch: true, riskLevel: "critical", owner: "attendance", isMajor: true, metadata: { route: "/attendance-v2", owner: "attendance", isMajor: true, mirrorOf: "/attendance", defaultEngine: "v1" } },
+  { id: "reports", key: "page.reports", name: "Laporan", description: "Halaman induk laporan.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", owner: "reports", isMajor: true, metadata: { route: "/reports", owner: "reports", isMajor: true } },
+  { id: "gradeReports", key: "page.reports.grades", name: "Laporan Nilai", description: "Halaman laporan nilai.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "high", owner: "reports", isMajor: true, metadata: { route: "/reports/grades", owner: "reports", isMajor: true, parent: "page.reports" } },
+  { id: "rankings", key: "page.reports.rankings", name: "Ranking Murid", description: "Halaman ranking keseluruhan.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "high", owner: "reports", isMajor: true, metadata: { route: "/reports/rankings", owner: "reports", isMajor: true, parent: "page.reports" } },
+  { id: "parentPortal", key: "page.reports.portal", name: "Portal Orang Tua", description: "Halaman konfigurasi portal orang tua.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", owner: "reports", isMajor: true, metadata: { route: "/reports/portal", owner: "reports", isMajor: true, parent: "page.reports" } },
+  { id: "settings", key: "page.settings", name: "Pengaturan", description: "Halaman pengaturan akun dan aplikasi.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", owner: "core", isMajor: true, metadata: { route: "/settings", owner: "core", isMajor: true } },
+  { id: "help", key: "page.help", name: "Panduan", description: "Halaman panduan penggunaan SIPENA.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "low", owner: "core", isMajor: true, metadata: { route: "/help", owner: "core", isMajor: true } },
+  { id: "about", key: "page.about", name: "Tentang", description: "Halaman informasi aplikasi.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "low", owner: "core", isMajor: true, metadata: { route: "/about", owner: "core", isMajor: true } },
+  { id: "morphe", key: "feature.morphe", name: "Morphe AI", description: "Fitur asisten AI Morphe.", type: "feature", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", owner: "ai", isMajor: true, metadata: { route: "/morphe", owner: "ai", isMajor: true } },
+  { id: "ocr", key: "feature.ocr", name: "OCR Smart Import", description: "Fitur OCR untuk import data dari gambar.", type: "feature", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", owner: "import", isMajor: true, metadata: { module: "grades", owner: "import", isMajor: true } },
+  { id: "exportStudio", key: "feature.export-studio", name: "Export Studio", description: "Fitur studio ekspor dokumen dan laporan.", type: "feature", defaultEnabled: true, globalKillSwitch: true, riskLevel: "medium", owner: "export", isMajor: true, metadata: { owner: "export", isMajor: true } },
+  { id: "changelog", key: "page.changelog", name: "Changelog", description: "Halaman catatan perubahan aplikasi.", type: "page", defaultEnabled: true, globalKillSwitch: true, riskLevel: "low", owner: "core", isMajor: true, metadata: { route: "/changelog", owner: "core", isMajor: true } },
+  { id: "attendanceV2Runtime", key: "attendance.v2.runtime", name: "Presensi V2 Runtime", description: "Mengaktifkan engine Presensi V2 untuk akun terpilih. Jika mati, V1 tetap digunakan.", type: "runtime", defaultEnabled: false, globalKillSwitch: true, riskLevel: "critical", owner: "attendance", isMajor: true, metadata: { engine: "v2", fallback: "v1", owner: "attendance", isMajor: true } },
+] as const satisfies readonly FeatureRegistryEntry[];
+
+export type FeatureRegistryId = (typeof FEATURE_REGISTRY)[number]["id"];
+
+export const FEATURE_KEYS = Object.fromEntries(
+  FEATURE_REGISTRY.map((feature) => [feature.id, feature.key]),
+) as Record<FeatureRegistryId, string>;
+
+export const DEFAULT_FEATURE_DEFINITIONS: FeatureFlagDefinition[] = FEATURE_REGISTRY.map(
+  ({ key, name, type, defaultEnabled, globalKillSwitch, riskLevel, metadata }) => ({
+    key,
+    name,
+    type,
+    defaultEnabled,
+    globalKillSwitch,
+    riskLevel,
+    metadata,
+  }),
+);
+
+export const FEATURE_CATALOG_SYNC_PAYLOAD = FEATURE_REGISTRY.map((feature) => ({
+  featureKey: feature.key,
+  name: feature.name,
+  description: feature.description,
+  featureType: feature.type,
+  defaultEnabled: feature.defaultEnabled,
+  globalKillSwitch: feature.globalKillSwitch,
+  riskLevel: feature.riskLevel,
+  metadata: feature.metadata || {},
+}));
 
 export const DEFAULT_FEATURE_MAP = new Map(
   DEFAULT_FEATURE_DEFINITIONS.map((feature) => [
