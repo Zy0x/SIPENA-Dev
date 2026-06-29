@@ -276,7 +276,7 @@ export class AttendanceV2Adapter {
       if (error) throw error;
       return { success: true, action: "deleted" };
     } else {
-      // Validasi: Batas maksimum 30 hari libur kustom per tahun ajaran
+      // Validasi: Batas maksimum 100 hari libur kustom per tahun ajaran
       const yearStart = `${new Date(patch.date).getFullYear()}-01-01`;
       const yearEnd = `${new Date(patch.date).getFullYear()}-12-31`;
 
@@ -287,8 +287,8 @@ export class AttendanceV2Adapter {
         .gte("date", yearStart)
         .lte("date", yearEnd);
 
-      if (count && count >= 30) {
-        throw new Error("Batas maksimum 30 hari libur custom per tahun ajaran tercapai.");
+      if (count && count >= 100) {
+        throw new Error("Batas maksimum 100 hari libur custom per tahun ajaran tercapai.");
       }
 
       const { data, error } = await client
