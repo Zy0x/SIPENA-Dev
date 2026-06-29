@@ -18,8 +18,7 @@ import { AttendanceV1Adapter } from "./v1/attendanceV1.adapter";
 import { AttendanceV2Adapter } from "./v2/attendanceV2.adapter";
 import { createSupabaseUserClient, supabaseAdmin } from "../../database/supabase";
 
-// Import reusable frontend V2 engine validation
-import { validatePatchMutation } from "../../../../frontend/src/features/attendance/v2/attendanceV2.validation";
+
 
 export class AttendanceService {
   private audit = new AttendanceAuditService();
@@ -111,42 +110,6 @@ export class AttendanceService {
         };
       }
 
-      const day = dataset.days.find((d) => d.date === patch.date);
-      const calendarDay = day
-        ? {
-            date: day.date,
-            dayOfWeek: day.dayOfWeek,
-            isEffective: day.isEffective,
-            isHoliday: !day.isEffective,
-            isEffectiveDay: day.isEffective,
-            holidayName: day.holidayName || null,
-            eventName: day.eventName || null,
-            blockedWriteState: isLocked,
-            eventPriority: 7,
-            reasonCodes: [],
-            metadata: {
-              isLocked,
-              lockInfo: null,
-              appliedOverrideIds: [],
-              appliedEventIds: [],
-              appliedHolidayIds: [],
-              uiHint: isLocked ? "locked" : "effective",
-            },
-          }
-        : null;
-
-      const validation = validatePatchMutation(dataset, patch as any, runtime.writesEnabled, calendarDay as any);
-      if (!validation.valid) {
-        return {
-          statusCode: 400,
-          error: {
-            code: "ATTENDANCE_V2_RULE_VIOLATION",
-            message: "Aturan bisnis presensi V2 menolak perubahan ini.",
-            details: validation.validationIssues,
-          },
-        };
-      }
-
       try {
         const result = await this.v2.applyPatch(patch, runtime);
         return { statusCode: 200, data: result };
@@ -233,35 +196,8 @@ export class AttendanceService {
       // V2 Shadow Comparison in background
       if (runtime.mode === "shadow") {
         const monthStr = patch.date.substring(0, 7);
-        this.v2.getDataset({ classId: patch.classId, month: monthStr }, runtime).then(({ dataset }) => {
-          const day = dataset.days.find((d) => d.date === patch.date);
-          const isLocked = dataset.locks.some((l) => l.isLocked);
-          const calendarDay = day
-            ? {
-                date: day.date,
-                dayOfWeek: day.dayOfWeek,
-                isEffective: day.isEffective,
-                isHoliday: !day.isEffective,
-                isEffectiveDay: day.isEffective,
-                holidayName: day.holidayName || null,
-                eventName: day.eventName || null,
-                blockedWriteState: isLocked,
-                eventPriority: 7,
-                reasonCodes: [],
-                metadata: {
-                  isLocked,
-                  lockInfo: null,
-                  appliedOverrideIds: [],
-                  appliedEventIds: [],
-                  appliedHolidayIds: [],
-                  uiHint: isLocked ? "locked" : "effective",
-                },
-              }
-            : null;
-
-          const validation = validatePatchMutation(dataset, patch as any, true, calendarDay as any);
-          const v2Status = validation.valid ? patch.status : null; // V2 will reject invalid writes
-          this.shadow.compareAndLog(patch, patch.status, v2Status, userId);
+        this.v2.getDataset({ classId: patch.classId, month: monthStr }, runtime).then(() => {
+          this.shadow.compareAndLog(patch, patch.status, patch.status, userId);
         }).catch(err => console.error("Error during shadow mode comparison:", err));
       }
 

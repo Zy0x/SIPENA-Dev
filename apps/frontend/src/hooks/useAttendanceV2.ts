@@ -42,7 +42,7 @@ export interface AttendanceLock {
 export type WorkDayFormat = "5days" | "6days";
 export type AttendanceStatusValue = "H" | "I" | "S" | "A" | "D";
 
-export function useAttendance(classId: string, month: Date, workDayFormat: WorkDayFormat = "6days") {
+export function useAttendanceV2(classId: string, month: Date, workDayFormat: WorkDayFormat = "6days") {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const monthStart = format(startOfMonth(month), "yyyy-MM-dd");
@@ -74,7 +74,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
 
   // Fetch attendance records
   const attendanceQuery = useQuery({
-    queryKey: ["attendance", classId, monthStart, dbAvailable],
+    queryKey: ["attendance_v2", classId, monthStart, dbAvailable],
     queryFn: async () => {
       if (!classId || !user || !dbAvailable) return [];
       const { data, error } = await (supabase as any)
@@ -91,7 +91,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
 
   // Fetch holidays
   const holidaysQuery = useQuery({
-    queryKey: ["attendance_holidays", user?.id, dbAvailable],
+    queryKey: ["attendance_v2_holidays", user?.id, dbAvailable],
     queryFn: async () => {
       if (!user || !dbAvailable) return [];
       const { data, error } = await (supabase as any)
@@ -106,7 +106,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
 
   // Fetch day events
   const dayEventsQuery = useQuery({
-    queryKey: ["attendance_day_events", user?.id, dbAvailable],
+    queryKey: ["attendance_v2_day_events", user?.id, dbAvailable],
     queryFn: async () => {
       if (!user || !dbAvailable) return [];
       try {
@@ -123,7 +123,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
 
   // Fetch lock status
   const lockQuery = useQuery({
-    queryKey: ["attendance_lock", classId, monthStart, dbAvailable],
+    queryKey: ["attendance_v2_lock", classId, monthStart, dbAvailable],
     queryFn: async () => {
       if (!classId || !user || !dbAvailable) return { is_locked: true };
       const { data, error } = await (supabase as any)
@@ -318,7 +318,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     },
     onSuccess: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2", classId, monthStart] });
       }
     },
   });
@@ -359,7 +359,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     },
     onSuccess: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2", classId, monthStart] });
       }
     },
   });
@@ -388,7 +388,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
       }
     },
     onSuccess: () => {
-      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_holidays"] });
+      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_v2_holidays"] });
     },
   });
 
@@ -423,7 +423,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
       }
     },
     onSuccess: () => {
-      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_day_events"] });
+      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_v2_day_events"] });
     },
   });
 
@@ -439,7 +439,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
       await (supabase as any).from("attendance_day_events").delete().eq("user_id", user.id).eq("date", date);
     },
     onSuccess: () => {
-      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_day_events"] });
+      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_v2_day_events"] });
     },
   });
 
@@ -461,7 +461,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
       return locked;
     },
     onSuccess: () => {
-      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_lock", classId, monthStart] });
+      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_v2_lock", classId, monthStart] });
     },
   });
 

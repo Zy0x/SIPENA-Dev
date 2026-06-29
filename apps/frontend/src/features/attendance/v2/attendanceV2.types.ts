@@ -1,135 +1,66 @@
 import type {
-  AttendanceCalendarEventCanonical,
-  AttendanceDatasetCanonical,
-  AttendanceDailySummaryCanonical,
-  AttendanceHolidayCanonical,
-  AttendanceLockCanonical,
-  AttendanceMonthlySummaryCanonical,
-  AttendanceRecordCanonical,
-  AttendanceStatusCode,
-  AttendanceStudentCanonical,
-  AttendanceValidationIssue,
-  AttendanceYearlySummaryCanonical,
-} from "../canonical/canonical.types";
-import type { RuleEvaluationOutput } from "./rules/ruleEngine.types";
-import type {
-  CalendarOverride,
-  CalendarSchoolScope,
+  AttendanceRecord,
+  HolidayRecord,
+  DayEvent,
+  AttendanceLock,
   WorkDayFormat,
-} from "./calendar/calendarEngine.types";
+  AttendanceStatusValue
+} from "@/hooks/useAttendanceV2";
+import type {
+  AttendanceClassCanonical,
+  AttendanceLockCanonical,
+  AttendanceStudentCanonical,
+} from "../canonical/canonical.types";
 
-export type AttendanceV2AuditAction = "CREATE" | "UPDATE" | "DELETE" | "BULK_UPDATE" | "NOTE_UPDATE" | "VALIDATE";
-export type AttendanceV2RuntimeMode = "disabled" | "shadow" | "active";
-export type AttendanceV2OperationSource = "manual" | "import" | "ocr" | "sync" | "shadow";
+export type V2Record = AttendanceRecord;
+export type V2Holiday = HolidayRecord;
+export type V2DayEvent = DayEvent;
+export type V2Lock = AttendanceLock;
+export type V2WorkDayFormat = WorkDayFormat;
+export type V2Status = AttendanceStatusValue;
+export type V2DisplayStatus = V2Status | "L" | "-";
 
-export interface AttendanceAuditEventCanonical {
-  id: string;
-  timestamp: string;
-  actor: string;
-  action: AttendanceV2AuditAction;
-  classId: string;
-  studentId?: string;
-  date?: string;
-  beforeState: AttendanceRecordCanonical | AttendanceRecordCanonical[] | null;
-  afterState: AttendanceRecordCanonical | AttendanceRecordCanonical[] | null;
-  reasonCode: string;
-  metadata?: Record<string, unknown>;
+export interface V2CanonicalSeamInput {
+  classInfo: AttendanceClassCanonical;
+  month: string;
+  students: AttendanceStudentCanonical[];
+  attendanceRecords: V2Record[];
+  holidays: V2Holiday[];
+  dayEvents: V2DayEvent[];
+  locks: V2Lock[];
 }
 
-export interface ShadowComparisonReport {
-  match: boolean;
-  dateChecked: string;
-  mismatchCount: number;
-  mismatches: {
-    studentId: string;
-    date: string;
-    v1Status: AttendanceStatusCode | null;
-    v2Status: AttendanceStatusCode | null;
-    mismatchFields: string[];
-  }[];
-}
-
-export interface MutationValidationResult {
-  valid: boolean;
-  reasonCode: string;
-  issues: string[];
-  validationIssues: AttendanceValidationIssue[];
-}
-
-export interface AttendanceV2PatchResult {
-  success: boolean;
-  reasonCode: string;
-  appliedRuleIds: string[];
-  dataset: AttendanceDatasetCanonical;
-  updatedRecord: AttendanceRecordCanonical | null;
-  auditEvent: AttendanceAuditEventCanonical | null;
-  auditEvents: AttendanceAuditEventCanonical[];
-  validationIssues: string[];
-  canonicalValidationIssues: AttendanceValidationIssue[];
-  ruleExplanation: RuleEvaluationOutput | null;
-  shadowComparison: ShadowComparisonReport | null;
-}
-
-export interface AttendanceV2BuildDatasetInput {
+export interface V2CanonicalSeamDraft {
   classId: string;
   month: string;
   students: AttendanceStudentCanonical[];
-  records?: AttendanceRecordCanonical[];
-  holidays?: AttendanceHolidayCanonical[];
-  dayEvents?: AttendanceCalendarEventCanonical[];
-  locks?: AttendanceLockCanonical[];
-  startDate?: string;
-  endDate?: string;
-  workDayFormat?: WorkDayFormat;
-  overrides?: CalendarOverride[];
-  schoolScope?: CalendarSchoolScope;
+  recordsCount: number;
+  holidaysCount: number;
+  dayEventsCount: number;
+  locks: AttendanceLockCanonical[];
+  isReadOnlyDraft: true;
 }
 
-export interface AttendanceV2MutationOptions {
-  actor: string;
-  source?: AttendanceV2OperationSource;
-  isRetroactiveEdit?: boolean;
-  v1CanonicalRecords?: AttendanceRecordCanonical[];
+export interface V2SafetyGuardResult {
+  isSafe: boolean;
+  reason: "v2-active" | "non-v2-runtime";
+  message: string;
 }
 
-export interface AttendanceV2SummaryBundle {
-  daily: AttendanceDailySummaryCanonical[];
-  monthly: AttendanceMonthlySummaryCanonical[];
-  yearly?: AttendanceYearlySummaryCanonical[];
-  classRecap: {
-    presentCount: number;
-    sickCount: number;
-    permissionCount: number;
-    absentCount: number;
-    dispensationCount: number;
-    leaveCount: number;
-    totalCount: number;
-  };
-}
-
-export interface AttendanceLockPatch {
-  classId: string;
-  month: string;
+export interface V2AdapterResult {
+  attendanceRecords: V2Record[];
+  holidays: V2Holiday[];
+  dayEvents: V2DayEvent[];
   isLocked: boolean;
+  dbAvailable: boolean;
+  isLoading: boolean;
+  isSaving: boolean;
+  getAttendance: (studentId: string, date: Date) => V2Status | null;
+  getAttendanceNote: (studentId: string, date: Date) => string;
+  getDayEvent: (date: Date) => V2DayEvent | undefined;
+  isHoliday: (date: Date) => boolean;
+  getHolidayDescription: (date: Date) => string | null;
+  setAttendance: (args: { studentId: string; date: string; status: V2Status }) => Promise<void>;
+  updateNote: (args: { studentId: string; date: string; note: string | null }) => Promise<void>;
+  toggleLock: () => Promise<void>;
 }
-
-export interface AttendanceHolidayPatch {
-  date: string;
-  description?: string;
-}
-
-export interface AttendanceDayEventPatch {
-  date: string;
-  label?: string;
-  description?: string | null;
-  color?: string | null;
-  action: "upsert" | "delete";
-}
-
-export interface AttendanceNotePatchBody {
-  studentId: string;
-  classId: string;
-  date: string;
-  note: string | null;
-}
-

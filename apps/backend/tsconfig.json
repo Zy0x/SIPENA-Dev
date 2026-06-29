@@ -11,13 +11,6 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "src",
-    "../frontend/src/features/attendance/v2/calendar/**/*",
-    "../frontend/src/features/attendance/v2/rules/**/*",
-    "../frontend/src/features/attendance/v2/attendanceV2.engine.ts",
-    "../frontend/src/features/attendance/v2/attendanceV2.types.ts",
-    "../frontend/src/features/attendance/v2/attendanceV2.validation.ts",
-    "../frontend/src/features/attendance/canonical/canonical.types.ts",
-    "../frontend/src/features/attendance/canonical/canonical.validation.ts"
+    "src"
   ]
 }
