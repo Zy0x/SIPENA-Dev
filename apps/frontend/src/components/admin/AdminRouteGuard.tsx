@@ -26,15 +26,15 @@ export function AdminRouteGuard({ children }: AdminRouteGuardProps) {
       }
 
       try {
+        let decoded;
         const parts = token.split(".");
-        if (parts.length !== 2) {
-          localStorage.removeItem("admin_session_token");
-          setHasValidToken(false);
-          return;
+        if (parts.length === 2) {
+          decoded = JSON.parse(atob(parts[0]));
+        } else {
+          decoded = JSON.parse(atob(token));
         }
 
         // Decode locally first as a quick expiration check
-        const decoded = JSON.parse(atob(parts[0]));
         if (!decoded.authenticated || decoded.expires <= Date.now()) {
           localStorage.removeItem("admin_session_token");
           setHasValidToken(false);
@@ -61,8 +61,13 @@ export function AdminRouteGuard({ children }: AdminRouteGuardProps) {
       } catch (error) {
         // If there's a connection/API error, fallback to local validation to prevent lockouts when offline
         try {
+          let decoded;
           const parts = token.split(".");
-          const decoded = JSON.parse(atob(parts[0]));
+          if (parts.length === 2) {
+            decoded = JSON.parse(atob(parts[0]));
+          } else {
+            decoded = JSON.parse(atob(token));
+          }
           if (decoded.authenticated && decoded.expires > Date.now()) {
             setHasValidToken(true);
             return;
