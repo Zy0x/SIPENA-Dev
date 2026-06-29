@@ -116,11 +116,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { success, error: showError } = useEnhancedToast();
-  const { canAccess } = useFeatureFlags();
+  const { getAccessStatus } = useFeatureFlags();
 
   const visibleNavItems = useMemo(() => {
     const filterItem = (item: NavItem): NavItem | null => {
-      if (item.featureKey && !canAccess(item.featureKey)) {
+      if (item.featureKey && getAccessStatus(item.featureKey) !== "allowed") {
         return null;
       }
 
@@ -132,7 +132,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
 
     return navItems.map(filterItem).filter((item): item is NavItem => item !== null);
-  }, [canAccess]);
+  }, [getAccessStatus]);
 
   // Sidebar width constants
   const SIDEBAR_EXPANDED_WIDTH = 260;

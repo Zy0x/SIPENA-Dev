@@ -1,5 +1,6 @@
 export type FeatureType = "page" | "feature" | "runtime";
 export type FeatureRiskLevel = "low" | "medium" | "high" | "critical";
+export type FeatureAccessStatus = "loading" | "allowed" | "denied" | "error";
 export type FeatureAccessReason =
   | "global_kill_switch_off"
   | "user"

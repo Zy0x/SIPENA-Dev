@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluateFeatureAccess, FEATURE_KEYS, type FeatureFlagDefinition } from "./featureAccess";
+import { createFallbackFeatureFlagContext } from "./featureFlagContext";
 
 const baseFeature: FeatureFlagDefinition = {
   key: FEATURE_KEYS.attendanceV2Runtime,
@@ -65,5 +66,14 @@ describe("feature access evaluation", () => {
       ["teacher"],
     );
     expect(result).toEqual({ enabled: true, reason: "all_users" });
+  });
+
+  it("keeps fallback context closed while feature access is not ready", () => {
+    const context = createFallbackFeatureFlagContext();
+    expect(context.isReady).toBe(false);
+    expect(context.isLoading).toBe(true);
+    expect(context.getAccessStatus(FEATURE_KEYS.dashboard)).toBe("loading");
+    expect(context.canAccess(FEATURE_KEYS.dashboard)).toBe(false);
+    expect(context.canAccessNow(FEATURE_KEYS.dashboard)).toBe(false);
   });
 });

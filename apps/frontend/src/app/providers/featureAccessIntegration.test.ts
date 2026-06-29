@@ -28,6 +28,8 @@ describe("feature access integration guard", () => {
   it("keeps attendance v2 behind feature runtime resolution", () => {
     const route = readSource("apps/frontend/src/features/attendance/runtime/AttendanceRuntimeRoute.tsx");
     expect(route).toContain("FEATURE_KEYS.attendanceV2Runtime");
+    expect(route).toContain("getAccessStatus");
+    expect(route).toContain('runtimeAccessStatus === "loading"');
     expect(route).toContain("resolveRuntime");
     expect(route).toContain("remoteEngine");
   });
@@ -36,7 +38,17 @@ describe("feature access integration guard", () => {
     const layout = readSource("apps/frontend/src/components/AppLayout.tsx");
     expect(layout).toContain("useFeatureFlags");
     expect(layout).toContain("visibleNavItems");
+    expect(layout).toContain("getAccessStatus");
+    expect(layout).toContain('!== "allowed"');
     expect(layout).toContain("featureKey");
+  });
+
+  it("does not render guarded page content before access status is final", () => {
+    const gate = readSource("apps/frontend/src/components/FeatureGate.tsx");
+    expect(gate).toContain("getAccessStatus");
+    expect(gate).toContain('accessStatus === "loading"');
+    expect(gate).toContain('accessStatus === "allowed"');
+    expect(gate).toContain('accessStatus === "error"');
   });
 
   it("keeps admin feature writes behind the admin Edge Function", () => {

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type PropsWithChildren } from "react";
+import { useCallback, useMemo, useState, type PropsWithChildren } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -10,6 +10,7 @@ import {
   DEFAULT_FEATURE_DEFINITIONS,
   DEFAULT_FEATURE_MAP,
   FEATURE_KEYS,
+  type FeatureAccessStatus,
   type FeatureAccessState,
 } from "./featureAccess";
 import { FeatureFlagContext, type FeatureFlagContextValue } from "./featureFlagContext";
@@ -57,6 +58,7 @@ function mergeWithDefaults(remoteFeatures: FeatureAccessState[] | undefined): Ma
 export function FeatureFlagProvider({ children }: PropsWithChildren) {
   const { session, loading } = useAuth();
   const queryClient = useQueryClient();
+  const [isRefreshingAccess, setIsRefreshingAccess] = useState(false);
   const accessToken = session?.access_token ?? null;
 
   const query = useQuery({
@@ -68,19 +70,39 @@ export function FeatureFlagProvider({ children }: PropsWithChildren) {
     retry: 1,
   });
 
+  const hasRemoteFeatures = query.data?.success === true;
+  const isReady = !isRefreshingAccess && !loading && (!accessToken || hasRemoteFeatures || query.isError);
+  const isEvaluationError = !!accessToken && query.isError;
+  const isLoading = !isReady || (!!accessToken && query.isFetching && !hasRemoteFeatures);
+
   const features = useMemo(() => mergeWithDefaults(query.data?.features), [query.data?.features]);
   const roles = useMemo(() => query.data?.roles || [], [query.data?.roles]);
   const error = query.error instanceof Error ? query.error.message : null;
-  const isFallback = !query.data?.success;
+  const isFallback = isEvaluationError;
 
   const getFeature = useCallback(
     (featureKey: string) => features.get(featureKey) || buildFallbackFeatureState(featureKey),
     [features],
   );
 
-  const canAccess = useCallback(
-    (featureKey: string) => getFeature(featureKey).enabled,
-    [getFeature],
+  const canAccessNow = useCallback(
+    (featureKey: string) => isReady && !isEvaluationError && getFeature(featureKey).enabled,
+    [getFeature, isEvaluationError, isReady],
+  );
+
+  const canAccess = canAccessNow;
+
+  const getAccessStatus = useCallback(
+    (featureKey: string): FeatureAccessStatus => {
+      if (!isReady) {
+        return "loading";
+      }
+      if (isEvaluationError) {
+        return "error";
+      }
+      return canAccessNow(featureKey) ? "allowed" : "denied";
+    },
+    [canAccessNow, isEvaluationError, isReady],
   );
 
   const resolveRuntime = useCallback(
@@ -94,22 +116,33 @@ export function FeatureFlagProvider({ children }: PropsWithChildren) {
   );
 
   const refresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ["feature-access"] });
-  }, [queryClient]);
+    setIsRefreshingAccess(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["feature-access"] });
+      if (accessToken) {
+        await query.refetch();
+      }
+    } finally {
+      setIsRefreshingAccess(false);
+    }
+  }, [accessToken, query, queryClient]);
 
   const value = useMemo<FeatureFlagContextValue>(
     () => ({
       features,
       roles,
-      isLoading: query.isFetching && !query.data && !!accessToken,
+      isReady,
+      isLoading,
       isFallback,
       error,
       canAccess,
+      canAccessNow,
+      getAccessStatus,
       getFeature,
       resolveRuntime,
       refresh,
     }),
-    [accessToken, canAccess, error, features, getFeature, isFallback, query.data, query.isFetching, refresh, roles, resolveRuntime],
+    [canAccess, canAccessNow, error, features, getAccessStatus, getFeature, isFallback, isLoading, isReady, refresh, roles, resolveRuntime],
   );
 
   return <FeatureFlagContext.Provider value={value}>{children}</FeatureFlagContext.Provider>;
