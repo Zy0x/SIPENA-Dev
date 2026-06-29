@@ -706,18 +706,6 @@ const Admin = () => {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* Logout button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              type="button"
-              className="h-8 gap-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 px-2.5 hidden sm:flex"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium hidden md:inline">Logout</span>
-            </Button>
           </div>
         </header>
 

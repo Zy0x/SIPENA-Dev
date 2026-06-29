@@ -42,6 +42,19 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.123",
+    version: "2.4.123",
+    title: "Penghapusan Tombol Logout Duplikat",
+    description: "Menghapus tombol logout duplikat yang berada di top header bar halaman Admin agar fungsi logout terpusat secara konsisten di sidebar.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-29",
+    details: [
+      "Menghilangkan komponen Button logout dari baris header atas Admin page.",
+      "Memastikan tombol keluar akun hanya diakses melalui panel navigasi utama (sidebar kiri) untuk keselarasan alur pengguna."
+    ]
+  },
+  {
     id: "v2.4.122",
     version: "2.4.122",
     title: "Penyederhanaan Mode Akses Feature Flags",

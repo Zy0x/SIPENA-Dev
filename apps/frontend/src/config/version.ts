@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.122";
+export const APP_VERSION = "2.4.123";
 export const VERSION_DATE = "2026-06-29";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.123": "Penghapusan tombol logout duplikat di top header bar halaman Admin agar hanya tersedia secara konsisten di sidebar.",
   "2.4.122": "Penyederhanaan alur kontrol akses Feature Flags dengan penggabungan switch membingungkan (Kill Switch, Default Aktif, Semua Pengguna) menjadi satu Mode Akses (Mati Total, Terbuka Umum, Terbatas).",
   "2.4.121": "Peningkatan kontras tema terang (light mode) dengan penajaman border, input, muted foreground, serta optimalisasi palet warna aksen.",
   "2.4.120": "Peningkatan performa halaman Admin skala enterprise dengan server-side search/pagination manajemen akun, lazy-loaded stats, paginasi preview tabel, dan warning database backup besar.",
