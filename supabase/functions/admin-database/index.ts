@@ -587,9 +587,31 @@ async function handleDelete(supabase: any, tablesToDelete: string[]): Promise<Re
   );
 }
 
+async function discoverTablesSecurity(supabase: any): Promise<{ table_name: string; rls_enabled: boolean }[]> {
+  try {
+    const { data, error } = await supabase.rpc("get_public_tables_security");
+    if (error) {
+      console.log("RPC get_public_tables_security not available, falling back to basic table discovery");
+      const tables = await discoverTables(supabase);
+      return tables.map((t: string) => ({ table_name: t, rls_enabled: true }));
+    }
+    return data || [];
+  } catch (e) {
+    console.error("Table security discovery error, falling back:", e);
+    const tables = await discoverTables(supabase);
+    return tables.map((t: string) => ({ table_name: t, rls_enabled: true }));
+  }
+}
+
 async function handleStats(supabase: any): Promise<Response> {
-  // Dynamically discover ALL public tables
-  const discoveredTables = await discoverTables(supabase);
+  // Dynamically discover ALL public tables with security status
+  const tableSecurities = await discoverTablesSecurity(supabase);
+  const discoveredTables = tableSecurities.map((t) => t.table_name);
+  const rlsStatuses: Record<string, boolean> = {};
+  tableSecurities.forEach((t) => {
+    rlsStatuses[t.table_name] = t.rls_enabled;
+  });
+
   const stats: Record<string, number> = {};
   const errors: string[] = [];
 
@@ -648,6 +670,7 @@ async function handleStats(supabase: any): Promise<Response> {
       stats,
       totalRecords,
       discoveredTables,
+      rlsStatuses,
       errors: errors.length > 0 ? errors : undefined
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }

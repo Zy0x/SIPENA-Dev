@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, Database, Zap, AlertCircle, TrendingUp } from "lucide-react";
+import { Loader2, RefreshCw, Database, Zap, AlertCircle, TrendingUp, Lock, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
 
@@ -35,6 +35,7 @@ const TABLE_ICONS: Record<string, string> = {
   password_reset_tokens: "🔑",
   account_deletion_requests: "🗑️",
   team_profiles: "👥",
+  admin_sessions: "🔐",
 };
 
 function getTableLabel(tableName: string): string {
@@ -60,6 +61,7 @@ function getTableLabel(tableName: string): string {
     password_reset_tokens: "Token Reset",
     account_deletion_requests: "Request Hapus",
     team_profiles: "Profil Tim",
+    admin_sessions: "Sesi Admin",
   };
   return labelMap[tableName] || tableName
     .split("_")
@@ -83,6 +85,7 @@ function getTableColor(tableName: string): string {
     profiles: "text-cyan-400",
     notifications: "text-yellow-400",
     activity_logs: "text-slate-400",
+    admin_sessions: "text-red-400",
   };
   return colorMap[tableName] || "text-slate-400";
 }
@@ -91,6 +94,7 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
   const { toast } = useToast();
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [discoveredTables, setDiscoveredTables] = useState<string[]>([]);
+  const [rlsStatuses, setRlsStatuses] = useState<Record<string, boolean>>({});
   const [statsLoading, setStatsLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
   const [isLive, setIsLive] = useState(false);
@@ -115,6 +119,7 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
         setStats(result.stats);
         setTotalRecords(result.totalRecords || 0);
         setDiscoveredTables(result.discoveredTables || Object.keys(result.stats));
+        setRlsStatuses(result.rlsStatuses || {});
         setIsLive(true);
         setLastUpdate(new Date());
       } else {
@@ -133,6 +138,8 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
     if (adminPassword && !stats) fetchDetailedStats();
   }, [adminPassword, stats, fetchDetailedStats]);
 
+  const unsecuredTables = discoveredTables.filter((t) => rlsStatuses[t] === false);
+
   return (
     <div className="rounded-xl border border-border bg-card/50 overflow-hidden">
       {/* Header */}
@@ -143,7 +150,7 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-foreground">Database Overview</p>
+              <p className="text-sm font-semibold text-foreground">Database Overview & Security Monitor</p>
               {isLive && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -201,6 +208,26 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
           </div>
         ) : stats && discoveredTables.length > 0 ? (
           <>
+            {/* Security Alerts Banner */}
+            {unsecuredTables.length > 0 ? (
+              <div className="flex items-start gap-3 p-4 mb-4 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold">Celah Keamanan Terdeteksi: RLS Dinonaktifkan</p>
+                  <p className="text-xs text-red-300 mt-1 leading-relaxed">
+                    Tabel berikut tidak memiliki Row Level Security (RLS) aktif:{" "}
+                    <span className="font-semibold text-white">{unsecuredTables.join(", ")}</span>. 
+                    Hal ini dapat menyebabkan kebocoran data. Segera aktifkan RLS di SQL Editor Supabase.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 mb-4 p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 text-xs font-medium">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>Monitoring Keamanan: Semua tabel aktif memiliki proteksi Row Level Security (RLS) aktif.</span>
+              </div>
+            )}
+
             {/* Total summary */}
             <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-muted/40 border border-border">
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
@@ -220,11 +247,22 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
                   key={tableName}
                   className="group p-3.5 rounded-lg border border-border/40 bg-muted/20 hover:bg-muted/50 hover:border-border/60 transition-all duration-150"
                 >
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-base leading-none">{getTableIcon(tableName)}</span>
-                    <span className="text-[11px] font-medium text-muted-foreground/70 truncate group-hover:text-muted-foreground transition-colors">
-                      {getTableLabel(tableName)}
-                    </span>
+                  <div className="flex items-center justify-between gap-1.5 mb-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-base leading-none">{getTableIcon(tableName)}</span>
+                      <span className="text-[11px] font-medium text-muted-foreground/70 truncate group-hover:text-muted-foreground transition-colors">
+                        {getTableLabel(tableName)}
+                      </span>
+                    </div>
+                    {rlsStatuses[tableName] === false ? (
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 font-semibold uppercase flex items-center gap-0.5 shrink-0" title="RLS Dinonaktifkan!">
+                        <Lock className="w-2.5 h-2.5" /> Off
+                      </span>
+                    ) : (
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold uppercase flex items-center gap-0.5 shrink-0" title="RLS Aktif (Aman)">
+                        <ShieldCheck className="w-2.5 h-2.5" /> RLS
+                      </span>
+                    )}
                   </div>
                   <p className={`text-2xl font-bold tabular-nums leading-none ${getTableColor(tableName)}`}>
                     {(stats[tableName] || 0).toLocaleString("id-ID")}
