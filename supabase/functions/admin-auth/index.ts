@@ -5,6 +5,62 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function signToken(sessionData: Record<string, unknown>, secret: string): Promise<string> {
+  const dataStr = JSON.stringify(sessionData);
+  const encoder = new TextEncoder();
+  const dataBytes = encoder.encode(dataStr);
+  const secretBytes = encoder.encode(secret);
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    secretBytes,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signatureBytes = await crypto.subtle.sign("HMAC", key, dataBytes);
+  const signatureHex = Array.from(new Uint8Array(signatureBytes))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  return btoa(dataStr) + "." + signatureHex;
+}
+
+async function verifyToken(token: string, secret: string): Promise<boolean> {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 2) return false;
+
+    const dataStr = atob(parts[0]);
+    const signatureHex = parts[1];
+
+    const encoder = new TextEncoder();
+    const dataBytes = encoder.encode(dataStr);
+    const secretBytes = encoder.encode(secret);
+
+    const key = await crypto.subtle.importKey(
+      "raw",
+      secretBytes,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+
+    const signatureBytes = new Uint8Array(
+      signatureHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+    );
+
+    const isValid = await crypto.subtle.verify("HMAC", key, signatureBytes, dataBytes);
+    if (!isValid) return false;
+
+    const decoded = JSON.parse(dataStr);
+    return decoded.authenticated && decoded.expires > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -40,7 +96,7 @@ serve(async (req) => {
           expires: Date.now() + (24 * 60 * 60 * 1000), // 24 jam
         };
         
-        const sessionToken = btoa(JSON.stringify(sessionData));
+        const sessionToken = await signToken(sessionData, ADMIN_PASSWORD);
 
         return new Response(
           JSON.stringify({
@@ -68,37 +124,23 @@ serve(async (req) => {
 
     // === ACTION: VERIFY TOKEN ===
     if (action === "verify") {
-      try {
-        const decoded = JSON.parse(atob(token));
-        
-        if (decoded.authenticated && decoded.expires > Date.now()) {
-          return new Response(
-            JSON.stringify({
-              success: true,
-              valid: true,
-            }),
-            { 
-              headers: { ...corsHeaders, "Content-Type": "application/json" } 
-            }
-          );
-        } else {
-          return new Response(
-            JSON.stringify({
-              success: true,
-              valid: false,
-              error: "Token expired",
-            }),
-            { 
-              headers: { ...corsHeaders, "Content-Type": "application/json" } 
-            }
-          );
-        }
-      } catch (error) {
+      const isValid = await verifyToken(token, ADMIN_PASSWORD);
+      if (isValid) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            valid: true,
+          }),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      } else {
         return new Response(
           JSON.stringify({
             success: true,
             valid: false,
-            error: "Invalid token format",
+            error: "Token expired or signature invalid",
           }),
           { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 

@@ -101,11 +101,9 @@ const App = () => {
                     <Route path="/share" element={<GuestAccess />} />
                     <Route path="/guest/grades" element={<Grades mode="guest" />} />
                     <Route path="/admin" element={
-                      <ProtectedRoute>
-                        <AdminRouteGuard>
-                          <Admin />
-                        </AdminRouteGuard>
-                      </ProtectedRoute>
+                      <AdminRouteGuard>
+                        <Admin />
+                      </AdminRouteGuard>
                     } />
                     <Route path="/changelog" element={<Changelog />} />
                     <Route path="/portal/:code" element={<PortalView />} />
