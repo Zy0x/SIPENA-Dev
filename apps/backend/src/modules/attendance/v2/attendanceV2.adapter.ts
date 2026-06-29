@@ -53,26 +53,27 @@ export class AttendanceV2Adapter {
       const yearStart = format(startOfYear(parsedMonth), "yyyy-MM-dd");
       const yearEnd = format(endOfYear(parsedMonth), "yyyy-MM-dd");
 
-      // Jalankan query paralel ke Supabase (menggunakan V1 tables)
+      // Jalankan query paralel ke Supabase (menggunakan V2 tables)
       const [studentsRes, recordsRes, holidaysRes, dayEventsRes, locksRes] = await Promise.all([
         client
           .from("students")
           .select("id, name, nisn")
           .eq("class_id", classId),
         client
-          .from("attendance_records")
+          .from("attendance_v2_records")
           .select("id, student_id, class_id, date, status, note, created_at, updated_at")
           .eq("class_id", classId)
+          .eq("user_id", userId)
           .gte("date", yearStart)
           .lte("date", yearEnd),
         client
-          .from("attendance_holidays")
+          .from("attendance_v2_holidays")
           .select("id, date, description, is_national")
           .eq("user_id", userId)
           .gte("date", yearStart)
           .lte("date", yearEnd),
         client
-          .from("attendance_day_events")
+          .from("attendance_v2_day_events")
           .select("id, date, label, description, color")
           .eq("user_id", userId)
           .gte("date", yearStart)
@@ -82,7 +83,7 @@ export class AttendanceV2Adapter {
             () => ({ data: [] })
           ), // Graceful recovery jika table/kolom error
         client
-          .from("attendance_locks")
+          .from("attendance_v2_locks")
           .select("class_id, month, is_locked, locked_at, locked_by")
           .eq("class_id", classId)
           .eq("month", month)
@@ -173,23 +174,26 @@ export class AttendanceV2Adapter {
     }
   }
 
-  // Mutasi tulis V2 replika V1 (menulis ke tabel V1 langsung)
+  // Mutasi tulis V2 replika V1 (menulis ke tabel V2 secara terisolasi)
   async applyPatch(patch: AttendanceRecordPatch, runtime: AttendanceRuntimeContext) {
     const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
     const userId = runtime.user?.id;
 
+    if (!userId) throw new Error("User ID is required for V2 writes");
+
     const { data: existing } = await client
-      .from("attendance_records")
+      .from("attendance_v2_records")
       .select("id")
       .eq("class_id", patch.classId)
       .eq("student_id", patch.studentId)
       .eq("date", patch.date)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (patch.status === null) {
       if (existing) {
         const { error } = await client
-          .from("attendance_records")
+          .from("attendance_v2_records")
           .delete()
           .eq("id", existing.id);
         if (error) throw error;
@@ -207,7 +211,7 @@ export class AttendanceV2Adapter {
 
       if (existing) {
         const { data, error } = await client
-          .from("attendance_records")
+          .from("attendance_v2_records")
           .update(payload)
           .eq("id", existing.id)
           .select()
@@ -216,8 +220,9 @@ export class AttendanceV2Adapter {
         return data;
       } else {
         const { data, error } = await client
-          .from("attendance_records")
+          .from("attendance_v2_records")
           .insert({
+            user_id: userId,
             class_id: patch.classId,
             student_id: patch.studentId,
             date: patch.date,
@@ -240,8 +245,10 @@ export class AttendanceV2Adapter {
     const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
     const userId = runtime.user?.id;
 
+    if (!userId) throw new Error("User ID is required for V2 lock");
+
     const { data: existing } = await client
-      .from("attendance_locks")
+      .from("attendance_v2_locks")
       .select("id")
       .eq("class_id", patch.classId)
       .eq("month", patch.month)
@@ -249,7 +256,7 @@ export class AttendanceV2Adapter {
 
     if (existing) {
       const { data, error } = await client
-        .from("attendance_locks")
+        .from("attendance_v2_locks")
         .update({
           is_locked: patch.isLocked,
           locked_at: patch.isLocked ? new Date().toISOString() : null,
@@ -262,7 +269,7 @@ export class AttendanceV2Adapter {
       return data;
     } else {
       const { data, error } = await client
-        .from("attendance_locks")
+        .from("attendance_v2_locks")
         .insert({
           user_id: userId,
           class_id: patch.classId,
@@ -282,8 +289,10 @@ export class AttendanceV2Adapter {
     const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
     const userId = runtime.user?.id;
 
+    if (!userId) throw new Error("User ID is required for V2 holiday");
+
     const { data: existing } = await client
-      .from("attendance_holidays")
+      .from("attendance_v2_holidays")
       .select("id")
       .eq("date", patch.date)
       .eq("user_id", userId)
@@ -291,14 +300,14 @@ export class AttendanceV2Adapter {
 
     if (existing) {
       const { error } = await client
-        .from("attendance_holidays")
+        .from("attendance_v2_holidays")
         .delete()
         .eq("id", existing.id);
       if (error) throw error;
       return { success: true, action: "deleted" };
     } else {
       const { data, error } = await client
-        .from("attendance_holidays")
+        .from("attendance_v2_holidays")
         .insert({
           user_id: userId,
           date: patch.date,
@@ -316,9 +325,11 @@ export class AttendanceV2Adapter {
     const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
     const userId = runtime.user?.id;
 
+    if (!userId) throw new Error("User ID is required for V2 day event");
+
     if (patch.action === "delete") {
       const { error } = await client
-        .from("attendance_day_events")
+        .from("attendance_v2_day_events")
         .delete()
         .eq("date", patch.date)
         .eq("user_id", userId);
@@ -326,7 +337,7 @@ export class AttendanceV2Adapter {
       return { success: true };
     } else {
       const { data: existing } = await client
-        .from("attendance_day_events")
+        .from("attendance_v2_day_events")
         .select("id")
         .eq("date", patch.date)
         .eq("user_id", userId)
@@ -334,7 +345,7 @@ export class AttendanceV2Adapter {
 
       if (existing) {
         const { data, error } = await client
-          .from("attendance_day_events")
+          .from("attendance_v2_day_events")
           .update({
             label: patch.label,
             description: patch.description,
@@ -347,7 +358,7 @@ export class AttendanceV2Adapter {
         return data;
       } else {
         const { data, error } = await client
-          .from("attendance_day_events")
+          .from("attendance_v2_day_events")
           .insert({
             user_id: userId,
             date: patch.date,
@@ -364,7 +375,6 @@ export class AttendanceV2Adapter {
   }
 
   async getAuditLogs(classId: string, runtime: AttendanceRuntimeContext) {
-    // V2 replika V1 tidak memiliki audit log khusus terpisah dari audit log bawaan V1
     return [];
   }
 }

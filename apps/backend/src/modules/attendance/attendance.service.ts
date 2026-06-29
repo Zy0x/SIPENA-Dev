@@ -196,8 +196,10 @@ export class AttendanceService {
       // V2 Shadow Comparison in background
       if (runtime.mode === "shadow") {
         const monthStr = patch.date.substring(0, 7);
-        this.v2.getDataset({ classId: patch.classId, month: monthStr }, runtime).then(() => {
-          this.shadow.compareAndLog(patch, patch.status, patch.status, userId);
+        this.v2.getDataset({ classId: patch.classId, month: monthStr }, runtime).then(({ dataset }) => {
+          const v2Rec = dataset.records.find((r) => r.studentId === patch.studentId && r.date === patch.date);
+          const v2Status = v2Rec?.status || null;
+          this.shadow.compareAndLog(patch, patch.status, v2Status, userId);
         }).catch(err => console.error("Error during shadow mode comparison:", err));
       }
 
@@ -237,11 +239,12 @@ export class AttendanceService {
       try {
         const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
         const { data, error } = await client
-          .from("attendance_records")
+          .from("attendance_v2_records")
           .update({ note: body.note, updated_at: new Date().toISOString(), updated_by: runtime.user?.id })
           .eq("class_id", body.classId)
           .eq("student_id", body.studentId)
           .eq("date", body.date)
+          .eq("user_id", runtime.user?.id)
           .select()
           .maybeSingle();
 
