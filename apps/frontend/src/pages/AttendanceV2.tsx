@@ -369,6 +369,7 @@ export default function AttendanceV2Page() {
   const [selectedAttendanceColumnKeys, setSelectedAttendanceColumnKeys] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<AttendanceStatus>("H");
   const [holidayDescription, setHolidayDescription] = useState("");
+  const [isHolidayGlobal, setIsHolidayGlobal] = useState(false);
   const [selectedHolidayDates, setSelectedHolidayDates] = useState<Date[]>([]);
   const [activeView, setActiveView] = useState<"daily" | "monthly">("daily");
   const [showNoteDialog, setShowNoteDialog] = useState(false);
@@ -1337,13 +1338,18 @@ export default function AttendanceV2Page() {
     const desc = holidayDescription || "Hari Libur";
     for (const date of selectedHolidayDates) {
       const dateStr = format(date, "yyyy-MM-dd");
-      await toggleHoliday({ date: dateStr, description: desc });
+      await toggleHoliday({ 
+        date: dateStr, 
+        description: desc, 
+        classId: isHolidayGlobal ? null : selectedClassId 
+      });
     }
     setShowHolidayDialog(false);
     setHolidayDescription("");
     setSelectedHolidayDates([]);
+    setIsHolidayGlobal(false);
     showSuccess("Berhasil", `${selectedHolidayDates.length} hari libur berhasil ditambahkan`);
-  }, [selectedHolidayDates, holidayDescription, toggleHoliday, showSuccess]);
+  }, [selectedHolidayDates, holidayDescription, isHolidayGlobal, selectedClassId, toggleHoliday, showSuccess]);
 
   const handleToggleHolidayDate = useCallback((date: Date) => {
     setSelectedHolidayDates(prev => {
@@ -1353,10 +1359,10 @@ export default function AttendanceV2Page() {
     });
   }, []);
 
-  const handleRemoveHoliday = useCallback(async (dateStr: string) => {
-    await toggleHoliday({ date: dateStr });
+  const handleRemoveHoliday = useCallback(async (dateStr: string, classIdParam?: string | null) => {
+    await toggleHoliday({ date: dateStr, classId: classIdParam !== undefined ? classIdParam : selectedClassId });
     showSuccess("Berhasil", "Hari libur berhasil dihapus");
-  }, [toggleHoliday, showSuccess]);
+  }, [toggleHoliday, selectedClassId, showSuccess]);
 
   const handleSaveDayEvent = useCallback(async () => {
     if (selectedDayEventDates.length === 0 || !dayEventLabel.trim()) return;
@@ -4344,16 +4350,29 @@ export default function AttendanceV2Page() {
                             className="flex items-center justify-between px-3 py-2.5 border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors"
                           >
                             <div className="min-w-0 flex-1 pr-2">
-                              <p className="text-xs font-medium text-foreground">
-                                {dayName}, {format(hDate, "d MMM yyyy", { locale: idLocale })}
-                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-medium text-foreground">
+                                  {dayName}, {format(hDate, "d MMM yyyy", { locale: idLocale })}
+                                </span>
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "text-[9px] px-1 py-0 h-4",
+                                    h.class_id 
+                                      ? "border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
+                                      : "border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300"
+                                  )}
+                                >
+                                  {h.class_id ? "Kelas Ini" : "Semua Kelas"}
+                                </Badge>
+                              </div>
                               <p className="text-[10px] text-muted-foreground truncate">{h.description}</p>
                             </div>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 text-destructive hover:bg-destructive/10 flex-shrink-0"
-                              onClick={() => handleRemoveHoliday(h.date)}
+                              onClick={() => handleRemoveHoliday(h.date, h.class_id)}
                             >
                               <X className="w-3 h-3" />
                             </Button>
@@ -4739,6 +4758,21 @@ export default function AttendanceV2Page() {
                   value={holidayDescription}
                   onChange={(e) => setHolidayDescription(e.target.value)}
                   className="h-9 text-sm rounded-xl"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-medium text-foreground">
+                    Terapkan untuk Semua Kelas
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Jika aktif, hari libur ini berlaku untuk seluruh kelas yang Anda kelola.
+                  </p>
+                </div>
+                <Switch
+                  checked={isHolidayGlobal}
+                  onCheckedChange={setIsHolidayGlobal}
                 />
               </div>
 

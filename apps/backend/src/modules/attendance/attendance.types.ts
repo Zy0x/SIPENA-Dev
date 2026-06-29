@@ -188,6 +188,7 @@ export interface AttendanceLockPatch {
 export interface AttendanceHolidayPatch {
   date: string; // YYYY-MM-DD
   description?: string;
+  classId?: string | null;
 }
 
 export interface AttendanceDayEventPatch {

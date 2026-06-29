@@ -181,7 +181,8 @@ export function validateHolidayPatchBody(body: unknown): {
     valid: issues.length === 0,
     holidayPatch: issues.length === 0 ? {
       date: String(value.date),
-      description: value.description ? String(value.description) : undefined
+      description: value.description ? String(value.description) : undefined,
+      classId: value.classId ? String(value.classId) : null
     } : null,
     issues
   };

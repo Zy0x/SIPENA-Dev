@@ -68,8 +68,9 @@ export class AttendanceV2Adapter {
           .lte("date", yearEnd),
         client
           .from("attendance_v2_holidays")
-          .select("id, date, description, is_national")
+          .select("id, date, description, is_national, class_id")
           .eq("user_id", userId)
+          .or(`class_id.eq.${classId},class_id.is.null`)
           .gte("date", yearStart)
           .lte("date", yearEnd),
         client
@@ -253,12 +254,19 @@ export class AttendanceV2Adapter {
 
     if (!userId) throw new Error("User ID is required for V2 holiday");
 
-    const { data: existing } = await client
+    const query = client
       .from("attendance_v2_holidays")
       .select("id")
       .eq("date", patch.date)
-      .eq("user_id", userId)
-      .maybeSingle();
+      .eq("user_id", userId);
+
+    if (patch.classId) {
+      query.eq("class_id", patch.classId);
+    } else {
+      query.is("class_id", null);
+    }
+
+    const { data: existing } = await query.maybeSingle();
 
     if (existing) {
       const { error } = await client
@@ -268,6 +276,21 @@ export class AttendanceV2Adapter {
       if (error) throw error;
       return { success: true, action: "deleted" };
     } else {
+      // Validasi: Batas maksimum 30 hari libur kustom per tahun ajaran
+      const yearStart = `${new Date(patch.date).getFullYear()}-01-01`;
+      const yearEnd = `${new Date(patch.date).getFullYear()}-12-31`;
+
+      const { count } = await client
+        .from("attendance_v2_holidays")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("date", yearStart)
+        .lte("date", yearEnd);
+
+      if (count && count >= 30) {
+        throw new Error("Batas maksimum 30 hari libur custom per tahun ajaran tercapai.");
+      }
+
       const { data, error } = await client
         .from("attendance_v2_holidays")
         .insert({
@@ -275,6 +298,7 @@ export class AttendanceV2Adapter {
           date: patch.date,
           description: patch.description || "Hari Libur",
           is_national: false,
+          class_id: patch.classId || null,
         })
         .select()
         .single();

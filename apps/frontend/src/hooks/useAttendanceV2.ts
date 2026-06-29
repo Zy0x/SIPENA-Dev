@@ -22,6 +22,8 @@ export interface HolidayRecord {
   user_id?: string;
   date: string;
   description: string;
+  is_national?: boolean;
+  class_id?: string | null;
 }
 
 export interface DayEvent {
@@ -449,13 +451,18 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
 
   // Toggle holiday
   const toggleHolidayMutation = useMutation({
-    mutationFn: async ({ date, description }: { date: string; description?: string }) => {
+    mutationFn: async ({ date, description, classId: targetClassId }: { date: string; description?: string; classId?: string | null }) => {
       if (!user) throw new Error("User not authenticated");
 
+      const resolvedClassId = targetClassId !== undefined ? targetClassId : classId;
+
       if (!dbAvailable) {
-        addOfflineMutation("toggleHoliday", { date, description });
-        const exists = localHolidays.some((h) => h.date === date);
-        setLocalHolidays((prev) => exists ? prev.filter((h) => h.date !== date) : [...prev, { date, description: description || "Hari Libur" }]);
+        addOfflineMutation("toggleHoliday", { date, description, classId: resolvedClassId });
+        const exists = localHolidays.some((h) => h.date === date && (resolvedClassId ? h.class_id === resolvedClassId : !h.class_id));
+        setLocalHolidays((prev) => exists 
+          ? prev.filter((h) => !(h.date === date && (resolvedClassId ? h.class_id === resolvedClassId : !h.class_id))) 
+          : [...prev, { date, description: description || "Hari Libur", class_id: resolvedClassId || null } as any]
+        );
         return { action: exists ? "deleted" : "added" };
       }
 
@@ -471,6 +478,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         body: JSON.stringify({
           date,
           description: description || "Hari Libur",
+          classId: resolvedClassId,
         }),
       });
 
@@ -721,10 +729,10 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       };
     }
 
-    const [attendanceResult, holidaysResult, dayEventsResult] = await Promise.all([
-      (supabase as any).from("attendance_records").select("*").eq("class_id", classId).gte("date", yearStart).lte("date", yearEnd),
-      (supabase as any).from("attendance_holidays").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd),
-      (supabase as any).from("attendance_day_events").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd).then((r: any) => r).catch(() => ({ data: [] })),
+     const [attendanceResult, holidaysResult, dayEventsResult] = await Promise.all([
+      (supabase as any).from("attendance_v2_records").select("*").eq("class_id", classId).gte("date", yearStart).lte("date", yearEnd),
+      (supabase as any).from("attendance_v2_holidays").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd),
+      (supabase as any).from("attendance_v2_day_events").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd).then((r: any) => r).catch(() => ({ data: [] })),
     ]);
 
     return {
@@ -755,7 +763,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     bulkSetAttendance: async (params: { studentIds: string[]; date: string; status: AttendanceStatusValue }) => {
       await bulkSetAttendanceMutation.mutateAsync(params);
     },
-    toggleHoliday: async (params: { date: string; description?: string }) => {
+    toggleHoliday: async (params: { date: string; description?: string; classId?: string | null }) => {
       return await toggleHolidayMutation.mutateAsync(params);
     },
     upsertDayEvent: async (params: { date: string; label: string; description?: string; color?: string }) => {
