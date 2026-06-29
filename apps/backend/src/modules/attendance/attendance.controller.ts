@@ -51,6 +51,14 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
   const method = req.method ?? "GET";
   const runtime = resolveAttendanceRuntime(req);
 
+  // Garansi pemisahan total V2 dari V1:
+  // Jika path dimulai dengan /attendance/v2, paksa runtime menggunakan engine v2 secara terisolasi.
+  if (pathname.startsWith("/attendance/v2")) {
+    runtime.engine = "v2";
+    runtime.mode = "active";
+    runtime.writesEnabled = true;
+  }
+
   const authHeader = req.headers["authorization"] || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : "";
 
