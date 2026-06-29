@@ -237,7 +237,7 @@ export class AttendanceService {
       try {
         const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
         const { data, error } = await client
-          .from("attendance_v2_records")
+          .from("attendance_records")
           .update({ note: body.note, updated_at: new Date().toISOString(), updated_by: runtime.user?.id })
           .eq("class_id", body.classId)
           .eq("student_id", body.studentId)

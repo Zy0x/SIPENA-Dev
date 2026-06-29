@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, startOfMonth, endOfMonth, getDay } from "date-fns";
 import { useMemo } from "react";
 import { useAttendanceRuntime } from "@/features/attendance/runtime/useAttendanceRuntime";
+import { providerConfig } from "@/config/provider.config";
+import type { AttendanceDatasetCanonical } from "@/features/attendance/canonical/canonical.types";
 
 export interface AttendanceRecord {
   id?: string;
@@ -72,77 +74,76 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     checkDbTables();
   }, [user]);
 
-  // Fetch attendance records
-  const attendanceQuery = useQuery({
-    queryKey: ["attendance_v2", classId, monthStart, dbAvailable],
+  // Fetch unified V2 dataset from REST API
+  const datasetQuery = useQuery({
+    queryKey: ["attendance_v2_dataset", classId, monthStart, dbAvailable],
     queryFn: async () => {
-      if (!classId || !user || !dbAvailable) return [];
-      const { data, error } = await (supabase as any)
-        .from("attendance_records")
-        .select("*")
-        .eq("class_id", classId)
-        .gte("date", monthStart)
-        .lte("date", monthEnd);
-      if (error) { console.error("Error fetching attendance:", error); return []; }
-      return (data || []) as AttendanceRecord[];
+      if (!classId || !user || !dbAvailable) return null;
+
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
+
+      // Ambil format YYYY-MM untuk query parameter month
+      const monthStr = monthStart.substring(0, 7);
+      const url = `${providerConfig.apiBaseUrl}/attendance/v2?classId=${classId}&month=${monthStr}`;
+
+      const res = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      }
+
+      const json = await res.json();
+      return json.data as AttendanceDatasetCanonical;
     },
     enabled: !!classId && !!user && dbAvailable,
   });
 
-  // Fetch holidays
-  const holidaysQuery = useQuery({
-    queryKey: ["attendance_v2_holidays", user?.id, dbAvailable],
-    queryFn: async () => {
-      if (!user || !dbAvailable) return [];
-      const { data, error } = await (supabase as any)
-        .from("attendance_holidays")
-        .select("*")
-        .eq("user_id", user.id);
-      if (error) { console.error("Error fetching holidays:", error); return []; }
-      return (data || []) as HolidayRecord[];
-    },
-    enabled: !!user && dbAvailable,
-  });
+  const attendanceRecords = useMemo(() => {
+    if (!dbAvailable) return localAttendance;
+    const records = datasetQuery.data?.records || [];
+    return records.map((r) => ({
+      id: r.id,
+      class_id: r.classId,
+      student_id: r.studentId,
+      date: r.date,
+      status: r.status as AttendanceStatusValue,
+      note: r.note,
+    }));
+  }, [dbAvailable, datasetQuery.data?.records, localAttendance]);
 
-  // Fetch day events
-  const dayEventsQuery = useQuery({
-    queryKey: ["attendance_v2_day_events", user?.id, dbAvailable],
-    queryFn: async () => {
-      if (!user || !dbAvailable) return [];
-      try {
-        const { data, error } = await (supabase as any)
-          .from("attendance_day_events")
-          .select("*")
-          .eq("user_id", user.id);
-        if (error) { return []; }
-        return (data || []) as DayEvent[];
-      } catch { return []; }
-    },
-    enabled: !!user && dbAvailable,
-  });
+  const holidays = useMemo(() => {
+    if (!dbAvailable) return localHolidays;
+    const records = datasetQuery.data?.holidays || [];
+    return records.map((h) => ({
+      id: h.id,
+      date: h.date,
+      description: h.description,
+    }));
+  }, [dbAvailable, datasetQuery.data?.holidays, localHolidays]);
 
-  // Fetch lock status
-  const lockQuery = useQuery({
-    queryKey: ["attendance_v2_lock", classId, monthStart, dbAvailable],
-    queryFn: async () => {
-      if (!classId || !user || !dbAvailable) return { is_locked: true };
-      const { data, error } = await (supabase as any)
-        .from("attendance_locks")
-        .select("*")
-        .eq("class_id", classId)
-        .eq("user_id", user.id)
-        .eq("month", monthStart)
-        .maybeSingle();
-      if (error) { console.error("Error fetching lock:", error); return { is_locked: true }; }
-      return data || { is_locked: true };
-    },
-    enabled: !!classId && !!user && dbAvailable,
-  });
+  const dayEvents = useMemo(() => {
+    if (!dbAvailable) return localDayEvents;
+    const records = datasetQuery.data?.dayEvents || [];
+    return records.map((e) => ({
+      id: e.id,
+      date: e.date,
+      label: e.label,
+      description: e.description ?? undefined,
+      color: e.color ?? undefined,
+    }));
+  }, [dbAvailable, datasetQuery.data?.dayEvents, localDayEvents]);
 
-  const attendanceRecords = dbAvailable ? (attendanceQuery.data || []) : localAttendance;
-  const holidays = dbAvailable ? (holidaysQuery.data || []) : localHolidays;
-  const dayEvents = dbAvailable ? (dayEventsQuery.data || []) : localDayEvents;
-  const isLocked = dbAvailable ? (lockQuery.data?.is_locked ?? true) : localLocked;
+  const isLocked = useMemo(() => {
+    if (!dbAvailable) return localLocked;
+    const locks = datasetQuery.data?.locks || [];
+    return locks.some((l) => l.isLocked);
+  }, [dbAvailable, datasetQuery.data?.locks, localLocked]);
 
   const runtime = useAttendanceRuntime();
 
@@ -211,8 +212,6 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     }) => {
       if (!user || !classId) throw new Error("User or class not set");
 
-
-
       if (!dbAvailable) {
         setLocalAttendance((prev) => {
           const existing = prev.findIndex(
@@ -231,51 +230,34 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         return null;
       }
 
-      const { data: existingData } = await (supabase as any)
-        .from("attendance_records")
-        .select("id")
-        .eq("class_id", classId)
-        .eq("student_id", studentId)
-        .eq("date", date)
-        .maybeSingle();
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
 
-      const existing = existingData as { id: string } | null;
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/record`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          classId,
+          studentId,
+          date,
+          status,
+          note: note !== undefined ? note : null,
+        }),
+      });
 
-      if (status === null) {
-        if (existing) {
-          await (supabase as any).from("attendance_records").delete().eq("id", existing.id);
-        }
-        return null;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
 
-      const updatePayload: Record<string, unknown> = { status };
-      if (note !== undefined) updatePayload.note = note;
-
-      if (existing) {
-        const { data, error } = await (supabase as any)
-          .from("attendance_records")
-          .update(updatePayload)
-          .eq("id", existing.id)
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
-      } else {
-        const { data, error } = await (supabase as any)
-          .from("attendance_records")
-          .insert({
-            class_id: classId, student_id: studentId, date, status,
-            note: note || null, created_by: user.id,
-          })
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
-      }
+      const json = await response.json();
+      return json.data;
     },
     onSuccess: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
       }
     },
   });
@@ -284,8 +266,6 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const updateNoteMutation = useMutation({
     mutationFn: async ({ studentId, date, note }: { studentId: string; date: string; note: string | null }) => {
       if (!user || !classId) throw new Error("User or class not set");
-
-
 
       if (!dbAvailable) {
         setLocalAttendance((prev) => {
@@ -300,25 +280,30 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         return null;
       }
 
-      const { data: existingData } = await (supabase as any)
-        .from("attendance_records")
-        .select("id")
-        .eq("class_id", classId)
-        .eq("student_id", studentId)
-        .eq("date", date)
-        .maybeSingle();
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
 
-      if (existingData) {
-        const { error } = await (supabase as any)
-          .from("attendance_records")
-          .update({ note })
-          .eq("id", existingData.id);
-        if (error) throw error;
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/note`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          classId,
+          studentId,
+          date,
+          note,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
     },
     onSuccess: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
       }
     },
   });
@@ -334,8 +319,6 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     }) => {
       if (!user || !classId) throw new Error("User or class not set");
 
-
-
       if (!dbAvailable) {
         setLocalAttendance((prev) => {
           const filtered = prev.filter((r) => r.date !== date);
@@ -347,19 +330,35 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         return null;
       }
 
-      await (supabase as any).from("attendance_records").delete().eq("class_id", classId).eq("date", date);
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
 
-      const records = studentIds.map((studentId) => ({
-        class_id: classId, student_id: studentId, date, status, created_by: user.id,
-      }));
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/bulk`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          patches: studentIds.map(studentId => ({
+            classId,
+            studentId,
+            date,
+            status,
+          })),
+        }),
+      });
 
-      const { data, error } = await (supabase as any).from("attendance_records").insert(records).select();
-      if (error) throw error;
-      return data;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+
+      const json = await response.json();
+      return json.data;
     },
     onSuccess: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
       }
     },
   });
@@ -375,20 +374,32 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         return { action: exists ? "deleted" : "added" };
       }
 
-      const { data: existingData } = await (supabase as any)
-        .from("attendance_holidays").select("id").eq("user_id", user.id).eq("date", date).maybeSingle();
-      const existing = existingData as { id: string } | null;
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
 
-      if (existing) {
-        await (supabase as any).from("attendance_holidays").delete().eq("id", existing.id);
-        return { action: "deleted" };
-      } else {
-        await (supabase as any).from("attendance_holidays").insert({ user_id: user.id, date, description: description || "Hari Libur" });
-        return { action: "added" };
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/holiday`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          date,
+          description: description || "Hari Libur",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
+
+      const json = await response.json();
+      return json.data;
     },
     onSuccess: () => {
-      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_v2_holidays"] });
+      if (dbAvailable) {
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      }
     },
   });
 
@@ -410,20 +421,32 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         return;
       }
 
-      const { data: existingData } = await (supabase as any)
-        .from("attendance_day_events").select("id").eq("user_id", user.id).eq("date", event.date).maybeSingle();
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
 
-      if (existingData) {
-        await (supabase as any).from("attendance_day_events")
-          .update({ label: event.label, description: event.description, color: event.color, updated_at: new Date().toISOString() })
-          .eq("id", existingData.id);
-      } else {
-        await (supabase as any).from("attendance_day_events")
-          .insert({ user_id: user.id, date: event.date, label: event.label, description: event.description, color: event.color || "blue" });
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/day-event`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          date: event.date,
+          label: event.label,
+          description: event.description || null,
+          color: event.color || "blue",
+          action: "upsert",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
     },
     onSuccess: () => {
-      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_v2_day_events"] });
+      if (dbAvailable) {
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      }
     },
   });
 
@@ -436,10 +459,28 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         return;
       }
 
-      await (supabase as any).from("attendance_day_events").delete().eq("user_id", user.id).eq("date", date);
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/day-event`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          date,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
     },
     onSuccess: () => {
-      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_v2_day_events"] });
+      if (dbAvailable) {
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      }
     },
   });
 
@@ -449,19 +490,32 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (!user || !classId) throw new Error("User or class not set");
       if (!dbAvailable) { setLocalLocked(locked); return locked; }
 
-      const { data: existingData } = await (supabase as any)
-        .from("attendance_locks").select("id").eq("class_id", classId).eq("user_id", user.id).eq("month", monthStart).maybeSingle();
-      const existing = existingData as { id: string } | null;
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
 
-      if (existing) {
-        await (supabase as any).from("attendance_locks").update({ is_locked: locked, locked_at: new Date().toISOString() }).eq("id", existing.id);
-      } else {
-        await (supabase as any).from("attendance_locks").insert({ class_id: classId, user_id: user.id, month: monthStart, is_locked: locked, locked_by: user.id });
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/lock`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          classId,
+          month: monthStart.substring(0, 7),
+          isLocked: locked,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
+
       return locked;
     },
     onSuccess: () => {
-      if (dbAvailable) queryClient.invalidateQueries({ queryKey: ["attendance_v2_lock", classId, monthStart] });
+      if (dbAvailable) {
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      }
     },
   });
 
@@ -563,8 +617,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     getMonthStats,
     getDayStats,
     getYearlyData,
-    isLoading: attendanceQuery.isLoading || holidaysQuery.isLoading,
-    isLoadingLock: lockQuery.isLoading,
+    isLoading: datasetQuery.isLoading,
+    isLoadingLock: datasetQuery.isLoading,
     setAttendance: async (params: { studentId: string; date: string; status: AttendanceStatusValue | null; note?: string | null }) => {
       await setAttendanceMutation.mutateAsync(params);
     },
@@ -590,10 +644,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     isTogglingHoliday: toggleHolidayMutation.isPending,
     isTogglingLock: toggleLockMutation.isPending,
     refetch: () => {
-      attendanceQuery.refetch();
-      holidaysQuery.refetch();
-      lockQuery.refetch();
-      dayEventsQuery.refetch();
+      datasetQuery.refetch();
     },
   };
 }
