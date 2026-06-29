@@ -67,21 +67,6 @@ const NAV_ITEMS: NavItem[] = [
 
 const NAV_GROUPS = ["Dashboard", "Komunikasi", "Data", "Pengguna", "Permintaan", "Sistem"];
 
-// ─── Session Timer Hook ───────────────────────────────────────────────────────
-function useSessionClock(isAuthenticated: boolean) {
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const id = setInterval(() => setElapsed(e => e + 1), 1000);
-    return () => clearInterval(id);
-  }, [isAuthenticated]);
-
-  const h = Math.floor(elapsed / 3600);
-  const m = Math.floor((elapsed % 3600) / 60);
-  const s = elapsed % 60;
-  return `${h > 0 ? `${h}j ` : ""}${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}d`;
-}
-
 // ─── Main Component ──────────────────────────────────────────────────────────
 const Admin = () => {
   const navigate = useNavigate();
@@ -89,7 +74,7 @@ const Admin = () => {
   const { currentTheme, isDark, selectTheme, toggleDarkMode: toggleThemeDarkMode, resetToDefault } = useThemes();
 
   // Auth states
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [password, setPassword] = useState("");
@@ -103,8 +88,6 @@ const Admin = () => {
   const [activeSection, setActiveSection] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  const sessionClock = useSessionClock(isAuthenticated);
 
   // Logout handler (moved up for session timeout)
   const handleLogout = useCallback(() => {
@@ -120,7 +103,7 @@ const Admin = () => {
   }, [navigate, toast]);
 
   // Session timeout hook
-  useAdminSessionTimeout({
+  const { formattedTimeRemaining } = useAdminSessionTimeout({
     onTimeout: () => {
       setShowTimeoutWarning(false);
       handleLogout();
@@ -137,7 +120,7 @@ const Admin = () => {
         description: "Sesi akan berakhir dalam 2 menit karena tidak aktif",
       });
     },
-    enabled: isAuthenticated,
+    enabled: !!isAuthenticated,
   });
 
   // Decode password from storage
@@ -517,7 +500,7 @@ const Admin = () => {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-foreground">SIPENA Admin</p>
-                    <p className="text-[10px] text-muted-foreground">{sessionClock} aktif</p>
+                    <p className="text-[10px] text-muted-foreground">Sisa Sesi: {formattedTimeRemaining}</p>
                   </div>
                 </div>
                 <button
@@ -617,10 +600,12 @@ const Admin = () => {
               </motion.div>
             )}
 
-            {/* Session clock */}
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-muted-foreground text-xs font-mono">
-              <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{sessionClock}</span>
+            {/* Session timeout countdown */}
+            <div className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-xs font-mono transition-colors duration-300 ${
+              showTimeoutWarning ? "text-amber-500 border-amber-500/20 animate-pulse" : "text-muted-foreground"
+            }`}>
+              <Clock className={`w-3.5 h-3.5 ${showTimeoutWarning ? "text-amber-500" : "text-emerald-400"}`} />
+              <span>{formattedTimeRemaining}</span>
             </div>
 
             {/* Backend password status */}
@@ -733,8 +718,8 @@ const Admin = () => {
                         status={backendPassword ? "ok" : "warn"}
                       />
                       <MetricCard
-                        label="Sesi Aktif"
-                        value={sessionClock}
+                        label="Sisa Sesi"
+                        value={formattedTimeRemaining}
                         icon={Clock}
                         status="neutral"
                       />

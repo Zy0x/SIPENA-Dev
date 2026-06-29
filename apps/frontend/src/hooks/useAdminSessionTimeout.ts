@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
 const WARNING_BEFORE = 2 * 60 * 1000; // 2 minutes before timeout
@@ -17,6 +17,7 @@ export function useAdminSessionTimeout({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const [timeRemaining, setTimeRemaining] = useState<number>(INACTIVITY_TIMEOUT);
 
   const clearTimers = useCallback(() => {
     if (timeoutRef.current) {
@@ -34,6 +35,7 @@ export function useAdminSessionTimeout({
 
     clearTimers();
     lastActivityRef.current = Date.now();
+    setTimeRemaining(INACTIVITY_TIMEOUT);
 
     // Set warning timer
     if (onWarning) {
@@ -84,11 +86,25 @@ export function useAdminSessionTimeout({
     };
   }, [enabled, resetTimer, clearTimers]);
 
+  // Reactive countdown interval
+  useEffect(() => {
+    if (!enabled) return;
+
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, INACTIVITY_TIMEOUT - (Date.now() - lastActivityRef.current));
+      setTimeRemaining(remaining);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [enabled]);
+
+  const m = Math.floor(timeRemaining / 60000);
+  const s = Math.floor((timeRemaining % 60000) / 1000);
+  const formattedTimeRemaining = `${m}m ${String(s).padStart(2, "0")}d`;
+
   return {
     resetTimer,
-    getTimeRemaining: () => {
-      const elapsed = Date.now() - lastActivityRef.current;
-      return Math.max(0, INACTIVITY_TIMEOUT - elapsed);
-    },
+    timeRemaining,
+    formattedTimeRemaining,
   };
 }
