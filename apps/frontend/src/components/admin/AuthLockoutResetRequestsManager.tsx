@@ -168,29 +168,45 @@ export function AuthLockoutResetRequestsManager({ adminPassword }: AuthLockoutRe
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-slate-800/70 bg-slate-900/50">
+      <CardHeader className="border-b border-slate-800/70 bg-slate-900/80">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TimerReset className="w-5 h-5 text-amber-600" />
-              Request Reset Waiting Time Login
-            </CardTitle>
-            <CardDescription className="mt-1">
-              Review request pengguna yang terkunci pada level 6 jam atau lebih.
-            </CardDescription>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <TimerReset className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-semibold text-slate-100">
+                Request Reset Waiting Time Login
+              </CardTitle>
+              <CardDescription className="mt-0.5 text-xs">
+                Review request pengguna yang terkunci pada level 6 jam atau lebih.
+              </CardDescription>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={processExpired} disabled={isProcessing || !adminPassword}>
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Proses auto approve"}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={processExpired}
+              disabled={isProcessing || !adminPassword}
+              className="h-8 gap-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+            >
+              {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Proses auto approve"}
             </Button>
-            <Button variant="ghost" size="sm" onClick={fetchRequests} disabled={isLoading || !adminPassword}>
-              <RefreshCcw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchRequests}
+              disabled={isLoading || !adminPassword}
+              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+            >
+              <RefreshCcw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-5">
         <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 p-4">
           <div className="min-w-0">
             <p className="text-sm font-medium">Auto approve 1x24 jam</p>

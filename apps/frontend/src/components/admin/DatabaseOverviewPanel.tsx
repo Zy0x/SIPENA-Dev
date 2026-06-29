@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, Database, Zap, AlertCircle } from "lucide-react";
+import { Loader2, RefreshCw, Database, Zap, AlertCircle, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
 
@@ -14,7 +13,6 @@ interface DatabaseOverviewPanelProps {
   adminPassword: string;
 }
 
-// Default table icons mapping
 const TABLE_ICONS: Record<string, string> = {
   academic_years: "📅",
   semesters: "📆",
@@ -39,13 +37,12 @@ const TABLE_ICONS: Record<string, string> = {
   team_profiles: "👥",
 };
 
-// Generate friendly label from table name
 function getTableLabel(tableName: string): string {
   const labelMap: Record<string, string> = {
     academic_years: "Tahun Akademik",
     semesters: "Semester",
     classes: "Kelas",
-    students: "Siswa",
+    students: "Murid",
     subjects: "Mata Pelajaran",
     chapters: "Bab/Chapter",
     assignments: "Tugas",
@@ -60,19 +57,34 @@ function getTableLabel(tableName: string): string {
     guest_audit_logs: "Log Audit Tamu",
     activity_logs: "Log Aktivitas",
     notifications: "Notifikasi",
-    password_reset_tokens: "Token Reset Password",
-    account_deletion_requests: "Request Hapus Akun",
+    password_reset_tokens: "Token Reset",
+    account_deletion_requests: "Request Hapus",
     team_profiles: "Profil Tim",
   };
-  
   return labelMap[tableName] || tableName
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function getTableIcon(tableName: string): string {
   return TABLE_ICONS[tableName] || "📁";
+}
+
+// Color accent per table type
+function getTableColor(tableName: string): string {
+  const colorMap: Record<string, string> = {
+    students: "text-blue-400",
+    grades: "text-emerald-400",
+    attendance: "text-violet-400",
+    classes: "text-amber-400",
+    subjects: "text-pink-400",
+    assignments: "text-orange-400",
+    profiles: "text-cyan-400",
+    notifications: "text-yellow-400",
+    activity_logs: "text-slate-400",
+  };
+  return colorMap[tableName] || "text-slate-400";
 }
 
 export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelProps) {
@@ -85,15 +97,10 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch detailed stats via Edge Function (now dynamic)
   const fetchDetailedStats = useCallback(async () => {
-    if (!adminPassword) {
-      return;
-    }
-
+    if (!adminPassword) return;
     setStatsLoading(true);
     setError(null);
-    
     try {
       const response = await fetch(`${EDGE_FUNCTIONS_URL}/admin-database`, {
         method: "POST",
@@ -101,14 +108,9 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
           "Content-Type": "application/json",
           Authorization: `Bearer ${SUPABASE_EXTERNAL_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          action: "stats",
-          password: adminPassword,
-        }),
+        body: JSON.stringify({ action: "stats", password: adminPassword }),
       });
-
       const result = await response.json();
-
       if (result.success) {
         setStats(result.stats);
         setTotalRecords(result.totalRecords || 0);
@@ -117,116 +119,126 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
         setLastUpdate(new Date());
       } else {
         setError(result.error || "Terjadi kesalahan");
-        toast({
-          variant: "destructive",
-          title: "Gagal Memuat Statistik",
-          description: result.error || "Terjadi kesalahan",
-        });
+        toast({ variant: "destructive", title: "Gagal Memuat Statistik", description: result.error });
       }
-    } catch (err) {
-      console.error("Stats fetch error:", err);
+    } catch {
       setError("Gagal terhubung ke server");
-      toast({
-        variant: "destructive",
-        title: "Error Koneksi",
-        description: "Gagal terhubung ke server",
-      });
+      toast({ variant: "destructive", title: "Error Koneksi", description: "Gagal terhubung ke server" });
     } finally {
       setStatsLoading(false);
     }
   }, [adminPassword, toast]);
 
-  // Auto-fetch on mount when password is available
   useEffect(() => {
-    if (adminPassword && !stats) {
-      fetchDetailedStats();
-    }
+    if (adminPassword && !stats) fetchDetailedStats();
   }, [adminPassword, stats, fetchDetailedStats]);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-            <CardTitle className="flex items-center gap-2">
-              <Database className="w-5 h-5" />
-              Database Overview
-            </CardTitle>
-            {isLive && (
-              <Badge variant="default" className="gap-1 bg-grade-pass/90 hover:bg-grade-pass">
-                <Zap className="w-3 h-3" />
-                Live Sync
-              </Badge>
-            )}
+    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/70 bg-slate-900/80">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <Database className="w-4 h-4 text-blue-400" />
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchDetailedStats}
-            disabled={statsLoading || !adminPassword}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${statsLoading ? "animate-spin" : ""}`} />
-            Refresh Stats
-          </Button>
-        </div>
-        <CardDescription>
-          {totalRecords > 0 ? (
-            <>
-              Total: {totalRecords.toLocaleString()} record dari {discoveredTables.length} tabel (dinamis)
-              {lastUpdate && (
-                <span className="ml-2 text-xs">
-                  • Diperbarui: {lastUpdate.toLocaleTimeString("id-ID")}
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-slate-100">Database Overview</p>
+              {isLive && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live
                 </span>
               )}
-            </>
-          ) : (
-            "Database akan dimuat secara otomatis saat password valid"
-          )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {totalRecords > 0
+                ? `${totalRecords.toLocaleString("id-ID")} record dari ${discoveredTables.length} tabel`
+                : "Memuat data dari Supabase..."}
+              {lastUpdate && (
+                <span className="ml-2 opacity-60">
+                  • {lastUpdate.toLocaleTimeString("id-ID")}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={fetchDetailedStats}
+          disabled={statsLoading || !adminPassword}
+          className="h-8 gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${statsLoading ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline text-xs">Refresh</span>
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="p-5">
         {!adminPassword ? (
-          <div className="flex items-center gap-3 py-8 justify-center text-muted-foreground">
-            <AlertCircle className="w-5 h-5" />
-            <p>Masukkan password backend di tab <strong>Kredensial</strong> untuk memuat data</p>
+          <div className="flex flex-col items-center gap-3 py-10 text-slate-600">
+            <AlertCircle className="w-10 h-10 opacity-30" />
+            <p className="text-sm text-center">
+              Masukkan password backend di tab{" "}
+              <span className="text-slate-400 font-medium">Kredensial</span> untuk memuat data
+            </p>
           </div>
         ) : statsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="h-[72px] rounded-lg bg-slate-800/40 animate-pulse" />
+            ))}
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground">
-            <AlertCircle className="w-8 h-8 text-destructive" />
-            <p className="text-sm">{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchDetailedStats}>
+          <div className="flex flex-col items-center gap-3 py-10">
+            <AlertCircle className="w-10 h-10 text-red-400/60" />
+            <p className="text-sm text-slate-500">{error}</p>
+            <Button variant="outline" size="sm" onClick={fetchDetailedStats} className="border-slate-700 text-slate-400 hover:text-slate-200">
               Coba Lagi
             </Button>
           </div>
         ) : stats && discoveredTables.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {discoveredTables.map((tableName) => (
-              <div
-                key={tableName}
-                className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition group"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span>{getTableIcon(tableName)}</span>
-                  <span className="text-xs font-medium truncate group-hover:text-primary transition-colors">
-                    {getTableLabel(tableName)}
-                  </span>
+          <>
+            {/* Total summary */}
+            <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-slate-800/40 border border-slate-700/40">
+              <TrendingUp className="w-4 h-4 text-slate-400" />
+              <span className="text-sm text-slate-400">
+                Total:{" "}
+                <span className="text-slate-100 font-bold tabular-nums">
+                  {totalRecords.toLocaleString("id-ID")}
+                </span>{" "}
+                record dari {discoveredTables.length} tabel aktif
+              </span>
+            </div>
+
+            {/* Table grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {discoveredTables.map((tableName) => (
+                <div
+                  key={tableName}
+                  className="group p-3.5 rounded-lg border border-slate-700/40 bg-slate-800/30 hover:bg-slate-800/60 hover:border-slate-600/60 transition-all duration-150"
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-base leading-none">{getTableIcon(tableName)}</span>
+                    <span className="text-[11px] font-medium text-slate-500 truncate group-hover:text-slate-400 transition-colors">
+                      {getTableLabel(tableName)}
+                    </span>
+                  </div>
+                  <p className={`text-2xl font-bold tabular-nums leading-none ${getTableColor(tableName)}`}>
+                    {(stats[tableName] || 0).toLocaleString("id-ID")}
+                  </p>
                 </div>
-                <p className="text-xl font-bold text-primary">
-                  {(stats[tableName] || 0).toLocaleString()}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         ) : (
-          <p className="text-center text-muted-foreground py-8">
+          <p className="text-center text-slate-600 py-10 text-sm">
             Data akan dimuat secara otomatis...
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

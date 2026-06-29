@@ -297,49 +297,61 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
 
   if (!adminPassword) {
     return (
-      <Card className="border-status-connecting/50 bg-status-connecting/5">
-        <CardContent className="flex items-center gap-3 py-6">
-          <AlertTriangle className="w-5 h-5 text-status-connecting" />
-          <span>Password backend belum diatur. Buka tab <strong>Kredensial</strong>.</span>
-        </CardContent>
-      </Card>
+      <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
+        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-slate-400">
+          Password backend belum diatur. Buka tab <span className="text-amber-400 font-medium">Kredensial</span>.
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Connection & Actions */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="outline" size="sm" onClick={testConnection} disabled={connectionStatus === "testing"}>
-          {connectionStatus === "testing" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> :
-           connectionStatus === "success" ? <CheckCircle className="w-4 h-4 mr-2 text-grade-pass" /> :
-           connectionStatus === "error" ? <XCircle className="w-4 h-4 mr-2 text-destructive" /> :
-           <HardDrive className="w-4 h-4 mr-2" />}
-          Test Koneksi
+      <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl border border-slate-800/70 bg-slate-900/50">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={testConnection}
+          disabled={connectionStatus === "testing"}
+          className="h-8 gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+        >
+          {connectionStatus === "testing" ? <Loader2 className="w-4 h-4 animate-spin" /> :
+           connectionStatus === "success" ? <CheckCircle className="w-4 h-4 text-emerald-400" /> :
+           connectionStatus === "error" ? <XCircle className="w-4 h-4 text-red-400" /> :
+           <HardDrive className="w-4 h-4" />}
+          <span className="text-xs">Test Koneksi</span>
         </Button>
-        <Button variant="outline" size="sm" onClick={fetchDetailedStats} disabled={statsLoading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${statsLoading ? "animate-spin" : ""}`} />
-          Refresh Stats
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={fetchDetailedStats}
+          disabled={statsLoading}
+          className="h-8 gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+        >
+          <RefreshCw className={`w-4 h-4 ${statsLoading ? "animate-spin" : ""}`} />
+          <span className="text-xs">Refresh</span>
         </Button>
         {connectionStatus === "success" && (
-          <Badge variant="default" className="gap-1">
-            <CheckCircle className="w-3 h-3" />
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium ml-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             Terhubung
-          </Badge>
+          </span>
         )}
       </div>
 
       {/* Dynamic Stats Grid */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="w-5 h-5" />
+      <Card className="border-slate-800/70 bg-slate-900/50">
+        <CardHeader className="border-b border-slate-800/70 bg-slate-900/80">
+          <CardTitle className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <Database className="w-4 h-4 text-blue-400" />
             Statistik Detail Per Tabel
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs">
             {totalRecords > 0
-              ? `Total: ${totalRecords.toLocaleString()} record dari ${discoveredTables.length} tabel • Klik tabel untuk melihat detail`
-              : "Klik 'Refresh Stats' untuk memuat statistik"}
+              ? `Total: ${totalRecords.toLocaleString()} record dari ${discoveredTables.length} tabel • Klik tabel untuk detail`
+              : "Klik 'Refresh' untuk memuat statistik"}
           </CardDescription>
         </CardHeader>
         <CardContent>

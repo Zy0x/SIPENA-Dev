@@ -174,11 +174,11 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <div className="rounded-xl border border-slate-800/70 bg-slate-900/50">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-600" />
+        </div>
+      </div>
     );
   }
 
@@ -190,36 +190,39 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <Megaphone className="w-5 h-5 text-amber-500" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Maintenance Reminder</CardTitle>
-              <CardDescription>Kelola alert/pemberitahuan live ke semua pengguna</CardDescription>
-            </div>
+    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+      {/* Panel header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/70 bg-slate-900/80">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+            <Megaphone className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="alert-active" className="text-sm font-medium">
-              {alert.is_active ? "Aktif" : "Nonaktif"}
-            </Label>
-            <Switch
-              id="alert-active"
-              checked={alert.is_active}
-              onCheckedChange={(v) => setAlert(prev => ({ ...prev, is_active: v }))}
-            />
+          <div>
+            <p className="text-sm font-semibold text-slate-100">Maintenance Alert</p>
+            <p className="text-xs text-slate-500 mt-0.5">Kelola banner pemberitahuan live ke semua pengguna</p>
           </div>
         </div>
-      </CardHeader>
+        <div className="flex items-center gap-3">
+          <span className={`text-xs font-medium px-2 py-1 rounded-full border ${
+            alert.is_active
+              ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+              : "text-slate-500 bg-slate-800/60 border-slate-700/50"
+          }`}>
+            {alert.is_active ? "● Aktif" : "○ Nonaktif"}
+          </span>
+          <Switch
+            id="alert-active"
+            checked={alert.is_active}
+            onCheckedChange={(v) => setAlert(prev => ({ ...prev, is_active: v }))}
+          />
+        </div>
+      </div>
 
-      <CardContent className="space-y-6">
-        {/* Preview */}
+      <div className="p-5 space-y-6">
+        {/* Live Preview */}
         {showPreview && (
           <div
-            className="rounded-lg overflow-hidden text-sm font-medium"
+            className="rounded-lg overflow-hidden text-sm font-medium shadow-lg"
             style={{ backgroundColor: alert.bg_color, color: alert.text_color }}
           >
             <div className="flex items-center gap-2 px-4 py-2.5">
@@ -241,98 +244,99 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
         <Button
           variant="outline"
           size="sm"
+          type="button"
           onClick={() => setShowPreview(!showPreview)}
-          className="gap-2"
+          className="gap-2 border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600"
         >
           {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           {showPreview ? "Sembunyikan Preview" : "Tampilkan Preview"}
         </Button>
 
-        <Separator />
-
-        {/* Content */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Judul</Label>
-            <Input
-              value={alert.title}
-              onChange={(e) => setAlert(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Pemberitahuan"
+        {/* ── Konten Section ── */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3">Konten</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-slate-300 text-sm">Judul</Label>
+              <Input
+                value={alert.title}
+                onChange={(e) => setAlert(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Pemberitahuan"
+                className="bg-slate-800/60 border-slate-700 text-slate-100 placeholder:text-slate-600"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300 text-sm">Tipe Alert</Label>
+              <Select value={alert.alert_type} onValueChange={(v) => setAlert(prev => ({ ...prev, alert_type: v }))}>
+                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-slate-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="info">ℹ️ Info</SelectItem>
+                  <SelectItem value="warning">⚠️ Warning</SelectItem>
+                  <SelectItem value="critical">🚨 Critical</SelectItem>
+                  <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2 mt-4">
+            <Label className="text-slate-300 text-sm">Pesan</Label>
+            <Textarea
+              value={alert.message}
+              onChange={(e) => setAlert(prev => ({ ...prev, message: e.target.value }))}
+              placeholder="Masukkan pesan maintenance/pemberitahuan..."
+              rows={3}
+              className="bg-slate-800/60 border-slate-700 text-slate-100 placeholder:text-slate-600 resize-none"
             />
           </div>
-
-          <div className="space-y-2">
-            <Label>Tipe Alert</Label>
-            <Select value={alert.alert_type} onValueChange={(v) => setAlert(prev => ({ ...prev, alert_type: v }))}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="info">ℹ️ Info</SelectItem>
-                <SelectItem value="warning">⚠️ Warning</SelectItem>
-                <SelectItem value="critical">🚨 Critical</SelectItem>
-                <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Pesan</Label>
-          <Textarea
-            value={alert.message}
-            onChange={(e) => setAlert(prev => ({ ...prev, message: e.target.value }))}
-            placeholder="Masukkan pesan maintenance/pemberitahuan..."
-            rows={3}
-          />
-        </div>
+        <div className="border-t border-slate-800/70" />
 
-        {/* Display Mode */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Monitor className="w-4 h-4" />
-            Mode Tampilan
-          </Label>
+        {/* ── Mode Tampilan ── */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3">Mode Tampilan</p>
           <div className="grid grid-cols-2 gap-3">
             <button
+              type="button"
               onClick={() => setAlert(prev => ({ ...prev, display_mode: "flat" }))}
-              className={`p-3 rounded-xl border-2 text-left transition-all ${
+              className={`p-3.5 rounded-xl border-2 text-left transition-all ${
                 alert.display_mode === "flat"
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/40"
+                  ? "border-amber-500/40 bg-amber-500/5 text-slate-100"
+                  : "border-slate-700/50 hover:border-slate-600 text-slate-400"
               }`}
             >
               <p className="text-sm font-semibold">Flat</p>
-              <p className="text-[10px] text-muted-foreground">Di atas header, mendorong konten ke bawah</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Di atas header, mendorong konten ke bawah</p>
             </button>
             <button
+              type="button"
               onClick={() => setAlert(prev => ({ ...prev, display_mode: "flyout" }))}
-              className={`p-3 rounded-xl border-2 text-left transition-all ${
+              className={`p-3.5 rounded-xl border-2 text-left transition-all ${
                 alert.display_mode === "flyout"
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/40"
+                  ? "border-amber-500/40 bg-amber-500/5 text-slate-100"
+                  : "border-slate-700/50 hover:border-slate-600 text-slate-400"
               }`}
             >
               <p className="text-sm font-semibold">Flyout</p>
-              <p className="text-[10px] text-muted-foreground">Melayang di atas header dengan efek bernapas</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Melayang di atas header dengan efek bernapas</p>
             </button>
           </div>
         </div>
 
-        <Separator />
+        <div className="border-t border-slate-800/70" />
 
-        {/* Styling */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Palette className="w-4 h-4" />
-            Warna Preset
-          </Label>
-          <div className="flex flex-wrap gap-2">
+        {/* ── Styling Section ── */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3">Warna & Styling</p>
+          <div className="flex flex-wrap gap-2 mb-4">
             {Object.entries(presetColors).map(([key, preset]) => (
               <button
                 key={key}
+                type="button"
                 onClick={() => handleColorPreset(key)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all hover:scale-105"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all hover:scale-105 active:scale-95"
                 style={{ backgroundColor: preset.bg, color: preset.text, borderColor: preset.bg }}
               >
                 {preset.label}
@@ -340,51 +344,52 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
             ))}
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label className="text-xs">Background</Label>
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-400">Warna Background</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={alert.bg_color}
                   onChange={(e) => setAlert(prev => ({ ...prev, bg_color: e.target.value }))}
-                  className="w-8 h-8 rounded cursor-pointer"
+                  className="w-9 h-9 rounded-lg cursor-pointer border border-slate-700 bg-slate-800"
                 />
                 <Input
                   value={alert.bg_color}
                   onChange={(e) => setAlert(prev => ({ ...prev, bg_color: e.target.value }))}
-                  className="font-mono text-xs"
+                  className="font-mono text-xs bg-slate-800/60 border-slate-700 text-slate-200"
                 />
               </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Teks</Label>
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-400">Warna Teks</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={alert.text_color}
                   onChange={(e) => setAlert(prev => ({ ...prev, text_color: e.target.value }))}
-                  className="w-8 h-8 rounded cursor-pointer"
+                  className="w-9 h-9 rounded-lg cursor-pointer border border-slate-700 bg-slate-800"
                 />
                 <Input
                   value={alert.text_color}
                   onChange={(e) => setAlert(prev => ({ ...prev, text_color: e.target.value }))}
-                  className="font-mono text-xs"
+                  className="font-mono text-xs bg-slate-800/60 border-slate-700 text-slate-200"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <Separator />
+        <div className="border-t border-slate-800/70" />
 
-        {/* Options */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+        {/* ── Opsi & Jadwal ── */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3">Opsi & Jadwal</p>
+          <div className="flex items-center justify-between p-3.5 rounded-lg bg-slate-800/40 border border-slate-700/40 mb-4">
             <div className="flex items-center gap-2">
-              <Type className="w-4 h-4 text-muted-foreground" />
+              <Type className="w-4 h-4 text-slate-500" />
               <div>
-                <p className="text-sm font-medium">Teks Berjalan (Marquee)</p>
-                <p className="text-xs text-muted-foreground">Teks akan bergerak jika pesan panjang</p>
+                <p className="text-sm font-medium text-slate-200">Teks Berjalan (Marquee)</p>
+                <p className="text-xs text-slate-500">Teks bergerak horizontal jika pesan panjang</p>
               </div>
             </div>
             <Switch
@@ -392,56 +397,59 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
               onCheckedChange={(v) => setAlert(prev => ({ ...prev, is_marquee: v }))}
             />
           </div>
-        </div>
 
-        <Separator />
-
-        {/* Time Window */}
-        <div className="space-y-3">
-          <Label className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Jadwal Tampil (Opsional)
-          </Label>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label className="text-xs">Mulai</Label>
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-400 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> Mulai Tampil
+              </Label>
               <Input
                 type="datetime-local"
                 value={alert.start_time}
                 onChange={(e) => setAlert(prev => ({ ...prev, start_time: e.target.value }))}
+                className="bg-slate-800/60 border-slate-700 text-slate-200 text-sm"
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Selesai</Label>
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-400 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> Selesai Tampil
+              </Label>
               <Input
                 type="datetime-local"
                 value={alert.end_time}
                 onChange={(e) => setAlert(prev => ({ ...prev, end_time: e.target.value }))}
+                className="bg-slate-800/60 border-slate-700 text-slate-200 text-sm"
               />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-600 mt-2">
             Kosongkan untuk tampil tanpa batas waktu selama aktif
           </p>
         </div>
 
-        <Separator />
+        <div className="border-t border-slate-800/70" />
 
-        {/* Save */}
+        {/* ── Save Section ── */}
         <div className="flex items-center justify-between">
-          <Badge variant={alert.is_active ? "default" : "secondary"}>
-            {alert.is_active ? "🟢 Alert akan ditampilkan" : "⚫ Alert tidak ditampilkan"}
-          </Badge>
-          <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${
+            alert.is_active
+              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+              : "bg-slate-800/40 border-slate-700/40 text-slate-500"
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${alert.is_active ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} />
+            {alert.is_active ? "Alert akan ditampilkan" : "Alert tidak ditampilkan"}
+          </div>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-900/20"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Simpan & Terapkan
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

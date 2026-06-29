@@ -503,42 +503,40 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Kontrol Fitur</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-base font-semibold text-slate-100 tracking-tight">Kontrol Fitur & Akses</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
             Kelola halaman, fitur, runtime, role, dan akses akun dari satu panel admin.
           </p>
         </div>
-        <Button variant="outline" onClick={loadData} disabled={loading} className="min-h-[44px] gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={loadData}
+          disabled={loading}
+          className="h-8 gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 min-h-[44px]"
+        >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Refresh Data
+          <span className="text-xs">Refresh</span>
         </Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-lg">
-          <CardContent className="p-4">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Total Fitur</p>
-            <p className="mt-1 text-2xl font-bold">{featureStats.total}</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-lg">
-          <CardContent className="p-4">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Aktif Umum</p>
-            <p className="mt-1 text-2xl font-bold">{featureStats.activeAll}</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-lg">
-          <CardContent className="p-4">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Target Role/User</p>
-            <p className="mt-1 text-2xl font-bold">{featureStats.role + featureStats.user}</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-lg">
-          <CardContent className="p-4">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Nonaktif</p>
-            <p className="mt-1 text-2xl font-bold">{featureStats.off}</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-slate-800/70 bg-slate-900/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Total Fitur</p>
+          <p className="mt-1.5 text-2xl font-bold text-slate-100 tabular-nums">{featureStats.total}</p>
+        </div>
+        <div className="rounded-lg border border-slate-800/70 bg-slate-900/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Aktif Umum</p>
+          <p className="mt-1.5 text-2xl font-bold text-emerald-400 tabular-nums">{featureStats.activeAll}</p>
+        </div>
+        <div className="rounded-lg border border-slate-800/70 bg-slate-900/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Target Role/User</p>
+          <p className="mt-1.5 text-2xl font-bold text-blue-400 tabular-nums">{featureStats.role + featureStats.user}</p>
+        </div>
+        <div className="rounded-lg border border-slate-800/70 bg-slate-900/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">Nonaktif</p>
+          <p className="mt-1.5 text-2xl font-bold text-slate-500 tabular-nums">{featureStats.off}</p>
+        </div>
       </div>
 
       <Tabs defaultValue="features" className="space-y-4">

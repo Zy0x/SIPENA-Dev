@@ -309,43 +309,51 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
 
   if (!adminPassword) {
     return (
-      <Alert className="border-warning/50 bg-warning/5">
-        <AlertTriangle className="w-4 h-4 text-warning" />
-        <AlertDescription>
-          Password backend diperlukan untuk memuat statistik akun. Buka tab{" "}
-          <strong>Kredensial</strong>.
-        </AlertDescription>
-      </Alert>
+      <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
+        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-slate-400">
+          Password backend diperlukan untuk memuat statistik akun.{" "}
+          <span className="text-amber-400 font-medium">Buka tab Kredensial</span>.
+        </p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Manajemen Akun
-            </CardTitle>
-            {isLive && (
-              <Badge variant="default" className="gap-1 bg-grade-pass/90 hover:bg-grade-pass">
-                <Zap className="w-3 h-3" />
-                Live Sync
-              </Badge>
-            )}
+    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/70 bg-slate-900/80">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <Users className="w-4 h-4 text-blue-400" />
           </div>
-          <Button variant="outline" size="sm" onClick={fetchAccountStats} disabled={isLoading}>
-            <RefreshCcw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-slate-100">Manajemen Akun</p>
+              {isLive && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {stats.length} akun terdaftar • Menampilkan {paginatedStats.length} dari {filteredAndSortedStats.length}
+            </p>
+          </div>
         </div>
-        <CardDescription>
-          {stats.length} akun terdaftar • Menampilkan {paginatedStats.length} dari{" "}
-          {filteredAndSortedStats.length}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={fetchAccountStats}
+          disabled={isLoading}
+          className="h-8 gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+        >
+          <RefreshCcw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline text-xs">Refresh</span>
+        </Button>
+      </div>
+      <div className="p-5 space-y-4">
         {/* Search & Controls */}
         <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
           <div className="flex-1 relative min-w-[200px]">
@@ -604,12 +612,11 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
 
         {/* Show more indicator */}
         {filteredAndSortedStats.length > pageSize && (
-          <p className="text-xs text-center text-muted-foreground pt-2">
-            Menampilkan {pageSize} dari {filteredAndSortedStats.length} akun. Ubah limit untuk
-            melihat lebih banyak.
+          <p className="text-xs text-center text-slate-600 pt-2">
+            Menampilkan {pageSize} dari {filteredAndSortedStats.length} akun. Ubah limit untuk melihat lebih banyak.
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
