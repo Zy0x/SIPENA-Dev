@@ -22,11 +22,11 @@ describe("feature access evaluation", () => {
       { ...baseFeature, globalKillSwitch: false },
       [
         { targetType: "all_users", targetValue: null, enabled: true },
-        { targetType: "role", targetValue: "tester", enabled: true },
+        { targetType: "role", targetValue: "beta_user", enabled: true },
         { targetType: "user", targetValue: "user-1", enabled: true },
       ],
       "user-1",
-      ["tester"],
+      ["beta_user"],
     );
     expect(result).toEqual({ enabled: false, reason: "global_kill_switch_off" });
   });
@@ -36,11 +36,11 @@ describe("feature access evaluation", () => {
       baseFeature,
       [
         { targetType: "all_users", targetValue: null, enabled: true },
-        { targetType: "role", targetValue: "tester", enabled: true },
+        { targetType: "role", targetValue: "beta_user", enabled: true },
         { targetType: "user", targetValue: "user-1", enabled: true },
       ],
       "user-1",
-      ["tester"],
+      ["beta_user"],
     );
     expect(result).toEqual({ enabled: true, reason: "user" });
   });
@@ -50,10 +50,10 @@ describe("feature access evaluation", () => {
       baseFeature,
       [
         { targetType: "all_users", targetValue: null, enabled: true },
-        { targetType: "role", targetValue: "tester", enabled: true },
+        { targetType: "role", targetValue: "beta_user", enabled: true },
       ],
       "user-2",
-      ["tester"],
+      ["beta_user"],
     );
     expect(result).toEqual({ enabled: true, reason: "role" });
   });

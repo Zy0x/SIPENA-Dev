@@ -118,9 +118,10 @@ interface FeatureStatusMeta {
 const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
   { value: "teacher", label: "Guru" },
-  { value: "tester", label: "Tester" },
   { value: "beta_user", label: "Beta User" },
 ];
+
+const DEFAULT_USER_ROLE = "teacher";
 
 const EMPTY_DRAFT: FeatureDraft = {
   defaultEnabled: false,
@@ -213,8 +214,8 @@ function getTargetSummary(feature: FeatureFlagRow, audiences: FeatureAudienceRow
 }
 
 function getRoleLabels(roleValues: string[]) {
-  if (roleValues.length === 0) return "Belum ada role";
-  return roleValues
+  const effectiveRoles = Array.from(new Set([DEFAULT_USER_ROLE, ...roleValues]));
+  return effectiveRoles
     .map((role) => ROLE_OPTIONS.find((option) => option.value === role)?.label || role)
     .join(", ");
 }
@@ -411,6 +412,7 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
   };
 
   const toggleUserRole = (role: string) => {
+    if (role === DEFAULT_USER_ROLE) return;
     setUserRoleDraft((current) =>
       current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
     );
@@ -467,7 +469,7 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
     try {
       await requestAdminFeatureAccess("save-user-roles", {
         userId: selectedRoleUserId,
-        roles: userRoleDraft,
+        roles: Array.from(new Set([DEFAULT_USER_ROLE, ...userRoleDraft])),
       });
       await loadData();
       await featureFlags.refresh();
@@ -868,7 +870,7 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
                       </TableRow>
                     ) : (
                       filteredRoleUsers.map((user) => {
-                        const userRoles = roleMap.get(user.id) || [];
+                        const userRoles = Array.from(new Set([DEFAULT_USER_ROLE, ...(roleMap.get(user.id) || [])]));
                         const active = selectedRoleUserId === user.id;
                         return (
                           <TableRow
@@ -883,15 +885,11 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap gap-1.5">
-                                {userRoles.length === 0 ? (
-                                  <Badge variant="outline">Tanpa role</Badge>
-                                ) : (
-                                  userRoles.map((role) => (
-                                    <Badge key={role} variant="secondary">
-                                      {ROLE_OPTIONS.find((option) => option.value === role)?.label || role}
-                                    </Badge>
-                                  ))
-                                )}
+                                {userRoles.map((role) => (
+                                  <Badge key={role} variant="secondary">
+                                    {ROLE_OPTIONS.find((option) => option.value === role)?.label || role}
+                                  </Badge>
+                                ))}
                               </div>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
@@ -940,10 +938,16 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
                           className="flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2"
                         >
                           <Checkbox
-                            checked={userRoleDraft.includes(role.value)}
+                            checked={role.value === DEFAULT_USER_ROLE || userRoleDraft.includes(role.value)}
+                            disabled={role.value === DEFAULT_USER_ROLE}
                             onCheckedChange={() => toggleUserRole(role.value)}
                           />
-                          <span className="text-sm font-medium">{role.label}</span>
+                          <span className="text-sm font-medium">
+                            {role.label}
+                            {role.value === DEFAULT_USER_ROLE && (
+                              <span className="ml-2 text-xs font-normal text-muted-foreground">(default)</span>
+                            )}
+                          </span>
                         </label>
                       ))}
                     </div>

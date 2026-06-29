@@ -71,4 +71,30 @@ describe("feature access integration guard", () => {
     expect(panel).toContain("Tabel Role Pengguna");
     expect(panel).toContain("Audit Perubahan");
   });
+
+  it("keeps role access limited to admin, guru, and beta user with guru as default", () => {
+    const panel = readSource("apps/frontend/src/components/admin/FeatureAccessPanel.tsx");
+    const edgeFunction = readSource("supabase/functions/admin-feature-access/index.ts");
+    const migration = readSource("supabase/migrations/20260629123000_default_teacher_roles.sql");
+
+    expect(panel).toContain('const DEFAULT_USER_ROLE = "teacher"');
+    expect(panel).toContain('role.value === DEFAULT_USER_ROLE');
+    expect(panel).toContain('{ value: "admin", label: "Admin" }');
+    expect(panel).toContain('{ value: "teacher", label: "Guru" }');
+    expect(panel).toContain('{ value: "beta_user", label: "Beta User" }');
+    expect(panel).not.toContain("Tester");
+    expect(panel).not.toContain('"tester"');
+
+    expect(edgeFunction).toContain('const DEFAULT_USER_ROLE = "teacher"');
+    expect(edgeFunction).toContain('const VALID_ROLES = new Set(["admin", DEFAULT_USER_ROLE, "beta_user"])');
+    expect(edgeFunction).toContain("includeDefaultTeacher: true");
+    expect(edgeFunction).not.toContain('"tester"');
+    expect(edgeFunction).not.toContain("'tester'");
+
+    expect(migration).toContain("DELETE FROM public.user_roles");
+    expect(migration).toContain("WHERE role = 'tester'");
+    expect(migration).toContain("INSERT INTO public.user_roles");
+    expect(migration).toContain("AFTER INSERT ON auth.users");
+    expect(migration).toContain("CHECK (role IN ('admin', 'teacher', 'beta_user'))");
+  });
 });

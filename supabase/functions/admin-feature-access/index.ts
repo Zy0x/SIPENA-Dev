@@ -8,6 +8,9 @@ const corsHeaders = {
 
 type TargetType = "all_users" | "role" | "user";
 
+const DEFAULT_USER_ROLE = "teacher";
+const VALID_ROLES = new Set(["admin", DEFAULT_USER_ROLE, "beta_user"]);
+
 interface FeatureFlagRow {
   id: string;
   feature_key: string;
@@ -45,6 +48,14 @@ function normalizeList(value: unknown): string[] {
         .filter(Boolean),
     ),
   );
+}
+
+function normalizeRoles(value: unknown, options: { includeDefaultTeacher?: boolean } = {}): string[] {
+  const roles = normalizeList(value).filter((role) => VALID_ROLES.has(role));
+  if (options.includeDefaultTeacher && !roles.includes(DEFAULT_USER_ROLE)) {
+    roles.unshift(DEFAULT_USER_ROLE);
+  }
+  return Array.from(new Set(roles));
 }
 
 function getBearerToken(req: Request): string | null {
@@ -149,7 +160,9 @@ serve(async (req) => {
 
       if (audienceError) return json({ success: false, error: audienceError.message }, 500);
 
-      const roles = (roleRows || []).map((row: { role: string }) => row.role);
+      const roles = normalizeRoles((roleRows || []).map((row: { role: string }) => row.role), {
+        includeDefaultTeacher: true,
+      });
       const evaluated = (flags || []).map((flag: FeatureFlagRow) => {
         const flagAudiences = (audiences || []).filter(
           (audience: FeatureAudienceRow) => audience.feature_key === flag.feature_key,
@@ -200,7 +213,18 @@ serve(async (req) => {
         emailConfirmed: !!user.email_confirmed_at,
       }));
 
-      return json({ success: true, flags, audiences, roles, audits, users });
+      const validRoles = (roles || []).filter((row: { role: string }) => VALID_ROLES.has(row.role));
+      const usersWithRoles = new Set(validRoles.map((row: { user_id: string }) => row.user_id));
+      const defaultTeacherRoles = users
+        .filter((user) => !usersWithRoles.has(user.id))
+        .map((user) => ({
+          user_id: user.id,
+          role: DEFAULT_USER_ROLE,
+          assigned_at: user.createdAt,
+          metadata: { source: "default-teacher-fallback", virtual: true },
+        }));
+
+      return json({ success: true, flags, audiences, roles: [...validRoles, ...defaultTeacherRoles], audits, users });
     }
 
     if (action === "save-feature") {
@@ -208,7 +232,7 @@ serve(async (req) => {
       const featureKey = typeof payload.featureKey === "string" ? payload.featureKey.trim() : "";
       if (!featureKey) return json({ success: false, error: "Feature key wajib diisi" }, 400);
 
-      const roles = normalizeList(payload.roles);
+      const roles = normalizeRoles(payload.roles);
       const userIds = normalizeList(payload.userIds);
       const allUsers = Boolean(payload.allUsers);
 
@@ -274,9 +298,7 @@ serve(async (req) => {
     if (action === "save-user-roles") {
       const payload = body.payload || {};
       const userId = typeof payload.userId === "string" ? payload.userId.trim() : "";
-      const roles = normalizeList(payload.roles).filter((role) =>
-        ["admin", "teacher", "tester", "beta_user"].includes(role),
-      );
+      const roles = normalizeRoles(payload.roles, { includeDefaultTeacher: true });
 
       if (!userId) return json({ success: false, error: "User wajib dipilih" }, 400);
 
