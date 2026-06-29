@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.120",
+    version: "2.4.120",
+    title: "Optimasi Skalabilitas Admin & Paginated Table Details",
+    description: "Peningkatan performa halaman Admin skala enterprise dengan server-side search/pagination manajemen akun, lazy-loaded stats, paginasi preview tabel, dan warning database backup besar.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-29",
+    details: [
+      "Mengganti client-side pagination dan search di Manajemen Akun dengan server-side pagination dan search via parameter limit, offset, dan search di Edge Function admin-account-stats.",
+      "Mengubah pengambilan statistik data per akun menjadi on-demand (lazy-loaded) ketika panel akun di-expand, untuk menghindari query berat (N+1 queries) di database.",
+      "Menambahkan server-side pagination pada pratinjau data tabel di Panel Manajemen Database (table-detail) dengan support range limit dan offset.",
+      "Menambahkan warning ketika ukuran database melebihi 50.000 records saat hendak mengunduh backup JSON, menyarankan penggunaan pg_dump / CLI untuk backup skala enterprise.",
+      "Memastikan semua filter, pagination, dan input pencarian tersinkronisasi dengan state, loading indicator, dan penanganan empty-state yang sesuai."
+    ]
+  },
+  {
     id: "v2.4.119",
     version: "2.4.119",
     title: "Admin Panel Enterprise & Theme Revamp",

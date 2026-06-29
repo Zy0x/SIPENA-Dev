@@ -164,7 +164,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, password, tables, backupData, sourceUrl, customUrl, customServiceKey, table } = await req.json();
+    const { action, password, tables, backupData, sourceUrl, customUrl, customServiceKey, table, page, pageSize } = await req.json();
 
     // Verify admin password for all operations
     if (!verifyAdminPassword(password)) {
@@ -212,36 +212,49 @@ serve(async (req) => {
         return await handleDiscoverTables(supabaseAdmin);
       }
       case "table-detail": {
-        // Fetch first 200 rows of a specific table
         if (!table || typeof table !== "string") {
           return new Response(
             JSON.stringify({ error: "Table name required" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(pageSize) || 50;
+        const start = (pageNum - 1) * limitNum;
+        const end = start + limitNum - 1;
+
         try {
+          // Get exact total count first
+          const { count, error: countError } = await supabaseAdmin
+            .from(table)
+            .select("*", { count: "exact", head: true });
+
+          if (countError) throw countError;
+
+          // Fetch paginated rows
           const { data, error } = await supabaseAdmin
             .from(table)
             .select("*")
             .order("created_at", { ascending: false })
-            .limit(200);
+            .range(start, end);
           
           if (error) {
             // Try without ordering if created_at doesn't exist
             const { data: data2, error: error2 } = await supabaseAdmin
               .from(table)
               .select("*")
-              .limit(200);
+              .range(start, end);
             
             if (error2) throw error2;
             return new Response(
-              JSON.stringify({ success: true, data: data2 || [] }),
+              JSON.stringify({ success: true, data: data2 || [], totalCount: count || 0 }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
           
           return new Response(
-            JSON.stringify({ success: true, data: data || [] }),
+            JSON.stringify({ success: true, data: data || [], totalCount: count || 0 }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         } catch (e: any) {

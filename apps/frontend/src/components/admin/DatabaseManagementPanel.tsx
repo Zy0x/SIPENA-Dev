@@ -17,7 +17,8 @@ import {
 import { 
   Database, Download, Upload, Trash2, RefreshCw, 
   Loader2, CheckCircle, XCircle, AlertTriangle,
-  HardDrive, FileJson, Clock, Eye, Table2
+  HardDrive, FileJson, Clock, Eye, Table2,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
@@ -85,6 +86,9 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
   const [detailTable, setDetailTable] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<any[] | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailPage, setDetailPage] = useState(1);
+  const [detailPageSize, setDetailPageSize] = useState(50);
+  const [detailTotalCount, setDetailTotalCount] = useState(0);
   
   // Backup/Restore/Delete
   const [backupLoading, setBackupLoading] = useState(false);
@@ -127,20 +131,29 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
   }, [adminPassword, toast]);
 
   // Fetch table detail data
-  const fetchTableDetail = useCallback(async (tableName: string) => {
+  const fetchTableDetail = useCallback(async (tableName: string, pageNum = 1, pageSizeNum = 50) => {
     if (!adminPassword) return;
     setDetailTable(tableName);
+    setDetailPage(pageNum);
+    setDetailPageSize(pageSizeNum);
     setDetailLoading(true);
     setDetailData(null);
     try {
       const response = await fetch(`${EDGE_FUNCTIONS_URL}/admin-database`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_EXTERNAL_ANON_KEY}` },
-        body: JSON.stringify({ action: "table-detail", password: adminPassword, table: tableName }),
+        body: JSON.stringify({ 
+          action: "table-detail", 
+          password: adminPassword, 
+          table: tableName,
+          page: pageNum,
+          pageSize: pageSizeNum
+        }),
       });
       const result = await response.json();
       if (result.success) {
         setDetailData(result.data || []);
+        setDetailTotalCount(result.totalCount || 0);
       } else {
         toast({ variant: "destructive", title: "Gagal", description: result.error || "Gagal memuat detail tabel" });
         setDetailTable(null);
@@ -399,7 +412,9 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
               <Table2 className="w-5 h-5" />
               {detailTable && `${getTableIcon(detailTable)} ${getTableLabel(detailTable)}`}
               {detailData && (
-                <Badge variant="secondary" className="ml-2">{detailData.length} records</Badge>
+                <Badge variant="secondary" className="ml-2">
+                  Total {detailTotalCount.toLocaleString()} records
+                </Badge>
               )}
             </DialogTitle>
           </DialogHeader>
@@ -408,37 +423,67 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : detailData && detailData.length > 0 ? (
-            <ScrollArea className="flex-1 min-h-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead className="sticky top-0 bg-card z-10">
-                    <tr>
-                      {Object.keys(detailData[0]).map(col => (
-                        <th key={col} className="px-2 py-1.5 text-left font-semibold text-muted-foreground border-b border-border whitespace-nowrap">
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detailData.slice(0, 100).map((row, i) => (
-                      <tr key={i} className="hover:bg-muted/50 transition-colors">
-                        {Object.values(row).map((val: any, j) => (
-                          <td key={j} className="px-2 py-1.5 border-b border-border/50 max-w-[200px] truncate" title={String(val ?? "")}>
-                            {val === null ? <span className="text-muted-foreground/40 italic">null</span> : String(val)}
-                          </td>
+            <>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse">
+                    <thead className="sticky top-0 bg-card z-10">
+                      <tr>
+                        {Object.keys(detailData[0]).map(col => (
+                          <th key={col} className="px-2 py-1.5 text-left font-semibold text-muted-foreground border-b border-border whitespace-nowrap">
+                            {col}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {detailData.length > 100 && (
-                  <p className="text-center text-xs text-muted-foreground py-3">
-                    Menampilkan 100 dari {detailData.length} record
-                  </p>
-                )}
+                    </thead>
+                    <tbody>
+                      {detailData.map((row, i) => (
+                        <tr key={i} className="hover:bg-muted/50 transition-colors">
+                          {Object.values(row).map((val: any, j) => (
+                            <td key={j} className="px-2 py-1.5 border-b border-border/50 max-w-[200px] truncate" title={String(val ?? "")}>
+                              {val === null ? <span className="text-muted-foreground/40 italic">null</span> : String(val)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </ScrollArea>
+              
+              {/* Table Detail Pagination Controls */}
+              <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-border mt-2 gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Halaman {detailPage} dari {Math.ceil(detailTotalCount / detailPageSize) || 1}
+                  </span>
+                  <span className="text-muted-foreground/30 text-xs">|</span>
+                  <span className="text-xs text-muted-foreground">
+                    Tampil {detailData.length} records
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => fetchTableDetail(detailTable!, detailPage - 1, detailPageSize)}
+                    disabled={detailPage === 1 || detailLoading}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => fetchTableDetail(detailTable!, detailPage + 1, detailPageSize)}
+                    disabled={detailPage >= Math.ceil(detailTotalCount / detailPageSize) || detailLoading}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            </ScrollArea>
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center py-12">
               <Database className="w-8 h-8 text-muted-foreground/30 mb-2" />
@@ -455,6 +500,17 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
           <CardDescription>Ekspor seluruh database ke file JSON</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {totalRecords > 50000 && (
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Peringatan Ukuran Database Besar</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Database Anda memiliki <span className="font-semibold text-foreground">{totalRecords.toLocaleString()}</span> records. Melakukan ekspor JSON melalui browser untuk database &gt; 50.000 records dapat menyebabkan memori browser habis atau request timeout. Disarankan menggunakan tool native seperti <code>pg_dump</code> atau Supabase CLI untuk backup skala enterprise.
+                </p>
+              </div>
+            </div>
+          )}
           <Button onClick={handleBackup} disabled={backupLoading} className="w-full sm:w-auto">
             {backupLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sedang Backup...</> : <><Download className="w-4 h-4 mr-2" />Backup Sekarang</>}
           </Button>

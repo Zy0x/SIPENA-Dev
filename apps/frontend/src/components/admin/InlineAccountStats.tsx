@@ -19,6 +19,8 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Trash2,
   AlertTriangle,
   Users,
@@ -43,7 +45,7 @@ interface AccountStat {
     grade_formula_settings?: number;
     assignments: number;
     total: number;
-  };
+  } | null;
 }
 
 interface InlineAccountStatsProps {
@@ -66,72 +68,164 @@ const DATA_CATEGORIES = [
 ] as const;
 
 type SortBy = "recent" | "records" | "email-asc" | "email-desc";
-type FilterBy = "all" | "verified" | "unverified" | "with-data" | "empty";
+type FilterBy = "all" | "verified" | "unverified";
 
 export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
   const { toast } = useEnhancedToast();
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<AccountStat[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("recent");
   const [filterBy, setFilterBy] = useState<FilterBy>("all");
   const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalAccounts, setTotalAccounts] = useState(0);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
+  const [userStatsLoading, setUserStatsLoading] = useState<Record<string, boolean>>({});
 
-  // Fetch account stats
-  const fetchAccountStats = useCallback(async () => {
-    if (!adminPassword) {
-      return;
-    }
+  // Fetch account stats with paginated/filter options
+  const fetchAccountStats = useCallback(
+    async (
+      pageVal: number,
+      sizeVal: number,
+      searchVal: string,
+      filterVal: string,
+      sortVal: string
+    ) => {
+      if (!adminPassword) {
+        return;
+      }
 
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${EDGE_FUNCTIONS_URL}/admin-account-stats`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_EXTERNAL_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          action: "get-account-stats",
-          password: adminPassword,
-        }),
-      });
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${EDGE_FUNCTIONS_URL}/admin-account-stats`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_EXTERNAL_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            action: "get-account-stats",
+            password: adminPassword,
+            page: pageVal,
+            pageSize: sizeVal,
+            search: searchVal,
+            filter: filterVal,
+            sort: sortVal,
+          }),
+        });
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (result.success) {
-        setStats(result.stats || []);
-        setIsLive(true);
-      } else {
+        if (result.success) {
+          setStats(result.stats || []);
+          setTotalAccounts(result.totalAccounts || 0);
+          setIsLive(true);
+        } else {
+          toast({
+            title: "Gagal Memuat",
+            description: result.error || "Terjadi kesalahan",
+            variant: "error",
+          });
+        }
+      } catch (error) {
         toast({
-          title: "Gagal Memuat",
-          description: result.error || "Terjadi kesalahan",
+          title: "Error",
+          description: "Gagal mengambil data statistik",
           variant: "error",
         });
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal mengambil data statistik",
-        variant: "error",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [adminPassword, toast]);
+    },
+    [adminPassword, toast]
+  );
 
-  // Auto-load when password is available
+  // Lazy-load single user stats on expand
+  const fetchSingleUserStats = useCallback(
+    async (userId: string) => {
+      if (!adminPassword || userStatsLoading[userId]) return;
+
+      setUserStatsLoading((prev) => ({ ...prev, [userId]: true }));
+      try {
+        const response = await fetch(`${EDGE_FUNCTIONS_URL}/admin-account-stats`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_EXTERNAL_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            action: "get-single-user-stats",
+            password: adminPassword,
+            userId,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Update the stats list with the loaded user stats
+          setStats((prevStats) =>
+            prevStats.map((s) =>
+              s.userId === userId ? { ...s, stats: result.stats } : s
+            )
+          );
+        } else {
+          toast({
+            title: "Gagal memuat detail data",
+            description: result.error || "Terjadi kesalahan",
+            variant: "error",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching single user stats:", error);
+      } finally {
+        setUserStatsLoading((prev) => ({ ...prev, [userId]: false }));
+      }
+    },
+    [adminPassword, userStatsLoading, toast]
+  );
+
+  // Helper trigger to refresh current data
+  const handleRefresh = useCallback(() => {
+    fetchAccountStats(currentPage, pageSize, searchQuery, filterBy, sortBy);
+  }, [currentPage, pageSize, searchQuery, filterBy, sortBy, fetchAccountStats]);
+
+  // Debounce search query to search input
   useEffect(() => {
-    if (adminPassword && stats.length === 0) {
-      fetchAccountStats();
+    const handler = setTimeout(() => {
+      setSearchQuery(searchTerm);
+      setCurrentPage(1); // Reset page on new search query
+    }, 400);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
+  // Fetch data on page/filter/search changes
+  useEffect(() => {
+    if (adminPassword) {
+      fetchAccountStats(currentPage, pageSize, searchQuery, filterBy, sortBy);
     }
-  }, [adminPassword, stats.length, fetchAccountStats]);
+  }, [adminPassword, currentPage, pageSize, searchQuery, filterBy, sortBy, fetchAccountStats]);
+
+  const handleToggleExpand = (userId: string, currentStats: any) => {
+    if (expandedUser === userId) {
+      setExpandedUser(null);
+    } else {
+      setExpandedUser(userId);
+      if (currentStats === null) {
+        fetchSingleUserStats(userId);
+      }
+    }
+  };
 
   // Delete user data categories
   const handleDeleteDataCategories = useCallback(
@@ -165,7 +259,7 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
 
         if (result.success) {
           setSelectedCategories(new Set());
-          fetchAccountStats();
+          handleRefresh();
           toast({
             title: "Data Dihapus",
             description: `${result.deletedCount} record berhasil dihapus`,
@@ -187,7 +281,7 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
         setIsDeleting(false);
       }
     },
-    [selectedCategories, adminPassword, toast, fetchAccountStats]
+    [selectedCategories, adminPassword, toast, handleRefresh]
   );
 
   // Delete entire user account
@@ -222,7 +316,7 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
         if (result.success) {
           setDeletingUserId(null);
           setDeleteConfirm("");
-          fetchAccountStats();
+          handleRefresh();
           toast({
             title: "Akun Dihapus",
             description: `Akun ${email} dan semua datanya telah dihapus`,
@@ -244,58 +338,11 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
         setIsDeleting(false);
       }
     },
-    [deleteConfirm, adminPassword, toast, fetchAccountStats]
+    [deleteConfirm, adminPassword, toast, handleRefresh]
   );
 
-  // Filter and sort data
-  const filteredAndSortedStats = useMemo(() => {
-    let result = stats.filter((stat) => {
-      // Search filter
-      const matchesSearch =
-        stat.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        stat.userId.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Category filter
-      let matchesFilter = true;
-      switch (filterBy) {
-        case "verified":
-          matchesFilter = stat.emailConfirmed;
-          break;
-        case "unverified":
-          matchesFilter = !stat.emailConfirmed;
-          break;
-        case "with-data":
-          matchesFilter = stat.stats.total > 0;
-          break;
-        case "empty":
-          matchesFilter = stat.stats.total === 0;
-          break;
-      }
-
-      return matchesSearch && matchesFilter;
-    });
-
-    // Sort
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "records":
-          return b.stats.total - a.stats.total;
-        case "email-asc":
-          return a.email.localeCompare(b.email);
-        case "email-desc":
-          return b.email.localeCompare(a.email);
-        default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-    });
-
-    return result;
-  }, [stats, searchQuery, sortBy, filterBy]);
-
-  // Paginated data
-  const paginatedStats = useMemo(() => {
-    return filteredAndSortedStats.slice(0, pageSize);
-  }, [filteredAndSortedStats, pageSize]);
+  // Paginated stats is directly the stats array since we paginate server-side
+  const paginatedStats = stats;
 
   const toggleCategory = (category: string) => {
     const newSet = new Set(selectedCategories);
@@ -333,19 +380,19 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
               {isLive && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Live
+                  Live (Enterprise)
                 </span>
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {stats.length} akun terdaftar • Menampilkan {paginatedStats.length} dari {filteredAndSortedStats.length}
+              {totalAccounts} akun terdaftar • Halaman {currentPage} dari {Math.ceil(totalAccounts / pageSize) || 1}
             </p>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          onClick={fetchAccountStats}
+          onClick={handleRefresh}
           disabled={isLoading}
           className="h-8 gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
         >
@@ -360,13 +407,19 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Cari email atau user ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Select value={filterBy} onValueChange={(v) => setFilterBy(v as FilterBy)}>
+            <Select 
+              value={filterBy} 
+              onValueChange={(v) => { 
+                setFilterBy(v as FilterBy); 
+                setCurrentPage(1); 
+              }}
+            >
               <SelectTrigger className="w-[140px]">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Filter" />
@@ -375,24 +428,30 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
                 <SelectItem value="all">Semua</SelectItem>
                 <SelectItem value="verified">Terverifikasi</SelectItem>
                 <SelectItem value="unverified">Belum Verifikasi</SelectItem>
-                <SelectItem value="with-data">Ada Data</SelectItem>
-                <SelectItem value="empty">Kosong</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+            <Select 
+              value={sortBy} 
+              onValueChange={(v) => { 
+                setSortBy(v as SortBy); 
+                setCurrentPage(1); 
+              }}
+            >
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Urutkan" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="recent">Terbaru</SelectItem>
-                <SelectItem value="records">Paling Banyak Data</SelectItem>
                 <SelectItem value="email-asc">Email (A-Z)</SelectItem>
                 <SelectItem value="email-desc">Email (Z-A)</SelectItem>
               </SelectContent>
             </Select>
             <Select
               value={pageSize.toString()}
-              onValueChange={(v) => setPageSize(parseInt(v))}
+              onValueChange={(v) => {
+                setPageSize(parseInt(v));
+                setCurrentPage(1);
+              }}
             >
               <SelectTrigger className="w-[90px]">
                 <SelectValue placeholder="Limit" />
@@ -419,7 +478,7 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
           ) : paginatedStats.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <p className="text-sm text-muted-foreground">
-                {searchQuery || filterBy !== "all"
+                {searchTerm || filterBy !== "all"
                   ? "Tidak ada akun yang cocok"
                   : "Belum ada akun"}
               </p>
@@ -432,12 +491,10 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
               >
                 {/* Header - Click to expand */}
                 <button
-                  onClick={() =>
-                    setExpandedUser(expandedUser === account.userId ? null : account.userId)
-                  }
-                  className="w-full p-3 hover:bg-accent/50 transition flex items-center justify-between"
+                  onClick={() => handleToggleExpand(account.userId, account.stats)}
+                  className="w-full p-3 hover:bg-accent/50 transition flex items-center justify-between text-left"
                 >
-                  <div className="flex-1 text-left min-w-0">
+                  <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{account.email}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       ID: {account.userId.slice(0, 12)}...
@@ -454,7 +511,7 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
                       </Badge>
                     )}
                     <Badge variant="outline" className="text-xs font-semibold">
-                      {account.stats.total} Records
+                      {account.stats !== null ? `${account.stats.total} Records` : "Klik detail..."}
                     </Badge>
                     {expandedUser === account.userId ? (
                       <ChevronUp className="w-4 h-4" />
@@ -472,34 +529,53 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
                       {/* Data Breakdown Grid */}
                       <div>
                         <p className="text-xs font-semibold mb-2 text-muted-foreground">
-                          BREAKDOWN DATA
+                          BREAKDOWN DATA (LAZY-LOADED)
                         </p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                          <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Tahun</p>
-                            <p className="text-lg font-semibold">{account.stats.academicYears}</p>
+                        {userStatsLoading[account.userId] ? (
+                          <div className="flex items-center justify-center py-6 bg-muted/30 rounded-lg">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground ml-2">Mengitung record...</span>
                           </div>
-                          <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Kelas</p>
-                            <p className="text-lg font-semibold">{account.stats.classes}</p>
+                        ) : account.stats === null ? (
+                          <div className="flex flex-col items-center py-4 bg-muted/20 rounded-lg border border-dashed">
+                            <p className="text-xs text-muted-foreground mb-2">Statistik belum dimuat</p>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => fetchSingleUserStats(account.userId)}
+                              className="text-xs h-7"
+                            >
+                              Hitung Data Akun
+                            </Button>
                           </div>
-                          <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Siswa</p>
-                            <p className="text-lg font-semibold">{account.stats.students}</p>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                            <div className="p-2 bg-muted rounded text-center">
+                              <p className="text-xs text-muted-foreground">Tahun</p>
+                              <p className="text-lg font-semibold">{account.stats.academicYears}</p>
+                            </div>
+                            <div className="p-2 bg-muted rounded text-center">
+                              <p className="text-xs text-muted-foreground">Kelas</p>
+                              <p className="text-lg font-semibold">{account.stats.classes}</p>
+                            </div>
+                            <div className="p-2 bg-muted rounded text-center">
+                              <p className="text-xs text-muted-foreground">Siswa</p>
+                              <p className="text-lg font-semibold">{account.stats.students}</p>
+                            </div>
+                            <div className="p-2 bg-muted rounded text-center">
+                              <p className="text-xs text-muted-foreground">Mapel</p>
+                              <p className="text-lg font-semibold">{account.stats.subjects}</p>
+                            </div>
+                            <div className="p-2 bg-muted rounded text-center">
+                              <p className="text-xs text-muted-foreground">Nilai</p>
+                              <p className="text-lg font-semibold">{account.stats.grades}</p>
+                            </div>
+                            <div className="p-2 bg-muted rounded text-center">
+                              <p className="text-xs text-muted-foreground">Tugas</p>
+                              <p className="text-lg font-semibold">{account.stats.assignments}</p>
+                            </div>
                           </div>
-                          <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Mapel</p>
-                            <p className="text-lg font-semibold">{account.stats.subjects}</p>
-                          </div>
-                          <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Nilai</p>
-                            <p className="text-lg font-semibold">{account.stats.grades}</p>
-                          </div>
-                          <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Tugas</p>
-                            <p className="text-lg font-semibold">{account.stats.assignments}</p>
-                          </div>
-                        </div>
+                        )}
                       </div>
 
                       {/* Delete Categories Section */}
@@ -610,11 +686,33 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
           )}
         </div>
 
-        {/* Show more indicator */}
-        {filteredAndSortedStats.length > pageSize && (
-          <p className="text-xs text-center text-muted-foreground/60 pt-2">
-            Menampilkan {pageSize} dari {filteredAndSortedStats.length} akun. Ubah limit untuk melihat lebih banyak.
-          </p>
+        {/* Pagination Controls */}
+        {totalAccounts > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-border mt-2 gap-2">
+            <span className="text-xs text-muted-foreground">
+              Total {totalAccounts} Akun • Halaman {currentPage} dari {Math.ceil(totalAccounts / pageSize) || 1}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || isLoading}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage((p) => Math.min(Math.ceil(totalAccounts / pageSize), p + 1))}
+                disabled={currentPage >= Math.ceil(totalAccounts / pageSize) || isLoading}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

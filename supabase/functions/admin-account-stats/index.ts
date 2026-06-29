@@ -37,7 +37,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, password, userId, tables } = await req.json();
+    const { action, password, userId, tables, page, pageSize, search, filter, sort } = await req.json();
 
     // Verify admin password
     if (!verifyAdminPassword(password)) {
@@ -63,96 +63,172 @@ serve(async (req) => {
 
     switch (action) {
       case "get-account-stats": {
-        // Get all auth users
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-        
-        if (authError) {
-          console.error("Error listing users:", authError);
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(pageSize) || 10;
+        const searchStr = typeof search === "string" ? search.trim() : "";
+
+        // Create client pointing to "auth" schema for direct querying if possible
+        const supabaseAuthAdmin = createClient(
+          EXTERNAL_SUPABASE_URL!,
+          EXTERNAL_SERVICE_ROLE_KEY,
+          { db: { schema: "auth" }, auth: { persistSession: false } }
+        );
+
+        let query = supabaseAuthAdmin
+          .from("users")
+          .select("id, email, created_at, last_sign_in_at, email_confirmed_at", { count: "exact" });
+
+        if (searchStr) {
+          query = query.ilike("email", `%${searchStr}%`);
+        }
+
+        // Apply filters
+        if (filter === "verified") {
+          query = query.not("email_confirmed_at", "is", null);
+        } else if (filter === "unverified") {
+          query = query.is("email_confirmed_at", null);
+        }
+
+        // Apply sorting
+        if (sort === "email-asc") {
+          query = query.order("email", { ascending: true });
+        } else if (sort === "email-desc") {
+          query = query.order("email", { ascending: false });
+        } else {
+          query = query.order("created_at", { ascending: false });
+        }
+
+        const start = (pageNum - 1) * limitNum;
+        const end = start + limitNum - 1;
+        query = query.range(start, end);
+
+        const { data: users, count, error: fetchError } = await query;
+
+        if (fetchError) {
+          console.error("Error listing users from auth schema:", fetchError);
+          // Fallback to standard GoTrue listUsers pagination (default 100 limit)
+          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+          if (authError) {
+            return new Response(
+              JSON.stringify({ success: false, error: authError.message }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          // Map users from listUsers
+          const mappedUsers = authData.users.map((user) => ({
+            userId: user.id,
+            email: user.email,
+            createdAt: user.created_at,
+            lastSignInAt: user.last_sign_in_at,
+            emailConfirmed: !!user.email_confirmed_at,
+            stats: null, // Loaded on-demand
+          }));
+
           return new Response(
-            JSON.stringify({ success: false, error: authError.message }),
+            JSON.stringify({
+              success: true,
+              stats: mappedUsers,
+              totalAccounts: authData.users.length,
+              isFallback: true,
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // Get stats for each user
-        const stats = await Promise.all(
-          authData.users.map(async (user) => {
-            const counts = {
-              academicYears: 0,
-              classes: 0,
-              students: 0,
-              subjects: 0,
-              grades: 0,
-              assignments: 0,
-              total: 0,
-            };
-
-            // Count academic years
-            const { count: academicYearsCount } = await supabaseAdmin
-              .from("academic_years")
-              .select("*", { count: "exact", head: true })
-              .eq("user_id", user.id);
-            counts.academicYears = academicYearsCount || 0;
-
-            // Count classes
-            const { count: classesCount } = await supabaseAdmin
-              .from("classes")
-              .select("*", { count: "exact", head: true })
-              .eq("user_id", user.id);
-            counts.classes = classesCount || 0;
-
-            // Count students
-            const { count: studentsCount } = await supabaseAdmin
-              .from("students")
-              .select("*", { count: "exact", head: true })
-              .eq("user_id", user.id);
-            counts.students = studentsCount || 0;
-
-            // Count subjects
-            const { count: subjectsCount } = await supabaseAdmin
-              .from("subjects")
-              .select("*", { count: "exact", head: true })
-              .eq("user_id", user.id);
-            counts.subjects = subjectsCount || 0;
-
-            // Count grades
-            const { count: gradesCount } = await supabaseAdmin
-              .from("grades")
-              .select("*", { count: "exact", head: true })
-              .eq("user_id", user.id);
-            counts.grades = gradesCount || 0;
-
-            // Count assignments
-            const { count: assignmentsCount } = await supabaseAdmin
-              .from("assignments")
-              .select("*", { count: "exact", head: true })
-              .eq("user_id", user.id);
-            counts.assignments = assignmentsCount || 0;
-
-            counts.total = 
-              counts.academicYears + 
-              counts.classes + 
-              counts.students + 
-              counts.subjects + 
-              counts.grades + 
-              counts.assignments;
-
-            return {
-              userId: user.id,
-              email: user.email,
-              createdAt: user.created_at,
-              lastSignInAt: user.last_sign_in_at,
-              emailConfirmed: !!user.email_confirmed_at,
-              stats: counts,
-            };
-          })
-        );
+        // Map users from direct query
+        const mappedUsers = (users || []).map((user: any) => ({
+          userId: user.id,
+          email: user.email,
+          createdAt: user.created_at,
+          lastSignInAt: user.last_sign_in_at,
+          emailConfirmed: !!user.email_confirmed_at,
+          stats: null, // Loaded on-demand
+        }));
 
         return new Response(
           JSON.stringify({
             success: true,
-            stats,
-            totalAccounts: authData.users.length,
+            stats: mappedUsers,
+            totalAccounts: count || 0,
+            isFallback: false,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "get-single-user-stats": {
+        if (!userId) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Missing userId" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const counts = {
+          academicYears: 0,
+          classes: 0,
+          students: 0,
+          subjects: 0,
+          grades: 0,
+          assignments: 0,
+          total: 0,
+        };
+
+        // Count academic years
+        const { count: academicYearsCount } = await supabaseAdmin
+          .from("academic_years")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId);
+        counts.academicYears = academicYearsCount || 0;
+
+        // Count classes
+        const { count: classesCount } = await supabaseAdmin
+          .from("classes")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId);
+        counts.classes = classesCount || 0;
+
+        // Count students
+        const { count: studentsCount } = await supabaseAdmin
+          .from("students")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId);
+        counts.students = studentsCount || 0;
+
+        // Count subjects
+        const { count: subjectsCount } = await supabaseAdmin
+          .from("subjects")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId);
+        counts.subjects = subjectsCount || 0;
+
+        // Count grades
+        const { count: gradesCount } = await supabaseAdmin
+          .from("grades")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId);
+        counts.grades = gradesCount || 0;
+
+        // Count assignments
+        const { count: assignmentsCount } = await supabaseAdmin
+          .from("assignments")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId);
+        counts.assignments = assignmentsCount || 0;
+
+        counts.total = 
+          counts.academicYears + 
+          counts.classes + 
+          counts.students + 
+          counts.subjects + 
+          counts.grades + 
+          counts.assignments;
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            stats: counts,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
