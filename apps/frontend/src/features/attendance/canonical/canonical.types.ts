@@ -66,6 +66,8 @@ export interface AttendanceDayCanonical {
   holidayName?: string;
   eventName?: string;
   lock?: AttendanceLockCanonical | null;
+  reasonCodes?: string[];
+  blockedWriteState?: boolean;
 }
 
 export interface AttendanceCalendarEventCanonical {

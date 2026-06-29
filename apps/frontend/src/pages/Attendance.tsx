@@ -50,6 +50,8 @@ import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import ImportAttendanceDialog from "@/components/import/ImportAttendanceDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 import { normalizeAttendanceStatus, normalizeOcrDate } from "@/lib/ocrImport";
+import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
+import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ProductTour, TourButton } from "@/components/ui/product-tour";
 import { createDefaultSignatureConfig, useSignatureSettings } from "@/hooks/useSignatureSettings";
@@ -293,6 +295,7 @@ const ATTENDANCE_EXPORT_FORMATS: ExportStudioFormatOption[] = [
 
 export default function Attendance() {
   const navigate = useNavigate();
+  const { canAccess } = useFeatureFlags();
   const { success: showSuccess, warning: showWarning } = useEnhancedToast();
   const { classes: dbClasses } = useClasses();
   const [isTourDummyActive, setIsTourDummyActive] = useState(false);
@@ -3233,77 +3236,89 @@ export default function Attendance() {
               {/* 3. Ekspor (UnifiedExportStudio) */}
               {hasData && (
                 <div data-tour="export-attendance">
-                  <UnifiedExportStudio
-                    title="Studio Ekspor Presensi"
-                    description="Pilih format ekspor presensi dan kelola signature dari satu panel yang lebih mudah dipahami."
-                    triggerLabel="Ekspor"
-                    triggerClassName="h-9 px-2.5 text-xs font-semibold"
-                    open={attendanceStudioOpen}
-                    onOpenChange={setAttendanceStudioOpen}
-                    onTriggerClick={openAttendanceExportMonthDialog}
-                    formats={ATTENDANCE_EXPORT_FORMATS}
-                    selectedFormat={attendanceExportFormat}
-                    onFormatChange={handleAttendanceExportFormatChange}
-                    onExport={async ({ formatId, includeSignature: nextIncludeSignature, signatureConfig: nextSignatureConfig, paperSize: nextPaperSize, documentStyle: nextDocumentStyle, autoFitOnePage: nextAutoFitOnePage }) => {
-                      if (formatId === "excel") {
-                        await handleExportExcel(nextSignatureConfig, nextIncludeSignature, selectedAttendanceColumnKeys);
-                        return;
-                      }
-                      if (formatId === "pdf") {
-                        await handleExportPDFVector(nextSignatureConfig, nextIncludeSignature, nextDocumentStyle, nextAutoFitOnePage, nextPaperSize, selectedAttendanceColumnKeys);
-                        return;
-                      }
-                      await handleExportPNGV2(formatId === "png-4k" ? "4k" : "hd", nextSignatureConfig, nextIncludeSignature, nextDocumentStyle, nextAutoFitOnePage, nextPaperSize, selectedAttendanceColumnKeys);
-                    }}
-                    includeSignature={includeSignature}
-                    onIncludeSignatureChange={setIncludeSignature}
-                    signatureConfig={attendanceDefaultSignatureConfig}
-                    hasSignature={hasSignature}
-                    isLoading={signatureLoading}
-                    isSaving={signatureSaving}
-                    onSaveSignature={saveSignature}
-                    paperSize={paperSize}
-                    onPaperSizeChange={setPaperSize}
-                    documentStyle={documentStyle}
-                    onDocumentStyleChange={setDocumentStyle}
-                    autoFitOnePage={autoFitOnePage}
-                    onAutoFitOnePageChange={setAutoFitOnePage}
-                    showAutoFitPreset
-                    formatPanelExtra={attendanceDebugPanel}
-                    stylePanelExtra={attendanceStylePanelExtra}
-                    previewFooter={attendanceDebugPreviewFooter}
-                    columnOptions={attendanceColumnOptions}
-                    onColumnOptionChange={handleAttendanceColumnOptionChange}
-                    columnCount={selectedAttendanceColumnKeys.length}
-                    columnTypographyOptions={attendanceColumnTypographyOptions}
-                    onRestoreDefaultMode={resetAttendanceStudioDefaults}
-                    defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
-                    stylePresetMode="attendance"
-                    stylePresetBaseline={attendanceStylePresetBaseline}
-                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
-                      <AttendanceExportPreviewV2
-                        previewFormat={previewFormat}
-                        draft={draft}
-                        setDraft={setDraft}
-                        previewDate={previewDate}
-                        includeSignature={previewIncludeSignature}
-                        data={attendancePreviewStudioData}
-                        paperSize={previewPaperSize}
-                        documentStyle={previewDocumentStyle ?? documentStyle}
-                        autoFitOnePage={previewAutoFitOnePage ?? autoFitOnePage}
-                        visibleColumnKeys={selectedAttendanceColumnKeys}
-                        debugEnabled={attendanceDebugEnabled}
-                        onTrace={(trace) => attendanceDebugEnabled && commitAttendanceTrace(trace)}
-                        liveEditMode={liveEditMode}
-                        highlightTarget={highlightTarget}
-                        onHighlightTargetHoverChange={onHighlightTargetHoverChange}
-                        onHighlightTargetSelect={onHighlightTargetSelect}
-                        annotationDisplayMode={attendanceAnnotationDisplayMode}
-                        eventAnnotationDisplayMode={attendanceEventAnnotationDisplayMode}
-                        inlineLabelStyle={attendanceInlineLabelStyle}
-                      />
-                    )}
-                  />
+                  {canAccess(FEATURE_KEYS.exportStudio) ? (
+                    <UnifiedExportStudio
+                      title="Studio Ekspor Presensi"
+                      description="Pilih format ekspor presensi dan kelola signature dari satu panel yang lebih mudah dipahami."
+                      triggerLabel="Ekspor"
+                      triggerClassName="h-9 px-2.5 text-xs font-semibold"
+                      open={attendanceStudioOpen}
+                      onOpenChange={setAttendanceStudioOpen}
+                      onTriggerClick={openAttendanceExportMonthDialog}
+                      formats={ATTENDANCE_EXPORT_FORMATS}
+                      selectedFormat={attendanceExportFormat}
+                      onFormatChange={handleAttendanceExportFormatChange}
+                      onExport={async ({ formatId, includeSignature: nextIncludeSignature, signatureConfig: nextSignatureConfig, paperSize: nextPaperSize, documentStyle: nextDocumentStyle, autoFitOnePage: nextAutoFitOnePage }) => {
+                        if (formatId === "excel") {
+                          await handleExportExcel(nextSignatureConfig, nextIncludeSignature, selectedAttendanceColumnKeys);
+                          return;
+                        }
+                        if (formatId === "pdf") {
+                          await handleExportPDFVector(nextSignatureConfig, nextIncludeSignature, nextDocumentStyle, nextAutoFitOnePage, nextPaperSize, selectedAttendanceColumnKeys);
+                          return;
+                        }
+                        await handleExportPNGV2(formatId === "png-4k" ? "4k" : "hd", nextSignatureConfig, nextIncludeSignature, nextDocumentStyle, nextAutoFitOnePage, nextPaperSize, selectedAttendanceColumnKeys);
+                      }}
+                      includeSignature={includeSignature}
+                      onIncludeSignatureChange={setIncludeSignature}
+                      signatureConfig={attendanceDefaultSignatureConfig}
+                      hasSignature={hasSignature}
+                      isLoading={signatureLoading}
+                      isSaving={signatureSaving}
+                      onSaveSignature={saveSignature}
+                      paperSize={paperSize}
+                      onPaperSizeChange={setPaperSize}
+                      documentStyle={documentStyle}
+                      onDocumentStyleChange={setDocumentStyle}
+                      autoFitOnePage={autoFitOnePage}
+                      onAutoFitOnePageChange={setAutoFitOnePage}
+                      showAutoFitPreset
+                      formatPanelExtra={attendanceDebugPanel}
+                      stylePanelExtra={attendanceStylePanelExtra}
+                      previewFooter={attendanceDebugPreviewFooter}
+                      columnOptions={attendanceColumnOptions}
+                      onColumnOptionChange={handleAttendanceColumnOptionChange}
+                      columnCount={selectedAttendanceColumnKeys.length}
+                      columnTypographyOptions={attendanceColumnTypographyOptions}
+                      onRestoreDefaultMode={resetAttendanceStudioDefaults}
+                      defaultModeDescription="Reset semua pengaturan studio kembali ke baseline awal sambil mempertahankan ukuran kertas dan identitas signature."
+                      stylePresetMode="attendance"
+                      stylePresetBaseline={attendanceStylePresetBaseline}
+                      renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFitOnePage, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
+                        <AttendanceExportPreviewV2
+                          previewFormat={previewFormat}
+                          draft={draft}
+                          setDraft={setDraft}
+                          previewDate={previewDate}
+                          includeSignature={previewIncludeSignature}
+                          data={attendancePreviewStudioData}
+                          paperSize={previewPaperSize}
+                          documentStyle={previewDocumentStyle ?? documentStyle}
+                          autoFitOnePage={previewAutoFitOnePage ?? autoFitOnePage}
+                          visibleColumnKeys={selectedAttendanceColumnKeys}
+                          debugEnabled={attendanceDebugEnabled}
+                          onTrace={(trace) => attendanceDebugEnabled && commitAttendanceTrace(trace)}
+                          liveEditMode={liveEditMode}
+                          highlightTarget={highlightTarget}
+                          onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                          onHighlightTargetSelect={onHighlightTargetSelect}
+                          annotationDisplayMode={attendanceAnnotationDisplayMode}
+                          eventAnnotationDisplayMode={attendanceEventAnnotationDisplayMode}
+                          inlineLabelStyle={attendanceInlineLabelStyle}
+                        />
+                      )}
+                    />
+                  ) : (
+                    <Button 
+                      onClick={() => {
+                        showWarning("Fitur Ekspor Studio dinonaktifkan oleh administrator.");
+                      }}
+                      className="h-9 px-2.5 text-xs font-semibold"
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1" />
+                      Ekspor
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

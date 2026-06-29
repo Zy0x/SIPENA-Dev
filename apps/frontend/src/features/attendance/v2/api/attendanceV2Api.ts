@@ -17,9 +17,10 @@ export const attendanceV2Api = {
     });
   },
 
-  getDataset: async (classId: string, month: string, token: string) => {
+  getDataset: async (classId: string, month: string, token: string, workDayFormat?: string) => {
+    const formatQuery = workDayFormat ? `&workDayFormat=${workDayFormat}` : "";
     return httpRequest<{ data: AttendanceDatasetCanonical; issues: any[] }>(
-      `/attendance/v2?classId=${classId}&month=${month}`,
+      `/attendance/v2?classId=${classId}&month=${month}${formatQuery}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
   },

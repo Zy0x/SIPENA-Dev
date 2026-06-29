@@ -73,6 +73,8 @@ export interface AttendanceDayCanonical {
   isWeekend?: boolean;
   holidayName?: string;
   eventName?: string;
+  reasonCodes?: string[];
+  blockedWriteState?: boolean;
 }
 
 export interface AttendanceHolidayCanonical {
@@ -129,6 +131,7 @@ export interface AttendanceDatasetCanonical {
   holidays: AttendanceHolidayCanonical[];
   dayEvents: AttendanceCalendarEventCanonical[];
   locks: AttendanceLockCanonical[];
+  workDayFormat?: "5days" | "6days";
   monthlySummary?: AttendanceMonthlySummaryCanonical[];
   dailySummary?: AttendanceDailySummaryCanonical[];
 }
@@ -162,6 +165,7 @@ export interface AttendanceApiError {
 export interface AttendanceDatasetQuery {
   classId: string;
   month: string;
+  workDayFormat?: string;
 }
 
 export interface AttendanceDailySummaryQuery extends AttendanceDatasetQuery {

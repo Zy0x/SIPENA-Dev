@@ -30,6 +30,8 @@ import ClassCard from "@/components/classes/ClassCard";
 import ClassKkmSetupDialog from "@/components/classes/ClassKkmSetupDialog";
 import ImportClassesStudentsDialog from "@/components/classes/ImportClassesStudentsDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
+import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
+import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 import { ProductTour, TourButton, TourStep } from "@/components/ui/product-tour";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import gsap from "gsap";
@@ -74,6 +76,7 @@ const classesTourSteps: TourStep[] = [
 
 export default function Classes() {
   const { classes, isLoading } = useClasses();
+  const { canAccess } = useFeatureFlags();
   const { allSubjects, isLoading: subjectsLoading } = useSubjects();
   const [searchQuery, setSearchQuery] = useState("");
   const [isTourDummyActive, setIsTourDummyActive] = useState(false);
@@ -240,10 +243,12 @@ export default function Classes() {
                   <Upload className="w-4 h-4" />
                   Import Kelas & Murid
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowOCRImport(true)} className="gap-2 min-h-[44px]">
-                  <Camera className="w-4 h-4" />
-                  Import Murid dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
-                </DropdownMenuItem>
+                {canAccess(FEATURE_KEYS.ocr) && (
+                  <DropdownMenuItem onClick={() => setShowOCRImport(true)} className="gap-2 min-h-[44px]">
+                    <Camera className="w-4 h-4" />
+                    Import Murid dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <TourButton tourKey="classes-tour" onBeforeStart={prepareClassesTour} />

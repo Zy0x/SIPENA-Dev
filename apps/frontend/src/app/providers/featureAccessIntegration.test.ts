@@ -36,16 +36,14 @@ describe("feature access integration guard", () => {
     expect(route).toContain("remoteEngine");
     expect(route).not.toContain("AttendanceV2Page");
     expect(route).not.toContain("AttendanceV2Visualizer");
-    expect(v2Entry).toContain("AttendanceV2LegacyMirror");
-    expect(v2Entry).not.toContain("AttendanceV2Page");
+    expect(v2Entry).toContain("AttendanceV2Page");
     expect(v2Entry).not.toContain("AttendanceV2Visualizer");
   });
 
-  it("keeps attendance v2 as a v1 visual mirror without importing the experimental v2 page", () => {
+  it("keeps the legacy mirror module decoupled but routes active v2 to AttendanceV2Page", () => {
     const mirror = readSource("apps/frontend/src/features/attendance/v2/AttendanceV2LegacyMirror.tsx");
     expect(mirror).toContain("AttendanceV1Wrapper");
     expect(mirror).not.toContain("AttendanceV2Page");
-    expect(mirror).not.toContain("AttendanceV2Visualizer");
   });
 
   it("filters sidebar navigation with feature access", () => {

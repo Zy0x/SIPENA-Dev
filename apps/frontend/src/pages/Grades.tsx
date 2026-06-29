@@ -107,6 +107,8 @@ import {
 import { ReportRoundingSettingsDialog } from "@/components/grades/ReportRoundingSettingsDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 import AddClassDialog from "@/components/classes/AddClassDialog";
+import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
+import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 
 export type GradeInputMode = "owner" | "guest";
 
@@ -307,6 +309,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const { success, error: showError, warning: showWarning } = useEnhancedToast();
   const { shouldShowTours } = useUserPreferences();
   const { colorScheme: gradeTableColorScheme } = useGradeTableColorScheme();
+  const { canAccess } = useFeatureFlags();
 
   const token = searchParams.get("token") || "";
   const [addClassOpen, setAddClassOpen] = useState(false);
@@ -2146,10 +2149,12 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             {isDownloadingOfficialTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
             Download Template Resmi
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => runAfterGradeManageMenuCloses(() => setShowOCRGrades(true))} className="gap-2 min-h-[44px]">
-            <Camera className="w-4 h-4" />
-            Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
-          </DropdownMenuItem>
+          {canAccess(FEATURE_KEYS.ocr) && (
+            <DropdownMenuItem onSelect={() => runAfterGradeManageMenuCloses(() => setShowOCRGrades(true))} className="gap-2 min-h-[44px]">
+              <Camera className="w-4 h-4" />
+              Import dari Foto (OCR) <Badge className="ml-auto bg-amber-500 text-amber-950">BETA</Badge>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">Backup / Restore</DropdownMenuLabel>
           <DropdownMenuItem

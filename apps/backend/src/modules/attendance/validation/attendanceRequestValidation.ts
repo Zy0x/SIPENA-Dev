@@ -22,12 +22,17 @@ export function validateDatasetQuery(params: URLSearchParams): {
 } {
   const classId = params.get("classId")?.trim() ?? "";
   const month = params.get("month")?.trim() ?? "";
+  const workDayFormat = params.get("workDayFormat")?.trim() || undefined;
   const issues: AttendanceValidationIssue[] = [];
 
   if (!classId) issues.push(issue("CLASS_ID_REQUIRED", "classId wajib dikirim.", "classId"));
   if (!ISO_MONTH_RE.test(month)) issues.push(issue("MONTH_INVALID", "month wajib berformat YYYY-MM.", "month"));
 
-  return { valid: issues.length === 0, query: { classId, month }, issues };
+  return {
+    valid: issues.length === 0,
+    query: { classId, month, ...(workDayFormat ? { workDayFormat } : {}) },
+    issues,
+  };
 }
 
 export function validateDailySummaryQuery(params: URLSearchParams): {

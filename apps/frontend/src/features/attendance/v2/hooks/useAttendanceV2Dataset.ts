@@ -4,18 +4,18 @@ import { attendanceV2Api } from "../api/attendanceV2Api";
 import { format } from "date-fns";
 import type { AttendanceDatasetCanonical } from "../../canonical/canonical.types";
 
-export function useAttendanceV2Dataset(classId: string, month: Date) {
+export function useAttendanceV2Dataset(classId: string, month: Date, workDayFormat?: "5days" | "6days") {
   const { session } = useAuth();
   const token = session?.access_token ?? "";
   const monthStr = format(month, "yyyy-MM");
 
   const query = useQuery({
-    queryKey: ["attendance_v2_dataset", classId, monthStr, !!token],
+    queryKey: ["attendance_v2_dataset", classId, monthStr, workDayFormat, !!token],
     queryFn: async () => {
       if (!classId || !token) {
         return null;
       }
-      const response = await attendanceV2Api.getDataset(classId, monthStr, token);
+      const response = await attendanceV2Api.getDataset(classId, monthStr, token, workDayFormat);
       return response.data;
     },
     enabled: !!classId && !!token,
