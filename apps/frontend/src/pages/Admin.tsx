@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Shield, Lock, Eye, EyeOff, LogOut, Database, Users, 
   Key, ArrowLeft, Loader2, CheckCircle, XCircle,
-  AlertTriangle, Server, HardDrive, Clock, Megaphone, UserPlus, TimerReset
+  AlertTriangle, Server, HardDrive, Clock, Megaphone, UserPlus, TimerReset, SlidersHorizontal
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -27,6 +27,7 @@ import { MaintenanceAlertPanel } from "@/components/admin/MaintenanceAlertPanel"
 import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
 import { TeamManagementPanel } from "@/components/admin/TeamManagementPanel";
 import { AuthLockoutResetRequestsManager } from "@/components/admin/AuthLockoutResetRequestsManager";
+import { FeatureAccessPanel } from "@/components/admin/FeatureAccessPanel";
 
 // Admin session storage keys - must match Auth.tsx
 const ADMIN_SESSION_TOKEN_KEY = "admin_session_token";
@@ -338,7 +339,7 @@ const Admin = () => {
       {/* Main content */}
       <main className="container px-4 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 lg:w-auto lg:inline-flex">
             <TabsTrigger value="overview" className="gap-2">
               <Database className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -366,6 +367,10 @@ const Admin = () => {
             <TabsTrigger value="auth-reset" className="gap-2">
               <TimerReset className="w-4 h-4" />
               <span className="hidden sm:inline">Auth Reset</span>
+            </TabsTrigger>
+            <TabsTrigger value="features" className="gap-2">
+              <SlidersHorizontal className="w-4 h-4" />
+              <span className="hidden sm:inline">Fitur</span>
             </TabsTrigger>
             <TabsTrigger value="credentials" className="gap-2">
               <Key className="w-4 h-4" />
@@ -429,6 +434,11 @@ const Admin = () => {
           <TabsContent value="auth-reset" className="space-y-6">
             <h2 className="text-2xl font-bold">Reset Waiting Time Login</h2>
             <AuthLockoutResetRequestsManager adminPassword={getBackendPassword()} />
+          </TabsContent>
+
+          {/* Feature Access Control Tab */}
+          <TabsContent value="features" className="space-y-6">
+            <FeatureAccessPanel adminPassword={getBackendPassword()} />
           </TabsContent>
 
           {/* Credentials Tab */}

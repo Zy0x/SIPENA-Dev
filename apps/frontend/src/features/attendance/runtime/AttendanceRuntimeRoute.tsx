@@ -4,8 +4,8 @@ import AttendanceV1Wrapper from "../v1/AttendanceV1Wrapper";
 import { AttendanceProvider } from "../provider/AttendanceProvider";
 import { AttendanceRuntimeBoundary } from "../ui/AttendanceRuntimeBoundary";
 import AttendanceV2 from "../ui/AttendanceV2";
-
-import { AttendanceV2Visualizer } from "../ui/AttendanceV2Visualizer";
+import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
+import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 
 function ResolvedAttendanceRuntime() {
   const runtime = useAttendanceRuntime();
@@ -16,8 +16,11 @@ function ResolvedAttendanceRuntime() {
 }
 
 export function AttendanceRuntimeRoute() {
+  const { resolveRuntime } = useFeatureFlags();
+  const remoteEngine = resolveRuntime(FEATURE_KEYS.attendanceV2Runtime);
+
   return (
-    <AttendanceRuntimeProvider>
+    <AttendanceRuntimeProvider configInput={{ remoteEngine, mode: "active" }}>
       <AttendanceProvider>
         <AttendanceRuntimeBoundary>
           <ResolvedAttendanceRuntime />

@@ -787,9 +787,9 @@ export default function StudentRankings() {
                       <div className="flex items-center gap-2">
                         <Filter className="w-4 h-4 text-muted-foreground" />
                         <div>
-                          <CardTitle className="text-sm sm:text-base">Filter Mata Pelajaran</CardTitle>
+                          <CardTitle className="text-sm sm:text-base">Mapel yang Dihitung</CardTitle>
                           <CardDescription className="text-xs mt-0.5">
-                            {subjectScopeDescription}
+                            Peringkat gabungan satu kelas. {subjectScopeDescription}
                           </CardDescription>
                         </div>
                       </div>
@@ -814,7 +814,7 @@ export default function StudentRankings() {
                           className="h-8 gap-1.5 text-xs px-3 touch-manipulation"
                         >
                           <X className="h-3 w-3" />
-                          Hapus
+                          Hapus Pilihan
                         </Button>
                       </div>
                     </div>

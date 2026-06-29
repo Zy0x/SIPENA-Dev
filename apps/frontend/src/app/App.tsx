@@ -19,6 +19,10 @@ import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { ThemePreferenceSync } from "@/components/theme/ThemePreferenceSync";
 import { ViewportTelemetryReporter } from "@/hooks/useViewportTelemetry";
 import { useTouchScrollClickGuard } from "@/hooks/useTouchScrollClickGuard";
+import { FeatureFlagProvider } from "@/app/providers/FeatureFlagProvider";
+import { FEATURE_KEYS } from "@/app/providers/featureAccess";
+import { FeatureRouteGuard } from "@/components/FeatureGate";
+import AttendanceRuntimeRoute from "@/features/attendance/runtime/AttendanceRuntimeRoute";
 
 // Pages
 import Index from "../pages/Index";
@@ -42,7 +46,6 @@ import ParentPortal from "../pages/ParentPortal";
 import PortalView from "../pages/PortalView";
 import MorpheChat from "../pages/MorpheChat";
 import Terms from "../pages/Terms";
-import Attendance from "../pages/Attendance";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,8 +74,9 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ToastProvider>
-          <AcademicYearProvider>
+        <FeatureFlagProvider>
+          <ToastProvider>
+            <AcademicYearProvider>
             <TooltipProvider delayDuration={0}>
               <ThemePreferenceSync />
               <Toaster />
@@ -101,27 +105,35 @@ const App = () => {
                     <Route path="/terms" element={<Terms />} />
 
                     {/* Morphe AI - fullscreen route (no sidebar) */}
-                    <Route path="/morphe" element={<ProtectedRoute><MorpheChat /></ProtectedRoute>} />
+                    <Route path="/morphe" element={
+                      <ProtectedRoute>
+                        <FeatureRouteGuard featureKey={FEATURE_KEYS.morphe} label="Morphe AI">
+                          <MorpheChat />
+                        </FeatureRouteGuard>
+                      </ProtectedRoute>
+                    } />
 
                     {/* Protected routes with persistent layout (sidebar won't reload) */}
                     <Route element={<ProtectedRoute><LayoutRoute /></ProtectedRoute>}>
                       <Route path="/dashboard" element={
-                        <ErrorBoundary fallbackTitle="Dashboard error">
-                          <Dashboard />
-                        </ErrorBoundary>
+                        <FeatureRouteGuard featureKey={FEATURE_KEYS.dashboard}>
+                          <ErrorBoundary fallbackTitle="Dashboard error">
+                            <Dashboard />
+                          </ErrorBoundary>
+                        </FeatureRouteGuard>
                       } />
-                      <Route path="/classes" element={<Classes />} />
-                      <Route path="/attendance" element={<Attendance />} />
-                      <Route path="/subjects" element={<Subjects />} />
-                      <Route path="/grades" element={<Grades />} />
-                      <Route path="/reports" element={<Reports />} />
-                      <Route path="/reports/grades" element={<GradeReports />} />
-                      <Route path="/reports/rankings" element={<StudentRankings />} />
-                      <Route path="/reports/portal" element={<ParentPortal />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/settings/profile" element={<Profile />} />
-                      <Route path="/help" element={<Help />} />
-                      <Route path="/about" element={<About />} />
+                      <Route path="/classes" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.classes}><Classes /></FeatureRouteGuard>} />
+                      <Route path="/attendance" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.attendance}><AttendanceRuntimeRoute /></FeatureRouteGuard>} />
+                      <Route path="/subjects" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.subjects}><Subjects /></FeatureRouteGuard>} />
+                      <Route path="/grades" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.grades}><Grades /></FeatureRouteGuard>} />
+                      <Route path="/reports" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.reports}><Reports /></FeatureRouteGuard>} />
+                      <Route path="/reports/grades" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.gradeReports}><GradeReports /></FeatureRouteGuard>} />
+                      <Route path="/reports/rankings" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.rankings}><StudentRankings /></FeatureRouteGuard>} />
+                      <Route path="/reports/portal" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.parentPortal}><ParentPortal /></FeatureRouteGuard>} />
+                      <Route path="/settings" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.settings}><Settings /></FeatureRouteGuard>} />
+                      <Route path="/settings/profile" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.settings}><Profile /></FeatureRouteGuard>} />
+                      <Route path="/help" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.help}><Help /></FeatureRouteGuard>} />
+                      <Route path="/about" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.about}><About /></FeatureRouteGuard>} />
                     </Route>
 
                     <Route path="*" element={<NotFound />} />
@@ -131,8 +143,9 @@ const App = () => {
                 </KeyboardShortcutsProvider>
               </BrowserRouter>
             </TooltipProvider>
-          </AcademicYearProvider>
-        </ToastProvider>
+            </AcademicYearProvider>
+          </ToastProvider>
+        </FeatureFlagProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

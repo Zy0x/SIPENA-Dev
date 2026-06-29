@@ -1,4 +1,4 @@
- import { useState, useEffect, useRef, useCallback } from "react";
+ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
  import { Link, useLocation, useNavigate } from "react-router-dom";
  import { useAuth } from "@/contexts/AuthContext";
  import { useEnhancedToast } from "@/contexts/ToastContext";
@@ -13,6 +13,8 @@
  import { HeaderYearDisplay } from "@/components/layout/HeaderYearDisplay";
  import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
  import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
+ import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
+ import { FEATURE_KEYS } from "@/app/providers/featureAccess";
  import gsap from "gsap";
  import {
     LayoutDashboard,
@@ -42,37 +44,40 @@
    href: string;
    label: string;
    icon: React.ComponentType<{ className?: string }>;
+   featureKey?: string;
    isBeta?: boolean;
    children?: NavItem[];
  }
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/classes", label: "Kelas & Siswa", icon: School },
-  { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen },
-  { href: "/grades", label: "Input Nilai", icon: FileSpreadsheet },
-  { href: "/attendance", label: "Presensi", icon: CalendarDays, isBeta: true },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, featureKey: FEATURE_KEYS.dashboard },
+  { href: "/classes", label: "Kelas & Murid", icon: School, featureKey: FEATURE_KEYS.classes },
+  { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen, featureKey: FEATURE_KEYS.subjects },
+  { href: "/grades", label: "Input Nilai", icon: FileSpreadsheet, featureKey: FEATURE_KEYS.grades },
+  { href: "/attendance", label: "Presensi", icon: CalendarDays, isBeta: true, featureKey: FEATURE_KEYS.attendance },
   { 
     href: "/reports", 
     label: "Laporan", 
     icon: BarChart3,
+    featureKey: FEATURE_KEYS.reports,
     children: [
-      { href: "/reports/grades", label: "Laporan Nilai", icon: FileSpreadsheet },
-      { href: "/reports/rankings", label: "Ranking Siswa", icon: Trophy },
-      { href: "/reports/portal", label: "Portal Orang Tua", icon: UserCheck },
+      { href: "/reports/grades", label: "Laporan Nilai", icon: FileSpreadsheet, featureKey: FEATURE_KEYS.gradeReports },
+      { href: "/reports/rankings", label: "Ranking Murid", icon: Trophy, featureKey: FEATURE_KEYS.rankings },
+      { href: "/reports/portal", label: "Portal Orang Tua", icon: UserCheck, featureKey: FEATURE_KEYS.parentPortal },
     ]
   },
   { 
     href: "/settings", 
     label: "Pengaturan", 
     icon: Settings,
+    featureKey: FEATURE_KEYS.settings,
     children: [
       { href: "/settings/profile", label: "Profil Saya", icon: Users },
       { href: "/settings/profile#security-section", label: "Keamanan Akun", icon: Shield },
     ]
   },
-  { href: "/help", label: "Panduan", icon: HelpCircle },
-  { href: "/about", label: "Tentang", icon: Info },
-  { href: "/morphe", label: "Morphe AI", icon: MorpheIcon, isBeta: true },
+  { href: "/help", label: "Panduan", icon: HelpCircle, featureKey: FEATURE_KEYS.help },
+  { href: "/about", label: "Tentang", icon: Info, featureKey: FEATURE_KEYS.about },
+  { href: "/morphe", label: "Morphe AI", icon: MorpheIcon, isBeta: true, featureKey: FEATURE_KEYS.morphe },
 ];
 
  interface AppLayoutProps {
@@ -111,6 +116,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { success, error: showError } = useEnhancedToast();
+  const { canAccess } = useFeatureFlags();
+
+  const visibleNavItems = useMemo(() => {
+    const filterItem = (item: NavItem): NavItem | null => {
+      if (item.featureKey && !canAccess(item.featureKey)) {
+        return null;
+      }
+
+      const children = item.children
+        ?.map(filterItem)
+        .filter((child): child is NavItem => child !== null);
+
+      return children ? { ...item, children } : item;
+    };
+
+    return navItems.map(filterItem).filter((item): item is NavItem => item !== null);
+  }, [canAccess]);
 
   // Sidebar width constants
   const SIDEBAR_EXPANDED_WIDTH = 260;
@@ -291,7 +313,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Auto-expand menu if child is active (supports hash fragments)
   useEffect(() => {
-    navItems.forEach(item => {
+    visibleNavItems.forEach(item => {
       if (item.children?.some(child => {
         const childPath = child.href.split('#')[0];
         const childHash = child.href.includes('#') ? `#${child.href.split('#')[1]}` : null;
@@ -304,7 +326,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         }
       }
     });
-  }, [location.pathname, location.hash]);
+  }, [location.pathname, location.hash, visibleNavItems, expandedMenus]);
 
   // Load avatar from storage for global sync
   useEffect(() => {
@@ -347,7 +369,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const handleNavClick = useCallback((e: React.MouseEvent, href: string, hasChildren: boolean) => {
     const isOnThisPage = location.pathname === href;
-    const isOnChildPage = hasChildren && navItems.find(i => i.href === href)?.children?.some(c => {
+    const isOnChildPage = hasChildren && visibleNavItems.find(i => i.href === href)?.children?.some(c => {
       const childPath = c.href.split('#')[0];
       return location.pathname === childPath;
     });
@@ -369,7 +391,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     if (!isDesktopSidebar) {
       setSidebarOpen(false);
     }
-  }, [location.pathname, expandedMenus, isDesktopSidebar]);
+  }, [location.pathname, expandedMenus, isDesktopSidebar, visibleNavItems]);
 
    const closeMobileSidebar = useCallback(() => {
      setSidebarOpen(false);
@@ -586,7 +608,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }}
         >
            <ul className="space-y-1" role="list">
-             {navItems.map((item) => {
+             {visibleNavItems.map((item) => {
                const isActive = location.pathname === item.href || 
                  (item.children && item.children.some(child => location.pathname === child.href));
                const isExpanded = expandedMenus.includes(item.href);
