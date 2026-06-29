@@ -181,64 +181,26 @@ export class AttendanceV2Adapter {
 
     if (!userId) throw new Error("User ID is required for V2 writes");
 
-    const { data: existing } = await client
-      .from("attendance_v2_records")
-      .select("id")
-      .eq("class_id", patch.classId)
-      .eq("student_id", patch.studentId)
-      .eq("date", patch.date)
-      .eq("user_id", userId)
-      .maybeSingle();
+    const { data, error } = await client.rpc("upsert_attendance_record", {
+      p_user_id: userId,
+      p_class_id: patch.classId,
+      p_student_id: patch.studentId,
+      p_date: patch.date,
+      p_status: patch.status,
+      p_note: patch.note || null,
+      p_source: "manual",
+    });
 
-    if (patch.status === null) {
-      if (existing) {
-        const { error } = await client
-          .from("attendance_v2_records")
-          .delete()
-          .eq("id", existing.id);
-        if (error) throw error;
-      }
-      return { success: true, action: "delete" };
-    } else {
-      const payload: Record<string, any> = {
-        status: patch.status,
-        updated_at: new Date().toISOString(),
-        updated_by: userId,
-      };
-      if (patch.note !== undefined) {
-        payload.note = patch.note;
-      }
-
-      if (existing) {
-        const { data, error } = await client
-          .from("attendance_v2_records")
-          .update(payload)
-          .eq("id", existing.id)
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
-      } else {
-        const { data, error } = await client
-          .from("attendance_v2_records")
-          .insert({
-            user_id: userId,
-            class_id: patch.classId,
-            student_id: patch.studentId,
-            date: patch.date,
-            status: patch.status,
-            note: patch.note || null,
-            created_at: new Date().toISOString(),
-            created_by: userId,
-            updated_at: new Date().toISOString(),
-            updated_by: userId,
-          })
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
-      }
+    if (error) {
+      throw new Error(`Supabase RPC Error: ${error.message}`);
     }
+
+    const json = data as { success: boolean; error_code?: string; message?: string; action?: string; record_id?: string };
+    if (!json.success) {
+      throw new Error(json.message || `RPC Error: ${json.error_code}`);
+    }
+
+    return json;
   }
 
   async toggleLock(patch: AttendanceLockPatch, runtime: AttendanceRuntimeContext) {

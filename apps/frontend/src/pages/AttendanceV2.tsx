@@ -293,7 +293,34 @@ const ATTENDANCE_EXPORT_FORMATS: ExportStudioFormatOption[] = [
 
 export default function AttendanceV2Page() {
   const navigate = useNavigate();
-  const { success: showSuccess, warning: showWarning } = useEnhancedToast();
+  const { success: showSuccess, warning: showWarning, info: showInfo } = useEnhancedToast();
+  
+  useEffect(() => {
+    const handleSyncStart = (e: Event) => {
+      const customEvent = e as CustomEvent<{ count: number }>;
+      showInfo(
+        "Menyelaraskan Data Offline",
+        `Sedang mengirim ${customEvent.detail.count} perubahan offline ke server...`
+      );
+    };
+
+    const handleSyncComplete = (e: Event) => {
+      const customEvent = e as CustomEvent<{ successCount: number; totalCount: number }>;
+      showSuccess(
+        "Sinkronisasi Selesai",
+        `Berhasil menyelaraskan ${customEvent.detail.successCount} dari ${customEvent.detail.totalCount} perubahan offline.`
+      );
+    };
+
+    window.addEventListener("attendance_v2_sync_start", handleSyncStart);
+    window.addEventListener("attendance_v2_sync_complete", handleSyncComplete);
+
+    return () => {
+      window.removeEventListener("attendance_v2_sync_start", handleSyncStart);
+      window.removeEventListener("attendance_v2_sync_complete", handleSyncComplete);
+    };
+  }, [showInfo, showSuccess]);
+
   const { classes: dbClasses } = useClasses();
   const [isTourDummyActive, setIsTourDummyActive] = useState(false);
   const [tourDummyClass, setTourDummyClass] = useState<Class | null>(null);

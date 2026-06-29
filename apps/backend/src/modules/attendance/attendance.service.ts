@@ -82,6 +82,23 @@ export class AttendanceService {
         };
       }
 
+      // Verifikasi relasi murid-kelas untuk integritas akademik
+      const { data: studentMatch, error: studentMatchError } = await supabaseAdmin
+        .from("students")
+        .select("class_id")
+        .eq("id", patch.studentId)
+        .maybeSingle();
+
+      if (studentMatchError || !studentMatch || studentMatch.class_id !== patch.classId) {
+        return {
+          statusCode: 400,
+          error: {
+            code: "ATTENDANCE_STUDENT_CLASS_MISMATCH",
+            message: "Siswa tidak terdaftar di kelas yang bersangkutan.",
+          },
+        };
+      }
+
       const monthStr = patch.date.substring(0, 7); // "YYYY-MM"
       const { dataset, issues: fetchIssues } = await this.v2.getDataset(
         { classId: patch.classId, month: monthStr },
@@ -239,6 +256,37 @@ export class AttendanceService {
     if (runtime.engine === "v2") {
       try {
         const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+
+        // 1. Verifikasi relasi murid-kelas untuk mencegah manipulasi data
+        const { data: studentMatch, error: studentMatchError } = await supabaseAdmin
+          .from("students")
+          .select("class_id")
+          .eq("id", body.studentId)
+          .maybeSingle();
+
+        if (studentMatchError || !studentMatch || studentMatch.class_id !== body.classId) {
+          return {
+            statusCode: 400,
+            error: {
+              code: "ATTENDANCE_STUDENT_CLASS_MISMATCH",
+              message: "Siswa tidak terdaftar di kelas yang bersangkutan.",
+            },
+          };
+        }
+
+        // 2. Verifikasi status lock period
+        const monthStr = body.date.substring(0, 7);
+        const { dataset } = await this.v2.getDataset({ classId: body.classId, month: monthStr }, runtime);
+        if (dataset.locks.some((l) => l.isLocked)) {
+          return {
+            statusCode: 400,
+            error: {
+              code: "ATTENDANCE_LOCKED_PERIOD",
+              message: "Periode presensi ini telah dikunci.",
+            },
+          };
+        }
+
         const { data, error } = await client
           .from("attendance_v2_records")
           .update({ note: body.note, updated_at: new Date().toISOString(), updated_by: runtime.user?.id })

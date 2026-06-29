@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal as supabase, EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
 import { useAuth } from "@/contexts/AuthContext";
@@ -200,6 +200,87 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     [holidays, workDayFormat]
   );
 
+  interface OfflineMutation {
+    id: string;
+    type: "setAttendance" | "updateNote" | "bulkSetAttendance" | "toggleHoliday" | "upsertDayEvent" | "deleteDayEvent" | "toggleLock";
+    params: any;
+    timestamp: number;
+  }
+
+  const syncInProgressRef = useRef(false);
+
+  const addOfflineMutation = useCallback((type: OfflineMutation["type"], params: any) => {
+    try {
+      const key = `attendance_v2_pending_sync_${user?.id || "anon"}`;
+      const existingRaw = localStorage.getItem(key);
+      const queue: OfflineMutation[] = existingRaw ? JSON.parse(existingRaw) : [];
+      queue.push({
+        id: Math.random().toString(36).substring(7),
+        type,
+        params,
+        timestamp: Date.now(),
+      });
+      localStorage.setItem(key, JSON.stringify(queue));
+    } catch (e) {
+      console.error("Error saving offline mutation:", e);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!dbAvailable || !user || syncInProgressRef.current) return;
+
+    const key = `attendance_v2_pending_sync_${user.id}`;
+    const rawQueue = localStorage.getItem(key);
+    if (!rawQueue) return;
+
+    let queue: OfflineMutation[] = [];
+    try {
+      queue = JSON.parse(rawQueue);
+    } catch {
+      return;
+    }
+
+    if (queue.length === 0) return;
+
+    const performSync = async () => {
+      syncInProgressRef.current = true;
+      let successCount = 0;
+      
+      window.dispatchEvent(new CustomEvent("attendance_v2_sync_start", { detail: { count: queue.length } }));
+
+      for (const item of queue) {
+        try {
+          if (item.type === "setAttendance") {
+            await setAttendanceMutation.mutateAsync(item.params);
+          } else if (item.type === "updateNote") {
+            await updateNoteMutation.mutateAsync(item.params);
+          } else if (item.type === "bulkSetAttendance") {
+            await bulkSetAttendanceMutation.mutateAsync(item.params);
+          } else if (item.type === "toggleHoliday") {
+            await toggleHolidayMutation.mutateAsync(item.params);
+          } else if (item.type === "upsertDayEvent") {
+            await upsertDayEventMutation.mutateAsync(item.params);
+          } else if (item.type === "deleteDayEvent") {
+            await deleteDayEventMutation.mutateAsync(item.params);
+          } else if (item.type === "toggleLock") {
+            await toggleLockMutation.mutateAsync(item.params);
+          }
+          successCount++;
+        } catch (err) {
+          console.error(`Offline sync failed for mutation type ${item.type}:`, err);
+        }
+      }
+
+      localStorage.removeItem(key);
+      window.dispatchEvent(new CustomEvent("attendance_v2_sync_complete", { detail: { successCount, totalCount: queue.length } }));
+      
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      syncInProgressRef.current = false;
+    };
+
+    performSync();
+  }, [dbAvailable, user, classId, monthStart]);
+
   // Set attendance mutation (supports D status + note)
   const setAttendanceMutation = useMutation({
     mutationFn: async ({
@@ -213,6 +294,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (!user || !classId) throw new Error("User or class not set");
 
       if (!dbAvailable) {
+        addOfflineMutation("setAttendance", { studentId, date, status, note });
         setLocalAttendance((prev) => {
           const existing = prev.findIndex(
             (r) => r.student_id === studentId && r.date === date
@@ -268,6 +350,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (!user || !classId) throw new Error("User or class not set");
 
       if (!dbAvailable) {
+        addOfflineMutation("updateNote", { studentId, date, note });
         setLocalAttendance((prev) => {
           const idx = prev.findIndex(r => r.student_id === studentId && r.date === date);
           if (idx >= 0) {
@@ -320,6 +403,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (!user || !classId) throw new Error("User or class not set");
 
       if (!dbAvailable) {
+        addOfflineMutation("bulkSetAttendance", { studentIds, date, status });
         setLocalAttendance((prev) => {
           const filtered = prev.filter((r) => r.date !== date);
           const newRecords = studentIds.map((studentId) => ({
@@ -369,6 +453,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (!user) throw new Error("User not authenticated");
 
       if (!dbAvailable) {
+        addOfflineMutation("toggleHoliday", { date, description });
         const exists = localHolidays.some((h) => h.date === date);
         setLocalHolidays((prev) => exists ? prev.filter((h) => h.date !== date) : [...prev, { date, description: description || "Hari Libur" }]);
         return { action: exists ? "deleted" : "added" };
@@ -409,6 +494,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (!user) throw new Error("User not authenticated");
 
       if (!dbAvailable) {
+        addOfflineMutation("upsertDayEvent", event);
         setLocalDayEvents((prev) => {
           const exists = prev.findIndex(e => e.date === event.date);
           if (exists >= 0) {
@@ -455,6 +541,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (!user) throw new Error("User not authenticated");
 
       if (!dbAvailable) {
+        addOfflineMutation("deleteDayEvent", date);
         setLocalDayEvents(prev => prev.filter(e => e.date !== date));
         return;
       }
@@ -488,7 +575,11 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const toggleLockMutation = useMutation({
     mutationFn: async (locked: boolean) => {
       if (!user || !classId) throw new Error("User or class not set");
-      if (!dbAvailable) { setLocalLocked(locked); return locked; }
+      if (!dbAvailable) {
+        addOfflineMutation("toggleLock", locked);
+        setLocalLocked(locked);
+        return locked;
+      }
 
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
