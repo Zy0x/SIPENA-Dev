@@ -17,7 +17,7 @@ import { AttendanceShadowService } from "./shadow/attendanceShadow.service";
 import { AttendanceV1Adapter } from "./v1/attendanceV1.adapter";
 import { AttendanceV2Adapter } from "./v2/attendanceV2.adapter";
 import { createSupabaseUserClient, supabaseAdmin } from "../../database/supabase";
-import { parse, startOfMonth, endOfMonth, format } from "date-fns";
+import { parse, startOfMonth, endOfMonth, format, getDay } from "date-fns";
 
 
 
@@ -397,7 +397,7 @@ export class AttendanceService {
     }
   }
 
-  async promoteV2ToV1(classId: string, month: string, runtime: AttendanceRuntimeContext) {
+  async promoteV2ToV1(classId: string, month: string, workDayFormat: "5days" | "6days", runtime: AttendanceRuntimeContext) {
     const userId = runtime.user?.id;
     if (!userId) {
       return {
@@ -409,7 +409,7 @@ export class AttendanceService {
     try {
       const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
 
-      // 1. Ambil data dari V2 tables
+      // 1. Ambal data dari V2 tables
       const parsedMonth = parse(month, "yyyy-MM", new Date());
       const monthStart = format(startOfMonth(parsedMonth), "yyyy-MM-dd");
       const monthEnd = format(endOfMonth(parsedMonth), "yyyy-MM-dd");
@@ -448,9 +448,19 @@ export class AttendanceService {
       const v2DayEvents = dayEventsRes.data || [];
       const v2Lock = locksRes.data;
 
+      // Filter data presensi V2 sebelum digabungkan ke V1:
+      // Jika format kelas adalah 5 hari kerja, buang semua catatan hari Sabtu (day 6) agar data produksi V1 bersih.
+      let filteredV2Records = v2Records;
+      if (workDayFormat === "5days") {
+        filteredV2Records = v2Records.filter((r) => {
+          const dayOfWeek = getDay(parse(r.date, "yyyy-MM-dd", new Date()));
+          return dayOfWeek !== 6;
+        });
+      }
+
       // 2. Tulis data ke V1 tables (Upsert/Merge)
       // A. Records: hapus records V1 yang ada lalu masukkan records dari V2
-      if (v2Records.length > 0) {
+      if (filteredV2Records.length > 0) {
         // Hapus V1 records lama untuk class dan month ini
         const { error: deleteRecError } = await client
           .from("attendance_records")
@@ -462,7 +472,7 @@ export class AttendanceService {
         if (deleteRecError) throw deleteRecError;
 
         // Insert records baru
-        const newRecords = v2Records.map(r => ({
+        const newRecords = filteredV2Records.map(r => ({
           class_id: classId,
           student_id: r.student_id,
           date: r.date,

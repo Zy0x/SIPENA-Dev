@@ -636,6 +636,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         body: JSON.stringify({
           classId,
           month: monthStart.substring(0, 7),
+          workDayFormat,
         }),
       });
 

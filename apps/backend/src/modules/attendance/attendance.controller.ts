@@ -120,14 +120,15 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
 
     // Promote V2 to V1 (Merge sandbox data to production)
     if (method === "POST" && pathname === "/attendance/v2/promote") {
-      const body = (await readJson(req)) as { classId: string; month: string };
+      const body = (await readJson(req)) as { classId: string; month: string; workDayFormat?: "5days" | "6days" };
       if (!body.classId || !body.month) {
         sendJson(res, 400, {
           error: { code: "BAD_REQUEST", message: "classId dan month wajib dikirim." },
         });
         return true;
       }
-      const result = await attendanceService.promoteV2ToV1(body.classId, body.month, runtime);
+      const formatVal = body.workDayFormat || "6days";
+      const result = await attendanceService.promoteV2ToV1(body.classId, body.month, formatVal, runtime);
       if (result.error) {
         sendJson(res, result.statusCode, { error: result.error });
       } else {
