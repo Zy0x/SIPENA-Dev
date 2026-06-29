@@ -54,6 +54,7 @@ const navItems: NavItem[] = [
   { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen, featureKey: FEATURE_KEYS.subjects },
   { href: "/grades", label: "Input Nilai", icon: FileSpreadsheet, featureKey: FEATURE_KEYS.grades },
   { href: "/attendance", label: "Presensi", icon: CalendarDays, isBeta: true, featureKey: FEATURE_KEYS.attendance },
+  { href: "/attendance-v2", label: "Presensi V2", icon: CalendarDays, isBeta: true, featureKey: FEATURE_KEYS.attendance },
   { 
     href: "/reports", 
     label: "Laporan", 

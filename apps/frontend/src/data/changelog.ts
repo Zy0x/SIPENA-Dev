@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.124",
+    version: "2.4.124",
+    title: "Pemisahan Rute Presensi V1 dan V2",
+    description: "Memisahkan rute halaman Presensi: rute /attendance dikunci menggunakan Engine V1, dan ditambahkan rute baru /attendance-v2 yang dikunci menggunakan Engine V2 secara paralel.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-29",
+    details: [
+      "Menambahkan opsional prop forcedEngine pada komponen AttendanceRuntimeRoute untuk mem-bypass kalkulasi Feature Flags dan mengunci target engine secara statis.",
+      "Mengonfigurasi rute /attendance agar selalu menggunakan Engine V1, dan rute baru /attendance-v2 agar selalu menggunakan Engine V2.",
+      "Menyuntikkan item menu navigasi 'Presensi V2' pada sidebar AppLayout sehingga kedua halaman dapat diakses secara berdampingan."
+    ]
+  },
+  {
     id: "v2.4.123",
     version: "2.4.123",
     title: "Penghapusan Tombol Logout Duplikat",

@@ -8,19 +8,24 @@ import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
 import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 import { Loader2 } from "lucide-react";
 
-function ResolvedAttendanceRuntime() {
+interface AttendanceRuntimeRouteProps {
+  forcedEngine?: "v1" | "v2";
+}
+
+function ResolvedAttendanceRuntime({ forcedEngine }: { forcedEngine?: "v1" | "v2" }) {
   const runtime = useAttendanceRuntime();
-  if (runtime.engine === "v2") {
+  const activeEngine = forcedEngine || runtime.engine;
+  if (activeEngine === "v2") {
     return <AttendanceV2 />;
   }
   return <AttendanceV1Wrapper />;
 }
 
-export function AttendanceRuntimeRoute() {
+export function AttendanceRuntimeRoute({ forcedEngine }: AttendanceRuntimeRouteProps) {
   const { getAccessStatus, resolveRuntime } = useFeatureFlags();
   const runtimeAccessStatus = getAccessStatus(FEATURE_KEYS.attendanceV2Runtime);
 
-  if (runtimeAccessStatus === "loading") {
+  if (!forcedEngine && runtimeAccessStatus === "loading") {
     return (
       <div className="flex min-h-[50vh] items-center justify-center px-4 py-8 text-muted-foreground">
         <div className="flex items-center gap-2 text-sm">
@@ -31,13 +36,13 @@ export function AttendanceRuntimeRoute() {
     );
   }
 
-  const remoteEngine = resolveRuntime(FEATURE_KEYS.attendanceV2Runtime);
+  const remoteEngine = forcedEngine || resolveRuntime(FEATURE_KEYS.attendanceV2Runtime);
 
   return (
     <AttendanceRuntimeProvider configInput={{ remoteEngine, mode: "active" }}>
       <AttendanceProvider>
         <AttendanceRuntimeBoundary>
-          <ResolvedAttendanceRuntime />
+          <ResolvedAttendanceRuntime forcedEngine={forcedEngine} />
         </AttendanceRuntimeBoundary>
       </AttendanceProvider>
     </AttendanceRuntimeProvider>
