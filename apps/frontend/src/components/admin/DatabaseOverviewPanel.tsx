@@ -134,16 +134,16 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
   }, [adminPassword, stats, fetchDetailedStats]);
 
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+    <div className="rounded-xl border border-border bg-card/50 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/70 bg-slate-900/80">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/80">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
             <Database className="w-4 h-4 text-blue-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-slate-100">Database Overview</p>
+              <p className="text-sm font-semibold text-foreground">Database Overview</p>
               {isLive && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -151,7 +151,7 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {totalRecords > 0
                 ? `${totalRecords.toLocaleString("id-ID")} record dari ${discoveredTables.length} tabel`
                 : "Memuat data dari Supabase..."}
@@ -168,7 +168,7 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
           size="sm"
           onClick={fetchDetailedStats}
           disabled={statsLoading || !adminPassword}
-          className="h-8 gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+          className="h-8 gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${statsLoading ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline text-xs">Refresh</span>
@@ -178,35 +178,35 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
       {/* Content */}
       <div className="p-5">
         {!adminPassword ? (
-          <div className="flex flex-col items-center gap-3 py-10 text-slate-600">
+          <div className="flex flex-col items-center gap-3 py-10 text-muted-foreground/60">
             <AlertCircle className="w-10 h-10 opacity-30" />
             <p className="text-sm text-center">
               Masukkan password backend di tab{" "}
-              <span className="text-slate-400 font-medium">Kredensial</span> untuk memuat data
+              <span className="text-foreground font-medium">Kredensial</span> untuk memuat data
             </p>
           </div>
         ) : statsLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-[72px] rounded-lg bg-slate-800/40 animate-pulse" />
+              <div key={i} className="h-[72px] rounded-lg bg-muted/40 animate-pulse" />
             ))}
           </div>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 py-10">
             <AlertCircle className="w-10 h-10 text-red-400/60" />
-            <p className="text-sm text-slate-500">{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchDetailedStats} className="border-slate-700 text-slate-400 hover:text-slate-200">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={fetchDetailedStats} className="border-border text-muted-foreground hover:text-foreground">
               Coba Lagi
             </Button>
           </div>
         ) : stats && discoveredTables.length > 0 ? (
           <>
             {/* Total summary */}
-            <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-slate-800/40 border border-slate-700/40">
-              <TrendingUp className="w-4 h-4 text-slate-400" />
-              <span className="text-sm text-slate-400">
+            <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-muted/40 border border-border">
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
                 Total:{" "}
-                <span className="text-slate-100 font-bold tabular-nums">
+                <span className="text-foreground font-bold tabular-nums">
                   {totalRecords.toLocaleString("id-ID")}
                 </span>{" "}
                 record dari {discoveredTables.length} tabel aktif
@@ -218,11 +218,11 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
               {discoveredTables.map((tableName) => (
                 <div
                   key={tableName}
-                  className="group p-3.5 rounded-lg border border-slate-700/40 bg-slate-800/30 hover:bg-slate-800/60 hover:border-slate-600/60 transition-all duration-150"
+                  className="group p-3.5 rounded-lg border border-border/40 bg-muted/20 hover:bg-muted/50 hover:border-border/60 transition-all duration-150"
                 >
                   <div className="flex items-center gap-1.5 mb-2">
                     <span className="text-base leading-none">{getTableIcon(tableName)}</span>
-                    <span className="text-[11px] font-medium text-slate-500 truncate group-hover:text-slate-400 transition-colors">
+                    <span className="text-[11px] font-medium text-muted-foreground/70 truncate group-hover:text-muted-foreground transition-colors">
                       {getTableLabel(tableName)}
                     </span>
                   </div>
@@ -234,7 +234,7 @@ export function DatabaseOverviewPanel({ adminPassword }: DatabaseOverviewPanelPr
             </div>
           </>
         ) : (
-          <p className="text-center text-slate-600 py-10 text-sm">
+          <p className="text-center text-muted-foreground/65 py-10 text-sm">
             Data akan dimuat secara otomatis...
           </p>
         )}

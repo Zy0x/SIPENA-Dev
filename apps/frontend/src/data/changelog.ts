@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.119",
+    version: "2.4.119",
+    title: "Admin Panel Enterprise & Theme Revamp",
+    description: "Rombak total halaman admin dengan optimalisasi visual, mode tema adaptif, integrasi palette pemilih, dan semantic styling.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-29",
+    details: [
+      "Mengintegrasikan selektor mode tema (gelap/terang) dan pilihan palette warna dinamis di top header bar Admin.",
+      "Mengonversi struktur layout sidebar, drawer navigasi, panel credentials, dan panel notifikasi agar menggunakan CSS variable-based semantic classes secara responsif.",
+      "Melakukan refactoring penuh pada seluruh sub-panel admin (TeamManagement, DatabaseOverview, DatabaseManagement, MaintenanceAlert, AdminNotifications, DeletionRequests, AuthLockoutReset, dan FeatureAccess) untuk keterbacaan yang aman di light dan dark mode.",
+      "Memperbaiki error impor ikon RefreshCw menjadi RefreshCcw pada tab Auth Lockout Reset untuk menjamin build typecheck sukses.",
+      "Menguji dan memverifikasi compile build frontend dan typecheck monorepo berjalan normal."
+    ]
+  },
+  {
     id: "v2.4.118",
     version: "2.4.118",
     title: "Presensi V2 Persistence Adapter & Active Switch",

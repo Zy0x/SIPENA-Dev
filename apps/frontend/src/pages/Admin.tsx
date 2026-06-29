@@ -14,6 +14,7 @@ import {
   UserPlus, TimerReset, SlidersHorizontal, LayoutDashboard,
   ChevronLeft, ChevronRight, Bell, Activity, Menu, X,
   Fingerprint, ShieldCheck, Wifi, WifiOff,
+  Sun, Moon, Palette, RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,6 +30,15 @@ import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
 import { TeamManagementPanel } from "@/components/admin/TeamManagementPanel";
 import { AuthLockoutResetRequestsManager } from "@/components/admin/AuthLockoutResetRequestsManager";
 import { FeatureAccessPanel } from "@/components/admin/FeatureAccessPanel";
+import { useThemes, themes } from "@/hooks/useThemes";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 // Admin session storage keys - must match Auth.tsx
 const ADMIN_SESSION_TOKEN_KEY = "admin_session_token";
@@ -76,6 +86,7 @@ function useSessionClock(isAuthenticated: boolean) {
 const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentTheme, isDark, selectTheme, toggleDarkMode: toggleThemeDarkMode, resetToDefault } = useThemes();
 
   // Auth states
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -231,17 +242,17 @@ const Admin = () => {
   // ─── Loading State ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
               <Shield className="w-8 h-8 text-red-400" />
             </div>
-            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center">
-              <Loader2 className="w-3 h-3 animate-spin text-slate-400" />
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-background border border-border flex items-center justify-center">
+              <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
             </span>
           </div>
-          <p className="text-slate-500 text-sm">Memeriksa sesi...</p>
+          <p className="text-muted-foreground/85 text-sm">Memeriksa sesi...</p>
         </div>
       </div>
     );
@@ -250,11 +261,11 @@ const Admin = () => {
   // ─── LOGIN PAGE ────────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-slate-950">
+      <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-background">
         {/* Ambient background */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-red-600/5 blur-[120px]" />
-          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-slate-700/10 blur-[100px]" />
+          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-muted/10 blur-[100px]" />
           {/* Grid pattern */}
           <div
             className="absolute inset-0 opacity-[0.03]"
@@ -276,7 +287,7 @@ const Admin = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate("/")}
-            className="mb-8 gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+            className="mb-8 gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
             type="button"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -284,7 +295,7 @@ const Admin = () => {
           </Button>
 
           {/* Card */}
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden">
+          <div className="rounded-2xl border border-border bg-card/85 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden">
             {/* Top accent bar */}
             <div className="h-1 w-full bg-gradient-to-r from-red-600 via-rose-500 to-red-700" />
 
@@ -305,27 +316,27 @@ const Admin = () => {
                 </motion.div>
 
                 <div className="text-center">
-                  <h1 className="text-2xl font-bold text-slate-100 tracking-tight">
+                  <h1 className="text-2xl font-bold text-foreground tracking-tight">
                     Admin Portal
                   </h1>
-                  <p className="text-slate-400 text-sm mt-1">
+                  <p className="text-muted-foreground text-sm mt-1">
                     SIPENA System Administration
                   </p>
                 </div>
 
                 {/* Security indicators */}
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-500 dark:text-emerald-400">
                     <Wifi className="w-3 h-3" />
                     <span>Koneksi Aman</span>
                   </div>
-                  <div className="w-px h-3 bg-slate-700" />
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <div className="w-px h-3 bg-border" />
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Fingerprint className="w-3 h-3" />
                     <span>Akses Terbatas</span>
                   </div>
-                  <div className="w-px h-3 bg-slate-700" />
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <div className="w-px h-3 bg-border" />
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <ShieldCheck className="w-3 h-3" />
                     <span>Terenkripsi</span>
                   </div>
@@ -335,25 +346,25 @@ const Admin = () => {
               {/* Form */}
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="admin-password" className="text-slate-300 text-sm font-medium">
+                  <Label htmlFor="admin-password" className="text-foreground/90 text-sm font-medium">
                     Password Admin
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
                     <Input
                       id="admin-password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10 bg-slate-800/60 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-red-500/60 focus:ring-red-500/20 h-11"
+                      className="pl-10 pr-10 bg-background border-border text-foreground placeholder:text-muted-foreground/45 focus:border-red-500/60 focus:ring-red-500/20 h-11"
                       disabled={loginLoading}
                       autoFocus
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -375,7 +386,7 @@ const Admin = () => {
               </form>
 
               {/* Footer note */}
-              <p className="text-center text-xs text-slate-600 mt-6">
+              <p className="text-center text-xs text-muted-foreground/50 mt-6">
                 Akses tidak sah akan dicatat dan dilaporkan
               </p>
             </div>
@@ -390,23 +401,23 @@ const Admin = () => {
 
   // ─── ADMIN DASHBOARD ───────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="min-h-screen bg-background text-foreground flex transition-colors duration-200">
       {/* ── Sidebar (desktop) ── */}
       <aside
         className={`
           hidden lg:flex flex-col fixed top-0 left-0 h-screen z-40
-          border-r border-slate-800/70 bg-slate-900/95 backdrop-blur-xl
+          border-r border-border bg-card/95 backdrop-blur-xl
           transition-all duration-300 ease-in-out
           ${sidebarCollapsed ? "w-16" : "w-64"}
         `}
       >
         {/* Sidebar header */}
-        <div className={`flex items-center h-16 px-4 border-b border-slate-800/70 shrink-0 ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
+        <div className={`flex items-center h-16 px-4 border-b border-border shrink-0 ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
               <SipenaLogo size="sm" />
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-100 leading-none">SIPENA</p>
+                <p className="text-xs font-semibold text-foreground leading-none">SIPENA</p>
                 <p className="text-[10px] text-red-400 font-medium mt-0.5">Admin Console</p>
               </div>
             </div>
@@ -419,7 +430,7 @@ const Admin = () => {
           <button
             type="button"
             onClick={() => setSidebarCollapsed(c => !c)}
-            className={`p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors ${sidebarCollapsed ? "ml-0" : ""}`}
+            className={`p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors ${sidebarCollapsed ? "ml-0" : ""}`}
           >
             {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -432,7 +443,7 @@ const Admin = () => {
             return (
               <div key={group} className="mb-3">
                 {!sidebarCollapsed && (
-                  <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+                  <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
                     {group}
                   </p>
                 )}
@@ -450,7 +461,7 @@ const Admin = () => {
                         ${sidebarCollapsed ? "justify-center" : ""}
                         ${isActive
                           ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                          : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70 border border-transparent"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent"
                         }
                       `}
                     >
@@ -467,12 +478,12 @@ const Admin = () => {
         </nav>
 
         {/* Sidebar footer */}
-        <div className="shrink-0 p-3 border-t border-slate-800/70">
+        <div className="shrink-0 p-3 border-t border-border">
           <button
             type="button"
             onClick={handleLogout}
             title={sidebarCollapsed ? "Logout" : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-150 select-none ${sidebarCollapsed ? "justify-center" : ""}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all duration-150 select-none ${sidebarCollapsed ? "justify-center" : ""}`}
           >
             <LogOut className="w-4 h-4 shrink-0" />
             {!sidebarCollapsed && <span>Logout</span>}
@@ -496,23 +507,23 @@ const Admin = () => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed top-0 left-0 h-full w-72 z-50 bg-slate-900 border-r border-slate-800 flex flex-col lg:hidden"
+              className="fixed top-0 left-0 h-full w-72 z-50 bg-card border-r border-border flex flex-col lg:hidden"
             >
               {/* Mobile sidebar header */}
-              <div className="flex items-center justify-between h-16 px-4 border-b border-slate-800">
+              <div className="flex items-center justify-between h-16 px-4 border-b border-border">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                     <Shield className="w-4 h-4 text-red-400" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-100">SIPENA Admin</p>
-                    <p className="text-[10px] text-slate-500">{sessionClock} aktif</p>
+                    <p className="text-xs font-semibold text-foreground">SIPENA Admin</p>
+                    <p className="text-[10px] text-muted-foreground">{sessionClock} aktif</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMobileNavOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -524,7 +535,7 @@ const Admin = () => {
                   const items = NAV_ITEMS.filter(n => n.group === group);
                   return (
                     <div key={group} className="mb-3">
-                      <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+                      <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
                         {group}
                       </p>
                       {items.map(item => {
@@ -539,7 +550,7 @@ const Admin = () => {
                               w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 select-none
                               ${isActive
                                 ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/70 border border-transparent"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent"
                               }
                             `}
                           >
@@ -554,11 +565,11 @@ const Admin = () => {
               </nav>
 
               {/* Mobile logout */}
-              <div className="p-3 border-t border-slate-800">
+              <div className="p-3 border-t border-border">
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all select-none"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-all select-none"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Logout</span>
@@ -572,23 +583,23 @@ const Admin = () => {
       {/* ── Main Content Area ── */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`}>
         {/* ── Top Header Bar ── */}
-        <header className="sticky top-0 z-30 h-16 border-b border-slate-800/70 bg-slate-950/95 backdrop-blur-xl flex items-center px-4 gap-4 shrink-0">
+        <header className="sticky top-0 z-30 h-16 border-b border-border bg-background/95 backdrop-blur-xl flex items-center px-4 gap-4 shrink-0">
           {/* Mobile hamburger */}
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors lg:hidden"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors lg:hidden"
           >
             <Menu className="w-5 h-5" />
           </button>
 
           {/* Page title breadcrumb */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="text-slate-600 text-sm hidden sm:inline">Admin</span>
-            <span className="text-slate-700 hidden sm:inline">/</span>
+            <span className="text-muted-foreground/60 text-sm hidden sm:inline">Admin</span>
+            <span className="text-muted-foreground/30 hidden sm:inline">/</span>
             <div className="flex items-center gap-2">
-              {(() => { const Icon = currentNav.icon; return <Icon className="w-4 h-4 text-slate-400 shrink-0" />; })()}
-              <h1 className="text-sm font-semibold text-slate-200 truncate">{currentNav.label}</h1>
+              {(() => { const Icon = currentNav.icon; return <Icon className="w-4 h-4 text-muted-foreground shrink-0" />; })()}
+              <h1 className="text-sm font-semibold text-foreground truncate">{currentNav.label}</h1>
             </div>
           </div>
 
@@ -607,7 +618,7 @@ const Admin = () => {
             )}
 
             {/* Session clock */}
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-slate-400 text-xs font-mono">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-muted-foreground text-xs font-mono">
               <Activity className="w-3.5 h-3.5 text-emerald-400" />
               <span>{sessionClock}</span>
             </div>
@@ -616,9 +627,9 @@ const Admin = () => {
             <div
               className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer transition-colors"
               style={{
-                borderColor: backendPassword ? "rgba(52,211,153,0.2)" : "rgba(239,68,68,0.2)",
-                background: backendPassword ? "rgba(52,211,153,0.05)" : "rgba(239,68,68,0.05)",
-                color: backendPassword ? "#34d399" : "#f87171",
+                borderColor: backendPassword ? "rgba(52,211,153,0.3)" : "rgba(239,68,68,0.3)",
+                background: backendPassword ? "rgba(52,211,153,0.08)" : "rgba(239,68,68,0.08)",
+                color: backendPassword ? "#10b981" : "#f87171",
               }}
               onClick={() => setActiveSection("credentials")}
               title="Klik untuk ke tab Kredensial"
@@ -632,6 +643,69 @@ const Admin = () => {
               <Shield className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Admin</span>
             </div>
+
+            {/* Theme switcher */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleThemeDarkMode}
+              title={isDark ? "Ubah ke Mode Terang" : "Ubah ke Mode Gelap"}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              {isDark ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+            </Button>
+
+            {/* Theme palette picker */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title="Pilih Tema Warna"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
+                  <Palette className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-popover border border-border">
+                <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground">Palet Tema SIPENA</DropdownMenuLabel>
+                <DropdownMenuSeparator className="border-border" />
+                <div className="max-h-60 overflow-y-auto py-1">
+                  {Object.entries(themes).map(([themeId, theme]) => (
+                    <DropdownMenuItem
+                      key={themeId}
+                      onClick={() => selectTheme(themeId)}
+                      className={`flex items-center justify-between px-3 py-2 text-xs cursor-pointer ${
+                        currentTheme === themeId ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      }`}
+                    >
+                      <span>{theme.name}</span>
+                      <div className="flex gap-0.5 rounded overflow-hidden shrink-0">
+                        {theme.colors.slice(0, 3).map((color, idx) => (
+                          <div
+                            key={idx}
+                            className="w-2.5 h-2.5"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+                {currentTheme !== "default" && (
+                  <>
+                    <DropdownMenuSeparator className="border-border" />
+                    <DropdownMenuItem
+                      onClick={resetToDefault}
+                      className="flex items-center justify-center py-2 text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3 mr-1.5" />
+                      Reset ke Default
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Logout button */}
             <Button
@@ -880,23 +954,23 @@ function MetricCard({
   status: MetricStatus;
 }) {
   const colors: Record<MetricStatus, { bg: string; border: string; icon: string; value: string }> = {
-    ok:      { bg: "bg-emerald-500/5",  border: "border-emerald-500/15", icon: "text-emerald-400", value: "text-emerald-300" },
-    warn:    { bg: "bg-amber-500/5",    border: "border-amber-500/15",   icon: "text-amber-400",   value: "text-amber-300"   },
-    error:   { bg: "bg-red-500/5",      border: "border-red-500/15",     icon: "text-red-400",     value: "text-red-300"     },
-    neutral: { bg: "bg-slate-800/40",   border: "border-slate-700/50",   icon: "text-slate-400",   value: "text-slate-200"   },
-    info:    { bg: "bg-blue-500/5",     border: "border-blue-500/15",    icon: "text-blue-400",    value: "text-blue-300"    },
+    ok:      { bg: "bg-emerald-500/5",  border: "border-emerald-500/15", icon: "text-emerald-400", value: "text-emerald-500 dark:text-emerald-300" },
+    warn:    { bg: "bg-amber-500/5",    border: "border-amber-500/15",   icon: "text-amber-500",   value: "text-amber-500 dark:text-amber-300"   },
+    error:   { bg: "bg-red-500/5",      border: "border-red-500/15",     icon: "text-red-500",     value: "text-red-500 dark:text-red-300"     },
+    neutral: { bg: "bg-muted/40",       border: "border-border",         icon: "text-muted-foreground", value: "text-foreground"   },
+    info:    { bg: "bg-blue-500/5",     border: "border-blue-500/15",    icon: "text-blue-500",    value: "text-blue-500 dark:text-blue-300"    },
   };
   const c = colors[status];
 
   return (
     <div className={`rounded-xl border p-4 ${c.bg} ${c.border}`}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-8 h-8 rounded-lg bg-slate-900/60 flex items-center justify-center`}>
+        <div className="w-8 h-8 rounded-lg bg-card/60 flex items-center justify-center">
           <Icon className={`w-4 h-4 ${c.icon}`} />
         </div>
       </div>
       <p className={`text-base font-bold tabular-nums leading-tight ${c.value}`}>{value}</p>
-      <p className="text-xs text-slate-600 mt-0.5">{label}</p>
+      <p className="text-xs text-muted-foreground/80 mt-0.5">{label}</p>
     </div>
   );
 }
@@ -912,12 +986,12 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-start gap-4 pb-2">
-      <div className="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/50 flex items-center justify-center shrink-0">
-        <Icon className="w-5 h-5 text-slate-300" />
+      <div className="w-10 h-10 rounded-xl bg-muted border border-border flex items-center justify-center shrink-0">
+        <Icon className="w-5 h-5 text-foreground" />
       </div>
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
-        {description && <p className="text-sm text-slate-500 mt-0.5">{description}</p>}
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
       </div>
     </div>
   );
@@ -935,15 +1009,15 @@ function CredentialsPanel({
   setShowPassword: (v: boolean) => void;
 }) {
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+    <div className="rounded-xl border border-border bg-card/50 overflow-hidden">
       {/* Panel header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-800/70 bg-slate-900/80">
-        <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700/50 flex items-center justify-center">
-          <Server className="w-4 h-4 text-slate-400" />
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-card/80">
+        <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center">
+          <Server className="w-4 h-4 text-muted-foreground" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-100">Password Backend (ADMIN_DB_PASSWORD)</p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm font-semibold text-foreground">Password Backend (ADMIN_DB_PASSWORD)</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Digunakan untuk Edge Functions admin. Disimpan di memori sesi saja — tidak tersimpan permanen.
           </p>
         </div>
@@ -951,29 +1025,29 @@ function CredentialsPanel({
 
       <div className="p-6 space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="backend-password" className="text-slate-300 text-sm font-medium">
+          <Label htmlFor="backend-password" className="text-foreground text-sm font-medium">
             Password Backend
           </Label>
           <div className="relative">
-            <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/75" />
             <Input
               id="backend-password"
               type={showPassword ? "text" : "password"}
               placeholder="Masukkan ADMIN_DB_PASSWORD"
               value={backendPassword}
               onChange={(e) => setBackendPassword(e.target.value)}
-              className="pl-10 pr-10 bg-slate-800/60 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-slate-500 h-11"
+              className="pl-10 pr-10 bg-background border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary h-11"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          <p className="text-xs text-slate-600">
-            Secret yang diatur di Supabase Edge Functions → Secrets sebagai <code className="text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">ADMIN_DB_PASSWORD</code>
+          <p className="text-xs text-muted-foreground">
+            Secret yang diatur di Supabase Edge Functions → Secrets sebagai <code className="text-foreground bg-muted px-1.5 py-0.5 rounded text-[11px]">ADMIN_DB_PASSWORD</code>
           </p>
         </div>
 
@@ -984,7 +1058,7 @@ function CredentialsPanel({
               Password tersimpan di sesi ini
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/50 text-slate-500 text-sm">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted border border-border text-muted-foreground text-sm">
               <XCircle className="w-4 h-4" />
               Belum diatur — statistik tidak akan dimuat
             </div>

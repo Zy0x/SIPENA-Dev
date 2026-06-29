@@ -339,8 +339,8 @@ export function TeamManagementPanel({ adminPassword }: { adminPassword: string }
   const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-border/80 bg-card/50">
+      <CardHeader className="border-b border-border/80 bg-card/80">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-base">

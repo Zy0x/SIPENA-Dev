@@ -113,7 +113,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
       case "new_user_registration":
         return <UserPlus className="w-4 h-4 text-blue-400" />;
       default:
-        return <Bell className="w-4 h-4 text-slate-400" />;
+        return <Bell className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -122,23 +122,23 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
   if (!adminPassword) return null;
 
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+    <div className="rounded-xl border border-border bg-card/50 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/70 bg-slate-900/80">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/80">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
               <Bell className="w-4 h-4 text-violet-400" />
             </div>
             {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 border border-slate-900 flex items-center justify-center text-[9px] font-bold text-white">
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 border border-card flex items-center justify-center text-[9px] font-bold text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-slate-100">Notifikasi Admin</p>
+              <p className="text-sm font-semibold text-foreground">Notifikasi Admin</p>
               {isLive && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -146,7 +146,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Aktivitas penting — pendaftaran pengguna baru, dll
             </p>
           </div>
@@ -157,7 +157,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
               variant="ghost"
               size="sm"
               onClick={markAllAsRead}
-              className="h-8 gap-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               <CheckCircle className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Tandai Semua</span>
@@ -168,7 +168,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
             size="sm"
             onClick={fetchNotifications}
             disabled={isLoading}
-            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
@@ -178,12 +178,12 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
       {/* Content */}
       <div className="p-5">
         {isLoading ? (
-          <div className="flex flex-col items-center gap-3 py-8 text-slate-600">
+          <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground/60">
             <Loader2 className="w-6 h-6 animate-spin" />
             <p className="text-sm">Memuat notifikasi...</p>
           </div>
         ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-10 text-slate-600">
+          <div className="flex flex-col items-center gap-3 py-10 text-muted-foreground/60">
             <Bell className="w-10 h-10 opacity-20" />
             <p className="text-sm text-center">Belum ada notifikasi admin</p>
           </div>
@@ -196,25 +196,25 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
                   className={`
                     group relative flex items-start gap-3 p-3.5 rounded-lg transition-all duration-150 border
                     ${!notification.read
-                      ? "bg-slate-800/50 border-slate-700/50 border-l-2 border-l-violet-500"
-                      : "bg-slate-800/20 border-transparent hover:bg-slate-800/40 border-l-2 border-l-transparent"
+                      ? "bg-muted/50 border-border/50 border-l-2 border-l-violet-500"
+                      : "bg-muted/10 border-transparent hover:bg-muted/30 border-l-2 border-l-transparent"
                     }
                   `}
                 >
                   <div className="mt-0.5 shrink-0">{getNotificationIcon(notification.type)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-slate-200 truncate">
+                      <p className="text-sm font-medium text-foreground truncate">
                         {notification.title}
                       </p>
                       {!notification.read && (
                         <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                       {notification.message}
                     </p>
-                    <p className="text-[11px] text-slate-600 mt-1">
+                    <p className="text-[11px] text-muted-foreground/75 mt-1">
                       {formatDistanceToNow(new Date(notification.created_at), {
                         addSuffix: true,
                         locale: id,
@@ -226,7 +226,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
                       <button
                         type="button"
                         onClick={() => markAsRead(notification.id)}
-                        className="p-1 rounded text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                        className="p-1 rounded text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors"
                         aria-label="Tandai dibaca"
                       >
                         <CheckCircle className="w-3.5 h-3.5" />
@@ -235,7 +235,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
                     <button
                       type="button"
                       onClick={() => deleteNotification(notification.id)}
-                      className="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
                       aria-label="Hapus"
                     >
                       <X className="w-3.5 h-3.5" />

@@ -190,23 +190,23 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+    <div className="rounded-xl border border-border bg-card/50 overflow-hidden">
       {/* Panel header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/70 bg-slate-900/80">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/80">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
             <Megaphone className="w-4 h-4 text-amber-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-100">Maintenance Alert</p>
-            <p className="text-xs text-slate-500 mt-0.5">Kelola banner pemberitahuan live ke semua pengguna</p>
+            <p className="text-sm font-semibold text-foreground">Maintenance Alert</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Kelola banner pemberitahuan live ke semua pengguna</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <span className={`text-xs font-medium px-2 py-1 rounded-full border ${
             alert.is_active
               ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
-              : "text-slate-500 bg-slate-800/60 border-slate-700/50"
+              : "text-muted-foreground bg-muted border-border"
           }`}>
             {alert.is_active ? "● Aktif" : "○ Nonaktif"}
           </span>
@@ -246,7 +246,7 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
           size="sm"
           type="button"
           onClick={() => setShowPreview(!showPreview)}
-          className="gap-2 border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600"
+          className="gap-2 border-border text-muted-foreground hover:text-foreground hover:border-border/80"
         >
           {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           {showPreview ? "Sembunyikan Preview" : "Tampilkan Preview"}
@@ -254,24 +254,24 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
 
         {/* ── Konten Section ── */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3">Konten</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Konten</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-slate-300 text-sm">Judul</Label>
+              <Label className="text-foreground text-sm">Judul</Label>
               <Input
                 value={alert.title}
                 onChange={(e) => setAlert(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Pemberitahuan"
-                className="bg-slate-800/60 border-slate-700 text-slate-100 placeholder:text-slate-600"
+                className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-300 text-sm">Tipe Alert</Label>
+              <Label className="text-foreground text-sm">Tipe Alert</Label>
               <Select value={alert.alert_type} onValueChange={(v) => setAlert(prev => ({ ...prev, alert_type: v }))}>
-                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-slate-100">
+                <SelectTrigger className="bg-background border-border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="info">ℹ️ Info</SelectItem>
                   <SelectItem value="warning">⚠️ Warning</SelectItem>
                   <SelectItem value="critical">🚨 Critical</SelectItem>
@@ -281,55 +281,55 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
             </div>
           </div>
           <div className="space-y-2 mt-4">
-            <Label className="text-slate-300 text-sm">Pesan</Label>
+            <Label className="text-foreground text-sm">Pesan</Label>
             <Textarea
               value={alert.message}
               onChange={(e) => setAlert(prev => ({ ...prev, message: e.target.value }))}
               placeholder="Masukkan pesan maintenance/pemberitahuan..."
               rows={3}
-              className="bg-slate-800/60 border-slate-700 text-slate-100 placeholder:text-slate-600 resize-none"
+              className="bg-background border-border text-foreground placeholder:text-muted-foreground/50 resize-none"
             />
           </div>
         </div>
 
-        <div className="border-t border-slate-800/70" />
+        <div className="border-t border-border" />
 
         {/* ── Mode Tampilan ── */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3">Mode Tampilan</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Mode Tampilan</p>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setAlert(prev => ({ ...prev, display_mode: "flat" }))}
               className={`p-3.5 rounded-xl border-2 text-left transition-all ${
                 alert.display_mode === "flat"
-                  ? "border-amber-500/40 bg-amber-500/5 text-slate-100"
-                  : "border-slate-700/50 hover:border-slate-600 text-slate-400"
+                  ? "border-amber-500/40 bg-amber-500/5 text-foreground"
+                  : "border-border hover:border-border/80 text-muted-foreground"
               }`}
             >
               <p className="text-sm font-semibold">Flat</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Di atas header, mendorong konten ke bawah</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Di atas header, mendorong konten ke bawah</p>
             </button>
             <button
               type="button"
               onClick={() => setAlert(prev => ({ ...prev, display_mode: "flyout" }))}
               className={`p-3.5 rounded-xl border-2 text-left transition-all ${
                 alert.display_mode === "flyout"
-                  ? "border-amber-500/40 bg-amber-500/5 text-slate-100"
-                  : "border-slate-700/50 hover:border-slate-600 text-slate-400"
+                  ? "border-amber-500/40 bg-amber-500/5 text-foreground"
+                  : "border-border hover:border-border/80 text-muted-foreground"
               }`}
             >
               <p className="text-sm font-semibold">Flyout</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Melayang di atas header dengan efek bernapas</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Melayang di atas header dengan efek bernapas</p>
             </button>
           </div>
         </div>
 
-        <div className="border-t border-slate-800/70" />
+        <div className="border-t border-border" />
 
         {/* ── Styling Section ── */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3">Warna & Styling</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Warna & Styling</p>
           <div className="flex flex-wrap gap-2 mb-4">
             {Object.entries(presetColors).map(([key, preset]) => (
               <button
@@ -345,51 +345,51 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Warna Background</Label>
+              <Label className="text-xs text-muted-foreground">Warna Background</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={alert.bg_color}
                   onChange={(e) => setAlert(prev => ({ ...prev, bg_color: e.target.value }))}
-                  className="w-9 h-9 rounded-lg cursor-pointer border border-slate-700 bg-slate-800"
+                  className="w-9 h-9 rounded-lg cursor-pointer border border-border bg-background"
                 />
                 <Input
                   value={alert.bg_color}
                   onChange={(e) => setAlert(prev => ({ ...prev, bg_color: e.target.value }))}
-                  className="font-mono text-xs bg-slate-800/60 border-slate-700 text-slate-200"
+                  className="font-mono text-xs bg-background border-border text-foreground"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Warna Teks</Label>
+              <Label className="text-xs text-muted-foreground">Warna Teks</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={alert.text_color}
                   onChange={(e) => setAlert(prev => ({ ...prev, text_color: e.target.value }))}
-                  className="w-9 h-9 rounded-lg cursor-pointer border border-slate-700 bg-slate-800"
+                  className="w-9 h-9 rounded-lg cursor-pointer border border-border bg-background"
                 />
                 <Input
                   value={alert.text_color}
                   onChange={(e) => setAlert(prev => ({ ...prev, text_color: e.target.value }))}
-                  className="font-mono text-xs bg-slate-800/60 border-slate-700 text-slate-200"
+                  className="font-mono text-xs bg-background border-border text-foreground"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-slate-800/70" />
+        <div className="border-t border-border" />
 
         {/* ── Opsi & Jadwal ── */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3">Opsi & Jadwal</p>
-          <div className="flex items-center justify-between p-3.5 rounded-lg bg-slate-800/40 border border-slate-700/40 mb-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Opsi & Jadwal</p>
+          <div className="flex items-center justify-between p-3.5 rounded-lg bg-muted/40 border border-border mb-4">
             <div className="flex items-center gap-2">
-              <Type className="w-4 h-4 text-slate-500" />
+              <Type className="w-4 h-4 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium text-slate-200">Teks Berjalan (Marquee)</p>
-                <p className="text-xs text-slate-500">Teks bergerak horizontal jika pesan panjang</p>
+                <p className="text-sm font-medium text-foreground">Teks Berjalan (Marquee)</p>
+                <p className="text-xs text-muted-foreground">Teks bergerak horizontal jika pesan panjang</p>
               </div>
             </div>
             <Switch
@@ -400,43 +400,43 @@ export function MaintenanceAlertPanel({ adminPassword }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400 flex items-center gap-1.5">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" /> Mulai Tampil
               </Label>
               <Input
                 type="datetime-local"
                 value={alert.start_time}
                 onChange={(e) => setAlert(prev => ({ ...prev, start_time: e.target.value }))}
-                className="bg-slate-800/60 border-slate-700 text-slate-200 text-sm"
+                className="bg-background border-border text-foreground text-sm"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400 flex items-center gap-1.5">
+              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" /> Selesai Tampil
               </Label>
               <Input
                 type="datetime-local"
                 value={alert.end_time}
                 onChange={(e) => setAlert(prev => ({ ...prev, end_time: e.target.value }))}
-                className="bg-slate-800/60 border-slate-700 text-slate-200 text-sm"
+                className="bg-background border-border text-foreground text-sm"
               />
             </div>
           </div>
-          <p className="text-xs text-slate-600 mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             Kosongkan untuk tampil tanpa batas waktu selama aktif
           </p>
         </div>
 
-        <div className="border-t border-slate-800/70" />
+        <div className="border-t border-border" />
 
         {/* ── Save Section ── */}
         <div className="flex items-center justify-between">
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium ${
             alert.is_active
               ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-              : "bg-slate-800/40 border-slate-700/40 text-slate-500"
+              : "bg-muted/40 border-border text-muted-foreground"
           }`}>
-            <span className={`w-2 h-2 rounded-full ${alert.is_active ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} />
+            <span className={`w-2 h-2 rounded-full ${alert.is_active ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`} />
             {alert.is_active ? "Alert akan ditampilkan" : "Alert tidak ditampilkan"}
           </div>
           <Button

@@ -309,13 +309,13 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
   return (
     <div className="space-y-6">
       {/* Connection & Actions */}
-      <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl border border-slate-800/70 bg-slate-900/50">
+      <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl border border-border bg-card/50">
         <Button
           variant="ghost"
           size="sm"
           onClick={testConnection}
           disabled={connectionStatus === "testing"}
-          className="h-8 gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+          className="h-8 gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
         >
           {connectionStatus === "testing" ? <Loader2 className="w-4 h-4 animate-spin" /> :
            connectionStatus === "success" ? <CheckCircle className="w-4 h-4 text-emerald-400" /> :
@@ -328,7 +328,7 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
           size="sm"
           onClick={fetchDetailedStats}
           disabled={statsLoading}
-          className="h-8 gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+          className="h-8 gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
         >
           <RefreshCw className={`w-4 h-4 ${statsLoading ? "animate-spin" : ""}`} />
           <span className="text-xs">Refresh</span>
@@ -342,9 +342,9 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
       </div>
 
       {/* Dynamic Stats Grid */}
-      <Card className="border-slate-800/70 bg-slate-900/50">
-        <CardHeader className="border-b border-slate-800/70 bg-slate-900/80">
-          <CardTitle className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+      <Card className="border-border bg-card/50">
+        <CardHeader className="border-b border-border bg-card/85">
+          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Database className="w-4 h-4 text-blue-400" />
             Statistik Detail Per Tabel
           </CardTitle>
@@ -449,7 +449,7 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
       </Dialog>
 
       {/* Backup Section */}
-      <Card>
+      <Card className="border-border bg-card/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Download className="w-5 h-5" />Backup Database</CardTitle>
           <CardDescription>Ekspor seluruh database ke file JSON</CardDescription>
@@ -460,14 +460,14 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
           </Button>
           {lastBackup && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="w-3 h-3" />Backup terakhir: {lastBackup}
+               <Clock className="w-3 h-3" />Backup terakhir: {lastBackup}
             </p>
           )}
         </CardContent>
       </Card>
 
       {/* Restore Section */}
-      <Card>
+      <Card className="border-border bg-card/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Upload className="w-5 h-5" />Restore Database</CardTitle>
           <CardDescription>Impor data dari file backup JSON</CardDescription>
@@ -481,7 +481,7 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
             </AlertDescription>
           </Alert>
           <div className="flex items-center gap-3">
-            <Input type="file" accept=".json" onChange={handleFileSelect} className="flex-1" />
+            <Input type="file" accept=".json" onChange={handleFileSelect} className="flex-1 bg-background text-foreground border-border" />
             <Button onClick={handleRestore} disabled={restoreLoading || !restoreFile}>
               {restoreLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
               Restore
@@ -496,7 +496,7 @@ export function DatabaseManagementPanel({ adminPassword }: DatabaseManagementPan
       </Card>
 
       {/* Delete Section */}
-      <Card className="border-destructive/30">
+      <Card className="border-destructive/30 bg-destructive/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive"><Trash2 className="w-5 h-5" />Hapus Data</CardTitle>
           <CardDescription>Hapus seluruh data dari tabel yang dipilih</CardDescription>

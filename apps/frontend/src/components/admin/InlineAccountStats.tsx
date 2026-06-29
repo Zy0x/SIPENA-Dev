@@ -320,16 +320,16 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-900/50 overflow-hidden">
+    <div className="rounded-xl border border-border bg-card/50 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/70 bg-slate-900/80">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/85">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
             <Users className="w-4 h-4 text-blue-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-slate-100">Manajemen Akun</p>
+              <p className="text-sm font-semibold text-foreground">Manajemen Akun</p>
               {isLive && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -337,7 +337,7 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {stats.length} akun terdaftar • Menampilkan {paginatedStats.length} dari {filteredAndSortedStats.length}
             </p>
           </div>
@@ -347,7 +347,7 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
           size="sm"
           onClick={fetchAccountStats}
           disabled={isLoading}
-          className="h-8 gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+          className="h-8 gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
         >
           <RefreshCcw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline text-xs">Refresh</span>
@@ -612,7 +612,7 @@ export function InlineAccountStats({ adminPassword }: InlineAccountStatsProps) {
 
         {/* Show more indicator */}
         {filteredAndSortedStats.length > pageSize && (
-          <p className="text-xs text-center text-slate-600 pt-2">
+          <p className="text-xs text-center text-muted-foreground/60 pt-2">
             Menampilkan {pageSize} dari {filteredAndSortedStats.length} akun. Ubah limit untuk melihat lebih banyak.
           </p>
         )}

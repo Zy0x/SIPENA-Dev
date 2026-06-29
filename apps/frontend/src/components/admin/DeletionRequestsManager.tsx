@@ -249,15 +249,15 @@ export function DeletionRequestsManager({ adminPassword }: DeletionRequestsManag
   const processedRequests = requests.filter(r => r.status !== "pending");
 
   return (
-    <Card className="border-slate-800/70 bg-slate-900/50">
-      <CardHeader className="border-b border-slate-800/70 bg-slate-900/80">
+    <Card className="border-border bg-card/50">
+      <CardHeader className="border-b border-border bg-card/85">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
               <UserMinus className="w-4 h-4 text-red-400" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold text-slate-100">
+              <CardTitle className="text-sm font-semibold text-foreground">
                 Permintaan Hapus Akun
               </CardTitle>
               <CardDescription className="mt-0.5 text-xs">
@@ -271,7 +271,7 @@ export function DeletionRequestsManager({ adminPassword }: DeletionRequestsManag
               size="sm"
               onClick={handleProcessExpired}
               disabled={isProcessingExpired}
-              className="h-8 gap-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               {isProcessingExpired ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -287,7 +287,7 @@ export function DeletionRequestsManager({ adminPassword }: DeletionRequestsManag
               size="sm"
               onClick={fetchRequests}
               disabled={isLoading}
-              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               <RefreshCcw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
             </Button>

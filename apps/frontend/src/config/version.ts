@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.118";
-export const VERSION_DATE = "2026-06-28";
+export const APP_VERSION = "2.4.119";
+export const VERSION_DATE = "2026-06-29";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.119": "Rombak total halaman admin dengan optimalisasi visual, mode tema adaptif, integrasi palette pemilih, dan semantic styling.",
   "2.4.118": "Adapter persistence Attendance V2 selesai dengan runtime switch, shadow mode drift audit, dan 572 vitest passing.",
   "2.4.101": "Seam V1 Presensi diperkuat dengan wrapper, draft mapping canonical read-only, guard terstruktur, dan proof bahwa V1 tetap tidak disentuh.",
   "2.4.100": "Fondasi runtime switch Presensi ditambahkan dengan default tetap V1, guard V2 terkunci aman, dan dokumentasi rollback Phase 01.",
