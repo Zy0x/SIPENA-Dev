@@ -519,6 +519,42 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
   });
 
+  // Promote V2 dataset to V1 (Merge sandbox data to production)
+  const promoteMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !classId) throw new Error("User or class not set");
+      if (!dbAvailable) throw new Error("Database not available for promotion");
+
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/promote`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          classId,
+          month: monthStart.substring(0, 7),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+
+      const json = await response.json();
+      return json.data;
+    },
+    onSuccess: () => {
+      if (dbAvailable) {
+        queryClient.invalidateQueries({ queryKey: ["attendance", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      }
+    },
+  });
+
   // ✅ PERBAIKAN FINAL: Explicit conditionals untuk menghitung stats
   const getMonthStats = useCallback(() => {
     const stats = { H: 0, I: 0, S: 0, A: 0, D: 0, total: 0 };
@@ -640,9 +676,13 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     toggleLock: async (locked: boolean) => {
       await toggleLockMutation.mutateAsync(locked);
     },
+    promoteV2ToV1: async () => {
+      await promoteMutation.mutateAsync();
+    },
     isSaving: setAttendanceMutation.isPending || bulkSetAttendanceMutation.isPending || updateNoteMutation.isPending,
     isTogglingHoliday: toggleHolidayMutation.isPending,
     isTogglingLock: toggleLockMutation.isPending,
+    isPromoting: promoteMutation.isPending,
     refetch: () => {
       datasetQuery.refetch();
     },

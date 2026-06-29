@@ -328,6 +328,7 @@ export default function AttendanceV2Page() {
   const [exportPickerYear, setExportPickerYear] = useState(() => new Date().getFullYear());
   const [showImportAttendance, setShowImportAttendance] = useState(false);
   const [showOCRAttendance, setShowOCRAttendance] = useState(false);
+  const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
   const [attendanceExportFormat, setAttendanceExportFormat] = useState<"pdf" | "excel" | "png-hd" | "png-4k">("pdf");
   const [documentStyle, setDocumentStyle] = useState<ReportDocumentStyle>(() => createDefaultReportDocumentStyle());
   // Presensi WAJIB termuat 1 halaman per bulan + tanda tangan (project knowledge).
@@ -395,7 +396,7 @@ export default function AttendanceV2Page() {
     attendanceRecords, holidays, dayEvents, isLocked, dbAvailable,
     getAttendance: dbGetAttendance, getAttendanceNote: dbGetAttendanceNote, getDayEvent, isHoliday, getHolidayDescription, getMonthStats: dbGetMonthStats, getDayStats: dbGetDayStats, getYearlyData,
     setAttendance: setAttendanceDb, updateNote, bulkSetAttendance, toggleHoliday, upsertDayEvent, deleteDayEvent, toggleLock,
-    isSaving, isLoading,
+    isSaving, isLoading, promoteV2ToV1, isPromoting,
   } = useAttendanceV2(selectedClassId === "tour-dummy-class" ? "" : selectedClassId, currentMonth, workDayFormat);
 
   const getAttendance = useCallback((studentId: string, date: Date) => {
@@ -583,6 +584,16 @@ export default function AttendanceV2Page() {
 
     if (preTourActiveViewRef.current !== null) {
       setActiveView(preTourActiveViewRef.current);
+    }
+  };
+
+  const handlePromote = async () => {
+    try {
+      setShowPromoteConfirm(false);
+      await promoteV2ToV1();
+      showSuccess("Merge Berhasil", "Data hasil eksperimen V2 berhasil digabungkan ke produksi V1!");
+    } catch (err: any) {
+      showWarning("Merge Gagal", err.message || "Gagal menggabungkan data V2 ke V1.");
     }
   };
 
@@ -3204,6 +3215,24 @@ export default function AttendanceV2Page() {
           breadcrumbs={[{ label: "Presensi" }]}
           actions={
             <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+              {/* 0. Merge / Promote Button */}
+              {selectedClassId && selectedClassId !== "tour-dummy-class" && dbAvailable && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowPromoteConfirm(true)}
+                  disabled={isPromoting}
+                  className="h-9 px-3 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-md transition-all duration-200"
+                >
+                  {isPromoting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  )}
+                  <span>Merge ke V1</span>
+                </Button>
+              )}
+
               {/* 1. Import (excel/OCR) */}
               {selectedClassId && (
                 <DropdownMenu>
@@ -5023,6 +5052,39 @@ export default function AttendanceV2Page() {
           };
         }}
       />
+      {/* Promotion V2 to V1 Confirmation Dialog */}
+      <Dialog open={showPromoteConfirm} onOpenChange={setShowPromoteConfirm}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground font-bold">
+              <AlertCircle className="w-5 h-5 text-emerald-600" />
+              <span>Merge Data V2 ke V1</span>
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-muted-foreground text-sm leading-relaxed">
+              Apakah Anda yakin ingin memindahkan data hasil eksperimen V2 ke V1 (Produksi)?
+              <br /><br />
+              Tindakan ini akan <strong>menimpa data presensi, hari libur, kegiatan khusus, dan status penguncian</strong> untuk kelas <strong>{selectedClass?.name}</strong> pada bulan <strong>{format(currentMonth, "MMMM yyyy", { locale: idLocale })}</strong> di V1 dengan data dari V2.
+              <br /><br />
+              Data pengguna lain tidak akan terganggu. Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button type="button" variant="outline" onClick={() => setShowPromoteConfirm(false)} className="rounded-xl">
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePromote}
+              disabled={isPromoting}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-1.5"
+            >
+              {isPromoting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>Ya, Merge Data</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ProductTour steps={attendanceTourSteps} tourKey="attendance" onComplete={cleanupAttendanceTour} />
     </>
   );

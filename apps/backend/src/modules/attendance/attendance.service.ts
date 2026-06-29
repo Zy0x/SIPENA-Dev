@@ -17,6 +17,7 @@ import { AttendanceShadowService } from "./shadow/attendanceShadow.service";
 import { AttendanceV1Adapter } from "./v1/attendanceV1.adapter";
 import { AttendanceV2Adapter } from "./v2/attendanceV2.adapter";
 import { createSupabaseUserClient, supabaseAdmin } from "../../database/supabase";
+import { parse, startOfMonth, endOfMonth, format } from "date-fns";
 
 
 
@@ -344,6 +345,192 @@ export class AttendanceService {
       return {
         statusCode: 500,
         error: { code: "SHADOW_FETCH_FAILED", message: `Gagal memuat shadow report: ${err.message}` },
+      };
+    }
+  }
+
+  async promoteV2ToV1(classId: string, month: string, runtime: AttendanceRuntimeContext) {
+    const userId = runtime.user?.id;
+    if (!userId) {
+      return {
+        statusCode: 401,
+        error: { code: "UNAUTHORIZED", message: "User tidak terautentikasi." },
+      };
+    }
+
+    try {
+      const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+
+      // 1. Ambil data dari V2 tables
+      const parsedMonth = parse(month, "yyyy-MM", new Date());
+      const monthStart = format(startOfMonth(parsedMonth), "yyyy-MM-dd");
+      const monthEnd = format(endOfMonth(parsedMonth), "yyyy-MM-dd");
+
+      const [recordsRes, holidaysRes, dayEventsRes, locksRes] = await Promise.all([
+        client
+          .from("attendance_v2_records")
+          .select("*")
+          .eq("class_id", classId)
+          .eq("user_id", userId)
+          .gte("date", monthStart)
+          .lte("date", monthEnd),
+        client
+          .from("attendance_v2_holidays")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("date", monthStart)
+          .lte("date", monthEnd),
+        client
+          .from("attendance_v2_day_events")
+          .select("*")
+          .eq("user_id", userId)
+          .gte("date", monthStart)
+          .lte("date", monthEnd)
+          .then((res: any) => res, () => ({ data: [] })),
+        client
+          .from("attendance_v2_locks")
+          .select("*")
+          .eq("class_id", classId)
+          .eq("month", month)
+          .maybeSingle(),
+      ]);
+
+      const v2Records = recordsRes.data || [];
+      const v2Holidays = holidaysRes.data || [];
+      const v2DayEvents = dayEventsRes.data || [];
+      const v2Lock = locksRes.data;
+
+      // 2. Tulis data ke V1 tables (Upsert/Merge)
+      // A. Records: hapus records V1 yang ada lalu masukkan records dari V2
+      if (v2Records.length > 0) {
+        // Hapus V1 records lama untuk class dan month ini
+        const { error: deleteRecError } = await client
+          .from("attendance_records")
+          .delete()
+          .eq("class_id", classId)
+          .gte("date", monthStart)
+          .lte("date", monthEnd);
+
+        if (deleteRecError) throw deleteRecError;
+
+        // Insert records baru
+        const newRecords = v2Records.map(r => ({
+          class_id: classId,
+          student_id: r.student_id,
+          date: r.date,
+          status: r.status,
+          note: r.note,
+          created_by: userId,
+          updated_by: userId,
+        }));
+
+        const { error: insertRecError } = await client
+          .from("attendance_records")
+          .insert(newRecords);
+
+        if (insertRecError) throw insertRecError;
+      }
+
+      // B. Holidays: upsert per tanggal untuk user ini
+      for (const holiday of v2Holidays) {
+        const { data: existingHoliday } = await client
+          .from("attendance_holidays")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("date", holiday.date)
+          .maybeSingle();
+
+        if (existingHoliday) {
+          await client
+            .from("attendance_holidays")
+            .update({ description: holiday.description })
+            .eq("id", existingHoliday.id);
+        } else {
+          await client
+            .from("attendance_holidays")
+            .insert({
+              user_id: userId,
+              date: holiday.date,
+              description: holiday.description,
+            });
+        }
+      }
+
+      // C. Day Events: upsert per tanggal untuk user ini
+      for (const event of v2DayEvents) {
+        const { data: existingEvent } = await client
+          .from("attendance_day_events")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("date", event.date)
+          .maybeSingle();
+
+        if (existingEvent) {
+          await client
+            .from("attendance_day_events")
+            .update({
+              label: event.label,
+              description: event.description,
+              color: event.color,
+            })
+            .eq("id", existingEvent.id);
+        } else {
+          await client
+            .from("attendance_day_events")
+            .insert({
+              user_id: userId,
+              date: event.date,
+              label: event.label,
+              description: event.description,
+              color: event.color,
+            });
+        }
+      }
+
+      // D. Locks: upsert
+      if (v2Lock) {
+        const { data: existingLock } = await client
+          .from("attendance_locks")
+          .select("id")
+          .eq("class_id", classId)
+          .eq("month", month)
+          .maybeSingle();
+
+        if (existingLock) {
+          await client
+            .from("attendance_locks")
+            .update({
+              is_locked: v2Lock.is_locked,
+              locked_at: v2Lock.locked_at,
+              locked_by: v2Lock.locked_by,
+            })
+            .eq("id", existingLock.id);
+        } else {
+          await client
+            .from("attendance_locks")
+            .insert({
+              class_id: classId,
+              user_id: userId,
+              month: month,
+              is_locked: v2Lock.is_locked,
+              locked_at: v2Lock.locked_at,
+              locked_by: v2Lock.locked_by,
+            });
+        }
+      }
+
+      // Log audit
+      this.audit.append("V2_PROMOTED_TO_V1", userId, { classId, month, recordsCount: v2Records.length });
+
+      return { statusCode: 200, data: { success: true, recordsPromoted: v2Records.length } };
+    } catch (err: any) {
+      this.audit.append("V2_PROMOTION_FAILED", userId, { classId, month, error: err.message || err });
+      return {
+        statusCode: 500,
+        error: {
+          code: "PROMOTION_FAILED",
+          message: `Gagal melakukan merge total V2 ke V1: ${err.message || err}`,
+        },
       };
     }
   }
