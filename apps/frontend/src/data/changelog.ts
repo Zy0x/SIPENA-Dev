@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.121",
+    version: "2.4.121",
+    title: "Peningkatan Kontras & Ketajaman Tema Terang",
+    description: "Peningkatan kontras tema terang (light mode) dengan penajaman border, input, muted foreground, serta optimalisasi palet warna aksen.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-29",
+    details: [
+      "Meningkatkan kontras default border, input, dan muted foreground pada CSS variables global (index.css).",
+      "Memperbarui seluruh 20 palet warna di useThemes.ts dengan menyesuaikan accent color agar memiliki kontras tinggi (minimal 4.5:1) terhadap teks putih pada tombol utama.",
+      "Mengintegrasikan setelan dinamis --border, --input, dan --muted pada applyThemePreference di useThemes.ts agar menyesuaikan palet warna aktif dan dibersihkan ketika kembali ke tema default.",
+      "Menstabilkan background agar tetap bersih dan teks utama menggunakan warna yang sangat gelap guna menjaga keterbacaan."
+    ]
+  },
+  {
     id: "v2.4.120",
     version: "2.4.120",
     title: "Optimasi Skalabilitas Admin & Paginated Table Details",

@@ -14,6 +14,8 @@ export interface ThemeColors {
     hover: string;
     h1: string;
     h2: string;
+    border?: string;
+    muted?: string;
   };
   dark: {
     bg: string;
@@ -24,6 +26,8 @@ export interface ThemeColors {
     hover: string;
     h1: string;
     h2: string;
+    border?: string;
+    muted?: string;
   };
 }
 
@@ -31,128 +35,128 @@ export const themes: Record<string, ThemeColors> = {
   "default": {
     name: "Default SIPENA",
     colors: ["#3b82f6", "#14b8a6", "#1e293b", "#f8fafc"],
-    light: { bg: "#f8fafc", surface: "#ffffff", text: "#1e293b", sec: "#475569", accent: "#3b82f6", hover: "#2563eb", h1: "#dbeafe", h2: "#60a5fa" },
-    dark: { bg: "#0f1729", surface: "#1e293b", text: "#f1f5f9", sec: "#94a3b8", accent: "#60a5fa", hover: "#3b82f6", h1: "#1e3a8a", h2: "#3b82f6" }
+    light: { bg: "#f8fafc", surface: "#ffffff", text: "#0f172a", sec: "#475569", accent: "#2563eb", hover: "#1d4ed8", h1: "#dbeafe", h2: "#60a5fa", border: "#cbd5e1", muted: "#f1f5f9" },
+    dark: { bg: "#0f1729", surface: "#1e293b", text: "#f1f5f9", sec: "#94a3b8", accent: "#60a5fa", hover: "#3b82f6", h1: "#1e3a8a", h2: "#3b82f6", border: "#2d3748", muted: "#1e293b" }
   },
   "1": {
     name: "Soft Periwinkle",
     colors: ["#edf2fb", "#e2eafc", "#c1d3fe", "#b6ccfe"],
-    light: { bg: "#edf2fb", surface: "#ffffff", text: "#1e293b", sec: "#475569", accent: "#c1d3fe", hover: "#abc4ff", h1: "#e2eafc", h2: "#b6ccfe" },
-    dark: { bg: "#0f172a", surface: "#1e293b", text: "#e2e8f0", sec: "#94a3b8", accent: "#a5b4fc", hover: "#818cf8", h1: "#4c1d95", h2: "#7c3aed" }
+    light: { bg: "#f5f7fb", surface: "#ffffff", text: "#1e293b", sec: "#475569", accent: "#4f46e5", hover: "#3730a3", h1: "#e2eafc", h2: "#b6ccfe", border: "#c7d2fe", muted: "#e0e7ff" },
+    dark: { bg: "#0f172a", surface: "#1e293b", text: "#e2e8f0", sec: "#94a3b8", accent: "#a5b4fc", hover: "#818cf8", h1: "#4c1d95", h2: "#7c3aed", border: "#334155", muted: "#1e293b" }
   },
   "2": {
     name: "Warm Neutral",
     colors: ["#DAD9D4", "#B8B1AA", "#8F8882", "#5D6E75"],
-    light: { bg: "#DAD9D4", surface: "#ffffff", text: "#1f2937", sec: "#4b5563", accent: "#5D6E75", hover: "#4c5a62", h1: "#B8B1AA", h2: "#8F8882" },
-    dark: { bg: "#1e2937", surface: "#2d3748", text: "#f1f5f9", sec: "#cbd5e1", accent: "#60a5fa", hover: "#3b82f6", h1: "#636e72", h2: "#9ca3af" }
+    light: { bg: "#fafaf9", surface: "#ffffff", text: "#1c1917", sec: "#44403c", accent: "#57534e", hover: "#292524", h1: "#e7e5e4", h2: "#d6d3d1", border: "#d6d3d1", muted: "#f5f5f4" },
+    dark: { bg: "#1c1917", surface: "#292524", text: "#fafaf9", sec: "#a8a29e", accent: "#a8a29e", hover: "#78716c", h1: "#44403c", h2: "#57534e", border: "#44403c", muted: "#292524" }
   },
   "3": {
     name: "Desert Sand",
     colors: ["#ffe8d6", "#ddbea9", "#cb997e", "#b7b7a4"],
-    light: { bg: "#ffe8d6", surface: "#ffffff", text: "#44403c", sec: "#78716c", accent: "#ddbea9", hover: "#cb997e", h1: "#ddbea9", h2: "#cb997e" },
-    dark: { bg: "#292524", surface: "#44403c", text: "#fefce8", sec: "#e7e5e4", accent: "#fbbf24", hover: "#f59e0b", h1: "#92400e", h2: "#b45309" }
+    light: { bg: "#faf6f0", surface: "#ffffff", text: "#451a03", sec: "#78350f", accent: "#b45309", hover: "#92400e", h1: "#fed7aa", h2: "#fdba74", border: "#fed7aa", muted: "#fef3c7" },
+    dark: { bg: "#292524", surface: "#44403c", text: "#fefce8", sec: "#e7e5e4", accent: "#fbbf24", hover: "#f59e0b", h1: "#92400e", h2: "#b45309", border: "#57534e", muted: "#44403c" }
   },
   "4": {
     name: "Sky Serenity",
     colors: ["#dceef3", "#c2e2ea", "#a7d5e1", "#72bbce"],
-    light: { bg: "#dceef3", surface: "#ffffff", text: "#1e40af", sec: "#3b82f6", accent: "#60a5fa", hover: "#3d8bfd", h1: "#a7d5e1", h2: "#72bbce" },
-    dark: { bg: "#172554", surface: "#1e3a8a", text: "#dbeafe", sec: "#93c5fd", accent: "#60a5fa", hover: "#3b82f6", h1: "#1e40af", h2: "#2563eb" }
+    light: { bg: "#f0f9ff", surface: "#ffffff", text: "#0369a1", sec: "#075985", accent: "#0284c7", hover: "#0369a1", h1: "#bae6fd", h2: "#7dd3fc", border: "#bae6fd", muted: "#e0f2fe" },
+    dark: { bg: "#0c4a6e", surface: "#155e75", text: "#e0f2fe", sec: "#7dd3fc", accent: "#38bdf8", hover: "#0ea5e9", h1: "#0f375a", h2: "#1e4e79", border: "#1e4e79", muted: "#134a71" }
   },
   "5": {
     name: "Pastel Lavender",
     colors: ["#fbe4ff", "#e9cfff", "#d7b8ff", "#b28dff"],
-    light: { bg: "#fbe4ff", surface: "#ffffff", text: "#581c87", sec: "#7c3aed", accent: "#c4b5fd", hover: "#a78bfa", h1: "#d7b8ff", h2: "#b28dff" },
-    dark: { bg: "#1e1b4b", surface: "#312e81", text: "#ddd6fe", sec: "#c4b5fd", accent: "#a78bfa", hover: "#8b5cf6", h1: "#4c1d95", h2: "#7c3aed" }
+    light: { bg: "#faf5ff", surface: "#ffffff", text: "#4c1d95", sec: "#6b21a8", accent: "#7c3aed", hover: "#6d28d9", h1: "#f3e8ff", h2: "#e9d5ff", border: "#e9d5ff", muted: "#f3e8ff" },
+    dark: { bg: "#1e1b4b", surface: "#312e81", text: "#ddd6fe", sec: "#c4b5fd", accent: "#a78bfa", hover: "#8b5cf6", h1: "#4c1d95", h2: "#7c3aed", border: "#4338ca", muted: "#312e81" }
   },
   "6": {
     name: "Fresh Mint",
     colors: ["#C8FFC8", "#86efac", "#22c55e", "#14532d"],
-    light: { bg: "#C8FFC8", surface: "#ffffff", text: "#0f766e", sec: "#14b8a6", accent: "#14b8a6", hover: "#0d9488", h1: "#86efac", h2: "#10b981" },
-    dark: { bg: "#052e16", surface: "#14532d", text: "#bbf7d0", sec: "#86efac", accent: "#22c55e", hover: "#16a34a", h1: "#15803d", h2: "#166534" }
+    light: { bg: "#f0fdf4", surface: "#ffffff", text: "#14532d", sec: "#166534", accent: "#16a34a", hover: "#15803d", h1: "#dcfce7", h2: "#bbf7d0", border: "#bbf7d0", muted: "#dcfce7" },
+    dark: { bg: "#052e16", surface: "#14532d", text: "#bbf7d0", sec: "#86efac", accent: "#22c55e", hover: "#16a34a", h1: "#15803d", h2: "#166534", border: "#166534", muted: "#14532d" }
   },
   "7": {
     name: "Nature Green",
     colors: ["#CEEDB2", "#CEF17B", "#84cc16", "#365314"],
-    light: { bg: "#CEEDB2", surface: "#ffffff", text: "#166534", sec: "#22c55e", accent: "#84cc16", hover: "#65a30d", h1: "#CEF17B", h2: "#84cc16" },
-    dark: { bg: "#1a2e05", surface: "#365314", text: "#dcfce7", sec: "#86efac", accent: "#84cc16", hover: "#65a30d", h1: "#4d7c0f", h2: "#3f6212" }
+    light: { bg: "#f7fee7", surface: "#ffffff", text: "#365314", sec: "#3f6212", accent: "#65a30d", hover: "#4d7c0f", h1: "#ecfccb", h2: "#d9f99d", border: "#d9f99d", muted: "#ecfccb" },
+    dark: { bg: "#1a2e05", surface: "#365314", text: "#dcfce7", sec: "#86efac", accent: "#84cc16", hover: "#65a30d", h1: "#4d7c0f", h2: "#3f6212", border: "#3f6212", muted: "#365314" }
   },
   "8": {
     name: "Modern Indigo",
     colors: ["#EAEFFE", "#9787F3", "#6366f1", "#312e81"],
-    light: { bg: "#EAEFFE", surface: "#ffffff", text: "#312e81", sec: "#6366f1", accent: "#818cf8", hover: "#6366f1", h1: "#9787F3", h2: "#6366f1" },
-    dark: { bg: "#1e1b4b", surface: "#312e81", text: "#e0e7ff", sec: "#c7d2fe", accent: "#818cf8", hover: "#6366f1", h1: "#4c1d95", h2: "#4338ca" }
+    light: { bg: "#f5f7ff", surface: "#ffffff", text: "#1e1b4b", sec: "#312e81", accent: "#4f46e5", hover: "#3730a3", h1: "#e0e7ff", h2: "#c7d2fe", border: "#c7d2fe", muted: "#e0e7ff" },
+    dark: { bg: "#1e1b4b", surface: "#312e81", text: "#e0e7ff", sec: "#c7d2fe", accent: "#818cf8", hover: "#6366f1", h1: "#4c1d95", h2: "#4338ca", border: "#4338ca", muted: "#312e81" }
   },
   "9": {
     name: "Clean Minimal",
     colors: ["#F6F3ED", "#C2CBD3", "#64748b", "#1e293b"],
-    light: { bg: "#F6F3ED", surface: "#ffffff", text: "#1e293b", sec: "#475569", accent: "#94a3b8", hover: "#64748b", h1: "#cbd5e1", h2: "#64748b" },
-    dark: { bg: "#0f172a", surface: "#1e293b", text: "#e2e8f0", sec: "#94a3b8", accent: "#94a3b8", hover: "#64748b", h1: "#475569", h2: "#334155" }
+    light: { bg: "#fafafa", surface: "#ffffff", text: "#171717", sec: "#404040", accent: "#525252", hover: "#262626", h1: "#e5e5e5", h2: "#d4d4d4", border: "#d4d4d4", muted: "#f5f5f5" },
+    dark: { bg: "#0f172a", surface: "#1e293b", text: "#e2e8f0", sec: "#94a3b8", accent: "#94a3b8", hover: "#64748b", h1: "#475569", h2: "#334155", border: "#334155", muted: "#1e293b" }
   },
   "10": {
     name: "Ocean Blue",
     colors: ["#E6F5FA", "#93c5fd", "#3b82f6", "#1e3a8a"],
-    light: { bg: "#E6F5FA", surface: "#ffffff", text: "#1e3a8a", sec: "#1d4ed8", accent: "#60a5fa", hover: "#3b82f6", h1: "#93c5fd", h2: "#60a5fa" },
-    dark: { bg: "#0c4a6e", surface: "#155e75", text: "#cffafe", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#0e7490", h2: "#0891b2" }
+    light: { bg: "#f0f9ff", surface: "#ffffff", text: "#0f375a", sec: "#1e4e79", accent: "#0284c7", hover: "#0369a1", h1: "#bae6fd", h2: "#7dd3fc", border: "#bae6fd", muted: "#e0f2fe" },
+    dark: { bg: "#0c4a6e", surface: "#155e75", text: "#cffafe", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#0e7490", h2: "#0891b2", border: "#0e7490", muted: "#155e75" }
   },
   "11": {
     name: "Cyan Teal",
     colors: ["#d1faff", "#67e8f9", "#22d3ee", "#134e4a"],
-    light: { bg: "#d1faff", surface: "#ffffff", text: "#134e4a", sec: "#115e59", accent: "#14b8a6", hover: "#0d9488", h1: "#67e8f9", h2: "#22d3ee" },
-    dark: { bg: "#042f2e", surface: "#134e4a", text: "#a5f3fc", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#164e63", h2: "#0e7490" }
+    light: { bg: "#ecfeff", surface: "#ffffff", text: "#115e59", sec: "#134e4a", accent: "#0d9488", hover: "#0f766e", h1: "#cffafe", h2: "#a5f3fc", border: "#a5f3fc", muted: "#cffafe" },
+    dark: { bg: "#042f2e", surface: "#134e4a", text: "#a5f3fc", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#164e63", h2: "#0e7490", border: "#115e59", muted: "#134e4a" }
   },
   "12": {
     name: "Muted Taupe",
     colors: ["#f3f9d2", "#a8a29e", "#78716c", "#292524"],
-    light: { bg: "#f3f9d2", surface: "#ffffff", text: "#292524", sec: "#44403c", accent: "#78716c", hover: "#57534e", h1: "#a8a29e", h2: "#78716c" },
-    dark: { bg: "#1c1917", surface: "#292524", text: "#fafaf9", sec: "#e7e5e4", accent: "#a8a29e", hover: "#78716c", h1: "#57534e", h2: "#44403c" }
+    light: { bg: "#fafaf9", surface: "#ffffff", text: "#292524", sec: "#44403c", accent: "#78716c", hover: "#57534e", h1: "#f5f5f4", h2: "#e7e5e4", border: "#e7e5e4", muted: "#f5f5f4" },
+    dark: { bg: "#1c1917", surface: "#292524", text: "#fafaf9", sec: "#e7e5e4", accent: "#a8a29e", hover: "#78716c", h1: "#57534e", h2: "#44403c", border: "#44403c", muted: "#292524" }
   },
   "13": {
     name: "Baby Blue",
     colors: ["#c1dff0", "#88ccf1", "#06b6d4", "#164e63"],
-    light: { bg: "#c1dff0", surface: "#ffffff", text: "#164e63", sec: "#0891b2", accent: "#06b6d4", hover: "#0e7490", h1: "#22d3ee", h2: "#06b6d4" },
-    dark: { bg: "#083344", surface: "#164e63", text: "#a5f3fc", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#0e7490", h2: "#0891b2" }
+    light: { bg: "#f0f9ff", surface: "#ffffff", text: "#0f3747", sec: "#164e63", accent: "#0284c7", hover: "#0369a1", h1: "#bae6fd", h2: "#7dd3fc", border: "#bae6fd", muted: "#e0f2fe" },
+    dark: { bg: "#083344", surface: "#164e63", text: "#a5f3fc", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#0e7490", h2: "#0891b2", border: "#115e59", muted: "#164e63" }
   },
   "14": {
     name: "Icy Steel",
     colors: ["#cfdee7", "#93c5fd", "#3b82f6", "#1e3a8a"],
-    light: { bg: "#cfdee7", surface: "#ffffff", text: "#1e3a8a", sec: "#1e40af", accent: "#3b82f6", hover: "#2563eb", h1: "#60a5fa", h2: "#3b82f6" },
-    dark: { bg: "#172554", surface: "#1e3a8a", text: "#dbeafe", sec: "#93c5fd", accent: "#60a5fa", hover: "#3b82f6", h1: "#1e40af", h2: "#2563eb" }
+    light: { bg: "#f1f5f9", surface: "#ffffff", text: "#0f172a", sec: "#334155", accent: "#2563eb", hover: "#1d4ed8", h1: "#e2e8f0", h2: "#cbd5e1", border: "#cbd5e1", muted: "#e2e8f0" },
+    dark: { bg: "#172554", surface: "#1e3a8a", text: "#dbeafe", sec: "#93c5fd", accent: "#60a5fa", hover: "#3b82f6", h1: "#1e40af", h2: "#2563eb", border: "#1e40af", muted: "#1e3a8a" }
   },
   "15": {
     name: "Pearl Aqua",
     colors: ["#a1d2ce", "#14b8a6", "#0d9488", "#134e4a"],
-    light: { bg: "#a1d2ce", surface: "#ffffff", text: "#134e4a", sec: "#115e59", accent: "#14b8a6", hover: "#0d9488", h1: "#22d3ee", h2: "#06b6d4" },
-    dark: { bg: "#042f2e", surface: "#134e4a", text: "#a5f3fc", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#164e63", h2: "#0e7490" }
+    light: { bg: "#f0fdfa", surface: "#ffffff", text: "#115e59", sec: "#134e4a", accent: "#0d9488", hover: "#0f766e", h1: "#ccfbf1", h2: "#99f6e4", border: "#99f6e4", muted: "#ccfbf1" },
+    dark: { bg: "#042f2e", surface: "#134e4a", text: "#a5f3fc", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#164e63", h2: "#0e7490", border: "#115e59", muted: "#134e4a" }
   },
   "16": {
     name: "Deep Teal",
     colors: ["#dadff7", "#94a3b8", "#475569", "#0f172a"],
-    light: { bg: "#dadff7", surface: "#ffffff", text: "#1e293b", sec: "#334155", accent: "#475569", hover: "#1e293b", h1: "#94a3b8", h2: "#64748b" },
-    dark: { bg: "#0f172a", surface: "#1e293b", text: "#e2e8f0", sec: "#cbd5e1", accent: "#94a3b8", hover: "#64748b", h1: "#334155", h2: "#1e293b" }
+    light: { bg: "#f0fdfa", surface: "#ffffff", text: "#0f3737", sec: "#115e59", accent: "#0f766e", hover: "#115e59", h1: "#ccfbf1", h2: "#99f6e4", border: "#99f6e4", muted: "#ccfbf1" },
+    dark: { bg: "#0f172a", surface: "#1e293b", text: "#e2e8f0", sec: "#cbd5e1", accent: "#94a3b8", hover: "#64748b", h1: "#334155", h2: "#1e293b", border: "#334155", muted: "#1e293b" }
   },
   "17": {
     name: "Sapphire",
     colors: ["#cfdee7", "#60a5fa", "#3b82f6", "#1e3a8a"],
-    light: { bg: "#cfdee7", surface: "#ffffff", text: "#1e3a8a", sec: "#1e40af", accent: "#3b82f6", hover: "#2563eb", h1: "#60a5fa", h2: "#3b82f6" },
-    dark: { bg: "#172554", surface: "#1e3a8a", text: "#dbeafe", sec: "#93c5fd", accent: "#60a5fa", hover: "#3b82f6", h1: "#1e40af", h2: "#2563eb" }
+    light: { bg: "#f0f4f8", surface: "#ffffff", text: "#102a43", sec: "#334e68", accent: "#127fbf", hover: "#0b69a3", h1: "#d9e2ec", h2: "#bcccdc", border: "#bcccdc", muted: "#d9e2ec" },
+    dark: { bg: "#172554", surface: "#1e3a8a", text: "#dbeafe", sec: "#93c5fd", accent: "#60a5fa", hover: "#3b82f6", h1: "#1e40af", h2: "#2563eb", border: "#1e40af", muted: "#1e3a8a" }
   },
   "18": {
     name: "Midnight Violet",
     colors: ["#fdf2f8", "#c084fc", "#a855f7", "#581c87"],
-    light: { bg: "#fdf2f8", surface: "#ffffff", text: "#4c1d95", sec: "#7c3aed", accent: "#a78bfa", hover: "#9333ea", h1: "#c084fc", h2: "#a855f7" },
-    dark: { bg: "#1e1b4b", surface: "#312e81", text: "#e9d5ff", sec: "#d8b4fe", accent: "#c084fc", hover: "#a855f7", h1: "#581c87", h2: "#7c3aed" }
+    light: { bg: "#faf5ff", surface: "#ffffff", text: "#2e1065", sec: "#581c87", accent: "#7c3aed", hover: "#6d28d9", h1: "#f3e8ff", h2: "#e9d5ff", border: "#e9d5ff", muted: "#f3e8ff" },
+    dark: { bg: "#1e1b4b", surface: "#312e81", text: "#e9d5ff", sec: "#d8b4fe", accent: "#c084fc", hover: "#a855f7", h1: "#581c87", h2: "#7c3aed", border: "#4338ca", muted: "#312e81" }
   },
   "19": {
     name: "Imperial Magenta",
     colors: ["#fffaff", "#a78bfa", "#d946ef", "#1e1b4b"],
-    light: { bg: "#fffaff", surface: "#ffffff", text: "#1e1b4b", sec: "#312e81", accent: "#8b5cf6", hover: "#7c3aed", h1: "#a78bfa", h2: "#9333ea" },
-    dark: { bg: "#1e1b4b", surface: "#312e81", text: "#f3e8ff", sec: "#e9d5ff", accent: "#d946ef", hover: "#c026d3", h1: "#7e22ce", h2: "#6b21b6" }
+    light: { bg: "#fff5f7", surface: "#ffffff", text: "#4a0404", sec: "#881337", accent: "#be123c", hover: "#9f1239", h1: "#ffe4e6", h2: "#fecdd3", border: "#fecdd3", muted: "#ffe4e6" },
+    dark: { bg: "#1e1b4b", surface: "#312e81", text: "#f3e8ff", sec: "#e9d5ff", accent: "#d946ef", hover: "#c026d3", h1: "#7e22ce", h2: "#6b21b6", border: "#4338ca", muted: "#312e81" }
   },
   "20": {
     name: "Baltic Cerulean",
     colors: ["#d9dcd6", "#22d3ee", "#06b6d4", "#134e4a"],
-    light: { bg: "#d9dcd6", surface: "#ffffff", text: "#164e63", sec: "#0891b2", accent: "#06b6d4", hover: "#0e7490", h1: "#22d3ee", h2: "#06b6d4" },
-    dark: { bg: "#042f2e", surface: "#134e4a", text: "#a5f3fc", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#164e63", h2: "#0e7490" }
+    light: { bg: "#f4f7f6", surface: "#ffffff", text: "#115e59", sec: "#134e4a", accent: "#0d9488", hover: "#0f766e", h1: "#ccfbf1", h2: "#99f6e4", border: "#99f6e4", muted: "#ccfbf1" },
+    dark: { bg: "#042f2e", surface: "#134e4a", text: "#a5f3fc", sec: "#67e8f9", accent: "#22d3ee", hover: "#06b6d4", h1: "#164e63", h2: "#0e7490", border: "#115e59", muted: "#134e4a" }
   }
 };
 
@@ -283,6 +287,13 @@ export function applyThemePreference(
     root.style.setProperty('--muted-foreground', hexToHsl(mode.sec));
     root.style.setProperty('--primary', hexToHsl(mode.accent));
     root.style.setProperty('--accent', hexToHsl(mode.accent));
+    
+    // Apply theme-based border, input and muted variables dynamically
+    const borderHex = mode.border || (dark ? '#2d3748' : '#cbd5e1');
+    const mutedHex = mode.muted || (dark ? '#1e293b' : '#f3f4f6');
+    root.style.setProperty('--border', hexToHsl(borderHex));
+    root.style.setProperty('--input', hexToHsl(borderHex));
+    root.style.setProperty('--muted', hexToHsl(mutedHex));
   } else {
     // Reset to default by removing inline styles
     root.style.removeProperty('--background');
@@ -294,6 +305,9 @@ export function applyThemePreference(
     root.style.removeProperty('--muted-foreground');
     root.style.removeProperty('--primary');
     root.style.removeProperty('--accent');
+    root.style.removeProperty('--border');
+    root.style.removeProperty('--input');
+    root.style.removeProperty('--muted');
   }
 
   root.classList.toggle("dark", dark);

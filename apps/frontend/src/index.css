@@ -27,7 +27,7 @@
 
     /* Muted */
     --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted-foreground: 215 19% 35%; /* Increased contrast (slate-600) */
 
     /* Accent - Teal */
     --accent: 173 80% 40%;
@@ -58,8 +58,8 @@
     --highlight-moon: 221 83% 60%;
 
     /* Border & Input */
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 214 20% 84%; /* Increased contrast border */
+    --input: 214 20% 84%;  /* Increased contrast input border */
     --ring: 221 83% 53%;
 
     /* Radius */
