@@ -90,7 +90,22 @@ const Admin = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Logout handler (moved up for session timeout)
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    const token = localStorage.getItem(ADMIN_SESSION_TOKEN_KEY);
+    if (token) {
+      try {
+        await fetch(`${EDGE_FUNCTIONS_URL}/admin-auth`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_EXTERNAL_ANON_KEY}`,
+          },
+          body: JSON.stringify({ action: "logout", token }),
+        });
+      } catch (error) {
+        console.error("Failed to delete session on backend:", error);
+      }
+    }
     localStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
     sessionStorage.removeItem(ADMIN_BACKEND_KEY);
     setIsAuthenticated(false);
@@ -103,7 +118,7 @@ const Admin = () => {
   }, [navigate, toast]);
 
   // Session timeout hook
-  const { formattedTimeRemaining } = useAdminSessionTimeout({
+  const { formattedTimeRemaining, refreshSession, isRefreshing } = useAdminSessionTimeout({
     onTimeout: () => {
       setShowTimeoutWarning(false);
       handleLogout();
@@ -122,6 +137,24 @@ const Admin = () => {
     },
     enabled: !!isAuthenticated,
   });
+
+  // Manual reset session countdown
+  const handleManualReset = useCallback(async () => {
+    const ok = await refreshSession();
+    if (ok) {
+      setShowTimeoutWarning(false);
+      toast({
+        title: "Sesi Diperpanjang",
+        description: "Countdown sesi admin Anda telah di-reset ke 15 menit.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Gagal Perpanjang Sesi",
+        description: "Terjadi kesalahan saat menyinkronkan sesi ke backend.",
+      });
+    }
+  }, [refreshSession, toast]);
 
   // Decode password from storage
   const decodePassword = (encoded: string): string | null => {
@@ -601,11 +634,28 @@ const Admin = () => {
             )}
 
             {/* Session timeout countdown */}
-            <div className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-xs font-mono transition-colors duration-300 ${
-              showTimeoutWarning ? "text-amber-500 border-amber-500/20 animate-pulse" : "text-muted-foreground"
+            <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted border border-border text-xs font-mono transition-colors duration-300 ${
+              showTimeoutWarning ? "text-amber-500 border-amber-500/20" : "text-muted-foreground"
             }`}>
-              <Clock className={`w-3.5 h-3.5 ${showTimeoutWarning ? "text-amber-500" : "text-emerald-400"}`} />
-              <span>{formattedTimeRemaining}</span>
+              <div className="flex items-center gap-1.5">
+                <Clock className={`w-3.5 h-3.5 ${showTimeoutWarning ? "text-amber-500 animate-pulse" : "text-emerald-400"}`} />
+                <span>{formattedTimeRemaining}</span>
+              </div>
+              <Separator orientation="vertical" className="h-3" />
+              <button
+                type="button"
+                onClick={handleManualReset}
+                disabled={isRefreshing}
+                className="hover:text-foreground text-primary transition-colors disabled:opacity-50 flex items-center gap-0.5"
+                title="Perpanjang Sesi Admin (Reset Count)"
+              >
+                {isRefreshing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <TimerReset className="w-3 h-3 shrink-0" />
+                )}
+                <span className="text-[10px] font-semibold uppercase">Reset</span>
+              </button>
             </div>
 
             {/* Backend password status */}
@@ -906,6 +956,68 @@ const Admin = () => {
             </button>
           </div>
         </nav>
+
+        {/* Stateful Security Timeout Warning Modal Overlay */}
+        <AnimatePresence>
+          {showTimeoutWarning && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                transition={{ duration: 0.2 }}
+                className="w-full max-w-md bg-card border border-amber-500/30 rounded-2xl p-6 shadow-2xl space-y-6"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                    <AlertTriangle className="w-6 h-6 animate-bounce" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">Sesi Admin Hampir Habis</h3>
+                    <p className="text-xs text-muted-foreground">Peringatan keamanan otomatis</p>
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 border border-border p-4 rounded-xl space-y-2">
+                  <p className="text-sm text-foreground">
+                    Untuk alasan keamanan tingkat tinggi, sesi panel admin Anda akan otomatis di-logout dalam:
+                  </p>
+                  <p className="text-2xl font-mono font-bold text-center text-amber-500 tracking-wider">
+                    {formattedTimeRemaining}
+                  </p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    (Semua aktivitas pengguna tidak memperpanjang sesi secara otomatis)
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleLogout}
+                    className="flex-1 border-border text-foreground hover:bg-muted"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Keluar Sekarang
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleManualReset}
+                    disabled={isRefreshing}
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                  >
+                    {isRefreshing ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <TimerReset className="w-4 h-4 mr-2" />
+                    )}
+                    Perpanjang Sesi
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
