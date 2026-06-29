@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.125",
+    version: "2.4.125",
+    title: "Peningkatan Keamanan Halaman Admin",
+    description: "Rute /admin kini dilindungi berlapis: wajib login Supabase (ProtectedRoute) sekaligus wajib memiliki role admin di database (AdminRouteGuard). Pengguna tanpa akses otomatis dialihkan.",
+    type: "security",
+    is_critical: true,
+    released_at: "2026-06-29",
+    details: [
+      "Membuat komponen AdminRouteGuard baru yang memverifikasi dua lapisan keamanan sebelum mengizinkan akses ke halaman Admin.",
+      "Lapisan pertama: ProtectedRoute memastikan pengguna sudah login via Supabase Auth. Tanpa sesi, otomatis dialihkan ke /auth.",
+      "Lapisan kedua: AdminRouteGuard memeriksa daftar role pengguna dari Edge Function. Hanya akun dengan role 'admin' di database yang diizinkan masuk.",
+      "Pengguna terdaftar non-admin yang mencoba mengakses /admin akan dialihkan ke /dashboard dengan notifikasi 'Akses Ditolak'.",
+      "Menampilkan indikator loading aman saat proses verifikasi sesi dan kredensial berlangsung."
+    ]
+  },
+  {
     id: "v2.4.124",
     version: "2.4.124",
     title: "Pemisahan Rute Presensi V1 dan V2",

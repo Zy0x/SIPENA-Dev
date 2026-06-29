@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { AcademicYearProvider } from "@/contexts/AcademicYearContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { AdminRouteGuard } from "@/components/admin/AdminRouteGuard";
 import LayoutRoute from "@/components/LayoutRoute";
 import PWAManager from "@/components/PWAManager";
 import { RotationOverlay } from "@/components/RotationOverlay";
@@ -99,7 +100,13 @@ const App = () => {
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/share" element={<GuestAccess />} />
                     <Route path="/guest/grades" element={<Grades mode="guest" />} />
-                    <Route path="/admin" element={<Admin />} />
+                    <Route path="/admin" element={
+                      <ProtectedRoute>
+                        <AdminRouteGuard>
+                          <Admin />
+                        </AdminRouteGuard>
+                      </ProtectedRoute>
+                    } />
                     <Route path="/changelog" element={<Changelog />} />
                     <Route path="/portal/:code" element={<PortalView />} />
                     <Route path="/terms" element={<Terms />} />

@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.124";
+export const APP_VERSION = "2.4.125";
 export const VERSION_DATE = "2026-06-29";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.125": "Peningkatan keamanan rute halaman Admin: dilindungi oleh ProtectedRoute (wajib login Supabase) dan AdminRouteGuard (wajib role admin di database), sehingga tidak dapat diakses sembarang pengguna hanya dari URL.",
   "2.4.124": "Pemisahan rute halaman Presensi: rute /attendance dikunci menggunakan Engine V1, dan ditambahkan rute baru /attendance-v2 yang dikunci menggunakan Engine V2 secara paralel.",
   "2.4.123": "Penghapusan tombol logout duplikat di top header bar halaman Admin agar hanya tersedia secara konsisten di sidebar.",
   "2.4.122": "Penyederhanaan alur kontrol akses Feature Flags dengan penggabungan switch membingungkan (Kill Switch, Default Aktif, Semua Pengguna) menjadi satu Mode Akses (Mati Total, Terbuka Umum, Terbatas).",
