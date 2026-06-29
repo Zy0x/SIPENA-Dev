@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.121";
+export const APP_VERSION = "2.4.122";
 export const VERSION_DATE = "2026-06-29";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.122": "Penyederhanaan alur kontrol akses Feature Flags dengan penggabungan switch membingungkan (Kill Switch, Default Aktif, Semua Pengguna) menjadi satu Mode Akses (Mati Total, Terbuka Umum, Terbatas).",
   "2.4.121": "Peningkatan kontras tema terang (light mode) dengan penajaman border, input, muted foreground, serta optimalisasi palet warna aksen.",
   "2.4.120": "Peningkatan performa halaman Admin skala enterprise dengan server-side search/pagination manajemen akun, lazy-loaded stats, paginasi preview tabel, dan warning database backup besar.",
   "2.4.119": "Rombak total halaman admin dengan optimalisasi visual, mode tema adaptif, integrasi palette pemilih, dan semantic styling.",

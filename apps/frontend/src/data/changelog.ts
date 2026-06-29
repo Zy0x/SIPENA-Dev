@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.122",
+    version: "2.4.122",
+    title: "Penyederhanaan Mode Akses Feature Flags",
+    description: "Penyederhanaan alur kontrol akses Feature Flags dengan menggabungkan switch yang membingungkan (Kill Switch, Default Aktif, Semua Pengguna) menjadi satu pilihan Mode Akses yang intuitif (Mati Total, Terbuka Umum, Terbatas).",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-29",
+    details: [
+      "Mengganti switch kontrol manual yang membingungkan dengan set kartu pilihan mode akses yang terpadu.",
+      "Menyembunyikan konfigurasi whitelist target role dan akun khusus jika mode diatur ke Mati Total (Offline) atau Terbuka Umum (Public) agar antarmuka tetap ringkas.",
+      "Menjamin kelancaran pemetaan otomatis antara opsi visual terpilih dengan parameter database Supabase saat penyimpanan.",
+      "Menyesuaikan penanda komentar integrasi agar tetap selaras dengan assert pengujian otomatis."
+    ]
+  },
+  {
     id: "v2.4.121",
     version: "2.4.121",
     title: "Peningkatan Kontras & Ketajaman Tema Terang",
