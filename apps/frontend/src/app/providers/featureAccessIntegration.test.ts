@@ -59,4 +59,16 @@ describe("feature access integration guard", () => {
     expect(panel).not.toContain(".from(\"feature_flags\")");
     expect(panel).not.toContain(".from('feature_flags')");
   });
+
+  it("keeps admin feature control separated into professional tables and tabs", () => {
+    const panel = readSource("apps/frontend/src/components/admin/FeatureAccessPanel.tsx");
+    expect(panel).toContain("<Tabs");
+    expect(panel).toContain('<TabsTrigger value="features"');
+    expect(panel).toContain('<TabsTrigger value="roles"');
+    expect(panel).toContain('<TabsTrigger value="audit"');
+    expect(panel).toContain("<Table");
+    expect(panel).toContain("Tabel Fitur");
+    expect(panel).toContain("Tabel Role Pengguna");
+    expect(panel).toContain("Audit Perubahan");
+  });
 });

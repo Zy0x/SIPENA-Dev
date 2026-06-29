@@ -2,32 +2,50 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Clock3,
   Loader2,
   RefreshCw,
   Search,
   ShieldCheck,
   SlidersHorizontal,
-  UserCog,
+  Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
 import { useToast } from "@/hooks/use-toast";
 import {
   EDGE_FUNCTIONS_URL,
   SUPABASE_EXTERNAL_ANON_KEY,
 } from "@/core/repositories/supabase-compat.repository";
-import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
 
 type FeatureType = "page" | "feature" | "runtime";
 type RiskLevel = "low" | "medium" | "high" | "critical";
 type AudienceTargetType = "all_users" | "role" | "user";
+type FeatureStatusFilter = "all" | "active_all" | "role" | "user" | "default" | "off";
 
 interface FeatureFlagRow {
   id: string;
@@ -91,6 +109,12 @@ interface FeatureDraft {
   userIds: string[];
 }
 
+interface FeatureStatusMeta {
+  label: string;
+  filter: Exclude<FeatureStatusFilter, "all">;
+  variant: "default" | "secondary" | "destructive" | "outline";
+}
+
 const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
   { value: "teacher", label: "Guru" },
@@ -105,6 +129,39 @@ const EMPTY_DRAFT: FeatureDraft = {
   roles: [],
   userIds: [],
 };
+
+const TYPE_LABELS: Record<FeatureType, string> = {
+  page: "Halaman",
+  feature: "Fitur",
+  runtime: "Runtime",
+};
+
+const RISK_LABELS: Record<RiskLevel, string> = {
+  low: "Rendah",
+  medium: "Sedang",
+  high: "Tinggi",
+  critical: "Kritis",
+};
+
+function includesRole(roles: string[], role: string) {
+  return roles.includes(role);
+}
+
+function getUserLabel(user: AdminUserRow) {
+  return user.name || user.email || user.id;
+}
+
+function getUserSubLabel(user: AdminUserRow) {
+  return user.email || user.id;
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
 
 function getAudienceDraft(feature: FeatureFlagRow, audiences: FeatureAudienceRow[]): FeatureDraft {
   const featureAudiences = audiences.filter(
@@ -124,17 +181,42 @@ function getAudienceDraft(feature: FeatureFlagRow, audiences: FeatureAudienceRow
   };
 }
 
-function getFeatureBadge(feature: FeatureFlagRow, audiences: FeatureAudienceRow[]) {
-  if (!feature.global_kill_switch) return { label: "Nonaktif", variant: "destructive" as const };
+function getFeatureStatus(feature: FeatureFlagRow, audiences: FeatureAudienceRow[]): FeatureStatusMeta {
+  if (!feature.global_kill_switch) {
+    return { label: "Kill Switch Off", filter: "off", variant: "destructive" };
+  }
+
   const draft = getAudienceDraft(feature, audiences);
-  if (draft.allUsers || feature.default_enabled) return { label: "Aktif Semua", variant: "default" as const };
-  if (draft.roles.length > 0) return { label: "Role", variant: "secondary" as const };
-  if (draft.userIds.length > 0) return { label: "User Khusus", variant: "outline" as const };
-  return { label: "Nonaktif", variant: "secondary" as const };
+  if (draft.allUsers) {
+    return { label: "Aktif Semua", filter: "active_all", variant: "default" };
+  }
+  if (draft.roles.length > 0) {
+    return { label: "Role", filter: "role", variant: "secondary" };
+  }
+  if (draft.userIds.length > 0) {
+    return { label: "User Khusus", filter: "user", variant: "outline" };
+  }
+  if (feature.default_enabled) {
+    return { label: "Default", filter: "default", variant: "secondary" };
+  }
+  return { label: "Nonaktif", filter: "off", variant: "secondary" };
 }
 
-function includesRole(roles: string[], role: string) {
-  return roles.includes(role);
+function getTargetSummary(feature: FeatureFlagRow, audiences: FeatureAudienceRow[]) {
+  const draft = getAudienceDraft(feature, audiences);
+  const parts: string[] = [];
+  if (draft.allUsers) parts.push("Semua akun");
+  if (draft.defaultEnabled) parts.push("Default aktif");
+  if (draft.roles.length > 0) parts.push(`${draft.roles.length} role`);
+  if (draft.userIds.length > 0) parts.push(`${draft.userIds.length} user`);
+  return parts.length > 0 ? parts.join(" • ") : "Tidak ada target";
+}
+
+function getRoleLabels(roleValues: string[]) {
+  if (roleValues.length === 0) return "Belum ada role";
+  return roleValues
+    .map((role) => ROLE_OPTIONS.find((option) => option.value === role)?.label || role)
+    .join(", ");
 }
 
 interface FeatureAccessPanelProps {
@@ -147,17 +229,23 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [roleUserSearch, setRoleUserSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | FeatureType>("all");
+  const [riskFilter, setRiskFilter] = useState<"all" | RiskLevel>("all");
+  const [statusFilter, setStatusFilter] = useState<FeatureStatusFilter>("all");
   const [flags, setFlags] = useState<FeatureFlagRow[]>([]);
   const [audiences, setAudiences] = useState<FeatureAudienceRow[]>([]);
   const [roles, setRoles] = useState<UserRoleRow[]>([]);
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [audits, setAudits] = useState<AuditRow[]>([]);
-  const [selectedFeatureKey, setSelectedFeatureKey] = useState<string>("");
+  const [selectedFeatureKey, setSelectedFeatureKey] = useState("");
   const [draft, setDraft] = useState<FeatureDraft>(EMPTY_DRAFT);
-  const [selectedRoleUserId, setSelectedRoleUserId] = useState<string>("");
+  const [selectedRoleUserId, setSelectedRoleUserId] = useState("");
   const [userRoleDraft, setUserRoleDraft] = useState<string[]>([]);
 
   const selectedFeature = flags.find((flag) => flag.feature_key === selectedFeatureKey) || null;
+  const selectedUser = users.find((user) => user.id === selectedRoleUserId) || null;
 
   const requestAdminFeatureAccess = useCallback(
     async (action: string, payload?: unknown): Promise<FeatureAccessPayload> => {
@@ -190,13 +278,20 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
     try {
       const result = await requestAdminFeatureAccess("get-admin-data");
       const nextFlags = result.flags || [];
+      const nextUsers = result.users || [];
       setFlags(nextFlags);
       setAudiences(result.audiences || []);
       setRoles(result.roles || []);
-      setUsers(result.users || []);
+      setUsers(nextUsers);
       setAudits(result.audits || []);
-      setSelectedFeatureKey((current) => current || nextFlags[0]?.feature_key || "");
-      setSelectedRoleUserId((current) => current || result.users?.[0]?.id || "");
+      setSelectedFeatureKey((current) =>
+        current && nextFlags.some((feature) => feature.feature_key === current)
+          ? current
+          : nextFlags[0]?.feature_key || "",
+      );
+      setSelectedRoleUserId((current) =>
+        current && nextUsers.some((user) => user.id === current) ? current : nextUsers[0]?.id || "",
+      );
     } catch (error) {
       toast({
         variant: "destructive",
@@ -222,13 +317,49 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
     setUserRoleDraft(roles.filter((role) => role.user_id === selectedRoleUserId).map((role) => role.role));
   }, [roles, selectedRoleUserId]);
 
+  const roleMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const row of roles) {
+      const current = map.get(row.user_id) || [];
+      current.push(row.role);
+      map.set(row.user_id, current);
+    }
+    return map;
+  }, [roles]);
+
   const filteredFlags = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return flags;
-    return flags.filter((flag) =>
-      [flag.name, flag.feature_key, flag.description].some((value) => value.toLowerCase().includes(needle)),
+    return flags.filter((flag) => {
+      const status = getFeatureStatus(flag, audiences);
+      const matchSearch =
+        !needle ||
+        [flag.name, flag.feature_key, flag.description].some((value) =>
+          value.toLowerCase().includes(needle),
+        );
+      return (
+        matchSearch &&
+        (typeFilter === "all" || flag.feature_type === typeFilter) &&
+        (riskFilter === "all" || flag.risk_level === riskFilter) &&
+        (statusFilter === "all" || status.filter === statusFilter)
+      );
+    });
+  }, [audiences, flags, riskFilter, search, statusFilter, typeFilter]);
+
+  const filteredSpecialUsers = useMemo(() => {
+    const needle = userSearch.trim().toLowerCase();
+    if (!needle) return users;
+    return users.filter((user) =>
+      [user.name || "", user.email || "", user.id].some((value) => value.toLowerCase().includes(needle)),
     );
-  }, [flags, search]);
+  }, [userSearch, users]);
+
+  const filteredRoleUsers = useMemo(() => {
+    const needle = roleUserSearch.trim().toLowerCase();
+    if (!needle) return users;
+    return users.filter((user) =>
+      [user.name || "", user.email || "", user.id].some((value) => value.toLowerCase().includes(needle)),
+    );
+  }, [roleUserSearch, users]);
 
   const previewCount = useMemo(() => {
     if (draft.allUsers || draft.defaultEnabled) return users.length;
@@ -242,7 +373,24 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
     return granted.size;
   }, [draft.allUsers, draft.defaultEnabled, draft.roles, draft.userIds, roles, users.length]);
 
-  const selectedUser = users.find((user) => user.id === selectedRoleUserId) || null;
+  const featureStats = useMemo(() => {
+    const stats = {
+      total: flags.length,
+      activeAll: 0,
+      role: 0,
+      user: 0,
+      off: 0,
+    };
+
+    for (const flag of flags) {
+      const status = getFeatureStatus(flag, audiences).filter;
+      if (status === "active_all" || status === "default") stats.activeAll += 1;
+      if (status === "role") stats.role += 1;
+      if (status === "user") stats.user += 1;
+      if (status === "off") stats.off += 1;
+    }
+    return stats;
+  }, [audiences, flags]);
 
   const toggleDraftRole = (role: string) => {
     setDraft((current) => ({
@@ -350,147 +498,271 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Kontrol Fitur</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Kontrol Fitur</h2>
           <p className="text-sm text-muted-foreground">
-            Atur akses halaman, fitur, dan runtime untuk semua akun, role, atau akun tertentu.
+            Kelola halaman, fitur, runtime, role, dan akses akun dari satu panel admin.
           </p>
         </div>
-        <Button variant="outline" onClick={loadData} disabled={loading} className="gap-2">
+        <Button variant="outline" onClick={loadData} disabled={loading} className="min-h-[44px] gap-2">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Refresh
+          Refresh Data
         </Button>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(280px,420px)_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5" />
-              Daftar Fitur
-            </CardTitle>
-            <CardDescription>Cari dan pilih fitur yang ingin diatur.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Cari fitur atau halaman..."
-                className="pl-9"
-              />
-            </div>
-
-            <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
-              {loading && flags.length === 0 ? (
-                <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed py-10 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Memuat fitur...
-                </div>
-              ) : filteredFlags.length === 0 ? (
-                <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Tidak ada fitur yang cocok.
-                </div>
-              ) : (
-                filteredFlags.map((flag) => {
-                  const badge = getFeatureBadge(flag, audiences);
-                  const active = flag.feature_key === selectedFeatureKey;
-                  return (
-                    <button
-                      key={flag.feature_key}
-                      type="button"
-                      onClick={() => setSelectedFeatureKey(flag.feature_key)}
-                      className={`w-full rounded-xl border p-3 text-left transition-colors touch-manipulation ${
-                        active
-                          ? "border-primary bg-primary/10 text-foreground"
-                          : "border-border bg-card hover:bg-muted/60"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold">{flag.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{flag.feature_key}</p>
-                        </div>
-                        <Badge variant={badge.variant}>{badge.label}</Badge>
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{flag.description}</p>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="rounded-lg">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium uppercase text-muted-foreground">Total Fitur</p>
+            <p className="mt-1 text-2xl font-bold">{featureStats.total}</p>
           </CardContent>
         </Card>
+        <Card className="rounded-lg">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium uppercase text-muted-foreground">Aktif Umum</p>
+            <p className="mt-1 text-2xl font-bold">{featureStats.activeAll}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-lg">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium uppercase text-muted-foreground">Target Role/User</p>
+            <p className="mt-1 text-2xl font-bold">{featureStats.role + featureStats.user}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-lg">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium uppercase text-muted-foreground">Nonaktif</p>
+            <p className="mt-1 text-2xl font-bold">{featureStats.off}</p>
+          </CardContent>
+        </Card>
+      </div>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex flex-wrap items-center gap-2">
-                <ShieldCheck className="h-5 w-5" />
-                {selectedFeature?.name || "Pilih Fitur"}
-                {selectedFeature && <Badge variant="outline">{selectedFeature.risk_level}</Badge>}
-              </CardTitle>
-              <CardDescription>
-                {selectedFeature?.description || "Pilih fitur di daftar kiri untuk mengatur akses."}
-              </CardDescription>
-            </CardHeader>
-            {selectedFeature && (
-              <CardContent className="space-y-5">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border p-4">
-                    <div className="flex items-start justify-between gap-3">
+      <Tabs defaultValue="features" className="space-y-4">
+        <TabsList className="grid h-auto w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="features" className="min-h-[44px] gap-2">
+            <SlidersHorizontal className="h-4 w-4" />
+            Fitur & Halaman
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="min-h-[44px] gap-2">
+            <Users className="h-4 w-4" />
+            Role Pengguna
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="min-h-[44px] gap-2">
+            <Clock3 className="h-4 w-4" />
+            Audit
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="features" className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.85fr)]">
+            <Card className="rounded-lg">
+              <CardHeader className="gap-4">
+                <div>
+                  <CardTitle>Tabel Fitur</CardTitle>
+                  <CardDescription>
+                    Pilih baris fitur untuk mengatur target aksesnya.
+                  </CardDescription>
+                </div>
+                <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_160px_170px]">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Cari fitur, key, atau deskripsi..."
+                      className="min-h-[44px] pl-9"
+                    />
+                  </div>
+                  <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as "all" | FeatureType)}>
+                    <SelectTrigger className="min-h-[44px]">
+                      <SelectValue placeholder="Tipe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Tipe</SelectItem>
+                      <SelectItem value="page">Halaman</SelectItem>
+                      <SelectItem value="feature">Fitur</SelectItem>
+                      <SelectItem value="runtime">Runtime</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={riskFilter} onValueChange={(value) => setRiskFilter(value as "all" | RiskLevel)}>
+                    <SelectTrigger className="min-h-[44px]">
+                      <SelectValue placeholder="Risiko" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Risiko</SelectItem>
+                      <SelectItem value="low">Rendah</SelectItem>
+                      <SelectItem value="medium">Sedang</SelectItem>
+                      <SelectItem value="high">Tinggi</SelectItem>
+                      <SelectItem value="critical">Kritis</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => setStatusFilter(value as FeatureStatusFilter)}
+                  >
+                    <SelectTrigger className="min-h-[44px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Status</SelectItem>
+                      <SelectItem value="active_all">Aktif Semua</SelectItem>
+                      <SelectItem value="role">Role</SelectItem>
+                      <SelectItem value="user">User Khusus</SelectItem>
+                      <SelectItem value="default">Default</SelectItem>
+                      <SelectItem value="off">Nonaktif</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader className="bg-muted/60">
+                    <TableRow>
+                      <TableHead className="min-w-[220px]">Nama</TableHead>
+                      <TableHead className="min-w-[220px]">Key</TableHead>
+                      <TableHead className="text-center">Tipe</TableHead>
+                      <TableHead className="text-center">Risiko</TableHead>
+                      <TableHead className="min-w-[130px] text-center">Status</TableHead>
+                      <TableHead className="min-w-[170px]">Target</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading && flags.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
+                          Memuat kontrol fitur...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredFlags.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
+                          Tidak ada fitur yang cocok dengan filter.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredFlags.map((flag) => {
+                        const status = getFeatureStatus(flag, audiences);
+                        const active = flag.feature_key === selectedFeatureKey;
+                        return (
+                          <TableRow
+                            key={flag.feature_key}
+                            data-state={active ? "selected" : undefined}
+                            className="cursor-pointer"
+                            onClick={() => setSelectedFeatureKey(flag.feature_key)}
+                          >
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="font-semibold">{flag.name}</p>
+                                <p className="line-clamp-1 text-xs text-muted-foreground">{flag.description}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                              {flag.feature_key}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline">{TYPE_LABELS[flag.feature_type]}</Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={flag.risk_level === "critical" ? "destructive" : "secondary"}>
+                                {RISK_LABELS[flag.risk_level]}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={status.variant}>{status.label}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {getTargetSummary(flag, audiences)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={active ? "default" : "outline"}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelectedFeatureKey(flag.feature_key);
+                                }}
+                              >
+                                Atur
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-lg">
+              <CardHeader>
+                <CardTitle className="flex flex-wrap items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" />
+                  {selectedFeature?.name || "Pilih Fitur"}
+                  {selectedFeature && (
+                    <Badge variant={selectedFeature.risk_level === "critical" ? "destructive" : "outline"}>
+                      {RISK_LABELS[selectedFeature.risk_level]}
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  {selectedFeature?.description || "Pilih salah satu fitur di tabel untuk melihat pengaturan."}
+                </CardDescription>
+              </CardHeader>
+              {selectedFeature && (
+                <CardContent className="space-y-5">
+                  <div className="grid gap-3">
+                    <div className="flex min-h-[64px] items-center justify-between gap-3 rounded-lg border p-3">
                       <div>
-                        <Label className="text-base">Kill Switch Aktif</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Jika dimatikan, fitur tertutup untuk semua target.
-                        </p>
+                        <Label className="text-sm font-semibold">Kill Switch</Label>
+                        <p className="text-xs text-muted-foreground">Off berarti fitur ditutup untuk semua akun.</p>
                       </div>
                       <Switch
                         checked={draft.globalKillSwitch}
-                        onCheckedChange={(checked) => setDraft((current) => ({ ...current, globalKillSwitch: checked }))}
+                        onCheckedChange={(checked) =>
+                          setDraft((current) => ({ ...current, globalKillSwitch: checked }))
+                        }
                       />
                     </div>
-                  </div>
-                  <div className="rounded-xl border p-4">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-h-[64px] items-center justify-between gap-3 rounded-lg border p-3">
                       <div>
-                        <Label className="text-base">Default Aktif</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Cocok untuk halaman lama. Fitur eksperimen sebaiknya tetap mati.
-                        </p>
+                        <Label className="text-sm font-semibold">Default Aktif</Label>
+                        <p className="text-xs text-muted-foreground">Untuk halaman stabil yang aman dibuka umum.</p>
                       </div>
                       <Switch
                         checked={draft.defaultEnabled}
-                        onCheckedChange={(checked) => setDraft((current) => ({ ...current, defaultEnabled: checked }))}
+                        onCheckedChange={(checked) =>
+                          setDraft((current) => ({ ...current, defaultEnabled: checked }))
+                        }
+                      />
+                    </div>
+                    <div className="flex min-h-[64px] items-center justify-between gap-3 rounded-lg border p-3">
+                      <div>
+                        <Label className="text-sm font-semibold">Semua Pengguna</Label>
+                        <p className="text-xs text-muted-foreground">Grant eksplisit untuk seluruh akun login.</p>
+                      </div>
+                      <Switch
+                        checked={draft.allUsers}
+                        onCheckedChange={(checked) => setDraft((current) => ({ ...current, allUsers: checked }))}
                       />
                     </div>
                   </div>
-                </div>
 
-                <div className="rounded-xl border p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <Label className="text-base">Aktif untuk semua pengguna</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Membuka fitur untuk semua akun login. Gunakan hati-hati untuk fitur beta.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={draft.allUsers}
-                      onCheckedChange={(checked) => setDraft((current) => ({ ...current, allUsers: checked }))}
-                    />
-                  </div>
-                </div>
+                  <Separator />
 
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-xl border p-4">
-                    <Label className="text-base">Role yang mendapat akses</Label>
-                    <div className="mt-3 grid gap-2">
+                  <section className="space-y-3">
+                    <Label className="text-sm font-semibold">Target Role</Label>
+                    <div className="grid gap-2 sm:grid-cols-2">
                       {ROLE_OPTIONS.map((role) => (
-                        <label key={role.value} className="flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2">
+                        <label
+                          key={role.value}
+                          className="flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2"
+                        >
                           <Checkbox
                             checked={draft.roles.includes(role.value)}
                             onCheckedChange={() => toggleDraftRole(role.value)}
@@ -499,137 +771,251 @@ export function FeatureAccessPanel({ adminPassword }: FeatureAccessPanelProps) {
                         </label>
                       ))}
                     </div>
-                  </div>
+                  </section>
 
-                  <div className="rounded-xl border p-4">
-                    <Label className="text-base">Akun khusus</Label>
-                    <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
-                      {users.length === 0 ? (
-                        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                          Belum ada daftar akun. Tekan Refresh atau periksa akses admin.
-                        </div>
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-sm font-semibold">User Khusus</Label>
+                      <Badge variant="outline">{draft.userIds.length} dipilih</Badge>
+                    </div>
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={userSearch}
+                        onChange={(event) => setUserSearch(event.target.value)}
+                        placeholder="Cari akun..."
+                        className="min-h-[44px] pl-9"
+                      />
+                    </div>
+                    <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-2">
+                      {filteredSpecialUsers.length === 0 ? (
+                        <p className="p-3 text-sm text-muted-foreground">Tidak ada akun yang cocok.</p>
                       ) : (
-                        users.map((user) => (
-                          <label key={user.id} className="flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2">
+                        filteredSpecialUsers.map((user) => (
+                          <label
+                            key={user.id}
+                            className="flex min-h-[44px] items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60"
+                          >
                             <Checkbox
                               checked={draft.userIds.includes(user.id)}
                               onCheckedChange={() => toggleDraftUser(user.id)}
                             />
                             <span className="min-w-0 text-sm">
-                              <span className="block truncate font-medium">{user.name || user.email || user.id}</span>
-                              <span className="block truncate text-xs text-muted-foreground">{user.email || user.id}</span>
+                              <span className="block truncate font-medium">{getUserLabel(user)}</span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {getUserSubLabel(user)}
+                              </span>
                             </span>
                           </label>
                         ))
                       )}
                     </div>
-                  </div>
-                </div>
+                  </section>
 
-                <Alert className="border-primary/30 bg-primary/5">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <AlertDescription>
-                    Preview dampak: <strong>{previewCount} akun</strong> akan mendapat akses berdasarkan aturan saat ini.
-                  </AlertDescription>
-                </Alert>
+                  <Alert className="border-primary/30 bg-primary/5">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <AlertDescription>
+                      Dampak saat disimpan: <strong>{previewCount} akun</strong> akan mendapat akses.
+                    </AlertDescription>
+                  </Alert>
 
-                <div className="flex justify-end">
-                  <Button onClick={saveFeature} disabled={saving} className="gap-2">
+                  <Button onClick={saveFeature} disabled={saving} className="min-h-[44px] w-full gap-2">
                     {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                     Simpan Kontrol Fitur
                   </Button>
-                </div>
-              </CardContent>
-            )}
-          </Card>
+                </CardContent>
+              )}
+            </Card>
+          </div>
+        </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCog className="h-5 w-5" />
-                Role Pengguna
-              </CardTitle>
-              <CardDescription>
-                Role digunakan untuk membuka fitur kepada kelompok akun, misalnya tester Presensi V2.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {users.length === 0 ? (
-                <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                  Belum ada akun yang bisa dipilih. Tekan Refresh atau periksa Edge Function admin.
+        <TabsContent value="roles" className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <Card className="rounded-lg">
+              <CardHeader className="gap-4">
+                <div>
+                  <CardTitle>Tabel Role Pengguna</CardTitle>
+                  <CardDescription>
+                    Pilih akun untuk mengubah role aplikasi yang dipakai oleh kontrol fitur.
+                  </CardDescription>
                 </div>
-              ) : (
-                <>
-                  <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)]">
-                    <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                      {users.map((user) => (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => setSelectedRoleUserId(user.id)}
-                          className={`w-full rounded-xl border p-3 text-left text-sm transition-colors touch-manipulation ${
-                            selectedRoleUserId === user.id ? "border-primary bg-primary/10" : "hover:bg-muted/60"
-                          }`}
+                <div className="relative max-w-xl">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={roleUserSearch}
+                    onChange={(event) => setRoleUserSearch(event.target.value)}
+                    placeholder="Cari nama atau email akun..."
+                    className="min-h-[44px] pl-9"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader className="bg-muted/60">
+                    <TableRow>
+                      <TableHead className="min-w-[240px]">Akun</TableHead>
+                      <TableHead className="min-w-[220px]">Role Aktif</TableHead>
+                      <TableHead className="min-w-[160px]">Login Terakhir</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRoleUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-28 text-center text-muted-foreground">
+                          Tidak ada akun yang cocok.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredRoleUsers.map((user) => {
+                        const userRoles = roleMap.get(user.id) || [];
+                        const active = selectedRoleUserId === user.id;
+                        return (
+                          <TableRow
+                            key={user.id}
+                            data-state={active ? "selected" : undefined}
+                            className="cursor-pointer"
+                            onClick={() => setSelectedRoleUserId(user.id)}
+                          >
+                            <TableCell>
+                              <p className="font-semibold">{getUserLabel(user)}</p>
+                              <p className="text-xs text-muted-foreground">{getUserSubLabel(user)}</p>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1.5">
+                                {userRoles.length === 0 ? (
+                                  <Badge variant="outline">Tanpa role</Badge>
+                                ) : (
+                                  userRoles.map((role) => (
+                                    <Badge key={role} variant="secondary">
+                                      {ROLE_OPTIONS.find((option) => option.value === role)?.label || role}
+                                    </Badge>
+                                  ))
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDateTime(user.lastSignInAt)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={active ? "default" : "outline"}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelectedRoleUserId(user.id);
+                                }}
+                              >
+                                Edit Role
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-lg">
+              <CardHeader>
+                <CardTitle>Editor Role</CardTitle>
+                <CardDescription>
+                  {selectedUser ? getUserSubLabel(selectedUser) : "Pilih akun di tabel untuk mengatur role."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {selectedUser ? (
+                  <>
+                    <div className="rounded-lg border p-3">
+                      <p className="font-semibold">{getUserLabel(selectedUser)}</p>
+                      <p className="text-xs text-muted-foreground">{selectedUser.id}</p>
+                    </div>
+                    <div className="grid gap-2">
+                      {ROLE_OPTIONS.map((role) => (
+                        <label
+                          key={role.value}
+                          className="flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2"
                         >
-                          <span className="block truncate font-medium">{user.name || user.email || user.id}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{user.email || user.id}</span>
-                        </button>
+                          <Checkbox
+                            checked={userRoleDraft.includes(role.value)}
+                            onCheckedChange={() => toggleUserRole(role.value)}
+                          />
+                          <span className="text-sm font-medium">{role.label}</span>
+                        </label>
                       ))}
                     </div>
-                    <div className="rounded-xl border p-4">
-                      <p className="mb-3 text-sm font-semibold">
-                        {selectedUser?.email || "Pilih akun"}
-                      </p>
-                      <div className="grid gap-2">
-                        {ROLE_OPTIONS.map((role) => (
-                          <label key={role.value} className="flex min-h-[44px] items-center gap-3 rounded-lg border px-3 py-2">
-                            <Checkbox
-                              checked={userRoleDraft.includes(role.value)}
-                              onCheckedChange={() => toggleUserRole(role.value)}
-                            />
-                            <span className="text-sm font-medium">{role.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <Button onClick={saveUserRoles} disabled={saving || !selectedRoleUserId} className="mt-4 w-full gap-2">
-                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                        Simpan Role Akun
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                    <Alert>
+                      <AlertDescription>
+                        Role aktif: <strong>{getRoleLabels(userRoleDraft)}</strong>
+                      </AlertDescription>
+                    </Alert>
+                    <Button
+                      onClick={saveUserRoles}
+                      disabled={saving || !selectedRoleUserId}
+                      className="min-h-[44px] w-full gap-2"
+                    >
+                      {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Simpan Role Akun
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Belum ada akun yang dipilih.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-          <Card>
+        <TabsContent value="audit">
+          <Card className="rounded-lg">
             <CardHeader>
               <CardTitle>Audit Perubahan</CardTitle>
-              <CardDescription>Catatan perubahan terbaru dari Kontrol Fitur.</CardDescription>
+              <CardDescription>
+                Riwayat perubahan terbaru dari fitur, audience, dan role pengguna.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {audits.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Belum ada audit perubahan.</p>
-              ) : (
-                <div className="space-y-3">
-                  {audits.map((audit) => (
-                    <div key={audit.id} className="rounded-xl border p-3 text-sm">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-medium">{audit.action}</span>
-                        <Badge variant="outline">{audit.feature_key || "role"}</Badge>
-                      </div>
-                      <Separator className="my-2" />
-                      <p className="text-xs text-muted-foreground">
-                        {audit.actor_email || "admin-panel"} - {new Date(audit.created_at).toLocaleString("id-ID")}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Table>
+                <TableHeader className="bg-muted/60">
+                  <TableRow>
+                    <TableHead className="min-w-[160px]">Aksi</TableHead>
+                    <TableHead className="min-w-[220px]">Fitur / Target</TableHead>
+                    <TableHead className="min-w-[220px]">Admin</TableHead>
+                    <TableHead className="min-w-[180px]">Waktu</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {audits.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-28 text-center text-muted-foreground">
+                        Belum ada audit perubahan.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    audits.map((audit) => (
+                      <TableRow key={audit.id}>
+                        <TableCell className="font-medium">{audit.action}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{audit.feature_key || "role pengguna"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {audit.actor_email || "admin-panel"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDateTime(audit.created_at)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
