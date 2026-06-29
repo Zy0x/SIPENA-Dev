@@ -70,8 +70,6 @@ import { useGradeFormulaSettings } from "@/hooks/useGradeFormulaSettings";
 import { useGradeTableColorScheme } from "@/hooks/useGradeTableColorScheme";
 import { calculateStudentSubjectReport } from "@/lib/gradeReportEngine";
 import { UnifiedExportStudio, type ExportColumnTypographyOption, type ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
-import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
-import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 import { ExportPreviewRenderer } from "@/components/export/ExportPreviewRenderer";
 import {
   getGradeTableChapterTone,
@@ -285,7 +283,6 @@ function buildReportPreviewHeaderGroups(groups: ReportHeaderGroup[]): ReportHead
 
 export default function GradeReports() {
   const { toast } = useEnhancedToast();
-  const { canAccess } = useFeatureFlags();
   const queryClient = useQueryClient();
   const { runWithLoader, overlay: exportOverlay } = useExportLoader();
   const { activeYear, semestersForActiveYear, activeYearId } = useAcademicYear();
@@ -1659,110 +1656,98 @@ export default function GradeReports() {
                       Pilih format, atur kolom, style dokumen, dan signature - semuanya di satu tempat dengan live preview.
                     </p>
                   </div>
-                  {canAccess(FEATURE_KEYS.exportStudio) ? (
-                    <UnifiedExportStudio
-                      title="Studio Ekspor Laporan Nilai"
-                      description="Atur format, kolom, style dokumen, dan signature dari satu tempat agar hasil ekspor lebih jelas dan konsisten."
-                      triggerLabel="Ekspor Laporan"
-                      formats={REPORT_EXPORT_FORMATS}
-                      selectedFormat={exportFormat}
-                      onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
-                      onExport={handleExport}
-                      includeSignature={includeSignature}
-                      onIncludeSignatureChange={setIncludeSignature}
-                      signatureConfig={signatureConfig}
-                      hasSignature={hasSignature}
-                      isLoading={signatureLoading}
-                      isSaving={signatureSaving}
-                      onSaveSignature={saveSignature}
-                      documentStyle={documentStyle}
-                      paperSize={paperSize}
-                      onDocumentStyleChange={setDocumentStyle}
-                      onPaperSizeChange={setPaperSize}
-                      autoFitOnePage={autoFitOnePage}
-                      onAutoFitOnePageChange={setAutoFitOnePage}
-                      showAutoFitPreset
-                      columnOptions={[
-                        {
-                          key: "includeAssignments",
-                          label: "Nilai Tugas",
-                          description: "Nilai per tugas/assignment di setiap BAB. Anda bisa mengecualikan tugas tertentu di bawah ini.",
-                          checked: exportOptions.includeAssignments,
-                          children: allAssignments.map((assignment) => {
-                            const chapter = allChapters.find((item) => item.id === assignment.chapter_id);
-                            return {
-                              key: `assignment:${assignment.id}`,
-                              label: assignment.name,
-                              description: chapter ? chapter.name : "Tugas tanpa BAB",
-                              checked: exportOptions.assignmentVisibility[assignment.id] !== false,
-                            };
-                          }),
-                        },
-                        { key: "includeChapterAvg", label: "Rata-Rata BAB", description: "Rata-rata nilai per BAB/bab materi", checked: exportOptions.includeChapterAvg },
-                        { key: "includeSTS", label: "STS", description: "Nilai Sumatif Tengah Semester", checked: exportOptions.includeSTS },
-                        { key: "includeSAS", label: "SAS", description: "Nilai Sumatif Akhir Semester", checked: exportOptions.includeSAS },
-                        { key: "includeRapor", label: "Nilai Rapor", description: "Nilai akhir rapor semester", checked: exportOptions.includeRapor },
-                        { key: "includeStatus", label: "Status", description: "Status kelulusan berdasarkan KKM", checked: exportOptions.includeStatus },
-                      ]}
-                      onColumnOptionChange={(key, checked) => setExportOptions((prev) => {
-                        if (key.startsWith("assignment:")) {
-                          const assignmentId = key.replace("assignment:", "");
+                  <UnifiedExportStudio
+                    title="Studio Ekspor Laporan Nilai"
+                    description="Atur format, kolom, style dokumen, dan signature dari satu tempat agar hasil ekspor lebih jelas dan konsisten."
+                    triggerLabel="Ekspor Laporan"
+                    formats={REPORT_EXPORT_FORMATS}
+                    selectedFormat={exportFormat}
+                    onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
+                    onExport={handleExport}
+                    includeSignature={includeSignature}
+                    onIncludeSignatureChange={setIncludeSignature}
+                    signatureConfig={signatureConfig}
+                    hasSignature={hasSignature}
+                    isLoading={signatureLoading}
+                    isSaving={signatureSaving}
+                    onSaveSignature={saveSignature}
+                    documentStyle={documentStyle}
+                    paperSize={paperSize}
+                    onDocumentStyleChange={setDocumentStyle}
+                    onPaperSizeChange={setPaperSize}
+                    autoFitOnePage={autoFitOnePage}
+                    onAutoFitOnePageChange={setAutoFitOnePage}
+                    showAutoFitPreset
+                    columnOptions={[
+                      {
+                        key: "includeAssignments",
+                        label: "Nilai Tugas",
+                        description: "Nilai per tugas/assignment di setiap BAB. Anda bisa mengecualikan tugas tertentu di bawah ini.",
+                        checked: exportOptions.includeAssignments,
+                        children: allAssignments.map((assignment) => {
+                          const chapter = allChapters.find((item) => item.id === assignment.chapter_id);
                           return {
-                            ...prev,
-                            assignmentVisibility: {
-                              ...prev.assignmentVisibility,
-                              [assignmentId]: checked,
-                            },
+                            key: `assignment:${assignment.id}`,
+                            label: assignment.name,
+                            description: chapter ? chapter.name : "Tugas tanpa BAB",
+                            checked: exportOptions.assignmentVisibility[assignment.id] !== false,
                           };
-                        }
+                        }),
+                      },
+                      { key: "includeChapterAvg", label: "Rata-Rata BAB", description: "Rata-rata nilai per BAB/bab materi", checked: exportOptions.includeChapterAvg },
+                      { key: "includeSTS", label: "STS", description: "Nilai Sumatif Tengah Semester", checked: exportOptions.includeSTS },
+                      { key: "includeSAS", label: "SAS", description: "Nilai Sumatif Akhir Semester", checked: exportOptions.includeSAS },
+                      { key: "includeRapor", label: "Nilai Rapor", description: "Nilai akhir rapor semester", checked: exportOptions.includeRapor },
+                      { key: "includeStatus", label: "Status", description: "Status kelulusan berdasarkan KKM", checked: exportOptions.includeStatus },
+                    ]}
+                    onColumnOptionChange={(key, checked) => setExportOptions((prev) => {
+                      if (key.startsWith("assignment:")) {
+                        const assignmentId = key.replace("assignment:", "");
+                        return {
+                          ...prev,
+                          assignmentVisibility: {
+                            ...prev.assignmentVisibility,
+                            [assignmentId]: checked,
+                          },
+                        };
+                      }
 
-                        if (key === "includeAssignments") {
-                          const nextVisibility = { ...prev.assignmentVisibility };
-                          allAssignments.forEach((assignment) => {
-                            nextVisibility[assignment.id] = checked;
-                          });
-                          return {
-                            ...prev,
-                            includeAssignments: checked,
-                            assignmentVisibility: nextVisibility,
-                          };
-                        }
+                      if (key === "includeAssignments") {
+                        const nextVisibility = { ...prev.assignmentVisibility };
+                        allAssignments.forEach((assignment) => {
+                          nextVisibility[assignment.id] = checked;
+                        });
+                        return {
+                          ...prev,
+                          includeAssignments: checked,
+                          assignmentVisibility: nextVisibility,
+                        };
+                      }
 
-                        return { ...prev, [key]: checked };
-                      })}
-                      columnCount={visibleColumns.length}
-                      columnTypographyOptions={columnTypographyOptions}
-                      renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
-                        <ExportPreviewRenderer
-                          previewFormat={previewFormat}
-                          draft={draft}
-                          setDraft={setDraft}
-                          previewDate={previewDate}
-                          liveEditMode={liveEditMode}
-                          highlightTarget={highlightTarget}
-                          onHighlightTargetHoverChange={onHighlightTargetHoverChange}
-                          onHighlightTargetSelect={onHighlightTargetSelect}
-                          previewData={{
-                            ...exportConfig,
-                            paperSize: previewPaperSize,
-                            includeSignature: previewIncludeSignature,
-                            documentStyle: previewStyle || documentStyle,
-                            autoFitOnePage: previewAutoFit ?? autoFitOnePage,
-                          }}
-                        />
-                      )}
-                    />
-                  ) : (
-                    <Button 
-                      onClick={() => {
-                        toast({ variant: "error", title: "Fitur Dinonaktifkan", description: "Fitur Ekspor Studio dinonaktifkan oleh administrator." });
-                      }}
-                      className="h-9 gap-2 text-xs shrink-0"
-                    >
-                      <FileSpreadsheet className="w-4 h-4" />
-                      Ekspor Laporan
-                    </Button>
-                  )}
+                      return { ...prev, [key]: checked };
+                    })}
+                    columnCount={visibleColumns.length}
+                    columnTypographyOptions={columnTypographyOptions}
+                    renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => (
+                      <ExportPreviewRenderer
+                        previewFormat={previewFormat}
+                        draft={draft}
+                        setDraft={setDraft}
+                        previewDate={previewDate}
+                        liveEditMode={liveEditMode}
+                        highlightTarget={highlightTarget}
+                        onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                        onHighlightTargetSelect={onHighlightTargetSelect}
+                        previewData={{
+                          ...exportConfig,
+                          paperSize: previewPaperSize,
+                          includeSignature: previewIncludeSignature,
+                          documentStyle: previewStyle || documentStyle,
+                          autoFitOnePage: previewAutoFit ?? autoFitOnePage,
+                        }}
+                      />
+                    )}
+                  />
                 </div>
 
                 <div className="grid gap-2 text-[10px] sm:grid-cols-3 sm:text-xs">

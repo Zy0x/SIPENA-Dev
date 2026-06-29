@@ -47,7 +47,7 @@ export const AttendanceV2Cell: React.FC<AttendanceV2CellProps> = ({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className={cellBg} onClick={onClick}>
+        <div className={cellBg} onClick={!isLocked && isEffective ? onClick : undefined}>
           <span>{displayChar}</span>
           
           {/* Icons/Indicators */}

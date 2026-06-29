@@ -55,8 +55,6 @@ import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import type { ExportProgressReporter } from "@/lib/exportProgress";
 import { useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { UnifiedExportStudio, type ExportColumnOption, type ExportColumnTypographyOption, type ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
-import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
-import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 import { ExportPreviewRenderer } from "@/components/export/ExportPreviewRenderer";
 import { buildRankingExportColumns, getDefaultSelectedColumns, buildRankingExportData, getRankingExportColumnLabel } from "@/lib/rankingExportColumns";
 import { getNaturalColumnWidthMmV2, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
@@ -107,7 +105,6 @@ const RANKING_EXPORT_FORMATS: ExportStudioFormatOption[] = [
 
 export default function StudentRankings() {
   const { toast } = useEnhancedToast();
-  const { canAccess } = useFeatureFlags();
   const { classes } = useClasses();
   const { runWithLoader, overlay: exportOverlay } = useExportLoader();
   const { activeYear } = useAcademicYear();
@@ -655,74 +652,62 @@ export default function StudentRankings() {
                           <span className="font-semibold text-foreground">{selectedClass?.name}</span>.
                         </p>
                       </div>
-                      {canAccess(FEATURE_KEYS.exportStudio) ? (
-                        <UnifiedExportStudio
-                          title="Studio Ekspor Ranking Keseluruhan"
-                          description="Pilih format ekspor ranking keseluruhan dan kelola signature dari satu panel yang sama."
-                          triggerLabel="Ekspor Ranking"
-                          triggerClassName="h-9 gap-2 text-xs shrink-0"
-                          formats={RANKING_EXPORT_FORMATS}
-                          selectedFormat={exportFormat}
-                          onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
-                          onExport={exportOverallRanking}
-                          includeSignature={includeSignature}
-                          onIncludeSignatureChange={setIncludeSignature}
-                          signatureConfig={signatureConfig}
-                          hasSignature={hasSignature}
-                          isLoading={signatureLoading}
-                          isSaving={signatureSaving}
-                          onSaveSignature={saveSignature}
-                          paperSize={paperSize}
-                          onPaperSizeChange={setPaperSize}
-                          documentStyle={documentStyle}
-                          onDocumentStyleChange={setDocumentStyle}
-                          autoFitOnePage={autoFitOnePage}
-                          onAutoFitOnePageChange={setAutoFitOnePage}
-                          showAutoFitPreset
-                          columnOptions={overallColumnOptions}
-                          onColumnOptionChange={handleOverallColumnOptionChange}
-                          columnCount={selectedOverallColumns.length}
-                          columnTypographyOptions={overallColumnTypographyOptions}
-                          renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
-                            if (!overallExportConfig) return null;
-                            return (
-                              <ExportPreviewRenderer
-                                previewFormat={previewFormat}
-                                draft={draft}
-                                setDraft={setDraft}
-                                previewDate={previewDate}
-                                liveEditMode={liveEditMode}
-                                highlightTarget={highlightTarget}
-                                onHighlightTargetHoverChange={onHighlightTargetHoverChange}
-                                onHighlightTargetSelect={onHighlightTargetSelect}
-                                previewData={{
-                                  ...overallExportConfig,
-                                  includeSignature: previewIncludeSignature && hasSignature,
-                                  signature: buildExportSignature(draft),
-                                  paperSize: previewPaperSize,
-                                  documentStyle: buildCompactRankingDocumentStyle(
-                                    previewDocumentStyle ?? documentStyle,
-                                    overallExportConfig.columns,
-                                    previewPaperSize,
-                                    overallExportConfig.data,
-                                  ),
-                                  autoFitOnePage: previewAutoFit ?? autoFitOnePage,
-                                }}
-                              />
-                            );
-                          }}
-                        />
-                      ) : (
-                        <Button 
-                          onClick={() => {
-                            toast({ variant: "error", title: "Fitur Dinonaktifkan", description: "Fitur Ekspor Studio dinonaktifkan oleh administrator." });
-                          }}
-                          className="h-9 gap-2 text-xs shrink-0"
-                        >
-                          <FileSpreadsheet className="w-4 h-4" />
-                          Ekspor Ranking
-                        </Button>
-                      )}
+                      <UnifiedExportStudio
+                        title="Studio Ekspor Ranking Keseluruhan"
+                        description="Pilih format ekspor ranking keseluruhan dan kelola signature dari satu panel yang sama."
+                        triggerLabel="Ekspor Ranking"
+                        triggerClassName="h-9 gap-2 text-xs shrink-0"
+                        formats={RANKING_EXPORT_FORMATS}
+                        selectedFormat={exportFormat}
+                        onFormatChange={(value) => setExportFormat(value as typeof exportFormat)}
+                        onExport={exportOverallRanking}
+                        includeSignature={includeSignature}
+                        onIncludeSignatureChange={setIncludeSignature}
+                        signatureConfig={signatureConfig}
+                        hasSignature={hasSignature}
+                        isLoading={signatureLoading}
+                        isSaving={signatureSaving}
+                        onSaveSignature={saveSignature}
+                        paperSize={paperSize}
+                        onPaperSizeChange={setPaperSize}
+                        documentStyle={documentStyle}
+                        onDocumentStyleChange={setDocumentStyle}
+                        autoFitOnePage={autoFitOnePage}
+                        onAutoFitOnePageChange={setAutoFitOnePage}
+                        showAutoFitPreset
+                        columnOptions={overallColumnOptions}
+                        onColumnOptionChange={handleOverallColumnOptionChange}
+                        columnCount={selectedOverallColumns.length}
+                        columnTypographyOptions={overallColumnTypographyOptions}
+                        renderPreview={({ previewFormat, draft, setDraft, previewDate, includeSignature: previewIncludeSignature, paperSize: previewPaperSize, documentStyle: previewDocumentStyle, autoFitOnePage: previewAutoFit, liveEditMode, highlightTarget, onHighlightTargetHoverChange, onHighlightTargetSelect }) => {
+                          if (!overallExportConfig) return null;
+                          return (
+                            <ExportPreviewRenderer
+                              previewFormat={previewFormat}
+                              draft={draft}
+                              setDraft={setDraft}
+                              previewDate={previewDate}
+                              liveEditMode={liveEditMode}
+                              highlightTarget={highlightTarget}
+                              onHighlightTargetHoverChange={onHighlightTargetHoverChange}
+                              onHighlightTargetSelect={onHighlightTargetSelect}
+                              previewData={{
+                                ...overallExportConfig,
+                                includeSignature: previewIncludeSignature && hasSignature,
+                                signature: buildExportSignature(draft),
+                                paperSize: previewPaperSize,
+                                documentStyle: buildCompactRankingDocumentStyle(
+                                  previewDocumentStyle ?? documentStyle,
+                                  overallExportConfig.columns,
+                                  previewPaperSize,
+                                  overallExportConfig.data,
+                                ),
+                                autoFitOnePage: previewAutoFit ?? autoFitOnePage,
+                              }}
+                            />
+                          );
+                        }}
+                      />
                     </div>
                   </CardHeader>
 

@@ -7,14 +7,12 @@ interface AttendanceV2TableProps {
   dataset: AttendanceDatasetCanonical | null;
   onCellClick: (studentId: string, date: string, currentStatus: AttendanceStatusCode | null, currentNote: string | null) => void;
   isLocked: boolean;
-  onDayHeaderClick?: (day: any) => void;
 }
 
 export const AttendanceV2Table: React.FC<AttendanceV2TableProps> = ({
   dataset,
   onCellClick,
   isLocked,
-  onDayHeaderClick,
 }) => {
   if (!dataset || dataset.students.length === 0) {
     return (
@@ -44,11 +42,9 @@ export const AttendanceV2Table: React.FC<AttendanceV2TableProps> = ({
                 return (
                   <th
                     key={day.date}
-                    className={`p-2 text-center font-medium border-l border-slate-100 dark:border-slate-800 min-w-[44px] cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/20 select-none ${
+                    className={`p-2 text-center font-medium border-l border-slate-100 dark:border-slate-800 min-w-[44px] ${
                       isNonEffective ? "bg-slate-100/50 dark:bg-slate-900/50 text-slate-400" : "text-slate-600 dark:text-slate-400"
                     }`}
-                    onClick={() => onDayHeaderClick?.(day)}
-                    title="Klik untuk detail kalender"
                   >
                     <div>{dayNum}</div>
                     <div className="text-[9px] uppercase tracking-wider">{dayName}</div>

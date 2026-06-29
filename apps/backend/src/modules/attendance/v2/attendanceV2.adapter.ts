@@ -24,14 +24,13 @@ export class AttendanceV2Adapter {
     query: AttendanceDatasetQuery,
     runtime: AttendanceRuntimeContext
   ): Promise<{ dataset: AttendanceDatasetCanonical; issues: AttendanceValidationIssue[] }> {
-    const { classId, month, workDayFormat } = query;
-    const resolvedWorkDayFormat = (workDayFormat === "5days" || workDayFormat === "6days") ? workDayFormat : "6days";
+    const { classId, month } = query;
     const userId = runtime.user?.id;
     const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
 
     if (!userId) {
       return {
-        dataset: { classId, month, students: [], records: [], days: [], holidays: [], dayEvents: [], locks: [], workDayFormat: resolvedWorkDayFormat },
+        dataset: { classId, month, students: [], records: [], days: [], holidays: [], dayEvents: [], locks: [] },
         issues: [{ severity: "error", code: "UNAUTHORIZED", message: "User tidak terautentikasi untuk mengambil data." }],
       };
     }
@@ -103,7 +102,7 @@ export class AttendanceV2Adapter {
         startDate,
         endDate,
         classId,
-        workDayFormat: resolvedWorkDayFormat,
+        workDayFormat: "6days",
         events: dayEvents.map((e: any) => ({ ...e, classId: null, schoolId: null })),
         holidays: holidays.map((h) => ({ ...h, isNational: h.isNational })),
         overrides: [],
@@ -113,12 +112,10 @@ export class AttendanceV2Adapter {
       const mappedDays = calendarDays.map((day) => ({
         date: day.date,
         dayOfWeek: day.dayOfWeek,
-        isWeekend: day.isWeekend,
+        isWeekend: day.dayOfWeek === 0 || day.dayOfWeek === 6,
         isEffective: day.isEffective,
         holidayName: day.holidayName || undefined,
         eventName: day.eventName || undefined,
-        reasonCodes: day.reasonCodes || [],
-        blockedWriteState: day.blockedWriteState || false,
       }));
 
       // 4. Evaluate attendance rules
@@ -164,7 +161,6 @@ export class AttendanceV2Adapter {
         holidays,
         dayEvents,
         locks,
-        workDayFormat: resolvedWorkDayFormat,
       };
 
       // 5. Compute summary bundles server-side

@@ -1,8 +1,8 @@
 import React from "react";
-import AttendanceV2Page from "../v2/page/AttendanceV2Page";
+import { AttendanceV2LegacyMirror } from "../v2/AttendanceV2LegacyMirror";
 
 export const AttendanceV2: React.FC = () => {
-  return <AttendanceV2Page />;
+  return <AttendanceV2LegacyMirror />;
 };
 
 export default AttendanceV2;
