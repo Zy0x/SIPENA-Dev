@@ -1,13 +1,12 @@
 import React from "react";
-import { AttendanceV2ControlCenter } from "./AttendanceV2ControlCenter";
+import AttendanceV2Page from "@/pages/AttendanceV2";
 
 /**
  * AttendanceV2Wrapper
- * Owns the V2-only workspace. V1 remains available through AttendanceV2LegacyMirror
- * and is not imported or modified here.
+ * Wraps the duplicated V2 Attendance page component. Renders it completely unchanged.
  */
 export const AttendanceV2Wrapper: React.FC = () => {
-  return <AttendanceV2ControlCenter />;
+  return <AttendanceV2Page />;
 };
 
 export default AttendanceV2Wrapper;

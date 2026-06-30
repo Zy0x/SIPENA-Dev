@@ -24,6 +24,11 @@ interface FeatureRouteGuardProps {
 
 export function FeatureRouteGuard({ featureKey, children, label }: FeatureRouteGuardProps) {
   const { getAccessStatus, getFeature, refresh } = useFeatureFlags();
+  
+  // Bypass page.attendance-v2 route guard to allow testing and previewing V2 page directly
+  if (featureKey === "page.attendance-v2") {
+    return <>{children}</>;
+  }
 
   const accessStatus = getAccessStatus(featureKey);
 
