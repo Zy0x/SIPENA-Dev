@@ -6,7 +6,7 @@ import { useAttendanceRuntime } from "../runtime/useAttendanceRuntime";
 export const AttendanceV2: React.FC = () => {
   const runtime = useAttendanceRuntime();
 
-  if (runtime.engine === "v2" && runtime.mode === "active") {
+  if ((runtime.engine === "v2" && runtime.mode === "active") || window.location.pathname.includes("attendance-v2")) {
     return <AttendanceV2Wrapper />;
   }
 
