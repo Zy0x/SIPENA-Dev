@@ -4,7 +4,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMont
 import { id as idLocale } from "date-fns/locale";
 import gsap from "gsap";
 import { 
-  Loader2, MessageSquare, AlertCircle, X, CalendarDays, 
+  Loader2, MessageSquare, AlertCircle, X, CalendarDays, CheckCircle2,
   Users, UserCheck, BarChart3, ChevronLeft, ChevronRight, Bookmark 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -212,11 +212,43 @@ export default function AttendanceV2Page() {
     attendanceRecords, holidays, dayEvents, isLocked, dbAvailable,
     getAttendance: dbGetAttendance, getAttendanceNote: dbGetAttendanceNote, getDayEvent, isHoliday, getHolidayDescription, getMonthStats: dbGetMonthStats, getDayStats: dbGetDayStats, getYearlyData,
     setAttendance: setAttendanceDb, updateNote, bulkSetAttendance, toggleHoliday, upsertDayEvent, deleteDayEvent, toggleLock,
+    pendingAttendanceSaves, failedAttendanceSaves, retryFailedAttendanceSaves,
     isSaving, isLoading, promoteV2ToV1, isPromoting,
     recapProfile, snapshots, delegations,
     updateRecapProfile, createSnapshot, restoreSnapshot, createDelegation, revokeDelegation,
     isUpdatingRecapProfile, isCreatingSnapshot, isRestoringSnapshot, isCreatingDelegation, isRevokingDelegation,
   } = useAttendanceV2(selectedClassId === "tour-dummy-class" ? "" : selectedClassId, currentMonth, workDayFormat);
+
+  const renderAttendanceSaveIndicator = useCallback(() => {
+    if (failedAttendanceSaves > 0) {
+      return (
+        <button
+          type="button"
+          onClick={retryFailedAttendanceSaves}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-3 text-[11px] font-semibold text-destructive touch-manipulation"
+        >
+          <AlertCircle className="h-3.5 w-3.5" />
+          {failedAttendanceSaves} gagal, coba lagi
+        </button>
+      );
+    }
+
+    if (pendingAttendanceSaves > 0) {
+      return (
+        <Badge variant="secondary" className="min-h-8 gap-1.5 rounded-full px-3 text-[11px] font-semibold">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          Menyimpan {pendingAttendanceSaves} perubahan
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="outline" className="min-h-8 gap-1.5 rounded-full px-3 text-[11px] font-semibold text-emerald-600">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Semua tersimpan
+      </Badge>
+    );
+  }, [failedAttendanceSaves, pendingAttendanceSaves, retryFailedAttendanceSaves]);
 
   const {
     signatureConfig,
@@ -1141,6 +1173,9 @@ export default function AttendanceV2Page() {
                   </button>
                 ))}
               </div>
+              <div className="mt-3 flex justify-end">
+                {renderAttendanceSaveIndicator()}
+              </div>
             </div>
 
             {/* Main Content Section */}
@@ -1178,7 +1213,6 @@ export default function AttendanceV2Page() {
                     getAttendanceNote={getAttendanceNote}
                     handleOpenNote={handleOpenNote}
                     handleSetAttendance={handleSetAttendance}
-                    isSaving={isSaving}
                     allStatuses={allStatuses}
                     statusConfig={statusConfig}
                   />

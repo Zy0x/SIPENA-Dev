@@ -4,6 +4,10 @@ import { supabaseExternal as supabase, EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANO
 import { useAuth } from "@/contexts/AuthContext";
 import { format, startOfMonth, endOfMonth, getDay } from "date-fns";
 import { useAttendanceRuntime } from "@/features/attendance/runtime/useAttendanceRuntime";
+import {
+  createAttendancePersistOutcome,
+  useQueuedAttendanceSave,
+} from "@/features/attendance/performance/useQueuedAttendanceSave";
 
 export interface AttendanceRecord {
   id?: string;
@@ -47,8 +51,10 @@ type AttendanceMutationParams = {
   status: AttendanceStatusValue | null;
   note?: string | null;
 };
+type QueuedAttendanceMutationParams = AttendanceMutationParams & { classId: string };
 
 type AttendanceStats = Record<AttendanceStatusValue | "total", number>;
+type AttendanceCellSnapshot = AttendanceRecord | null;
 
 const createEmptyStats = (): AttendanceStats => ({ H: 0, I: 0, S: 0, A: 0, D: 0, total: 0 });
 const buildAttendanceLookupKey = (studentId: string, date: string) => `${studentId}:${date}`;
@@ -303,99 +309,134 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     [holidayMap, workDayFormat]
   );
 
-  // Set attendance mutation (supports D status + note)
-  const setAttendanceMutation = useMutation({
-    mutationFn: async ({
-      studentId, date, status, note,
-    }: AttendanceMutationParams) => {
-      if (!user || !classId) throw new Error("User or class not set");
+  const getAttendanceCellSnapshot = useCallback((patch: QueuedAttendanceMutationParams): AttendanceCellSnapshot => {
+    const records = dbAvailable
+      ? queryClient.getQueryData<AttendanceRecord[]>(attendanceQueryKey) ?? []
+      : localAttendance;
+    return records.find((record) => record.student_id === patch.studentId && record.date === patch.date) ?? null;
+  }, [attendanceQueryKey, dbAvailable, localAttendance, queryClient]);
 
+  const applyOptimisticAttendancePatch = useCallback((patch: QueuedAttendanceMutationParams) => {
+    if (!dbAvailable) {
+      setLocalAttendance((current) => applyAttendancePatch(current, patch.classId, patch));
+      return;
+    }
 
+    void queryClient.cancelQueries({ queryKey: attendanceQueryKey });
+    queryClient.setQueryData<AttendanceRecord[]>(attendanceQueryKey, (current = []) =>
+      applyAttendancePatch(current, patch.classId, patch)
+    );
+  }, [attendanceQueryKey, dbAvailable, queryClient]);
 
-      if (!dbAvailable) {
-        setLocalAttendance((prev) => {
-          const existing = prev.findIndex(
-            (r) => r.student_id === studentId && r.date === date
-          );
-          if (status === null) {
-            return existing >= 0 ? prev.filter((_, i) => i !== existing) : prev;
-          }
-          if (existing >= 0) {
-            const newRecords = [...prev];
-            newRecords[existing] = { ...newRecords[existing], status, note: note !== undefined ? note : newRecords[existing].note };
-            return newRecords;
-          }
-          return [...prev, { class_id: classId, student_id: studentId, date, status, note: note || null }];
-        });
-        return null;
-      }
+  const rollbackAttendancePatch = useCallback((patch: QueuedAttendanceMutationParams, snapshot: unknown) => {
+    const previous = snapshot as AttendanceCellSnapshot;
+    const rollbackPatch: AttendanceMutationParams = previous
+      ? { studentId: patch.studentId, date: patch.date, status: previous.status, note: previous.note ?? null }
+      : { studentId: patch.studentId, date: patch.date, status: null };
 
-      const { data: existingData } = await (supabase as any)
-        .from("attendance_records")
-        .select("id")
-        .eq("class_id", classId)
-        .eq("student_id", studentId)
-        .eq("date", date)
-        .maybeSingle();
+    if (!dbAvailable) {
+      setLocalAttendance((current) =>
+        previous
+          ? applyAttendancePatch(current, patch.classId, rollbackPatch, previous)
+          : applyAttendancePatch(current, patch.classId, rollbackPatch)
+      );
+      return;
+    }
 
-      const existing = existingData as { id: string } | null;
+    queryClient.setQueryData<AttendanceRecord[]>(attendanceQueryKey, (current = []) =>
+      previous
+        ? applyAttendancePatch(current, patch.classId, rollbackPatch, previous)
+        : applyAttendancePatch(current, patch.classId, rollbackPatch)
+    );
+  }, [attendanceQueryKey, dbAvailable, queryClient]);
 
-      if (status === null) {
-        if (existing) {
-          await (supabase as any).from("attendance_records").delete().eq("id", existing.id);
-        }
-        return null;
-      }
+  const persistAttendancePatch = useCallback(async ({
+    studentId, date, status, note, classId: patchClassId,
+  }: QueuedAttendanceMutationParams): Promise<AttendanceRecord | null> => {
+    if (!user || !patchClassId) throw new Error("User or class not set");
+    if (!dbAvailable) return null;
 
-      const updatePayload: Record<string, unknown> = { status };
-      if (note !== undefined) updatePayload.note = note;
+    const { data: existingData } = await (supabase as any)
+      .from("attendance_records")
+      .select("id")
+      .eq("class_id", patchClassId)
+      .eq("student_id", studentId)
+      .eq("date", date)
+      .maybeSingle();
 
+    const existing = existingData as { id: string } | null;
+
+    if (status === null) {
       if (existing) {
-        const { data, error } = await (supabase as any)
-          .from("attendance_records")
-          .update(updatePayload)
-          .eq("id", existing.id)
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
-      } else {
-        const { data, error } = await (supabase as any)
-          .from("attendance_records")
-          .insert({
-            class_id: classId, student_id: studentId, date, status,
-            note: note || null, created_by: user.id,
-          })
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
+        await (supabase as any).from("attendance_records").delete().eq("id", existing.id);
       }
-    },
-    onMutate: async (params) => {
-      if (!dbAvailable) return { previousRecords: undefined };
+      return null;
+    }
 
-      await queryClient.cancelQueries({ queryKey: attendanceQueryKey });
-      const previousRecords = queryClient.getQueryData<AttendanceRecord[]>(attendanceQueryKey);
-      queryClient.setQueryData<AttendanceRecord[]>(attendanceQueryKey, (current = []) =>
-        applyAttendancePatch(current, classId, params)
-      );
+    const updatePayload: Record<string, unknown> = { status };
+    if (note !== undefined) updatePayload.note = note;
 
-      return { previousRecords };
-    },
-    onError: (_error, _params, context) => {
-      if (dbAvailable && context) {
-        queryClient.setQueryData(attendanceQueryKey, context.previousRecords ?? []);
+    if (existing) {
+      const { data, error } = await (supabase as any)
+        .from("attendance_records")
+        .update(updatePayload)
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as AttendanceRecord;
+    }
+
+    const { data, error } = await (supabase as any)
+      .from("attendance_records")
+      .insert({
+        class_id: patchClassId, student_id: studentId, date, status,
+        note: note || null, created_by: user.id,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as AttendanceRecord;
+  }, [dbAvailable, user]);
+
+  const persistQueuedAttendancePatches = useCallback(async (
+    entries: Array<{ key: string; patch: QueuedAttendanceMutationParams; sequence: number }>
+  ) => {
+    const outcome = createAttendancePersistOutcome<AttendanceRecord | null>();
+    let cursor = 0;
+    const workerCount = Math.min(4, entries.length);
+
+    const runWorker = async () => {
+      while (cursor < entries.length) {
+        const entry = entries[cursor];
+        cursor += 1;
+        try {
+          const result = await persistAttendancePatch(entry.patch);
+          outcome.successes.set(entry.key, result);
+        } catch (error) {
+          outcome.failures.set(entry.key, error);
+        }
       }
-    },
-    onSuccess: (data, params) => {
-      if (!dbAvailable) return;
+    };
 
+    await Promise.all(Array.from({ length: workerCount }, runWorker));
+    return outcome;
+  }, [persistAttendancePatch]);
+
+  const attendanceSaveQueue = useQueuedAttendanceSave<QueuedAttendanceMutationParams, AttendanceRecord | null>({
+    debounceMs: 300,
+    buildKey: (patch) => `${patch.classId}:${patch.studentId}:${patch.date}`,
+    getSnapshot: getAttendanceCellSnapshot,
+    applyOptimistic: applyOptimisticAttendancePatch,
+    rollback: rollbackAttendancePatch,
+    persist: persistQueuedAttendancePatches,
+    reconcileSuccess: (patch, persistedRecord) => {
+      if (!dbAvailable || patch.classId !== classId) return;
       queryClient.setQueryData<AttendanceRecord[]>(attendanceQueryKey, (current = []) =>
-        applyAttendancePatch(current, classId, params, (data as Partial<AttendanceRecord> | null) ?? null)
+        applyAttendancePatch(current, patch.classId, patch, persistedRecord ?? null)
       );
-      scheduleAttendanceRefresh();
     },
+    onDrain: scheduleAttendanceRefresh,
   });
 
   // Update note only
@@ -693,8 +734,13 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     isLoading: attendanceQuery.isLoading || holidaysQuery.isLoading,
     isLoadingLock: lockQuery.isLoading,
     setAttendance: async (params: { studentId: string; date: string; status: AttendanceStatusValue | null; note?: string | null }) => {
-      await setAttendanceMutation.mutateAsync(params);
+      attendanceSaveQueue.enqueue({ ...params, classId });
     },
+    pendingAttendanceSaves: attendanceSaveQueue.pendingSaveCount,
+    failedAttendanceSaves: attendanceSaveQueue.failedSaveCount,
+    flushAttendanceSaves: attendanceSaveQueue.flushNow,
+    retryFailedAttendanceSaves: attendanceSaveQueue.retryFailed,
+    getAttendanceSaveState: attendanceSaveQueue.getSaveState,
     updateNote: async (params: { studentId: string; date: string; note: string | null }) => {
       await updateNoteMutation.mutateAsync(params);
     },

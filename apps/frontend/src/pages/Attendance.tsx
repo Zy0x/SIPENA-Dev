@@ -395,8 +395,40 @@ export default function Attendance() {
     attendanceRecords, holidays, dayEvents, isLocked, dbAvailable,
     getAttendance: dbGetAttendance, getAttendanceNote: dbGetAttendanceNote, getDayEvent, isHoliday, getHolidayDescription, getMonthStats: dbGetMonthStats, getDayStats: dbGetDayStats, getYearlyData,
     setAttendance: setAttendanceDb, updateNote, bulkSetAttendance, toggleHoliday, upsertDayEvent, deleteDayEvent, toggleLock,
+    pendingAttendanceSaves, failedAttendanceSaves, retryFailedAttendanceSaves,
     isSaving, isLoading,
   } = useAttendance(selectedClassId === "tour-dummy-class" ? "" : selectedClassId, currentMonth, workDayFormat);
+
+  const renderAttendanceSaveIndicator = useCallback(() => {
+    if (failedAttendanceSaves > 0) {
+      return (
+        <button
+          type="button"
+          onClick={retryFailedAttendanceSaves}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-3 text-[11px] font-semibold text-destructive touch-manipulation"
+        >
+          <AlertCircle className="h-3.5 w-3.5" />
+          {failedAttendanceSaves} gagal, coba lagi
+        </button>
+      );
+    }
+
+    if (pendingAttendanceSaves > 0) {
+      return (
+        <Badge variant="secondary" className="min-h-8 gap-1.5 rounded-full px-3 text-[11px] font-semibold">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          Menyimpan {pendingAttendanceSaves} perubahan
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="outline" className="min-h-8 gap-1.5 rounded-full px-3 text-[11px] font-semibold text-emerald-600">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Semua tersimpan
+      </Badge>
+    );
+  }, [failedAttendanceSaves, pendingAttendanceSaves, retryFailedAttendanceSaves]);
 
   const getAttendance = useCallback((studentId: string, date: Date) => {
     if (isTourDummyActive) {
@@ -3502,6 +3534,9 @@ export default function Attendance() {
                   </button>
                 ))}
               </div>
+              <div className="mt-3 flex justify-end">
+                {renderAttendanceSaveIndicator()}
+              </div>
             </div>
 
             {/* Main Content Section */}
@@ -3657,12 +3692,12 @@ export default function Attendance() {
                               return (
                                 <button key={s}
                                   onClick={() => handleSetAttendance(student.id, selectedDate, isSelected ? null : s)}
-                                  disabled={holidayActive || isSaving}
+                                  disabled={holidayActive}
                                   className={cn(
                                     "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation",
                                     "w-[26px] h-7 sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col",
                                     isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground hover:bg-muted active:bg-muted/80",
-                                    (holidayActive || isSaving) && "cursor-not-allowed opacity-40"
+                                    holidayActive && "cursor-not-allowed opacity-40"
                                   )}
                                   aria-label={cfg.label}>
                                   <span className="text-[9px] sm:text-xs font-bold leading-none">{s}</span>

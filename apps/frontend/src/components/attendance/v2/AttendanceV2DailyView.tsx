@@ -27,7 +27,6 @@ interface AttendanceV2DailyViewProps {
   getAttendanceNote: (studentId: string, date: Date) => string | null;
   handleOpenNote: (studentId: string, name: string, date: Date) => void;
   handleSetAttendance: (studentId: string, date: Date, status: string | null) => void;
-  isSaving: boolean;
   allStatuses: string[];
   statusConfig: any;
 }
@@ -45,7 +44,6 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
   getAttendanceNote,
   handleOpenNote,
   handleSetAttendance,
-  isSaving,
   allStatuses,
   statusConfig,
 }) => {
@@ -144,12 +142,12 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                       <button 
                         key={s}
                         onClick={() => handleSetAttendance(student.id, selectedDate, isSelected ? null : s)}
-                        disabled={holidayActive || isSaving}
+                        disabled={holidayActive}
                         className={cn(
                           "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation",
                           "w-[26px] h-7 sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col",
                           isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground hover:bg-muted active:bg-muted/80",
-                          (holidayActive || isSaving) && "cursor-not-allowed opacity-40"
+                          holidayActive && "cursor-not-allowed opacity-40"
                         )}
                         aria-label={cfg.label}
                       >

@@ -7,6 +7,10 @@ import { useMemo } from "react";
 import { useAttendanceRuntime } from "@/features/attendance/runtime/useAttendanceRuntime";
 import { providerConfig } from "@/config/provider.config";
 import type { AttendanceDatasetCanonical } from "@/features/attendance/canonical/canonical.types";
+import {
+  createAttendancePersistOutcome,
+  useQueuedAttendanceSave,
+} from "@/features/attendance/performance/useQueuedAttendanceSave";
 
 export interface AttendanceRecord {
   id?: string;
@@ -84,8 +88,10 @@ type AttendanceMutationParams = {
   status: AttendanceStatusValue | null;
   note?: string | null;
 };
+type QueuedAttendanceMutationParams = AttendanceMutationParams & { classId: string };
 
 type AttendanceStats = Record<AttendanceStatusValue | "total", number>;
+type AttendanceCellSnapshot = AttendanceRecord | AttendanceDatasetCanonical["records"][number] | null;
 
 const createEmptyStats = (): AttendanceStats => ({ H: 0, I: 0, S: 0, A: 0, D: 0, total: 0 });
 const buildAttendanceLookupKey = (studentId: string, date: string) => `${studentId}:${date}`;
@@ -617,6 +623,151 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       );
       scheduleAttendanceRefresh();
     },
+  });
+
+  const getAttendanceCellSnapshot = useCallback((patch: QueuedAttendanceMutationParams): AttendanceCellSnapshot => {
+    if (!dbAvailable) {
+      return localAttendance.find((record) => record.student_id === patch.studentId && record.date === patch.date) ?? null;
+    }
+
+    const dataset = queryClient.getQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey);
+    return dataset?.records.find((record) => record.studentId === patch.studentId && record.date === patch.date) ?? null;
+  }, [attendanceDatasetQueryKey, dbAvailable, localAttendance, queryClient]);
+
+  const applyOptimisticAttendancePatch = useCallback((patch: QueuedAttendanceMutationParams) => {
+    if (!dbAvailable) {
+      setLocalAttendance((current) => applyAttendancePatch(current, patch.classId, patch));
+      return;
+    }
+
+    void queryClient.cancelQueries({ queryKey: attendanceDatasetQueryKey });
+    queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, (current) =>
+      applyAttendanceDatasetPatch(current, patch.classId, patch) as AttendanceDatasetCanonical | null
+    );
+  }, [attendanceDatasetQueryKey, dbAvailable, queryClient]);
+
+  const rollbackAttendancePatch = useCallback((patch: QueuedAttendanceMutationParams, snapshot: unknown) => {
+    const previous = snapshot as AttendanceCellSnapshot;
+
+    if (!dbAvailable) {
+      const previousLocal = previous && "student_id" in previous ? previous : null;
+      const rollbackPatch: AttendanceMutationParams = previousLocal
+        ? { studentId: patch.studentId, date: patch.date, status: previousLocal.status, note: previousLocal.note ?? null }
+        : { studentId: patch.studentId, date: patch.date, status: null };
+      setLocalAttendance((current) =>
+        previousLocal
+          ? applyAttendancePatch(current, patch.classId, rollbackPatch, previousLocal)
+          : applyAttendancePatch(current, patch.classId, rollbackPatch)
+      );
+      return;
+    }
+
+    const previousCanonical = previous && "studentId" in previous ? previous : null;
+    const rollbackPatch: AttendanceMutationParams = previousCanonical
+      ? { studentId: patch.studentId, date: patch.date, status: previousCanonical.status as AttendanceStatusValue, note: previousCanonical.note ?? null }
+      : { studentId: patch.studentId, date: patch.date, status: null };
+
+    queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, (current) =>
+      previousCanonical
+        ? applyAttendanceDatasetPatch(current, patch.classId, rollbackPatch, previousCanonical.id) as AttendanceDatasetCanonical | null
+        : applyAttendanceDatasetPatch(current, patch.classId, rollbackPatch) as AttendanceDatasetCanonical | null
+    );
+  }, [attendanceDatasetQueryKey, dbAvailable, queryClient]);
+
+  const persistQueuedAttendancePatches = useCallback(async (
+    entries: Array<{ key: string; patch: QueuedAttendanceMutationParams; sequence: number }>
+  ) => {
+    const outcome = createAttendancePersistOutcome<string | null>();
+    if (!user) {
+      entries.forEach((entry) => outcome.failures.set(entry.key, new Error("User or class not set")));
+      return outcome;
+    }
+
+    if (!dbAvailable) {
+      entries.forEach((entry) => {
+        addOfflineMutation("setAttendance", entry.patch);
+        outcome.successes.set(entry.key, null);
+      });
+      return outcome;
+    }
+
+    const { data: { session } } = await (supabase as any).auth.getSession();
+    const token = session?.access_token;
+
+    try {
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/bulk`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          patches: entries.map(({ patch }) => ({
+            classId: patch.classId,
+            studentId: patch.studentId,
+            date: patch.date,
+            status: patch.status,
+            note: patch.note !== undefined ? patch.note : null,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Bulk presensi V2 gagal (${response.status})`);
+      }
+
+      const json = await response.json();
+      const results = Array.isArray(json?.data) ? json.data : [];
+      entries.forEach((entry, index) => {
+        outcome.successes.set(entry.key, getPersistedRecordId(results[index]));
+      });
+      return outcome;
+    } catch (apiError) {
+      console.warn("V2 API queued bulk save failed, falling back to direct Supabase RPCs:", apiError);
+    }
+
+    let cursor = 0;
+    const workerCount = Math.min(4, entries.length);
+    const runWorker = async () => {
+      while (cursor < entries.length) {
+        const entry = entries[cursor];
+        cursor += 1;
+        try {
+          const { data, error } = await (supabase as any).rpc("upsert_attendance_record", {
+            p_user_id: user.id,
+            p_class_id: entry.patch.classId,
+            p_student_id: entry.patch.studentId,
+            p_date: entry.patch.date,
+            p_status: entry.patch.status,
+            p_note: entry.patch.note !== undefined ? entry.patch.note : null,
+            p_source: "manual",
+          });
+          if (error) throw error;
+          outcome.successes.set(entry.key, getPersistedRecordId(data));
+        } catch (error) {
+          outcome.failures.set(entry.key, error);
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: workerCount }, runWorker));
+    return outcome;
+  }, [addOfflineMutation, dbAvailable, user]);
+
+  const attendanceSaveQueue = useQueuedAttendanceSave<QueuedAttendanceMutationParams, string | null>({
+    debounceMs: 300,
+    buildKey: (patch) => `${patch.classId}:${patch.studentId}:${patch.date}`,
+    getSnapshot: getAttendanceCellSnapshot,
+    applyOptimistic: applyOptimisticAttendancePatch,
+    rollback: rollbackAttendancePatch,
+    persist: persistQueuedAttendancePatches,
+    reconcileSuccess: (patch, persistedId) => {
+      if (!dbAvailable || patch.classId !== classId) return;
+      queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, (current) =>
+        applyAttendanceDatasetPatch(current, patch.classId, patch, persistedId) as AttendanceDatasetCanonical | null
+      );
+    },
+    onDrain: scheduleAttendanceRefresh,
   });
 
   // Update note only
@@ -1306,8 +1457,13 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     isLoading: datasetQuery.isLoading,
     isLoadingLock: datasetQuery.isLoading,
     setAttendance: async (params: { studentId: string; date: string; status: AttendanceStatusValue | null; note?: string | null }) => {
-      await setAttendanceMutation.mutateAsync(params);
+      attendanceSaveQueue.enqueue({ ...params, classId });
     },
+    pendingAttendanceSaves: attendanceSaveQueue.pendingSaveCount,
+    failedAttendanceSaves: attendanceSaveQueue.failedSaveCount,
+    flushAttendanceSaves: attendanceSaveQueue.flushNow,
+    retryFailedAttendanceSaves: attendanceSaveQueue.retryFailed,
+    getAttendanceSaveState: attendanceSaveQueue.getSaveState,
     updateNote: async (params: { studentId: string; date: string; note: string | null }) => {
       await updateNoteMutation.mutateAsync(params);
     },
