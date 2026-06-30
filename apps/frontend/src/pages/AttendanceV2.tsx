@@ -4494,7 +4494,7 @@ export default function AttendanceV2Page() {
             </DialogHeader>
 
             <div className="min-h-0 flex-1 overflow-hidden">
-              <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)]">
+              <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_1fr] lg:grid-cols-[18rem_minmax(0,1fr)] lg:grid-rows-none">
                 <aside className="border-b bg-muted/10 p-3 lg:border-b-0 lg:border-r lg:p-4" data-tour="attendance-v2-settings-nav">
                   <div className="flex gap-2 overflow-x-auto pb-2 lg:block lg:space-y-1.5 lg:overflow-visible lg:pb-0">
                     {[
