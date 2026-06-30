@@ -30,7 +30,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ProductTour, TourButton, type TourStep } from "@/components/ui/product-tour";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DayEvent, Delegation, HolidayRecord, MonthSnapshot, RecapProfile } from "@/hooks/useAttendanceV2";
 import { cn } from "@/lib/utils";
 
@@ -114,11 +116,13 @@ function SectionIntro({
   title,
   description,
   action,
+  help,
 }: {
   icon: React.ElementType;
   title: string;
   description: string;
   action?: React.ReactNode;
+  help?: React.ReactNode;
 }) {
   return (
     <div className="rounded-2xl border bg-muted/10 p-3 sm:p-4">
@@ -127,12 +131,81 @@ function SectionIntro({
           <div className="flex items-center gap-2 font-semibold text-primary">
             <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
             <h3 className="text-sm sm:text-base">{title}</h3>
+            {help}
           </div>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">{description}</p>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
     </div>
+  );
+}
+
+function InfoHelp({
+  label,
+  summary,
+  detail,
+  example,
+  impact,
+  dataTour,
+}: {
+  label: string;
+  summary: string;
+  detail: string;
+  example?: string;
+  impact?: string;
+  dataTour?: string;
+}) {
+  return (
+    <Tooltip>
+      <Popover>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Informasi ${label}`}
+              data-tour={dataTour}
+              className={cn(
+                "inline-flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary",
+                "transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                "active:bg-primary/15 data-[state=open]:bg-primary/10",
+              )}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Info className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <PopoverContent
+          align="end"
+          sideOffset={8}
+          className="z-[10170] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border-primary/15 p-3 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-bold text-foreground">{label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</p>
+            </div>
+            {example ? (
+              <div className="rounded-xl border bg-muted/40 p-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Contoh</p>
+                <p className="mt-1 text-xs leading-relaxed text-foreground">{example}</p>
+              </div>
+            ) : null}
+            {impact ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+                <p className="text-[10px] font-bold uppercase tracking-wide">Dampak</p>
+                <p className="mt-1 text-xs leading-relaxed">{impact}</p>
+              </div>
+            ) : null}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <TooltipContent side="top" className="z-[10160] max-w-xs text-xs">
+        {summary}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -256,6 +329,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         target: "[data-tour='attendance-v2-settings-calendar']",
         title: "Kalender Akademik",
         description: "Atur format 5 atau 6 hari sekolah, serta override libur nasional dan akhir pekan jika ada kegiatan masuk.",
+        prepare: async () => {
+          setSettingsSection("calendar");
+          await delayForTour();
+        },
+      },
+      {
+        target: "[data-tour='attendance-v2-settings-info-help']",
+        title: "Icon Informasi",
+        description: "Tekan atau hover icon i untuk melihat fungsi fitur, contoh penggunaan, dan dampaknya pada rekap atau export.",
         prepare: async () => {
           setSettingsSection("calendar");
           await delayForTour();
@@ -399,13 +481,32 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   icon={CalendarDays}
                   title="Kalender Akademik"
                   description="Atur format hari sekolah utama dan override hari libur tertentu tanpa membuka banyak panel."
+                  help={
+                    <InfoHelp
+                      label="Kalender Akademik"
+                      summary="Dasar sistem menentukan tanggal masuk, libur, dan kegiatan."
+                      detail="Kalender akademik menjadi acuan Presensi V2 untuk menentukan hari efektif sebelum rekap atau export dibuat."
+                      example="Jika sekolah memakai 5 hari, Sabtu dan Minggu otomatis tidak efektif kecuali dibuat masuk khusus."
+                      impact="Perubahan kalender dapat mengubah jumlah hari efektif dan persentase rekap."
+                      dataTour="attendance-v2-settings-info-help"
+                    />
+                  }
                 />
 
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
                   <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4">
-                    <div className="mb-3">
-                      <h4 className="text-sm font-semibold">Format Hari Sekolah</h4>
-                      <p className="text-xs text-muted-foreground">Dasar perhitungan hari efektif mingguan.</p>
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-semibold">Format Hari Sekolah</h4>
+                        <p className="text-xs text-muted-foreground">Dasar perhitungan hari efektif mingguan.</p>
+                      </div>
+                      <InfoHelp
+                        label="Format 5/6 Hari Sekolah"
+                        summary="Pilih pola masuk mingguan utama untuk kelas ini."
+                        detail="Format ini menentukan hari mana yang otomatis dianggap hari efektif setiap minggu."
+                        example="Mode 5 hari menghitung Senin-Jumat. Mode 6 hari menghitung Senin-Sabtu."
+                        impact="Jumlah hari efektif bulan ini akan berubah mengikuti format yang dipilih."
+                      />
                     </div>
                     <div className="grid gap-2">
                       {[
@@ -445,6 +546,13 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         </h4>
                         <p className="text-xs text-muted-foreground">Jadikan tanggal tertentu tetap masuk sekolah.</p>
                       </div>
+                      <InfoHelp
+                        label="Override Libur dan Akhir Pekan"
+                        summary="Mengubah tanggal libur menjadi tanggal masuk khusus."
+                        detail="Gunakan ini saat ada kegiatan belajar atau presensi tetap berjalan pada tanggal yang biasanya libur."
+                        example="Sabtu biasanya libur pada mode 5 hari, tetapi bisa ditandai masuk untuk ujian sekolah."
+                        impact="Tanggal yang dioverride ikut masuk ke hari efektif dan rekap."
+                      />
                     </div>
                     <div className="grid gap-0 md:grid-cols-2">
                       <div className="border-b p-3 md:border-b-0 md:border-r sm:p-4">
@@ -536,6 +644,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   icon={CalendarOff}
                   title="Libur dan Kegiatan Khusus"
                   description="Tambah pengecualian lokal, kegiatan kelas, dan periksa alasan tanggal tidak efektif."
+                  help={
+                    <InfoHelp
+                      label="Libur dan Kegiatan Khusus"
+                      summary="Mencatat pengecualian kalender yang tidak cukup ditangani format mingguan."
+                      detail="Gunakan bagian ini untuk libur lokal, kegiatan kelas, atau agenda khusus yang memengaruhi hari efektif."
+                      example="Pesantren Ramadhan, class meeting, study tour kelas tertentu, atau libur semester."
+                      impact="Tanggal yang ditandai tidak efektif tidak masuk denominator rekap hari efektif."
+                    />
+                  }
                 />
 
                 <div className="grid gap-3 xl:grid-cols-2">
@@ -545,10 +662,19 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <h4 className="text-sm font-semibold">Libur Kustom</h4>
                         <p className="text-xs text-muted-foreground">Tanggal non-efektif di luar libur nasional.</p>
                       </div>
-                      <Button type="button" variant="outline" className="min-h-10 shrink-0 rounded-xl text-xs" onClick={onAddHolidayClick}>
-                        <CalendarOff className="mr-1.5 h-3.5 w-3.5" />
-                        Tambah
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <InfoHelp
+                          label="Libur Kustom"
+                          summary="Menandai tanggal tertentu sebagai tidak efektif."
+                          detail="Gunakan untuk libur lokal sekolah atau kelas yang tidak termasuk kalender nasional."
+                          example="Tanggal 12 Agustus dipakai rapat guru, sehingga kelas tidak presensi."
+                          impact="Libur kustom mengurangi hari efektif dan memengaruhi rekap/export."
+                        />
+                        <Button type="button" variant="outline" className="min-h-10 shrink-0 rounded-xl text-xs" onClick={onAddHolidayClick}>
+                          <CalendarOff className="mr-1.5 h-3.5 w-3.5" />
+                          Tambah
+                        </Button>
+                      </div>
                     </div>
                     <div className="max-h-72 overflow-y-auto divide-y">
                       {holidays.length === 0 ? (
@@ -584,10 +710,19 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <h4 className="text-sm font-semibold">Kegiatan Khusus</h4>
                         <p className="text-xs text-muted-foreground">Agenda non-KBM yang tetap perlu dicatat.</p>
                       </div>
-                      <Button type="button" variant="outline" className="min-h-10 shrink-0 rounded-xl text-xs" onClick={onAddDayEventClick}>
-                        <Bookmark className="mr-1.5 h-3.5 w-3.5" />
-                        Tambah
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <InfoHelp
+                          label="Kegiatan Khusus"
+                          summary="Mencatat agenda yang perlu muncul di kalender presensi."
+                          detail="Kegiatan khusus memberi konteks pada tanggal tertentu tanpa selalu membuatnya libur."
+                          example="Study tour, senam bersama, ujian sekolah, atau class meeting."
+                          impact="Label kegiatan membantu guru memahami alasan tanggal saat rekap/export diperiksa."
+                        />
+                        <Button type="button" variant="outline" className="min-h-10 shrink-0 rounded-xl text-xs" onClick={onAddDayEventClick}>
+                          <Bookmark className="mr-1.5 h-3.5 w-3.5" />
+                          Tambah
+                        </Button>
+                      </div>
                     </div>
                     <div className="max-h-72 overflow-y-auto divide-y">
                       {dayEvents.length === 0 ? (
@@ -620,8 +755,19 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
                 <div className="rounded-2xl border bg-card shadow-sm">
                   <div className="flex flex-col gap-1 border-b p-3 sm:p-4">
-                    <h4 className="text-sm font-semibold">Preview Hari Tidak Efektif</h4>
-                    <p className="text-xs text-muted-foreground">Alasan ini dipakai sebelum rekap dan export Presensi V2.</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-semibold">Preview Hari Tidak Efektif</h4>
+                        <p className="text-xs text-muted-foreground">Alasan ini dipakai sebelum rekap dan export Presensi V2.</p>
+                      </div>
+                      <InfoHelp
+                        label="Preview Hari Tidak Efektif"
+                        summary="Daftar tanggal yang tidak dihitung sebagai hari presensi."
+                        detail="Preview ini membantu memeriksa kenapa jumlah hari efektif berbeda dari jumlah hari kalender."
+                        example="Minggu, libur nasional, libur kelas, atau tanggal di luar tahun ajaran."
+                        impact="Gunakan preview ini sebelum export agar angka rekap tidak membingungkan."
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 border-b p-3 sm:grid-cols-4">
                     <CompactMetric label="Hari kalender" value={monthDays.length} />
@@ -658,6 +804,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   icon={FileSpreadsheet}
                   title="Profil Rekap Presensi"
                   description="Sesuaikan rumus rekap dengan kebijakan sekolah tanpa mengubah data presensi mentah."
+                  help={
+                    <InfoHelp
+                      label="Profil Rekap Presensi"
+                      summary="Mengatur cara sistem menghitung ringkasan presensi."
+                      detail="Profil rekap tidak mengubah catatan presensi, hanya mengatur cara status dihitung saat rekap dan export."
+                      example="Sekolah A menghitung Sakit dan Izin sebagai catatan, sekolah B menghitungnya sebagai tidak hadir."
+                      impact="Pengaturan ini dapat mengubah total hadir, tidak hadir, dan persentase."
+                    />
+                  }
                 />
 
                 {!recapProfile ? (
@@ -667,7 +822,16 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 ) : (
                   <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                     <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4">
-                      <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Denominator</Label>
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Denominator</Label>
+                        <InfoHelp
+                          label="Denominator Rekap"
+                          summary="Angka pembagi untuk menghitung persentase presensi."
+                          detail="Denominator menentukan total hari acuan saat menghitung persentase hadir atau tidak hadir."
+                          example="Jika memakai hari efektif, pembagi mengikuti kalender akademik. Jika memakai hari terisi, pembagi hanya tanggal yang sudah diinput."
+                          impact="Pilihan denominator sangat memengaruhi persentase akhir di rekap/export."
+                        />
+                      </div>
                       <div className="mt-3 grid gap-2">
                         {[
                           {
@@ -706,7 +870,16 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     </div>
 
                     <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4">
-                      <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pemetaan Status H/S/I/A/D</Label>
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pemetaan Status H/S/I/A/D</Label>
+                        <InfoHelp
+                          label="Pemetaan Status"
+                          summary="Menentukan status mana yang masuk hitungan hadir atau tidak hadir."
+                          detail="Setiap sekolah bisa punya aturan rekap berbeda. Status yang tidak dipilih tetap tersimpan sebagai catatan presensi."
+                          example="H dihitung hadir. A biasanya dihitung tidak hadir. D bisa dihitung hadir atau hanya catatan sesuai kebijakan sekolah."
+                          impact="Mapping status mengubah ringkasan kelas, persentase, dan export rekap."
+                        />
+                      </div>
                       <div className="mt-3 grid gap-3 md:grid-cols-2">
                         {[
                           {
@@ -761,6 +934,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   icon={Clock}
                   title="Audit Riwayat Perubahan"
                   description="Area ini menyiapkan jejak perubahan Presensi V2: editor, waktu, sumber aksi, nilai lama, dan nilai baru."
+                  help={
+                    <InfoHelp
+                      label="Audit Riwayat Perubahan"
+                      summary="Mencatat siapa mengubah apa dan kapan."
+                      detail="Audit membantu menelusuri perubahan presensi, termasuk edit manual, import, OCR, restore, dan aksi guru pengganti."
+                      example="Nilai murid tanggal 12 berubah dari A ke H oleh guru pengganti pukul 08.14."
+                      impact="Audit membuat data lebih aman karena perubahan penting tidak hilang tanpa jejak."
+                    />
+                  }
                 />
                 <div className="rounded-2xl border bg-card shadow-sm">
                   <div className="grid gap-2 border-b p-3 sm:grid-cols-3 sm:p-4">
@@ -782,6 +964,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   icon={UserPlus}
                   title="Delegasi Guru Pengganti"
                   description="Berikan akses sementara tanpa membagikan akun. Audit tetap mencatat editor sebenarnya."
+                  help={
+                    <InfoHelp
+                      label="Delegasi Guru Pengganti"
+                      summary="Memberi akses sementara kepada guru lain."
+                      detail="Delegasi dipakai saat wali kelas atau guru utama berhalangan, tetapi perubahan tetap tercatat atas nama editor sebenarnya."
+                      example="Guru pengganti diberi akses edit presensi kelas VI-B hanya tanggal 10-12 Juli."
+                      impact="Akses sementara mengurangi risiko berbagi akun dan memudahkan audit."
+                    />
+                  }
                   action={
                     <Button type="button" variant="outline" className="min-h-10 rounded-xl text-xs" onClick={onAddDelegationClick}>
                       <UserPlus className="mr-1.5 h-3.5 w-3.5" />
@@ -826,6 +1017,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   icon={Camera}
                   title="Backup Bulanan"
                   description="Buat snapshot sebelum import besar atau pemulihan data. Restore selalu tercatat sebagai aktivitas baru."
+                  help={
+                    <InfoHelp
+                      label="Backup dan Restore Bulanan"
+                      summary="Menyimpan cadangan bulan sebelum perubahan besar."
+                      detail="Backup membantu memulihkan kondisi bulan jika terjadi kesalahan import, OCR, atau edit massal."
+                      example="Sebelum import presensi satu bulan, buat cadangan agar data bisa dipulihkan bila file salah."
+                      impact="Restore tidak menghapus audit; sistem tetap mencatat bahwa pemulihan pernah dilakukan."
+                    />
+                  }
                   action={
                     <Button
                       type="button"
@@ -906,7 +1106,12 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         </div>
       </DialogContent>
 
-      <ProductTour steps={settingsTourSteps} tourKey="attendance-v2-settings" requireOnboarding={false} />
+      <ProductTour
+        steps={settingsTourSteps}
+        tourKey="attendance-v2-settings"
+        requireOnboarding={false}
+        zIndexBase={10120}
+      />
     </Dialog>
   );
 };

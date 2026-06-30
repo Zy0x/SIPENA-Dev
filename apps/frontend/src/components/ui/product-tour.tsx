@@ -19,6 +19,8 @@ interface ProductTourProps {
   requireOnboarding?: boolean;
   // Passed from parent to indicate if user needs onboarding
   shouldAutoStart?: boolean;
+  // Optional layer override for tours launched from high z-index surfaces such as dialogs.
+  zIndexBase?: number;
 }
 
 type TooltipPosition = "top" | "bottom" | "left" | "right";
@@ -31,11 +33,19 @@ export const triggerTour = (tourKey: string) => {
   if (listener) listener();
 };
 
-export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = true, shouldAutoStart }: ProductTourProps) {
+export function ProductTour({
+  steps,
+  tourKey,
+  onComplete,
+  requireOnboarding = true,
+  shouldAutoStart,
+  zIndexBase,
+}: ProductTourProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0, position: "bottom" as TooltipPosition });
+  const tourZIndexBase = zIndexBase ?? 9990;
   
   const popupRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -275,7 +285,7 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
   return (
     <>
       {/* Backdrop with spotlight cutout */}
-      <div className="fixed inset-0 z-[9990] pointer-events-none">
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: tourZIndexBase }}>
         {targetRect && (
           <div
             className="absolute rounded-xl transition-all duration-200 ease-out"
@@ -292,20 +302,22 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
 
       {/* Click blocker */}
       <div 
-        className="fixed inset-0 z-[9991] pointer-events-auto" 
+        className="fixed inset-0 pointer-events-auto"
+        style={{ zIndex: tourZIndexBase + 1 }}
         onClick={handleSkip}
       />
 
       {/* Highlight border */}
       {targetRect && (
         <div
-          className="fixed z-[9992] pointer-events-none rounded-xl border-[3px] border-primary animate-pulse"
+          className="fixed pointer-events-none rounded-xl border-[3px] border-primary animate-pulse"
           style={{
             top: targetRect.top - 8,
             left: targetRect.left - 8,
             width: targetRect.width + 16,
             height: targetRect.height + 16,
             boxShadow: "0 0 20px hsl(var(--primary) / 0.5)",
+            zIndex: tourZIndexBase + 2,
           }}
         />
       )}
@@ -314,12 +326,13 @@ export function ProductTour({ steps, tourKey, onComplete, requireOnboarding = tr
       <div
         ref={popupRef}
         className={cn(
-          "fixed z-[9999] w-[320px] max-w-[calc(100vw-2rem)] bg-card border-2 border-primary/30 rounded-2xl shadow-2xl p-4 pointer-events-auto",
+          "fixed w-[320px] max-w-[calc(100vw-2rem)] bg-card border-2 border-primary/30 rounded-2xl shadow-2xl p-4 pointer-events-auto",
           "animate-fade-in"
         )}
         style={{
           left: tooltipPos.x,
           top: tooltipPos.y,
+          zIndex: tourZIndexBase + 9,
         }}
         onClick={(e) => e.stopPropagation()}
       >

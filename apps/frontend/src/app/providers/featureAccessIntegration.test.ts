@@ -51,6 +51,7 @@ describe("feature access integration guard", () => {
   it("keeps the attendance v2 settings modal structured and guided", () => {
     const page = readSource("apps/frontend/src/pages/AttendanceV2.tsx");
     const modal = readSource("apps/frontend/src/components/attendance/v2/SettingsDashboard.tsx");
+    const tour = readSource("apps/frontend/src/components/ui/product-tour.tsx");
     expect(page).not.toContain("settingsTourSteps");
     expect(page).not.toContain("Legacy Settings Dialog kept disabled");
     expect(modal).toContain("!h-[100dvh]");
@@ -60,6 +61,15 @@ describe("feature access integration guard", () => {
     expect(modal).toContain("settingsSection");
     expect(modal).toContain("settingsTourSteps");
     expect(modal).toContain('tourKey="attendance-v2-settings"');
+    expect(modal).toContain("InfoHelp");
+    expect(modal).toContain("@/components/ui/tooltip");
+    expect(modal).toContain("@/components/ui/popover");
+    expect(modal).toContain('dataTour="attendance-v2-settings-info-help"');
+    expect(modal).toContain("data-tour={dataTour}");
+    expect(modal).toContain("zIndexBase={10120}");
+    expect(tour).toContain("zIndexBase?: number");
+    expect(tour).toContain("tourZIndexBase");
+    expect(tour).toContain("tourZIndexBase + 9");
     expect(modal).toContain('data-tour="attendance-v2-settings-header"');
     expect(modal).toContain('data-tour="attendance-v2-settings-nav"');
     expect(modal).toContain('data-tour="attendance-v2-settings-calendar"');
