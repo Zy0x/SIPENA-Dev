@@ -78,6 +78,102 @@ export interface Delegation {
 export type WorkDayFormat = "5days" | "6days";
 export type AttendanceStatusValue = "H" | "I" | "S" | "A" | "D";
 
+type AttendanceMutationParams = {
+  studentId: string;
+  date: string;
+  status: AttendanceStatusValue | null;
+  note?: string | null;
+};
+
+type AttendanceStats = Record<AttendanceStatusValue | "total", number>;
+
+const createEmptyStats = (): AttendanceStats => ({ H: 0, I: 0, S: 0, A: 0, D: 0, total: 0 });
+const buildAttendanceLookupKey = (studentId: string, date: string) => `${studentId}:${date}`;
+
+const applyAttendancePatch = (
+  records: AttendanceRecord[],
+  classId: string,
+  patch: AttendanceMutationParams,
+  persistedRecord?: Partial<AttendanceRecord> | null
+): AttendanceRecord[] => {
+  const index = records.findIndex((record) => record.student_id === patch.studentId && record.date === patch.date);
+
+  if (patch.status === null) {
+    return index >= 0 ? records.filter((_, i) => i !== index) : records;
+  }
+
+  const existing = index >= 0 ? records[index] : undefined;
+  const nextRecord: AttendanceRecord = {
+    class_id: existing?.class_id ?? classId,
+    student_id: patch.studentId,
+    date: patch.date,
+    status: patch.status,
+    note: patch.note !== undefined ? patch.note : existing?.note ?? null,
+    ...persistedRecord,
+  };
+
+  if (index >= 0) {
+    const next = [...records];
+    next[index] = { ...existing, ...nextRecord };
+    return next;
+  }
+
+  return [...records, nextRecord];
+};
+
+const applyAttendanceDatasetPatch = (
+  dataset: AttendanceDatasetCanonical | null | undefined,
+  classId: string,
+  patch: AttendanceMutationParams,
+  persistedId?: string | null
+): AttendanceDatasetCanonical | null | undefined => {
+  if (!dataset) return dataset;
+
+  const index = dataset.records.findIndex((record) => record.studentId === patch.studentId && record.date === patch.date);
+  if (patch.status === null) {
+    return {
+      ...dataset,
+      records: index >= 0 ? dataset.records.filter((_, i) => i !== index) : dataset.records,
+    };
+  }
+
+  const existing = index >= 0 ? dataset.records[index] : undefined;
+  const nowIso = new Date().toISOString();
+  const nextRecord = {
+    ...(existing ?? {}),
+    id: persistedId ?? existing?.id ?? `optimistic-${patch.studentId}-${patch.date}`,
+    classId: existing?.classId ?? classId,
+    studentId: patch.studentId,
+    date: patch.date,
+    status: patch.status,
+    note: patch.note !== undefined ? patch.note : existing?.note ?? null,
+    createdAt: existing?.createdAt ?? nowIso,
+    updatedAt: nowIso,
+  };
+
+  const nextRecords = [...dataset.records];
+  if (index >= 0) {
+    nextRecords[index] = nextRecord;
+  } else {
+    nextRecords.push(nextRecord);
+  }
+
+  return { ...dataset, records: nextRecords };
+};
+
+const getPersistedRecordId = (data: unknown): string | null => {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  if (typeof obj.record_id === "string") return obj.record_id;
+  if (typeof obj.id === "string") return obj.id;
+  if (obj.data && typeof obj.data === "object") {
+    const nested = obj.data as Record<string, unknown>;
+    if (typeof nested.record_id === "string") return nested.record_id;
+    if (typeof nested.id === "string") return nested.id;
+  }
+  return null;
+};
+
 export function useAttendanceV2(classId: string, month: Date, workDayFormat: WorkDayFormat = "6days") {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -89,6 +185,11 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const [localDayEvents, setLocalDayEvents] = useState<DayEvent[]>([]);
   const [localLocked, setLocalLocked] = useState(true);
   const [dbAvailable, setDbAvailable] = useState(false);
+  const attendanceRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attendanceDatasetQueryKey = useMemo(
+    () => ["attendance_v2_dataset", classId, monthStart, dbAvailable] as const,
+    [classId, monthStart, dbAvailable]
+  );
 
   useEffect(() => {
     const checkDbTables = async () => {
@@ -110,7 +211,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
 
   // Fetch unified V2 dataset from REST API
   const datasetQuery = useQuery({
-    queryKey: ["attendance_v2_dataset", classId, monthStart, dbAvailable],
+    queryKey: attendanceDatasetQueryKey,
     queryFn: async () => {
       if (!classId || !user || !dbAvailable) return null;
 
@@ -230,34 +331,91 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
 
   const runtime = useAttendanceRuntime();
 
+  const attendanceRecordMap = useMemo(() => {
+    const map = new Map<string, AttendanceRecord>();
+    attendanceRecords.forEach((record) => {
+      map.set(buildAttendanceLookupKey(record.student_id, record.date), record);
+    });
+    return map;
+  }, [attendanceRecords]);
+
+  const dayEventMap = useMemo(() => {
+    const map = new Map<string, DayEvent>();
+    dayEvents.forEach((event) => {
+      map.set(event.date, event);
+    });
+    return map;
+  }, [dayEvents]);
+
+  const holidayMap = useMemo(() => {
+    const map = new Map<string, HolidayRecord>();
+    holidays.forEach((holiday) => {
+      map.set(holiday.date, holiday);
+    });
+    return map;
+  }, [holidays]);
+
+  const { monthStats, dayStatsMap } = useMemo(() => {
+    const nextMonthStats = createEmptyStats();
+    const nextDayStats = new Map<string, AttendanceStats>();
+
+    attendanceRecords.forEach((record) => {
+      const status = record.status;
+      if (!status) return;
+
+      nextMonthStats[status] += 1;
+      nextMonthStats.total += 1;
+
+      const dayStats = nextDayStats.get(record.date) ?? createEmptyStats();
+      dayStats[status] += 1;
+      dayStats.total += 1;
+      nextDayStats.set(record.date, dayStats);
+    });
+
+    return { monthStats: nextMonthStats, dayStatsMap: nextDayStats };
+  }, [attendanceRecords]);
+
+  const scheduleAttendanceRefresh = useCallback(() => {
+    if (!dbAvailable) return;
+    if (attendanceRefreshTimerRef.current) {
+      clearTimeout(attendanceRefreshTimerRef.current);
+    }
+    attendanceRefreshTimerRef.current = setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
+      attendanceRefreshTimerRef.current = null;
+    }, 1800);
+  }, [attendanceDatasetQueryKey, dbAvailable, queryClient]);
+
+  useEffect(() => () => {
+    if (attendanceRefreshTimerRef.current) {
+      clearTimeout(attendanceRefreshTimerRef.current);
+    }
+  }, []);
+
   const getAttendance = useCallback(
     (studentId: string, date: Date): AttendanceStatusValue | null => {
       const dateStr = format(date, "yyyy-MM-dd");
-      const record = attendanceRecords.find(
-        (r) => r.student_id === studentId && r.date === dateStr
-      );
+      const record = attendanceRecordMap.get(buildAttendanceLookupKey(studentId, dateStr));
       return (record?.status as AttendanceStatusValue) ?? null;
     },
-    [attendanceRecords]
+    [attendanceRecordMap]
   );
 
   const getAttendanceNote = useCallback(
     (studentId: string, date: Date): string | null => {
       const dateStr = format(date, "yyyy-MM-dd");
-      const record = attendanceRecords.find(
-        (r) => r.student_id === studentId && r.date === dateStr
-      );
+      const record = attendanceRecordMap.get(buildAttendanceLookupKey(studentId, dateStr));
       return record?.note ?? null;
     },
-    [attendanceRecords]
+    [attendanceRecordMap]
   );
 
   const getDayEvent = useCallback(
     (date: Date): DayEvent | null => {
       const dateStr = format(date, "yyyy-MM-dd");
-      return dayEvents.find((e) => e.date === dateStr) || null;
+      return dayEventMap.get(dateStr) || null;
     },
-    [dayEvents]
+    [dayEventMap]
   );
 
   const isHoliday = useCallback(
@@ -266,9 +424,9 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (dayOfWeek === 0) return true;
       if (workDayFormat === "5days" && dayOfWeek === 6) return true;
       const dateStr = format(date, "yyyy-MM-dd");
-      return holidays.some((h) => h.date === dateStr);
+      return holidayMap.has(dateStr);
     },
-    [holidays, workDayFormat]
+    [holidayMap, workDayFormat]
   );
 
   const getHolidayDescription = useCallback(
@@ -277,10 +435,10 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (dayOfWeek === 0) return "Hari Minggu";
       if (workDayFormat === "5days" && dayOfWeek === 6) return "Hari Sabtu (Libur)";
       const dateStr = format(date, "yyyy-MM-dd");
-      const holiday = holidays.find((h) => h.date === dateStr);
+      const holiday = holidayMap.get(dateStr);
       return holiday?.description || null;
     },
-    [holidays, workDayFormat]
+    [holidayMap, workDayFormat]
   );
 
   interface OfflineMutation {
@@ -368,12 +526,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const setAttendanceMutation = useMutation({
     mutationFn: async ({
       studentId, date, status, note,
-    }: {
-      studentId: string;
-      date: string;
-      status: AttendanceStatusValue | null;
-      note?: string | null;
-    }) => {
+    }: AttendanceMutationParams) => {
       if (!user || !classId) throw new Error("User or class not set");
 
       if (!dbAvailable) {
@@ -434,12 +587,35 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       });
 
       if (error) throw error;
+      if (data && typeof data === "object" && "success" in data && (data as { success?: boolean }).success === false) {
+        throw new Error(String((data as { message?: string; error_code?: string }).message || (data as { error_code?: string }).error_code || "Gagal menyimpan presensi"));
+      }
       return data;
     },
-    onSuccess: () => {
-      if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+    onMutate: async (params) => {
+      if (!dbAvailable) return { previousDataset: undefined };
+
+      await queryClient.cancelQueries({ queryKey: attendanceDatasetQueryKey });
+      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey);
+      queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, (current) =>
+        applyAttendanceDatasetPatch(current, classId, params) as AttendanceDatasetCanonical | null
+      );
+
+      return { previousDataset };
+    },
+    onError: (_error, _params, context) => {
+      if (dbAvailable && context) {
+        queryClient.setQueryData(attendanceDatasetQueryKey, context.previousDataset ?? null);
       }
+    },
+    onSuccess: (data, params) => {
+      if (!dbAvailable) return;
+
+      const persistedId = getPersistedRecordId(data);
+      queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, (current) =>
+        applyAttendanceDatasetPatch(current, classId, params, persistedId) as AttendanceDatasetCanonical | null
+      );
+      scheduleAttendanceRefresh();
     },
   });
 
@@ -1080,6 +1256,15 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     return stats;
   }, [attendanceRecords]);
 
+  const getMonthStatsFast = useCallback(() => {
+    return { ...monthStats };
+  }, [monthStats]);
+
+  const getDayStatsFast = useCallback((date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return { ...(dayStatsMap.get(dateStr) ?? createEmptyStats()) };
+  }, [dayStatsMap]);
+
   // Export data for the entire year
   const getYearlyData = useCallback(async (year: number) => {
     if (!user || !classId) return { attendance: [], holidays: [], dayEvents: [] };
@@ -1115,8 +1300,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     getDayEvent,
     isHoliday,
     getHolidayDescription,
-    getMonthStats,
-    getDayStats,
+    getMonthStats: getMonthStatsFast,
+    getDayStats: getDayStatsFast,
     getYearlyData,
     isLoading: datasetQuery.isLoading,
     isLoadingLock: datasetQuery.isLoading,
@@ -1167,7 +1352,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     isRestoringSnapshot: restoreSnapshotMutation.isPending,
     isCreatingDelegation: createDelegationMutation.isPending,
     isRevokingDelegation: revokeDelegationMutation.isPending,
-    isSaving: setAttendanceMutation.isPending || bulkSetAttendanceMutation.isPending || updateNoteMutation.isPending,
+    isSaving: bulkSetAttendanceMutation.isPending || updateNoteMutation.isPending,
     isTogglingHoliday: toggleHolidayMutation.isPending,
     isTogglingLock: toggleLockMutation.isPending,
     isPromoting: promoteMutation.isPending,

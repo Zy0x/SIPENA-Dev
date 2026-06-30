@@ -1,9 +1,8 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal as supabase, EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, startOfMonth, endOfMonth, getDay } from "date-fns";
-import { useMemo } from "react";
 import { useAttendanceRuntime } from "@/features/attendance/runtime/useAttendanceRuntime";
 
 export interface AttendanceRecord {
@@ -42,6 +41,49 @@ export interface AttendanceLock {
 export type WorkDayFormat = "5days" | "6days";
 export type AttendanceStatusValue = "H" | "I" | "S" | "A" | "D";
 
+type AttendanceMutationParams = {
+  studentId: string;
+  date: string;
+  status: AttendanceStatusValue | null;
+  note?: string | null;
+};
+
+type AttendanceStats = Record<AttendanceStatusValue | "total", number>;
+
+const createEmptyStats = (): AttendanceStats => ({ H: 0, I: 0, S: 0, A: 0, D: 0, total: 0 });
+const buildAttendanceLookupKey = (studentId: string, date: string) => `${studentId}:${date}`;
+
+const applyAttendancePatch = (
+  records: AttendanceRecord[],
+  classId: string,
+  patch: AttendanceMutationParams,
+  persistedRecord?: Partial<AttendanceRecord> | null
+): AttendanceRecord[] => {
+  const index = records.findIndex((record) => record.student_id === patch.studentId && record.date === patch.date);
+
+  if (patch.status === null) {
+    return index >= 0 ? records.filter((_, i) => i !== index) : records;
+  }
+
+  const existing = index >= 0 ? records[index] : undefined;
+  const nextRecord: AttendanceRecord = {
+    class_id: existing?.class_id ?? classId,
+    student_id: patch.studentId,
+    date: patch.date,
+    status: patch.status,
+    note: patch.note !== undefined ? patch.note : existing?.note ?? null,
+    ...persistedRecord,
+  };
+
+  if (index >= 0) {
+    const next = [...records];
+    next[index] = { ...existing, ...nextRecord };
+    return next;
+  }
+
+  return [...records, nextRecord];
+};
+
 export function useAttendance(classId: string, month: Date, workDayFormat: WorkDayFormat = "6days") {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -53,6 +95,11 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
   const [localDayEvents, setLocalDayEvents] = useState<DayEvent[]>([]);
   const [localLocked, setLocalLocked] = useState(true);
   const [dbAvailable, setDbAvailable] = useState(false);
+  const attendanceRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attendanceQueryKey = useMemo(
+    () => ["attendance", classId, monthStart, dbAvailable] as const,
+    [classId, monthStart, dbAvailable]
+  );
 
   useEffect(() => {
     const checkDbTables = async () => {
@@ -74,7 +121,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
 
   // Fetch attendance records
   const attendanceQuery = useQuery({
-    queryKey: ["attendance", classId, monthStart, dbAvailable],
+    queryKey: attendanceQueryKey,
     queryFn: async () => {
       if (!classId || !user || !dbAvailable) return [];
       const { data, error } = await (supabase as any)
@@ -146,34 +193,91 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
 
   const runtime = useAttendanceRuntime();
 
+  const attendanceRecordMap = useMemo(() => {
+    const map = new Map<string, AttendanceRecord>();
+    attendanceRecords.forEach((record) => {
+      map.set(buildAttendanceLookupKey(record.student_id, record.date), record);
+    });
+    return map;
+  }, [attendanceRecords]);
+
+  const dayEventMap = useMemo(() => {
+    const map = new Map<string, DayEvent>();
+    dayEvents.forEach((event) => {
+      map.set(event.date, event);
+    });
+    return map;
+  }, [dayEvents]);
+
+  const holidayMap = useMemo(() => {
+    const map = new Map<string, HolidayRecord>();
+    holidays.forEach((holiday) => {
+      map.set(holiday.date, holiday);
+    });
+    return map;
+  }, [holidays]);
+
+  const { monthStats, dayStatsMap } = useMemo(() => {
+    const nextMonthStats = createEmptyStats();
+    const nextDayStats = new Map<string, AttendanceStats>();
+
+    attendanceRecords.forEach((record) => {
+      const status = record.status;
+      if (!status) return;
+
+      nextMonthStats[status] += 1;
+      nextMonthStats.total += 1;
+
+      const dayStats = nextDayStats.get(record.date) ?? createEmptyStats();
+      dayStats[status] += 1;
+      dayStats.total += 1;
+      nextDayStats.set(record.date, dayStats);
+    });
+
+    return { monthStats: nextMonthStats, dayStatsMap: nextDayStats };
+  }, [attendanceRecords]);
+
+  const scheduleAttendanceRefresh = useCallback(() => {
+    if (!dbAvailable) return;
+    if (attendanceRefreshTimerRef.current) {
+      clearTimeout(attendanceRefreshTimerRef.current);
+    }
+    attendanceRefreshTimerRef.current = setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: attendanceQueryKey });
+      attendanceRefreshTimerRef.current = null;
+    }, 1800);
+  }, [attendanceQueryKey, dbAvailable, queryClient]);
+
+  useEffect(() => () => {
+    if (attendanceRefreshTimerRef.current) {
+      clearTimeout(attendanceRefreshTimerRef.current);
+    }
+  }, []);
+
   const getAttendance = useCallback(
     (studentId: string, date: Date): AttendanceStatusValue | null => {
       const dateStr = format(date, "yyyy-MM-dd");
-      const record = attendanceRecords.find(
-        (r) => r.student_id === studentId && r.date === dateStr
-      );
+      const record = attendanceRecordMap.get(buildAttendanceLookupKey(studentId, dateStr));
       return (record?.status as AttendanceStatusValue) ?? null;
     },
-    [attendanceRecords]
+    [attendanceRecordMap]
   );
 
   const getAttendanceNote = useCallback(
     (studentId: string, date: Date): string | null => {
       const dateStr = format(date, "yyyy-MM-dd");
-      const record = attendanceRecords.find(
-        (r) => r.student_id === studentId && r.date === dateStr
-      );
+      const record = attendanceRecordMap.get(buildAttendanceLookupKey(studentId, dateStr));
       return record?.note ?? null;
     },
-    [attendanceRecords]
+    [attendanceRecordMap]
   );
 
   const getDayEvent = useCallback(
     (date: Date): DayEvent | null => {
       const dateStr = format(date, "yyyy-MM-dd");
-      return dayEvents.find((e) => e.date === dateStr) || null;
+      return dayEventMap.get(dateStr) || null;
     },
-    [dayEvents]
+    [dayEventMap]
   );
 
   const isHoliday = useCallback(
@@ -182,9 +286,9 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
       if (dayOfWeek === 0) return true;
       if (workDayFormat === "5days" && dayOfWeek === 6) return true;
       const dateStr = format(date, "yyyy-MM-dd");
-      return holidays.some((h) => h.date === dateStr);
+      return holidayMap.has(dateStr);
     },
-    [holidays, workDayFormat]
+    [holidayMap, workDayFormat]
   );
 
   const getHolidayDescription = useCallback(
@@ -193,22 +297,17 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
       if (dayOfWeek === 0) return "Hari Minggu";
       if (workDayFormat === "5days" && dayOfWeek === 6) return "Hari Sabtu (Libur)";
       const dateStr = format(date, "yyyy-MM-dd");
-      const holiday = holidays.find((h) => h.date === dateStr);
+      const holiday = holidayMap.get(dateStr);
       return holiday?.description || null;
     },
-    [holidays, workDayFormat]
+    [holidayMap, workDayFormat]
   );
 
   // Set attendance mutation (supports D status + note)
   const setAttendanceMutation = useMutation({
     mutationFn: async ({
       studentId, date, status, note,
-    }: {
-      studentId: string;
-      date: string;
-      status: AttendanceStatusValue | null;
-      note?: string | null;
-    }) => {
+    }: AttendanceMutationParams) => {
       if (!user || !classId) throw new Error("User or class not set");
 
 
@@ -273,10 +372,29 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
         return data;
       }
     },
-    onSuccess: () => {
-      if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance", classId, monthStart] });
+    onMutate: async (params) => {
+      if (!dbAvailable) return { previousRecords: undefined };
+
+      await queryClient.cancelQueries({ queryKey: attendanceQueryKey });
+      const previousRecords = queryClient.getQueryData<AttendanceRecord[]>(attendanceQueryKey);
+      queryClient.setQueryData<AttendanceRecord[]>(attendanceQueryKey, (current = []) =>
+        applyAttendancePatch(current, classId, params)
+      );
+
+      return { previousRecords };
+    },
+    onError: (_error, _params, context) => {
+      if (dbAvailable && context) {
+        queryClient.setQueryData(attendanceQueryKey, context.previousRecords ?? []);
       }
+    },
+    onSuccess: (data, params) => {
+      if (!dbAvailable) return;
+
+      queryClient.setQueryData<AttendanceRecord[]>(attendanceQueryKey, (current = []) =>
+        applyAttendancePatch(current, classId, params, (data as Partial<AttendanceRecord> | null) ?? null)
+      );
+      scheduleAttendanceRefresh();
     },
   });
 
@@ -525,6 +643,15 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     return stats;
   }, [attendanceRecords]);
 
+  const getMonthStatsFast = useCallback(() => {
+    return { ...monthStats };
+  }, [monthStats]);
+
+  const getDayStatsFast = useCallback((date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return { ...(dayStatsMap.get(dateStr) ?? createEmptyStats()) };
+  }, [dayStatsMap]);
+
   // Export data for the entire year
   const getYearlyData = useCallback(async (year: number) => {
     if (!user || !classId) return { attendance: [], holidays: [], dayEvents: [] };
@@ -560,8 +687,8 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     getDayEvent,
     isHoliday,
     getHolidayDescription,
-    getMonthStats,
-    getDayStats,
+    getMonthStats: getMonthStatsFast,
+    getDayStats: getDayStatsFast,
     getYearlyData,
     isLoading: attendanceQuery.isLoading || holidaysQuery.isLoading,
     isLoadingLock: lockQuery.isLoading,
@@ -586,7 +713,7 @@ export function useAttendance(classId: string, month: Date, workDayFormat: WorkD
     toggleLock: async (locked: boolean) => {
       await toggleLockMutation.mutateAsync(locked);
     },
-    isSaving: setAttendanceMutation.isPending || bulkSetAttendanceMutation.isPending || updateNoteMutation.isPending,
+    isSaving: bulkSetAttendanceMutation.isPending || updateNoteMutation.isPending,
     isTogglingHoliday: toggleHolidayMutation.isPending,
     isTogglingLock: toggleLockMutation.isPending,
     refetch: () => {
