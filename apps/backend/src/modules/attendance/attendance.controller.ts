@@ -10,6 +10,8 @@ import {
   validateLockPatchBody,
   validateHolidayPatchBody,
   validateDayEventPatchBody,
+  validateCalendarEventPatchBody,
+  validateCalendarQuery,
 } from "./validation/attendanceRequestValidation";
 import type { AttendanceApiError, AttendanceApiSuccess, AttendanceValidationIssue } from "./attendance.types";
 
@@ -199,6 +201,87 @@ export async function attendanceController(req: IncomingMessage, res: ServerResp
     }
 
     // 6. Holiday Operations V2
+    if (method === "GET" && pathname === "/attendance/v2/calendar") {
+      const validation = validateCalendarQuery(params);
+      if (!validation.valid) {
+        sendValidationError(res, validation.issues);
+        return true;
+      }
+      const result = await attendanceService.getCalendar(validation.query, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data, issues: result.issues });
+      }
+      return true;
+    }
+
+    if ((method === "POST" || method === "PATCH") && pathname === "/attendance/v2/calendar-events") {
+      const validation = validateCalendarEventPatchBody(await readJson(req));
+      if (!validation.valid || !validation.eventPatch) {
+        sendValidationError(res, validation.issues);
+        return true;
+      }
+      const result = await attendanceService.upsertCalendarEvent(validation.eventPatch, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
+    if (method === "POST" && pathname.startsWith("/attendance/v2/calendar-events/") && pathname.endsWith("/exceptions")) {
+      const eventId = pathname.replace("/attendance/v2/calendar-events/", "").replace("/exceptions", "").trim();
+      const body = (await readJson(req)) as { exceptions?: Record<string, unknown>[] };
+      if (!eventId || !Array.isArray(body.exceptions)) {
+        sendValidationError(res, [
+          { severity: "error", code: "EVENT_EXCEPTIONS_INVALID", message: "event id dan exceptions wajib dikirim.", field: "exceptions" },
+        ]);
+        return true;
+      }
+      const result = await attendanceService.updateCalendarEventExceptions(eventId, body.exceptions, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
+    if (method === "POST" && pathname === "/attendance/v2/snapshots") {
+      const body = (await readJson(req)) as { classId?: string; month?: string; reason?: string | null };
+      if (!body.classId || !body.month) {
+        sendValidationError(res, [
+          { severity: "error", code: "CLASS_ID_REQUIRED", message: "classId wajib dikirim.", field: "classId" },
+          { severity: "error", code: "MONTH_REQUIRED", message: "month wajib dikirim.", field: "month" },
+        ]);
+        return true;
+      }
+      const result = await attendanceService.createMonthSnapshot(body.classId, body.month, body.reason ?? null, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
+    if (method === "POST" && pathname === "/attendance/v2/restore") {
+      const body = (await readJson(req)) as { snapshotId?: string };
+      if (!body.snapshotId) {
+        sendValidationError(res, [{ severity: "error", code: "SNAPSHOT_ID_REQUIRED", message: "snapshotId wajib dikirim.", field: "snapshotId" }]);
+        return true;
+      }
+      const result = await attendanceService.restoreMonthSnapshot(body.snapshotId, runtime);
+      if (result.error) {
+        sendJson(res, result.statusCode, { error: result.error });
+      } else {
+        sendJson(res, result.statusCode, { data: result.data });
+      }
+      return true;
+    }
+
     if ((method === "POST" || method === "DELETE") && pathname === "/attendance/v2/holiday") {
       const validation = validateHolidayPatchBody(await readJson(req));
       if (!validation.valid || !validation.holidayPatch) {

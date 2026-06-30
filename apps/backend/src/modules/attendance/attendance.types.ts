@@ -73,6 +73,7 @@ export interface AttendanceDayCanonical {
   isWeekend?: boolean;
   holidayName?: string;
   eventName?: string;
+  reasonCodes?: string[];
 }
 
 export interface AttendanceHolidayCanonical {
@@ -129,6 +130,7 @@ export interface AttendanceDatasetCanonical {
   holidays: AttendanceHolidayCanonical[];
   dayEvents: AttendanceCalendarEventCanonical[];
   locks: AttendanceLockCanonical[];
+  workDayFormat?: "5days" | "6days";
   monthlySummary?: AttendanceMonthlySummaryCanonical[];
   dailySummary?: AttendanceDailySummaryCanonical[];
 }
@@ -189,14 +191,53 @@ export interface AttendanceHolidayPatch {
   date: string; // YYYY-MM-DD
   description?: string;
   classId?: string | null;
+  scopeType?: "school" | "class" | "national" | "user";
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface AttendanceDayEventPatch {
   date: string; // YYYY-MM-DD
+  startDate?: string;
+  endDate?: string;
   label?: string;
   description?: string | null;
   color?: string | null;
+  classId?: string | null;
+  schoolId?: string | null;
+  scopeType?: "school" | "class" | "national" | "user";
+  eventType?: "holiday" | "activity" | "closure" | "effective_override" | "exam" | "info";
+  effectOnAttendance?: "non_effective" | "effective" | "info_only" | "force_present" | "blocked_write";
+  priority?: number;
+  recurrenceRule?: Record<string, unknown> | null;
+  recurrenceExceptions?: Record<string, unknown>[] | null;
   action: "upsert" | "delete";
+}
+
+export interface AttendanceCalendarQuery {
+  classId: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface AttendanceCalendarEventPatch {
+  id?: string;
+  classId?: string | null;
+  schoolId?: string | null;
+  calendarId?: string | null;
+  scopeType?: "school" | "class" | "national" | "user";
+  eventType?: "holiday" | "activity" | "closure" | "effective_override" | "exam" | "info";
+  title: string;
+  description?: string | null;
+  startDate: string;
+  endDate?: string;
+  timezone?: string;
+  recurrenceRule?: Record<string, unknown> | null;
+  recurrenceExceptions?: Record<string, unknown>[] | null;
+  priority?: number;
+  effectOnAttendance?: "non_effective" | "effective" | "info_only" | "force_present" | "blocked_write";
+  color?: string | null;
+  source?: string;
 }
 
 export interface AttendanceAuditEventCanonical {

@@ -3,6 +3,8 @@ import type {
   AttendanceDailySummaryQuery,
   AttendanceDatasetQuery,
   AttendanceNotePatchBody,
+  AttendanceCalendarEventPatch,
+  AttendanceCalendarQuery,
   AttendanceRecordPatch,
   AttendanceValidationIssue,
 } from "../attendance.types";
@@ -214,12 +216,86 @@ export function validateDayEventPatchBody(body: unknown): {
     valid: issues.length === 0,
     dayEventPatch: issues.length === 0 ? {
       date: String(value.date),
+      startDate: value.startDate ? String(value.startDate) : String(value.date),
+      endDate: value.endDate ? String(value.endDate) : value.startDate ? String(value.startDate) : String(value.date),
       label: value.label ? String(value.label) : undefined,
       description: value.description ? String(value.description) : null,
       color: value.color ? String(value.color) : null,
+      classId: value.classId ? String(value.classId) : null,
+      schoolId: value.schoolId ? String(value.schoolId) : null,
+      scopeType: value.scopeType || (value.classId ? "class" : "user"),
+      eventType: value.eventType || "info",
+      effectOnAttendance: value.effectOnAttendance || "info_only",
+      priority: typeof value.priority === "number" ? value.priority : undefined,
+      recurrenceRule: value.recurrenceRule || null,
+      recurrenceExceptions: Array.isArray(value.recurrenceExceptions) ? value.recurrenceExceptions : null,
       action: value.action
     } : null,
     issues
+  };
+}
+
+export function validateCalendarQuery(params: URLSearchParams): {
+  valid: boolean;
+  query: AttendanceCalendarQuery;
+  issues: AttendanceValidationIssue[];
+} {
+  const classId = params.get("classId")?.trim() ?? "";
+  const startDate = params.get("startDate")?.trim() ?? "";
+  const endDate = params.get("endDate")?.trim() ?? "";
+  const issues: AttendanceValidationIssue[] = [];
+
+  if (!classId) issues.push(issue("CLASS_ID_REQUIRED", "classId wajib dikirim.", "classId"));
+  if (!ISO_DATE_RE.test(startDate)) issues.push(issue("START_DATE_INVALID", "startDate wajib berformat YYYY-MM-DD.", "startDate"));
+  if (!ISO_DATE_RE.test(endDate)) issues.push(issue("END_DATE_INVALID", "endDate wajib berformat YYYY-MM-DD.", "endDate"));
+
+  return { valid: issues.length === 0, query: { classId, startDate, endDate }, issues };
+}
+
+export function validateCalendarEventPatchBody(body: unknown): {
+  valid: boolean;
+  eventPatch: AttendanceCalendarEventPatch | null;
+  issues: AttendanceValidationIssue[];
+} {
+  const value = body as Partial<AttendanceCalendarEventPatch> | null;
+  const issues: AttendanceValidationIssue[] = [];
+
+  if (!value || typeof value !== "object") {
+    return { valid: false, eventPatch: null, issues: [issue("BODY_INVALID", "Body wajib berupa objek JSON.")] };
+  }
+
+  if (!value.title?.trim()) issues.push(issue("TITLE_REQUIRED", "title wajib dikirim.", "title"));
+  if (!value.startDate || !ISO_DATE_RE.test(value.startDate)) {
+    issues.push(issue("START_DATE_INVALID", "startDate wajib berformat YYYY-MM-DD.", "startDate"));
+  }
+  if (value.endDate && !ISO_DATE_RE.test(value.endDate)) {
+    issues.push(issue("END_DATE_INVALID", "endDate wajib berformat YYYY-MM-DD.", "endDate"));
+  }
+
+  return {
+    valid: issues.length === 0,
+    eventPatch: issues.length === 0
+      ? {
+          id: value.id ? String(value.id) : undefined,
+          classId: value.classId ? String(value.classId) : null,
+          schoolId: value.schoolId ? String(value.schoolId) : null,
+          calendarId: value.calendarId ? String(value.calendarId) : null,
+          scopeType: value.scopeType || (value.classId ? "class" : value.schoolId ? "school" : "user"),
+          eventType: value.eventType || "info",
+          title: String(value.title),
+          description: value.description ?? null,
+          startDate: String(value.startDate),
+          endDate: value.endDate ? String(value.endDate) : String(value.startDate),
+          timezone: value.timezone || "Asia/Makassar",
+          recurrenceRule: value.recurrenceRule ?? null,
+          recurrenceExceptions: Array.isArray(value.recurrenceExceptions) ? value.recurrenceExceptions : [],
+          priority: typeof value.priority === "number" ? value.priority : 0,
+          effectOnAttendance: value.effectOnAttendance || "info_only",
+          color: value.color || "blue",
+          source: value.source || "manual",
+        }
+      : null,
+    issues,
   };
 }
 

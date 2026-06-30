@@ -10,6 +10,8 @@ import type {
   AttendanceHolidayPatch,
   AttendanceDayEventPatch,
   AttendanceNotePatchBody,
+  AttendanceCalendarEventPatch,
+  AttendanceCalendarQuery,
 } from "./attendance.types";
 import { createExportDataset, summarizeDaily } from "./canonical/attendanceCanonical";
 import { AttendanceAuditService } from "./audit/attendanceAudit.service";
@@ -59,6 +61,18 @@ export class AttendanceService {
       exportDataset: createExportDataset(result.dataset),
       issues: result.issues,
     };
+  }
+
+  async getCalendar(query: AttendanceCalendarQuery, runtime: AttendanceRuntimeContext) {
+    try {
+      const result = await this.v2.getCalendar(query, runtime);
+      return { statusCode: 200, data: result.calendar, issues: result.issues };
+    } catch (err: any) {
+      return {
+        statusCode: 500,
+        error: { code: "CALENDAR_FETCH_FAILED", message: `Gagal memuat kalender akademik V2: ${err.message || err}` },
+      };
+    }
   }
 
   async applyPatch(
@@ -369,6 +383,162 @@ export class AttendanceService {
       return {
         statusCode: 500,
         error: { code: "DAY_EVENT_MUTATION_FAILED", message: `Gagal memproses event hari V2: ${err.message}` },
+      };
+    }
+  }
+
+  async upsertCalendarEvent(
+    patch: AttendanceCalendarEventPatch,
+    runtime: AttendanceRuntimeContext
+  ): Promise<{ statusCode: number; data?: any; error?: any }> {
+    try {
+      const res = await this.v2.upsertCalendarEvent(patch, runtime);
+      return { statusCode: 200, data: res };
+    } catch (err: any) {
+      return {
+        statusCode: 500,
+        error: { code: "CALENDAR_EVENT_MUTATION_FAILED", message: `Gagal menyimpan agenda kalender V2: ${err.message}` },
+      };
+    }
+  }
+
+  async updateCalendarEventExceptions(
+    eventId: string,
+    exceptions: Record<string, unknown>[],
+    runtime: AttendanceRuntimeContext
+  ): Promise<{ statusCode: number; data?: any; error?: any }> {
+    const userId = runtime.user?.id;
+    if (!userId) {
+      return { statusCode: 401, error: { code: "UNAUTHORIZED", message: "User tidak terautentikasi." } };
+    }
+
+    try {
+      const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+      const { data, error } = await client
+        .from("attendance_v2_calendar_events")
+        .update({ recurrence_exceptions: exceptions, updated_by: userId })
+        .eq("id", eventId)
+        .eq("user_id", userId)
+        .select()
+        .single();
+      if (error) throw error;
+      return { statusCode: 200, data };
+    } catch (err: any) {
+      return {
+        statusCode: 500,
+        error: { code: "CALENDAR_EVENT_EXCEPTION_FAILED", message: `Gagal menyimpan pengecualian agenda V2: ${err.message}` },
+      };
+    }
+  }
+
+  async createMonthSnapshot(
+    classId: string,
+    month: string,
+    reason: string | null,
+    runtime: AttendanceRuntimeContext
+  ): Promise<{ statusCode: number; data?: any; error?: any }> {
+    const userId = runtime.user?.id;
+    if (!userId) {
+      return { statusCode: 401, error: { code: "UNAUTHORIZED", message: "User tidak terautentikasi." } };
+    }
+
+    try {
+      const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+      const { dataset, issues } = await this.v2.getDataset({ classId, month }, runtime);
+      if (issues.some((issue) => issue.severity === "error" || issue.severity === "blocker")) {
+        return {
+          statusCode: 400,
+          error: { code: "SNAPSHOT_DATA_INVALID", message: "Dataset bulan ini belum aman untuk dibuat snapshot.", details: issues },
+        };
+      }
+
+      const { data, error } = await client
+        .from("attendance_v2_month_snapshots")
+        .insert({
+          user_id: userId,
+          class_id: classId,
+          month,
+          snapshot_json: dataset,
+          calendar_version: { generatedAt: new Date().toISOString(), workDayFormat: dataset.workDayFormat || "6days" },
+          reason,
+          created_by: userId,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return { statusCode: 200, data };
+    } catch (err: any) {
+      return {
+        statusCode: 500,
+        error: { code: "SNAPSHOT_CREATE_FAILED", message: `Gagal membuat backup bulanan V2: ${err.message || err}` },
+      };
+    }
+  }
+
+  async restoreMonthSnapshot(
+    snapshotId: string,
+    runtime: AttendanceRuntimeContext
+  ): Promise<{ statusCode: number; data?: any; error?: any }> {
+    const userId = runtime.user?.id;
+    if (!userId) {
+      return { statusCode: 401, error: { code: "UNAUTHORIZED", message: "User tidak terautentikasi." } };
+    }
+
+    try {
+      const client = runtime.token ? createSupabaseUserClient(runtime.token) : supabaseAdmin;
+      const { data: snapshot, error: snapshotError } = await client
+        .from("attendance_v2_month_snapshots")
+        .select("id, class_id, month, snapshot_json")
+        .eq("id", snapshotId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (snapshotError) throw snapshotError;
+      if (!snapshot) {
+        return { statusCode: 404, error: { code: "SNAPSHOT_NOT_FOUND", message: "Backup bulanan tidak ditemukan." } };
+      }
+
+      const records = Array.isArray(snapshot.snapshot_json?.records) ? snapshot.snapshot_json.records : [];
+      const monthStart = `${snapshot.month}-01`;
+      const parsedMonth = parse(snapshot.month, "yyyy-MM", new Date());
+      const monthEnd = format(endOfMonth(parsedMonth), "yyyy-MM-dd");
+
+      const { error: deleteError } = await client
+        .from("attendance_v2_records")
+        .delete()
+        .eq("user_id", userId)
+        .eq("class_id", snapshot.class_id)
+        .gte("date", monthStart)
+        .lte("date", monthEnd);
+      if (deleteError) throw deleteError;
+
+      if (records.length > 0) {
+        const payload = records.map((record: any) => ({
+          user_id: userId,
+          class_id: snapshot.class_id,
+          student_id: record.studentId,
+          date: record.date,
+          status: record.status,
+          note: record.note || null,
+          source: "sync",
+          created_by: userId,
+          updated_by: userId,
+        }));
+        const { error: insertError } = await client.from("attendance_v2_records").insert(payload);
+        if (insertError) throw insertError;
+      }
+
+      this.audit.append("V2_MONTH_SNAPSHOT_RESTORED", userId, {
+        snapshotId,
+        classId: snapshot.class_id,
+        month: snapshot.month,
+        records: records.length,
+      });
+
+      return { statusCode: 200, data: { success: true, restoredRecords: records.length } };
+    } catch (err: any) {
+      return {
+        statusCode: 500,
+        error: { code: "SNAPSHOT_RESTORE_FAILED", message: `Gagal memulihkan backup bulanan V2: ${err.message || err}` },
       };
     }
   }
