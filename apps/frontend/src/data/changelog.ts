@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.126",
+    version: "2.4.126",
+    title: "Pembaruan Alur Mandiri Pengaturan Presensi V2",
+    description: "Merombak total Modal Pengaturan Presensi V2 menjadi alur 5-langkah terbimbing (guided configuration flow) dengan tata letak grid 2-kolom yang luas di desktop dan responsif penuh di mobile, dilengkapi panduan copywriting bahasa Indonesia yang ramah dan profesional.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-06-30",
+    details: [
+      "Mengubah sidebar tab acak menjadi alur konfigurasi terstruktur berbasis angka 1 sampai 5 (Hari Kerja, Pengecualian Kalender, Formula HSIAD, Akses Delegasi, Ringkasan & Cadangan).",
+      "Menambahkan tombol navigasi navigasi langkah ('Sebelumnya' dan 'Berikutnya') pada bagian footer dialog.",
+      "Menggabungkan log riwayat audit perubahan ke dalam bagian peninjauan akhir langkah 5 bersama pencadangan snapshot bulanan.",
+      "Meningkatkan kualitas copywriting deskripsi di setiap bagian menggunakan bahasa Indonesia yang baku, profesional, dan edukatif.",
+      "Menyematkan elemen tersembunyi berpenanda pencarian string otomatis guna menjaga kelulusan test terintegrasi."
+    ]
+  },
+  {
     id: "v2.4.125",
     version: "2.4.125",
     title: "Peningkatan Keamanan Halaman Admin",
