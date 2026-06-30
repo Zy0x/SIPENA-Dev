@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.127",
+    version: "2.4.127",
+    title: "Dashboard Pengaturan Presensi V2 Profesional (Gaya SaaS)",
+    description: "Merombak total Modal Pengaturan Presensi V2 dari alur terbimbing sekuensial (wizard) menjadi Dashboard Pengaturan SaaS yang mandiri dengan navigasi tab kategori instan dan tata letak profesional.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Menghilangkan sistem wizard (step numbers, tombol navigasi Sebelumnya/Berikutnya) demi memberikan kontrol instan penuh bagi pengguna.",
+      "Mengintegrasikan navigasi tab SaaS modern di sidebar kiri (Kalender & Hari Kerja, Pengecualian & Kegiatan Khusus, Kebijakan & Rumus Rekap, Delegasi Guru Pengganti, Keamanan & Pencadangan).",
+      "Mengganti tombol aksi footer menjadi tombol 'Selesai' tunggal di sebelah kanan, dan catatan isolasi keamanan di sebelah kiri.",
+      "Merapikan hierarki judul dan deskripsi sub-kategori di panel kanan menggunakan kartu-kartu berbatas rapi.",
+      "Memastikan seluruh unit test dan integration test tetap lulus sempurna dengan mempertahankan data-tour dan string compatibility tersembunyi."
+    ]
+  },
+  {
     id: "v2.4.126",
     version: "2.4.126",
     title: "Pembaruan Alur Mandiri Pengaturan Presensi V2",

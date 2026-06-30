@@ -393,22 +393,6 @@ export default function AttendanceV2Page() {
   const [snapshotReason, setSnapshotReason] = useState("");
   const [settingsSection, setSettingsSection] = useState<"calendar" | "effective" | "recap" | "audit" | "delegation" | "backup">("calendar");
 
-  const stepKeys = ["calendar", "effective", "recap", "delegation", "backup"] as const;
-  const currentStepIndex = stepKeys.includes(settingsSection as any)
-    ? stepKeys.indexOf(settingsSection as any)
-    : 4;
-
-  const handleNextStep = () => {
-    if (currentStepIndex < stepKeys.length - 1) {
-      setSettingsSection(stepKeys[currentStepIndex + 1]);
-    }
-  };
-
-  const handlePrevStep = () => {
-    if (currentStepIndex > 0) {
-      setSettingsSection(stepKeys[currentStepIndex - 1]);
-    }
-  };
 
   // Scroll handling is now fully managed by SmartScrollTable component
 
@@ -4512,14 +4496,14 @@ export default function AttendanceV2Page() {
             <div className="min-h-0 flex-1 overflow-hidden">
               <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)]">
                 <aside className="border-b bg-muted/10 p-3 lg:border-b-0 lg:border-r lg:p-4" data-tour="attendance-v2-settings-nav">
-                  <div className="flex gap-2 overflow-x-auto pb-2 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
+                  <div className="flex gap-2 overflow-x-auto pb-2 lg:block lg:space-y-1.5 lg:overflow-visible lg:pb-0">
                     {[
-                      { id: "calendar" as const, number: 1, title: "1. Hari Kerja & Kalender", icon: CalendarDays, desc: "Sistem hari sekolah & override" },
-                      { id: "effective" as const, number: 2, title: "2. Pengecualian & Kegiatan", icon: CalendarOff, desc: "Libur kustom & kegiatan khusus" },
-                      { id: "recap" as const, number: 3, title: "3. Formula & Kebijakan", icon: FileSpreadsheet, desc: "Rumus HSIAD & denominator rekap" },
-                      { id: "delegation" as const, number: 4, title: "4. Delegasi Guru Pengganti", icon: UserPlus, desc: "Akses sementara guru mitra" },
-                      { id: "backup" as const, number: 5, title: "5. Ringkasan & Cadangan", icon: Camera, desc: "Total hari, snapshot & audit log" },
-                    ].map((item, index) => {
+                      { id: "calendar" as const, title: "Kalender & Hari Kerja", icon: CalendarDays, desc: "Hari sekolah & override" },
+                      { id: "effective" as const, title: "Libur & Kegiatan Khusus", icon: CalendarOff, desc: "Pengecualian KBM & agenda" },
+                      { id: "recap" as const, title: "Kebijakan & Rumus Rekap", icon: FileSpreadsheet, desc: "Rumus HSIAD & denominator" },
+                      { id: "delegation" as const, title: "Delegasi Guru Pengganti", icon: UserPlus, desc: "Akses sementara guru pengganti" },
+                      { id: "backup" as const, title: "Keamanan & Pencadangan", icon: Camera, desc: "Snapshot, restore & audit trail" },
+                    ].map((item) => {
                       const Icon = item.icon;
                       const active = settingsSection === item.id || (item.id === "backup" && settingsSection === "audit");
                       return (
@@ -4528,29 +4512,20 @@ export default function AttendanceV2Page() {
                           type="button"
                           onClick={() => setSettingsSection(item.id as typeof settingsSection)}
                           className={cn(
-                            "min-h-11 min-w-[11rem] rounded-xl border px-3 py-2 text-left transition-all duration-200 touch-manipulation lg:w-full",
+                            "min-h-[2.5rem] min-w-[12rem] rounded-xl border px-3 py-2.5 text-left transition-all duration-200 touch-manipulation lg:w-full flex items-start gap-2.5",
                             active
-                              ? "border-primary bg-primary text-primary-foreground shadow-sm font-semibold"
-                              : "border-border bg-background hover:bg-muted/60"
+                              ? "border-primary bg-primary/5 text-primary shadow-sm font-semibold"
+                              : "border-transparent bg-transparent hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                           )}
                           aria-pressed={active}
                         >
-                          <span className="flex items-center gap-2 text-xs sm:text-sm font-semibold">
-                            <div className={cn(
-                              "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors",
-                              active
-                                ? "bg-primary-foreground text-primary border-primary-foreground"
-                                : index < currentStepIndex
-                                  ? "bg-green-100 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800"
-                                  : "bg-muted text-muted-foreground border-transparent"
-                            )}>
-                              {index < currentStepIndex ? <Check className="w-3 h-3" /> : item.number}
-                            </div>
-                            {item.title}
-                          </span>
-                          <span className={cn("mt-0.5 hidden text-[10px] lg:block leading-normal pl-7", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                            {item.desc}
-                          </span>
+                          <Icon className={cn("h-4 w-4 mt-0.5 flex-shrink-0", active ? "text-primary" : "text-muted-foreground")} />
+                          <div className="min-w-0">
+                            <span className="block text-xs sm:text-sm font-semibold leading-none">{item.title}</span>
+                            <span className={cn("mt-1 hidden text-[10px] lg:block leading-normal font-normal", active ? "text-primary/80" : "text-muted-foreground")}>
+                              {item.desc}
+                            </span>
+                          </div>
                         </button>
                       );
                     })}
@@ -4563,10 +4538,10 @@ export default function AttendanceV2Page() {
                       <div className="rounded-2xl border bg-muted/10 p-4 space-y-2">
                         <div className="flex items-center gap-2 text-primary font-semibold">
                           <CalendarDays className="h-5 w-5" />
-                          <h3 className="text-sm sm:text-base">Langkah 1: Konfigurasi Kalender & Sistem Hari Kerja</h3>
+                          <h3 className="text-sm sm:text-base">Kalender Akademik & Hari Kerja</h3>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Atur sistem hari sekolah utama (5 hari atau 6 hari kerja) serta sesuaikan hari Sabtu/Minggu atau Libur Nasional tertentu menjadi hari masuk sekolah aktif jika ada kegiatan KBM/Sekolah khusus.
+                          Atur sistem hari sekolah utama (5 hari atau 6 hari kerja) serta sesuaikan hari Sabtu/Minggu atau Libur Nasional tertentu menjadi hari masuk sekolah aktif jika ada kegiatan sekolah khusus.
                         </p>
                       </div>
 
@@ -4696,7 +4671,7 @@ export default function AttendanceV2Page() {
                       <div className="rounded-2xl border bg-muted/10 p-4 space-y-2">
                         <div className="flex items-center gap-2 text-primary font-semibold">
                           <CalendarOff className="h-5 w-5" />
-                          <h3 className="text-sm sm:text-base">Langkah 2: Kalender Pengecualian & Jadwal Kegiatan Khusus</h3>
+                          <h3 className="text-sm sm:text-base">Pengecualian & Jadwal Kegiatan</h3>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
                           Tambahkan hari libur kustom lokal sekolah/kelas di luar libur nasional (misal: Rapat Kelulusan Guru, Cuti Bersama Khusus) atau catat kegiatan khusus non-KBM (seperti Ujian Semester, Class Meeting, Porseni).
@@ -4811,7 +4786,7 @@ export default function AttendanceV2Page() {
                       <div className="rounded-2xl border bg-muted/10 p-4 space-y-2">
                         <div className="flex items-center gap-2 text-primary font-semibold">
                           <FileSpreadsheet className="h-5 w-5" />
-                          <h3 className="text-sm sm:text-base">Langkah 3: Kebijakan Perhitungan & Pemetaan Status (HSIAD)</h3>
+                          <h3 className="text-sm sm:text-base">Kebijakan Perhitungan & Pemetaan Status (HSIAD)</h3>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
                           Atur pembagi dalam perhitungan nilai persentase rekapitulasi serta kelompokkan status kehadiran siswa (Hadir, Sakit, Izin, Alfa, Dispen) agar sesuai dengan regulasi pelaporan sekolah Anda.
@@ -4916,7 +4891,7 @@ export default function AttendanceV2Page() {
                       <div className="rounded-2xl border bg-muted/10 p-4 space-y-2">
                         <div className="flex items-center gap-2 text-primary font-semibold">
                           <UserPlus className="h-5 w-5" />
-                          <h3 className="text-sm sm:text-base">Langkah 4: Hak Akses Sementara & Guru Pengganti (Delegasi)</h3>
+                          <h3 className="text-sm sm:text-base">Delegasi & Hak Akses Sementara</h3>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
                           Berikan otorisasi pengisian presensi kelas kepada guru pengganti atau asisten mitra dalam rentang waktu tertentu. Guru yang didelegasikan dapat mengisi data presensi kelas ini tanpa membutuhkan password akun Anda.
@@ -4965,10 +4940,10 @@ export default function AttendanceV2Page() {
                       <div className="rounded-2xl border bg-muted/10 p-4 space-y-2">
                         <div className="flex items-center gap-2 text-primary font-semibold">
                           <CheckCircle2 className="h-5 w-5 text-green-600" />
-                          <h3 className="text-sm sm:text-base">Langkah 5: Tinjau Statistik, Audit Aktivitas, & Cadangkan Data</h3>
+                          <h3 className="text-sm sm:text-base">Keamanan & Pencadangan</h3>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Lakukan peninjauan akhir atas komposisi hari efektif sekolah pada bulan aktif, periksa riwayat audit perubahan data, dan pastikan untuk membuat <strong>Cadangan (Snapshot)</strong> untuk mengamankan data kehadiran sebelum bulan ini dikunci.
+                          Tinjau komposisi hari efektif sekolah pada bulan aktif, periksa riwayat audit perubahan data, dan pastikan untuk membuat <strong>Cadangan (Snapshot)</strong> untuk mengamankan data kehadiran sebelum bulan ini dikunci.
                         </p>
                       </div>
 
@@ -5049,28 +5024,15 @@ export default function AttendanceV2Page() {
 
             <div className="flex flex-col-reverse gap-2 border-t p-4 sm:flex-row sm:items-center sm:justify-between bg-muted/5">
               <p className="text-[11px] text-muted-foreground leading-normal max-w-sm sm:max-w-md hidden sm:block">
-                * Konfigurasi ini terisolasi untuk jalur <strong>Presensi V2</strong>. Data KBM Presensi V1 tetap aman dan tidak mengalami modifikasi.
+                * Seluruh perubahan konfigurasi di sini terisolasi untuk jalur <strong>Presensi V2</strong>. Data KBM Presensi V1 tetap aman.
               </p>
-              <div className="flex w-full sm:w-auto items-center justify-end gap-2">
-                <Button variant="ghost" onClick={() => setShowSettingsSheet(false)} className="h-10 text-xs rounded-xl px-4">
-                  Batal
+              <div className="flex w-full sm:w-auto items-center justify-end">
+                <Button 
+                  onClick={() => setShowSettingsSheet(false)} 
+                  className="h-10 text-xs gap-1.5 rounded-xl px-5 min-w-[7rem] bg-primary hover:bg-primary/95 text-primary-foreground shadow-sm"
+                >
+                  <span>Selesai</span>
                 </Button>
-                {currentStepIndex > 0 && (
-                  <Button variant="outline" onClick={handlePrevStep} className="h-10 text-xs gap-1 rounded-xl px-4">
-                    <ChevronLeft className="h-4 w-4" />
-                    Sebelumnya
-                  </Button>
-                )}
-                {currentStepIndex < 4 ? (
-                  <Button onClick={handleNextStep} className="h-10 text-xs gap-1 rounded-xl px-4 min-w-[6rem]">
-                    Berikutnya
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button onClick={() => setShowSettingsSheet(false)} className="h-10 text-xs gap-1 rounded-xl px-5 min-w-[7rem] bg-green-600 hover:bg-green-700 text-white border-transparent">
-                    Simpan & Selesai
-                  </Button>
-                )}
               </div>
             </div>
           </DialogContent>
