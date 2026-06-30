@@ -24,6 +24,7 @@ import {
   Sparkles, Loader2, Lock, Unlock, Sun, CalendarOff, UserCheck,
   Clock, CheckCircle2, XCircle, ShieldAlert, Settings2, MessageSquare, AlertCircle,
   FileText, Image as ImageIcon, Bookmark, Info, Upload, Camera, ChevronDown, Globe,
+  UserPlus, RotateCcw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,7 +36,8 @@ import {
 import { useClasses, type Class } from "@/hooks/useClasses";
 import { useStudents, type Student } from "@/hooks/useStudents";
 import { useNavigate } from "react-router-dom";
-import { useAttendanceV2, type AttendanceStatusValue, type DayEvent } from "@/hooks/useAttendanceV2";
+import { useAttendanceV2, type AttendanceStatusValue, type DayEvent, type RecapProfile } from "@/hooks/useAttendanceV2";
+import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from "date-fns";
@@ -382,6 +384,14 @@ export default function AttendanceV2Page() {
   const [dayEventColor, setDayEventColor] = useState("blue");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
+  // V2 Smart Academic Calendar UI States
+  const [showDelegationDialog, setShowDelegationDialog] = useState(false);
+  const [delegationTargetEmail, setDelegationTargetEmail] = useState("");
+  const [delegationStartsAt, setDelegationStartsAt] = useState<Date>(new Date());
+  const [delegationEndsAt, setDelegationEndsAt] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const [showSnapshotReasonDialog, setShowSnapshotReasonDialog] = useState(false);
+  const [snapshotReason, setSnapshotReason] = useState("");
+
   // Scroll handling is now fully managed by SmartScrollTable component
 
 
@@ -425,6 +435,9 @@ export default function AttendanceV2Page() {
     getAttendance: dbGetAttendance, getAttendanceNote: dbGetAttendanceNote, getDayEvent, isHoliday, getHolidayDescription, getMonthStats: dbGetMonthStats, getDayStats: dbGetDayStats, getYearlyData,
     setAttendance: setAttendanceDb, updateNote, bulkSetAttendance, toggleHoliday, upsertDayEvent, deleteDayEvent, toggleLock,
     isSaving, isLoading, promoteV2ToV1, isPromoting,
+    recapProfile, snapshots, delegations,
+    updateRecapProfile, createSnapshot, restoreSnapshot, createDelegation, revokeDelegation,
+    isUpdatingRecapProfile, isCreatingSnapshot, isRestoringSnapshot, isCreatingDelegation, isRevokingDelegation,
   } = useAttendanceV2(selectedClassId === "tour-dummy-class" ? "" : selectedClassId, currentMonth, workDayFormat);
 
   const getAttendance = useCallback((studentId: string, date: Date) => {
@@ -1381,6 +1394,118 @@ export default function AttendanceV2Page() {
     await deleteDayEvent(dateStr);
     showSuccess("Berhasil", "Kegiatan khusus berhasil dihapus");
   }, [deleteDayEvent, showSuccess]);
+
+  const handleUpdateRecapProfile = useCallback(async (updates: Partial<RecapProfile>) => {
+    if (!recapProfile) return;
+    try {
+      await updateRecapProfile({
+        id: recapProfile.id,
+        name: recapProfile.name,
+        counted_statuses: updates.counted_statuses ?? recapProfile.counted_statuses,
+        present_statuses: updates.present_statuses ?? recapProfile.present_statuses,
+        absence_statuses: updates.absence_statuses ?? recapProfile.absence_statuses,
+        denominator_policy: updates.denominator_policy ?? recapProfile.denominator_policy,
+        display_order: updates.display_order ?? recapProfile.display_order,
+      });
+      showSuccess("Profil Diperbarui", "Konfigurasi rekapitulasi berhasil disimpan");
+    } catch (e: any) {
+      showWarning("Gagal", `Gagal memperbarui profil: ${e.message || e}`);
+    }
+  }, [recapProfile, updateRecapProfile, showSuccess, showWarning]);
+
+  const handleToggleRecapStatus = useCallback(async (type: "present" | "absence" | "counted", status: AttendanceStatusValue) => {
+    if (!recapProfile) return;
+    
+    let nextCounted = [...recapProfile.counted_statuses];
+    let nextPresent = [...recapProfile.present_statuses];
+    let nextAbsence = [...recapProfile.absence_statuses];
+
+    if (type === "present") {
+      if (nextPresent.includes(status)) {
+        nextPresent = nextPresent.filter(s => s !== status);
+      } else {
+        nextPresent.push(status);
+        nextAbsence = nextAbsence.filter(s => s !== status);
+      }
+    } else if (type === "absence") {
+      if (nextAbsence.includes(status)) {
+        nextAbsence = nextAbsence.filter(s => s !== status);
+      } else {
+        nextAbsence.push(status);
+        nextPresent = nextPresent.filter(s => s !== status);
+      }
+    }
+
+    const allStatuses = Array.from(new Set([...nextPresent, ...nextAbsence])) as AttendanceStatusValue[];
+    nextCounted = allStatuses;
+
+    await handleUpdateRecapProfile({
+      present_statuses: nextPresent,
+      absence_statuses: nextAbsence,
+      counted_statuses: nextCounted,
+    });
+  }, [recapProfile, handleUpdateRecapProfile]);
+
+  const handleCreateSnapshotAction = useCallback(async () => {
+    try {
+      await createSnapshot(snapshotReason.trim() || null);
+      showSuccess("Snapshot Berhasil", "Snapshot bulanan berhasil disimpan dan dikunci.");
+      setSnapshotReason("");
+      setShowSnapshotReasonDialog(false);
+    } catch (e: any) {
+      showWarning("Gagal", `Gagal membuat snapshot: ${e.message || e}`);
+    }
+  }, [createSnapshot, snapshotReason, showSuccess, showWarning]);
+
+  const handleRestoreSnapshotAction = useCallback(async (snapshotId: string) => {
+    try {
+      await restoreSnapshot(snapshotId);
+      showSuccess("Data Dipulihkan", "Data presensi berhasil dipulihkan dari snapshot terpilih.");
+    } catch (e: any) {
+      showWarning("Gagal", `Gagal memulihkan data: ${e.message || e}`);
+    }
+  }, [restoreSnapshot, showSuccess, showWarning]);
+
+  const handleCreateDelegationAction = useCallback(async () => {
+    if (!delegationTargetEmail.trim()) {
+      showWarning("Input Kurang", "Email guru pengganti wajib diisi");
+      return;
+    }
+    try {
+      const { data: profileData, error } = await (supabase as any)
+        .from("team_profiles")
+        .select("id, name")
+        .eq("email", delegationTargetEmail.trim())
+        .maybeSingle();
+
+      if (error || !profileData) {
+        showWarning("Tidak Ditemukan", "Guru dengan email tersebut tidak ditemukan di sistem.");
+        return;
+      }
+
+      await createDelegation({
+        granteeUserId: profileData.id,
+        granteeLabel: profileData.name || delegationTargetEmail.trim(),
+        startsAt: delegationStartsAt,
+        endsAt: delegationEndsAt,
+      });
+
+      showSuccess("Delegasi Berhasil", `Akses didelegasikan kepada ${profileData.name || delegationTargetEmail}`);
+      setDelegationTargetEmail("");
+      setShowDelegationDialog(false);
+    } catch (e: any) {
+      showWarning("Gagal", `Gagal mendelegasikan akses: ${e.message || e}`);
+    }
+  }, [delegationTargetEmail, delegationStartsAt, delegationEndsAt, createDelegation, showSuccess, showWarning]);
+
+  const handleRevokeDelegationAction = useCallback(async (id: string) => {
+    try {
+      await revokeDelegation(id);
+      showSuccess("Delegasi Dicabut", "Akses guru pengganti berhasil dicabut.");
+    } catch (e: any) {
+      showWarning("Gagal", `Gagal mencabut delegasi: ${e.message || e}`);
+    }
+  }, [revokeDelegation, showSuccess, showWarning]);
 
   const handleBulkAttendance = useCallback(async () => {
     if (isHolidayCombined(selectedDate)) {
@@ -4615,6 +4740,177 @@ export default function AttendanceV2Page() {
                   )}
                 </div>
 
+                {/* Recap Profile Settings */}
+                <div className="rounded-2xl bg-card border border-border overflow-hidden">
+                  <div className="px-3 py-2.5 border-b border-border bg-muted/30">
+                    <p className="text-xs font-semibold text-foreground">Formula & Profil Rekapitulasi</p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Atur status hitungan persentase dan penyebut</p>
+                  </div>
+                  <div className="p-3 space-y-3">
+                    {/* Denominator Policy */}
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground uppercase font-medium">Kebijakan Penyebut (Denominator)</Label>
+                      <div className="grid grid-cols-2 gap-1.5 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateRecapProfile({ denominator_policy: "effective_days" })}
+                          className={cn(
+                            "px-2.5 py-1.5 text-left border rounded-xl text-[11px] transition-all",
+                            recapProfile.denominator_policy === "effective_days"
+                              ? "border-primary bg-primary/5 text-primary font-medium"
+                              : "border-border hover:bg-muted/50"
+                          )}
+                        >
+                          Hari Efektif ({effectiveDays} hari)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateRecapProfile({ denominator_policy: "filled_days" })}
+                          className={cn(
+                            "px-2.5 py-1.5 text-left border rounded-xl text-[11px] transition-all",
+                            recapProfile.denominator_policy === "filled_days"
+                              ? "border-primary bg-primary/5 text-primary font-medium"
+                              : "border-border hover:bg-muted/50"
+                          )}
+                        >
+                          Hari Terisi (Filled Days)
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Status yang dihitung Hadir */}
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground uppercase font-medium">Status Dianggap Hadir</Label>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {(["H", "S", "I", "A", "D"] as const).map((status) => {
+                          const isPresent = recapProfile.present_statuses.includes(status);
+                          return (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => handleToggleRecapStatus("present", status)}
+                              className={cn(
+                                "h-7 px-2.5 rounded-lg border text-xs flex items-center gap-1 transition-all",
+                                isPresent
+                                  ? "border-green-200 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300 font-semibold"
+                                  : "border-border text-muted-foreground hover:bg-muted/30"
+                              )}
+                            >
+                              {status} {isPresent && "✓"}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Snapshot & Restore */}
+                <div className="rounded-2xl bg-card border border-border overflow-hidden">
+                  <div className="px-3 py-2.5 border-b border-border bg-muted/30 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground">Snapshot & Pemulihan</p>
+                      <p className="text-[9px] text-muted-foreground mt-0.5">Kunci dan simpan snapshot bulanan tetap</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] gap-1 rounded-lg flex-shrink-0"
+                      onClick={() => setShowSnapshotReasonDialog(true)}
+                      disabled={isCreatingSnapshot}
+                    >
+                      <Camera className="w-3 h-3" />
+                      Snapshot
+                    </Button>
+                  </div>
+                  
+                  {snapshots.length === 0 ? (
+                    <p className="px-3 py-4 text-xs text-muted-foreground text-center">
+                      Belum ada snapshot bulanan untuk periode ini
+                    </p>
+                  ) : (
+                    <div className="max-h-[140px] overflow-y-auto overscroll-auto">
+                      {snapshots.map((snap) => (
+                        <div
+                          key={snap.id}
+                          className="flex items-center justify-between px-3 py-2 border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <p className="text-xs font-medium text-foreground">
+                              {format(new Date(snap.created_at), "d MMMM yyyy HH:mm", { locale: idLocale })}
+                            </p>
+                            <p className="text-[9px] text-muted-foreground truncate">
+                              Alasan: {snap.reason || "Rilis Bulan"}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 text-[9px] gap-1 rounded-md text-primary"
+                            onClick={() => handleRestoreSnapshotAction(snap.id)}
+                            disabled={isRestoringSnapshot}
+                          >
+                            <RotateCcw className="w-2.5 h-2.5" />
+                            Restore
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Delegations Substitute Teacher */}
+                <div className="rounded-2xl bg-card border border-border overflow-hidden">
+                  <div className="px-3 py-2.5 border-b border-border bg-muted/30 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground">Guru Pengganti (Delegasi)</p>
+                      <p className="text-[9px] text-muted-foreground mt-0.5">Beri izin akses temporer ke guru lain</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] gap-1 rounded-lg flex-shrink-0"
+                      onClick={() => setShowDelegationDialog(true)}
+                    >
+                      <UserPlus className="w-3 h-3" />
+                      Tambah
+                    </Button>
+                  </div>
+                  
+                  {delegations.length === 0 ? (
+                    <p className="px-3 py-4 text-xs text-muted-foreground text-center">
+                      Belum ada delegasi aktif
+                    </p>
+                  ) : (
+                    <div className="max-h-[140px] overflow-y-auto overscroll-auto">
+                      {delegations.map((del) => (
+                        <div
+                          key={del.id}
+                          className="flex items-center justify-between px-3 py-2 border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <p className="text-xs font-medium text-foreground">
+                              {del.grantee_label || del.grantee_user_id}
+                            </p>
+                            <p className="text-[9px] text-muted-foreground truncate">
+                              {format(new Date(del.starts_at), "d MMM")} – {format(new Date(del.ends_at), "d MMM yyyy", { locale: idLocale })}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:bg-destructive/10 flex-shrink-0"
+                            onClick={() => handleRevokeDelegationAction(del.id)}
+                            disabled={isRevokingDelegation}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
 
@@ -5141,6 +5437,108 @@ export default function AttendanceV2Page() {
             >
               {isPromoting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Ya, Merge Data</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delegation Dialog */}
+      <Dialog open={showDelegationDialog} onOpenChange={setShowDelegationDialog}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground font-bold">
+              <UserPlus className="w-5 h-5 text-primary" />
+              <span>Delegasikan Guru Pengganti</span>
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-muted-foreground text-sm">
+              Berikan akses temporer untuk membaca dan menulis data presensi kelas ini ke guru lain.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Email Guru Pengganti</Label>
+              <Input
+                type="email"
+                placeholder="Contoh: guru.pengganti@sekolah.sch.id"
+                value={delegationTargetEmail}
+                onChange={(e) => setDelegationTargetEmail(e.target.value)}
+                className="h-9 text-sm rounded-xl"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Tanggal Mulai</Label>
+                <Input
+                  type="date"
+                  value={format(delegationStartsAt, "yyyy-MM-dd")}
+                  onChange={(e) => setDelegationStartsAt(e.target.value ? new Date(e.target.value) : new Date())}
+                  className="h-9 text-sm rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Tanggal Selesai</Label>
+                <Input
+                  type="date"
+                  value={format(delegationEndsAt, "yyyy-MM-dd")}
+                  onChange={(e) => setDelegationEndsAt(e.target.value ? new Date(e.target.value) : new Date())}
+                  className="h-9 text-sm rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setShowDelegationDialog(false)} className="rounded-xl">
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateDelegationAction}
+              disabled={isCreatingDelegation}
+              className="rounded-xl gap-1.5"
+            >
+              {isCreatingDelegation && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>Delegasikan</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Snapshot Reason Dialog */}
+      <Dialog open={showSnapshotReasonDialog} onOpenChange={setShowSnapshotReasonDialog}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground font-bold">
+              <Camera className="w-5 h-5 text-primary" />
+              <span>Simpan Snapshot Presensi</span>
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-muted-foreground text-sm">
+              Snapshot akan mengunci seluruh rekapitulasi data presensi pada bulan ini sebagai catatan historis tetap.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Catatan / Alasan Snapshot (Opsional)</Label>
+              <Input
+                placeholder="Contoh: Rilis Laporan Bulanan Akhir"
+                value={snapshotReason}
+                onChange={(e) => setSnapshotReason(e.target.value)}
+                className="h-9 text-sm rounded-xl"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setShowSnapshotReasonDialog(false)} className="rounded-xl">
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateSnapshotAction}
+              disabled={isCreatingSnapshot}
+              className="rounded-xl gap-1.5"
+            >
+              {isCreatingSnapshot && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>Simpan Snapshot</span>
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -43,6 +43,38 @@ export interface AttendanceLock {
   is_locked: boolean;
 }
 
+export interface RecapProfile {
+  id?: string;
+  name: string;
+  counted_statuses: AttendanceStatusValue[];
+  present_statuses: AttendanceStatusValue[];
+  absence_statuses: AttendanceStatusValue[];
+  denominator_policy: "effective_days" | "filled_days" | "custom";
+  display_order: AttendanceStatusValue[];
+}
+
+export interface MonthSnapshot {
+  id: string;
+  class_id: string;
+  month: string;
+  snapshot_json: any;
+  calendar_version: any;
+  reason?: string | null;
+  created_at: string;
+}
+
+export interface Delegation {
+  id: string;
+  class_id: string;
+  grantee_user_id: string;
+  grantee_label?: string | null;
+  actor_role: "owner" | "teacher" | "substitute" | "guest" | "admin";
+  permissions: string[];
+  starts_at: string;
+  ends_at: string;
+  revoked_at?: string | null;
+}
+
 export type WorkDayFormat = "5days" | "6days";
 export type AttendanceStatusValue = "H" | "I" | "S" | "A" | "D";
 
@@ -655,6 +687,243 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
   });
 
+  // Recap Profile Query
+  const recapProfileQuery = useQuery({
+    queryKey: ["attendance_v2_recap_profile", classId],
+    queryFn: async (): Promise<RecapProfile> => {
+      if (!user || !classId || !dbAvailable) {
+        return {
+          name: "Default HSIAD",
+          counted_statuses: ["H", "S", "I", "A", "D"],
+          present_statuses: ["H", "D"],
+          absence_statuses: ["S", "I", "A"],
+          denominator_policy: "effective_days",
+          display_order: ["H", "S", "I", "A", "D"],
+        };
+      }
+      const { data, error } = await (supabase as any)
+        .from("attendance_v2_recap_profiles")
+        .select("*")
+        .or(`class_id.eq.${classId},class_id.is.null`)
+        .order("class_id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        return {
+          name: "Default HSIAD",
+          counted_statuses: ["H", "S", "I", "A", "D"],
+          present_statuses: ["H", "D"],
+          absence_statuses: ["S", "I", "A"],
+          denominator_policy: "effective_days",
+          display_order: ["H", "S", "I", "A", "D"],
+        };
+      }
+      return {
+        id: data.id,
+        name: data.name,
+        counted_statuses: data.counted_statuses,
+        present_statuses: data.present_statuses,
+        absence_statuses: data.absence_statuses,
+        denominator_policy: data.denominator_policy,
+        display_order: data.display_order,
+      };
+    },
+    enabled: !!user && !!classId && dbAvailable,
+  });
+
+  const recapProfile = recapProfileQuery.data || {
+    name: "Default HSIAD",
+    counted_statuses: ["H", "S", "I", "A", "D"] as AttendanceStatusValue[],
+    present_statuses: ["H", "D"] as AttendanceStatusValue[],
+    absence_statuses: ["S", "I", "A"] as AttendanceStatusValue[],
+    denominator_policy: "effective_days" as const,
+    display_order: ["H", "S", "I", "A", "D"] as AttendanceStatusValue[],
+  };
+
+  // Upsert Recap Profile Mutation
+  const upsertRecapProfileMutation = useMutation({
+    mutationFn: async (profile: Omit<RecapProfile, "id"> & { id?: string }) => {
+      if (!user || !classId || !dbAvailable) return;
+      
+      const payload = {
+        user_id: user.id,
+        class_id: classId,
+        name: profile.name || "Custom Profile",
+        counted_statuses: profile.counted_statuses,
+        present_statuses: profile.present_statuses,
+        absence_statuses: profile.absence_statuses,
+        denominator_policy: profile.denominator_policy,
+        display_order: profile.display_order,
+      };
+
+      let result;
+      if (profile.id) {
+        result = await (supabase as any)
+          .from("attendance_v2_recap_profiles")
+          .update(payload)
+          .eq("id", profile.id);
+      } else {
+        result = await (supabase as any)
+          .from("attendance_v2_recap_profiles")
+          .insert([payload]);
+      }
+
+      if (result.error) throw result.error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_recap_profile", classId] });
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+    },
+  });
+
+  // Snapshots Query
+  const snapshotsQuery = useQuery({
+    queryKey: ["attendance_v2_snapshots", classId, monthStart.substring(0, 7)],
+    queryFn: async (): Promise<MonthSnapshot[]> => {
+      if (!user || !classId || !dbAvailable) return [];
+      const currentMonthStr = monthStart.substring(0, 7);
+      const { data, error } = await (supabase as any)
+        .from("attendance_v2_month_snapshots")
+        .select("*")
+        .eq("class_id", classId)
+        .eq("month", currentMonthStr)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data as any || []) as MonthSnapshot[];
+    },
+    enabled: !!user && !!classId && dbAvailable,
+  });
+
+  const snapshots = snapshotsQuery.data || [];
+
+  // Create Snapshot Mutation
+  const createSnapshotMutation = useMutation({
+    mutationFn: async (reason: string | null) => {
+      if (!user || !classId || !dbAvailable) throw new Error("Connection or parameter missing");
+
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/snapshots`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({
+          classId,
+          month: monthStart.substring(0, 7),
+          reason,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+      
+      const json = await response.json();
+      return json.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_snapshots", classId, monthStart.substring(0, 7)] });
+    },
+  });
+
+  // Restore Snapshot Mutation
+  const restoreSnapshotMutation = useMutation({
+    mutationFn: async (snapshotId: string) => {
+      if (!user || !dbAvailable) throw new Error("Connection or parameter missing");
+
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/restore`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token || ""}`,
+        },
+        body: JSON.stringify({ snapshotId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+
+      const json = await response.json();
+      return json.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+    },
+  });
+
+  // Delegations Query
+  const delegationsQuery = useQuery({
+    queryKey: ["attendance_v2_delegations", classId],
+    queryFn: async (): Promise<Delegation[]> => {
+      if (!user || !classId || !dbAvailable) return [];
+      const { data, error } = await (supabase as any)
+        .from("attendance_v2_delegations")
+        .select("*")
+        .eq("class_id", classId)
+        .is("revoked_at", null)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data as any || []) as Delegation[];
+    },
+    enabled: !!user && !!classId && dbAvailable,
+  });
+
+  const delegations = delegationsQuery.data || [];
+
+  // Create Delegation Mutation
+  const createDelegationMutation = useMutation({
+    mutationFn: async (payload: { granteeUserId: string; granteeLabel: string; startsAt: Date; endsAt: Date }) => {
+      if (!user || !classId || !dbAvailable) return;
+      
+      const { error } = await (supabase as any)
+        .from("attendance_v2_delegations")
+        .insert([{
+          user_id: user.id,
+          class_id: classId,
+          granted_by: user.id,
+          grantee_user_id: payload.granteeUserId,
+          grantee_label: payload.granteeLabel,
+          actor_role: "substitute",
+          permissions: ["read", "write"],
+          starts_at: payload.startsAt.toISOString(),
+          ends_at: payload.endsAt.toISOString(),
+        }]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_delegations", classId] });
+    },
+  });
+
+  // Revoke Delegation Mutation
+  const revokeDelegationMutation = useMutation({
+    mutationFn: async (delegationId: string) => {
+      if (!user || !dbAvailable) return;
+
+      const { error } = await (supabase as any)
+        .from("attendance_v2_delegations")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", delegationId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_delegations", classId] });
+    },
+  });
+
   // ✅ PERBAIKAN FINAL: Explicit conditionals untuk menghitung stats
   const getMonthStats = useCallback(() => {
     const stats = { H: 0, I: 0, S: 0, A: 0, D: 0, total: 0 };
@@ -779,6 +1048,29 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     promoteV2ToV1: async () => {
       await promoteMutation.mutateAsync();
     },
+    recapProfile,
+    snapshots,
+    delegations,
+    updateRecapProfile: async (profile: Omit<RecapProfile, "id"> & { id?: string }) => {
+      await upsertRecapProfileMutation.mutateAsync(profile);
+    },
+    createSnapshot: async (reason: string | null) => {
+      await createSnapshotMutation.mutateAsync(reason);
+    },
+    restoreSnapshot: async (snapshotId: string) => {
+      await restoreSnapshotMutation.mutateAsync(snapshotId);
+    },
+    createDelegation: async (params: { granteeUserId: string; granteeLabel: string; startsAt: Date; endsAt: Date }) => {
+      await createDelegationMutation.mutateAsync(params);
+    },
+    revokeDelegation: async (delegationId: string) => {
+      await revokeDelegationMutation.mutateAsync(delegationId);
+    },
+    isUpdatingRecapProfile: upsertRecapProfileMutation.isPending,
+    isCreatingSnapshot: createSnapshotMutation.isPending,
+    isRestoringSnapshot: restoreSnapshotMutation.isPending,
+    isCreatingDelegation: createDelegationMutation.isPending,
+    isRevokingDelegation: revokeDelegationMutation.isPending,
     isSaving: setAttendanceMutation.isPending || bulkSetAttendanceMutation.isPending || updateNoteMutation.isPending,
     isTogglingHoliday: toggleHolidayMutation.isPending,
     isTogglingLock: toggleLockMutation.isPending,
