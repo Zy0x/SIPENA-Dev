@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal as supabase, EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, startOfMonth, endOfMonth, getDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, getDay, eachDayOfInterval } from "date-fns";
 import { useMemo } from "react";
 import { useAttendanceRuntime } from "@/features/attendance/runtime/useAttendanceRuntime";
 import { providerConfig } from "@/config/provider.config";
@@ -121,19 +121,68 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const monthStr = monthStart.substring(0, 7);
       const url = `${providerConfig.apiBaseUrl}/attendance/v2?classId=${classId}&month=${monthStr}`;
 
-      const res = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token || ""}`,
-        },
-      });
+      try {
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token || ""}`,
+          },
+        });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && !json.error) {
+            return json.data as AttendanceDatasetCanonical;
+          }
+        }
+      } catch (apiError) {
+        console.warn("V2 API Fetch failed, falling back to direct Supabase queries:", apiError);
       }
 
-      const json = await res.json();
-      return json.data as AttendanceDatasetCanonical;
+      // Direct Supabase Fallback Fetch
+      const [recordsRes, holidaysRes, dayEventsRes, locksRes, studentsRes] = await Promise.all([
+        (supabase as any).from("attendance_v2_records").select("*").eq("class_id", classId).gte("date", monthStart).lte("date", monthEnd),
+        (supabase as any).from("attendance_v2_holidays").select("*").or(`class_id.eq.${classId},class_id.is.null`).gte("date", monthStart).lte("date", monthEnd),
+        (supabase as any).from("attendance_v2_day_events").select("*").eq("class_id", classId).gte("date", monthStart).lte("date", monthEnd),
+        (supabase as any).from("attendance_v2_locks").select("*").eq("class_id", classId).eq("month", monthStr),
+        (supabase as any).from("students").select("id, name").eq("class_id", classId)
+      ]);
+
+      const daysOfInterval = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
+      const days = daysOfInterval.map(d => ({
+        date: format(d, "yyyy-MM-dd"),
+        dayOfWeek: getDay(d),
+      }));
+
+      return {
+        classId,
+        month: monthStr,
+        students: (studentsRes.data || []).map((s: any) => ({ id: s.id, name: s.name })),
+        records: (recordsRes.data || []).map((r: any) => ({
+          id: r.id,
+          classId: r.class_id,
+          studentId: r.student_id,
+          date: r.date,
+          status: r.status,
+          note: r.note,
+        })),
+        holidays: (holidaysRes.data || []).map((h: any) => ({
+          id: h.id,
+          date: h.date,
+          description: h.description,
+        })),
+        dayEvents: (dayEventsRes.data || []).map((e: any) => ({
+          id: e.id,
+          date: e.date,
+          label: e.label,
+          description: e.description,
+          color: e.color,
+        })),
+        locks: (locksRes.data || []).map((l: any) => ({
+          isLocked: l.is_locked,
+        })),
+        days
+      } as AttendanceDatasetCanonical;
     },
     enabled: !!classId && !!user && dbAvailable,
   });
@@ -349,27 +398,43 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/record`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token || ""}`,
-        },
-        body: JSON.stringify({
-          classId,
-          studentId,
-          date,
-          status,
-          note: note !== undefined ? note : null,
-        }),
-      });
+      try {
+        const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/record`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token || ""}`,
+          },
+          body: JSON.stringify({
+            classId,
+            studentId,
+            date,
+            status,
+            note: note !== undefined ? note : null,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        if (response.ok) {
+          const json = await response.json();
+          return json.data;
+        }
+      } catch (apiError) {
+        console.warn("V2 API Record Save failed, falling back to direct Supabase RPC:", apiError);
       }
 
-      const json = await response.json();
-      return json.data;
+      // Fallback Direct Supabase RPC
+      const { data, error } = await (supabase as any).rpc("upsert_attendance_record", {
+        p_user_id: user.id,
+        p_class_id: classId,
+        p_student_id: studentId,
+        p_date: date,
+        p_status: status,
+        p_note: note !== undefined ? note : null,
+        p_source: "manual",
+      });
+
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       if (dbAvailable) {
@@ -400,23 +465,35 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/note`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token || ""}`,
-        },
-        body: JSON.stringify({
-          classId,
-          studentId,
-          date,
-          note,
-        }),
-      });
+      try {
+        const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/note`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token || ""}`,
+          },
+          body: JSON.stringify({
+            classId,
+            studentId,
+            date,
+            note,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        if (response.ok) return;
+      } catch (apiError) {
+        console.warn("V2 API Update Note failed, falling back to direct Supabase update:", apiError);
       }
+
+      // Fallback Direct Supabase Call
+      const { error } = await (supabase as any)
+        .from("attendance_v2_records")
+        .update({ note })
+        .eq("class_id", classId)
+        .eq("student_id", studentId)
+        .eq("date", date);
+
+      if (error) throw error;
     },
     onSuccess: () => {
       if (dbAvailable) {
@@ -451,28 +528,47 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/bulk`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token || ""}`,
-        },
-        body: JSON.stringify({
-          patches: studentIds.map(studentId => ({
-            classId,
-            studentId,
-            date,
-            status,
-          })),
-        }),
-      });
+      try {
+        const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/bulk`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token || ""}`,
+          },
+          body: JSON.stringify({
+            patches: studentIds.map(studentId => ({
+              classId,
+              studentId,
+              date,
+              status,
+            })),
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        if (response.ok) {
+          const json = await response.json();
+          return json.data;
+        }
+      } catch (apiError) {
+        console.warn("V2 API Bulk Save failed, falling back to direct Supabase RPCs:", apiError);
       }
 
-      const json = await response.json();
-      return json.data;
+      // Fallback Direct Supabase RPC
+      const results = [];
+      for (const studentId of studentIds) {
+        const { data, error } = await (supabase as any).rpc("upsert_attendance_record", {
+          p_user_id: user.id,
+          p_class_id: classId,
+          p_student_id: studentId,
+          p_date: date,
+          p_status: status,
+          p_note: null,
+          p_source: "manual",
+        });
+        if (error) throw error;
+        results.push(data);
+      }
+      return results;
     },
     onSuccess: () => {
       if (dbAvailable) {
