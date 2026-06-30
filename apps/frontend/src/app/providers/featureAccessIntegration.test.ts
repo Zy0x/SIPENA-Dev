@@ -48,6 +48,27 @@ describe("feature access integration guard", () => {
     expect(mirror).not.toContain("AttendanceV2Visualizer");
   });
 
+  it("keeps the attendance v2 settings modal structured and guided", () => {
+    const page = readSource("apps/frontend/src/pages/AttendanceV2.tsx");
+    expect(page).toContain("Pengaturan Presensi V2");
+    expect(page).toContain("settingsSection");
+    expect(page).toContain("settingsTourSteps");
+    expect(page).toContain('tourKey="attendance-v2-settings"');
+    expect(page).toContain('data-tour="attendance-v2-settings-calendar"');
+    expect(page).toContain('data-tour="attendance-v2-settings-effective"');
+    expect(page).toContain('data-tour="attendance-v2-settings-recap"');
+    expect(page).toContain('data-tour="attendance-v2-settings-audit"');
+    expect(page).toContain('data-tour="attendance-v2-settings-delegation"');
+    expect(page).toContain('data-tour="attendance-v2-settings-backup"');
+    expect(page).toContain("Kalender Akademik");
+    expect(page).toContain("Preview Hari Efektif");
+    expect(page).toContain("Profil Rekap Presensi");
+    expect(page).toContain("Audit Riwayat Perubahan");
+    expect(page).toContain("Delegasi Guru Pengganti");
+    expect(page).toContain("Backup Bulanan");
+    expect(page).not.toContain("Legacy Settings Dialog kept disabled");
+  });
+
   it("filters sidebar navigation with feature access", () => {
     const layout = readSource("apps/frontend/src/components/AppLayout.tsx");
     expect(layout).toContain("useFeatureFlags");

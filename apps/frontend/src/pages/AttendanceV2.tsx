@@ -391,6 +391,7 @@ export default function AttendanceV2Page() {
   const [delegationEndsAt, setDelegationEndsAt] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
   const [showSnapshotReasonDialog, setShowSnapshotReasonDialog] = useState(false);
   const [snapshotReason, setSnapshotReason] = useState("");
+  const [settingsSection, setSettingsSection] = useState<"calendar" | "effective" | "recap" | "audit" | "delegation" | "backup">("calendar");
 
   // Scroll handling is now fully managed by SmartScrollTable component
 
@@ -541,6 +542,60 @@ export default function AttendanceV2Page() {
       },
     ];
   }, [classes.length, students.length]);
+
+  const settingsTourSteps = useMemo(() => [
+    {
+      target: "[data-tour='attendance-v2-settings-header']",
+      title: "Pusat Pengaturan Presensi",
+      description: "Modal ini mengumpulkan kalender akademik, hari efektif, profil rekap, riwayat, delegasi, dan backup agar pengaturan tidak tersebar.",
+      prepare: () => {
+        setShowSettingsSheet(true);
+        setSettingsSection("calendar");
+      },
+    },
+    {
+      target: "[data-tour='attendance-v2-settings-nav']",
+      title: "Pilih Bagian Pengaturan",
+      description: "Gunakan menu ini untuk berpindah bagian. Di layar kecil menu bisa digeser secara horizontal.",
+      prepare: () => setSettingsSection("calendar"),
+    },
+    {
+      target: "[data-tour='attendance-v2-settings-calendar']",
+      title: "Kalender Akademik",
+      description: "Atur format hari kerja, libur kustom, libur nasional, akhir pekan yang dijadikan hari kerja, dan kegiatan khusus.",
+      prepare: () => setSettingsSection("calendar"),
+    },
+    {
+      target: "[data-tour='attendance-v2-settings-effective']",
+      title: "Preview Hari Efektif",
+      description: "Cek ringkasan jumlah hari kalender, hari efektif, libur, kegiatan, dan hari terkunci sebelum rekap atau ekspor.",
+      prepare: () => setSettingsSection("effective"),
+    },
+    {
+      target: "[data-tour='attendance-v2-settings-recap']",
+      title: "Profil Rekap",
+      description: "Tentukan status yang dianggap hadir dan kebijakan penyebut agar rumus rekap mengikuti kebutuhan sekolah.",
+      prepare: () => setSettingsSection("recap"),
+    },
+    {
+      target: "[data-tour='attendance-v2-settings-audit']",
+      title: "Riwayat Perubahan",
+      description: "Bagian ini disiapkan untuk memeriksa perubahan presensi: siapa editor, kapan berubah, dan nilai lama ke nilai baru.",
+      prepare: () => setSettingsSection("audit"),
+    },
+    {
+      target: "[data-tour='attendance-v2-settings-delegation']",
+      title: "Delegasi Guru Pengganti",
+      description: "Berikan akses sementara kepada guru pengganti. Semua perubahan tetap tercatat atas nama editor sebenarnya.",
+      prepare: () => setSettingsSection("delegation"),
+    },
+    {
+      target: "[data-tour='attendance-v2-settings-backup']",
+      title: "Backup Bulanan",
+      description: "Buat snapshot bulanan dan pulihkan bila terjadi kesalahan import atau edit massal.",
+      prepare: () => setSettingsSection("backup"),
+    },
+  ], []);
 
   const setupFullDummyData = () => {
     setIsTourDummyActive(true);
@@ -4383,545 +4438,493 @@ export default function AttendanceV2Page() {
           </DialogContent>
         </Dialog>
 
-        {/* Settings Dialog - Mobile Responsive Fix */}
+        {/* Settings Dialog - Presensi V2 professional control center */}
         <Dialog open={showSettingsSheet} onOpenChange={setShowSettingsSheet}>
-          <DialogContent
-            className={cn(
-              // Lebar: di mobile pakai hampir full width dengan margin kecil, md ke atas lebar
-              "w-[calc(100vw-1.5rem)] md:max-w-4xl lg:max-w-5xl",
-              // Posisi & tinggi
-              "mx-auto rounded-2xl",
-              "max-h-[90dvh] sm:max-h-[85vh]",
-              // Layout flex untuk header + scrollable content + footer
-              "flex flex-col p-0",
-              // Pastikan tidak ada overflow horizontal
-              "overflow-hidden"
-            )}
-          >
-            {/* Header — fixed, tidak ikut scroll */}
-            <DialogHeader className="px-4 pt-4 pb-3 flex-shrink-0 border-b border-border">
-              <DialogTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Settings2 className="w-4 h-4 text-primary flex-shrink-0" />
-                Pengaturan Presensi
-              </DialogTitle>
-              <DialogDescription className="text-[10px] sm:text-xs text-muted-foreground">
-                Atur format hari kerja, hari libur, dan kegiatan
-              </DialogDescription>
+          <DialogContent className="flex max-h-[92dvh] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden rounded-2xl p-0 sm:w-[calc(100vw-2rem)]">
+            <DialogHeader className="border-b px-4 py-4 sm:px-6" data-tour="attendance-v2-settings-header">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 space-y-1">
+                  <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <Settings2 className="h-5 w-5 text-primary" />
+                    Pengaturan Presensi V2
+                  </DialogTitle>
+                  <DialogDescription className="max-w-2xl text-xs sm:text-sm">
+                    Atur kalender akademik, hari efektif, profil rekap, delegasi, dan backup untuk kelas aktif tanpa mengubah Presensi V1.
+                  </DialogDescription>
+                </div>
+                <TourButton
+                  tourKey="attendance-v2-settings"
+                  className="min-h-11 w-full justify-center sm:w-auto"
+                  onBeforeStart={async () => {
+                    setShowSettingsSheet(true);
+                    setSettingsSection("calendar");
+                    await new Promise((resolve) => window.setTimeout(resolve, 120));
+                  }}
+                />
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                <div className="rounded-xl border bg-muted/20 px-3 py-2">
+                  <p className="text-muted-foreground">Kelas</p>
+                  <p className="truncate font-semibold">{selectedClass?.name || "Belum dipilih"}</p>
+                </div>
+                <div className="rounded-xl border bg-muted/20 px-3 py-2">
+                  <p className="text-muted-foreground">Bulan</p>
+                  <p className="font-semibold">{format(currentMonth, "MMMM yyyy", { locale: idLocale })}</p>
+                </div>
+                <div className="rounded-xl border bg-muted/20 px-3 py-2">
+                  <p className="text-muted-foreground">Hari Efektif</p>
+                  <p className="font-semibold">{effectiveDays} dari {monthDays.length} hari</p>
+                </div>
+                <div className="rounded-xl border bg-muted/20 px-3 py-2">
+                  <p className="text-muted-foreground">Status Bulan</p>
+                  <p className={cn("font-semibold", isLocked ? "text-amber-600" : "text-green-600")}>
+                    {isLocked ? "Terkunci" : "Bisa diedit"}
+                  </p>
+                </div>
+              </div>
             </DialogHeader>
 
-            {/* Scrollable body */}
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 py-4">
-                {/* Column 1: Konfigurasi & Admin */}
-                <div className="space-y-4">
-                  {/* Format Hari Kerja */}
-                  <div className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-border bg-muted/30">
-                      <p className="text-xs font-semibold text-foreground">Format Hari Kerja</p>
-                      <p className="text-[9px] text-muted-foreground mt-0.5">Pilih jumlah hari aktif sekolah</p>
-                    </div>
-                    {(
-                      [
-                        { key: "5days" as const, label: "5 Hari", desc: "Senin – Jumat" },
-                        { key: "6days" as const, label: "6 Hari", desc: "Senin – Sabtu" },
-                      ] as const
-                    ).map(({ key, label, desc }) => (
-                      <button
-                        key={key}
-                        onClick={() => handleWorkDayFormatChange(key)}
-                        className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors touch-manipulation hover:bg-muted/50 active:bg-muted/70 min-h-[44px] border-b border-border/30 last:border-0"
-                      >
-                        <div>
-                          <p className="font-medium text-xs text-foreground">{label}</p>
-                          <p className="text-[10px] text-muted-foreground">{desc}</p>
-                        </div>
-                        {workDayFormat === key && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
-                      </button>
-                    ))}
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
+                <aside className="border-b bg-muted/10 p-3 lg:border-b-0 lg:border-r lg:p-4" data-tour="attendance-v2-settings-nav">
+                  <div className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
+                    {[
+                      { id: "calendar", label: "Kalender", icon: CalendarDays, desc: "Libur, event, hari kerja" },
+                      { id: "effective", label: "Hari Efektif", icon: BarChart3, desc: "Ringkasan dan alasan" },
+                      { id: "recap", label: "Profil Rekap", icon: FileSpreadsheet, desc: "Rumus HSIAD/SIA/custom" },
+                      { id: "audit", label: "Riwayat", icon: Clock, desc: "Audit perubahan" },
+                      { id: "delegation", label: "Delegasi", icon: UserPlus, desc: "Guru pengganti" },
+                      { id: "backup", label: "Backup", icon: Camera, desc: "Snapshot bulanan" },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      const active = settingsSection === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSettingsSection(item.id as typeof settingsSection)}
+                          className={cn(
+                            "min-h-11 min-w-[9rem] rounded-xl border px-3 py-2 text-left transition-colors touch-manipulation lg:w-full",
+                            active
+                              ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                              : "border-border bg-background hover:bg-muted/60"
+                          )}
+                          aria-pressed={active}
+                        >
+                          <span className="flex items-center gap-2 text-sm font-semibold">
+                            <Icon className="h-4 w-4" />
+                            {item.label}
+                          </span>
+                          <span className={cn("mt-0.5 hidden text-[11px] lg:block", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                            {item.desc}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
+                </aside>
 
-                  {/* Recap Profile Settings */}
-                  <div className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-border bg-muted/30">
-                      <p className="text-xs font-semibold text-foreground">Formula & Profil Rekapitulasi</p>
-                      <p className="text-[9px] text-muted-foreground mt-0.5">Atur status hitungan persentase dan penyebut</p>
-                    </div>
-                    <div className="p-3 space-y-3">
-                      {/* Denominator Policy */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground uppercase font-medium">Kebijakan Penyebut (Denominator)</Label>
-                        <div className="grid grid-cols-2 gap-1.5 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateRecapProfile({ denominator_policy: "effective_days" })}
-                            className={cn(
-                              "px-2.5 py-1.5 text-left border rounded-xl text-[11px] transition-all",
-                              recapProfile.denominator_policy === "effective_days"
-                                ? "border-primary bg-primary/5 text-primary font-medium"
-                                : "border-border hover:bg-muted/50"
-                            )}
-                          >
-                            Hari Efektif ({effectiveDays} hari)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateRecapProfile({ denominator_policy: "filled_days" })}
-                            className={cn(
-                              "px-2.5 py-1.5 text-left border rounded-xl text-[11px] transition-all",
-                              recapProfile.denominator_policy === "filled_days"
-                                ? "border-primary bg-primary/5 text-primary font-medium"
-                                : "border-border hover:bg-muted/50"
-                            )}
-                          >
-                            Hari Terisi (Filled Days)
-                          </button>
+                <div className="min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5">
+                  {settingsSection === "calendar" && (
+                    <section className="space-y-4" data-tour="attendance-v2-settings-calendar">
+                      <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <h3 className="text-base font-semibold">Kalender Akademik</h3>
+                            <p className="text-sm text-muted-foreground">Kelola hari kerja, libur, dan kegiatan yang memengaruhi presensi bulan ini.</p>
+                          </div>
+                          <Badge variant="outline" className="w-fit">{workDayFormat === "5days" ? "5 hari sekolah" : "6 hari sekolah"}</Badge>
                         </div>
-                      </div>
-                      
-                      {/* Status yang dihitung Hadir */}
-                      <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground uppercase font-medium">Status Dianggap Hadir</Label>
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          {(["H", "S", "I", "A", "D"] as const).map((status) => {
-                            const isPresent = recapProfile.present_statuses.includes(status);
-                            return (
-                              <button
-                                key={status}
-                                type="button"
-                                onClick={() => handleToggleRecapStatus("present", status)}
-                                className={cn(
-                                  "h-7 px-2.5 rounded-lg border text-xs flex items-center gap-1 transition-all",
-                                  isPresent
-                                    ? "border-green-200 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300 font-semibold"
-                                    : "border-border text-muted-foreground hover:bg-muted/30"
-                                )}
-                              >
-                                {status} {isPresent && "✓"}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Snapshot & Restore */}
-                  <div className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-border bg-muted/30 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground">Snapshot & Pemulihan</p>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">Kunci dan simpan snapshot bulanan tetap</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-[10px] gap-1 rounded-lg flex-shrink-0"
-                        onClick={() => setShowSnapshotReasonDialog(true)}
-                        disabled={isCreatingSnapshot}
-                      >
-                        <Camera className="w-3 h-3" />
-                        Snapshot
-                      </Button>
-                    </div>
-                    
-                    {snapshots.length === 0 ? (
-                      <p className="px-3 py-4 text-xs text-muted-foreground text-center">
-                        Belum ada snapshot bulanan untuk periode ini
-                      </p>
-                    ) : (
-                      <div className="max-h-[140px] overflow-y-auto overscroll-auto">
-                        {snapshots.map((snap) => (
-                          <div
-                            key={snap.id}
-                            className="flex items-center justify-between px-3 py-2 border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors"
-                          >
-                            <div className="min-w-0 flex-1 pr-2">
-                              <p className="text-xs font-medium text-foreground">
-                                {format(new Date(snap.created_at), "d MMMM yyyy HH:mm", { locale: idLocale })}
-                              </p>
-                              <p className="text-[9px] text-muted-foreground truncate">
-                                Alasan: {snap.reason || "Rilis Bulan"}
-                              </p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 px-2 text-[9px] gap-1 rounded-md text-primary"
-                              onClick={() => handleRestoreSnapshotAction(snap.id)}
-                              disabled={isRestoringSnapshot}
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          {([
+                            { key: "5days" as const, label: "5 Hari", desc: "Senin sampai Jumat" },
+                            { key: "6days" as const, label: "6 Hari", desc: "Senin sampai Sabtu" },
+                          ] as const).map(({ key, label, desc }) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => handleWorkDayFormatChange(key)}
+                              className={cn(
+                                "min-h-14 rounded-xl border px-4 py-3 text-left transition-colors touch-manipulation",
+                                workDayFormat === key ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/50"
+                              )}
                             >
-                              <RotateCcw className="w-2.5 h-2.5" />
-                              Restore
+                              <span className="flex items-center justify-between gap-3">
+                                <span>
+                                  <span className="block font-semibold">{label}</span>
+                                  <span className="text-xs text-muted-foreground">{desc}</span>
+                                </span>
+                                {workDayFormat === key && <Check className="h-4 w-4" />}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 xl:grid-cols-2">
+                        <div className="rounded-2xl border bg-card shadow-sm">
+                          <div className="flex items-center justify-between gap-3 border-b p-4">
+                            <div className="min-w-0">
+                              <h4 className="font-semibold">Hari Libur Kustom</h4>
+                              <p className="text-xs text-muted-foreground">Libur khusus kelas atau sekolah.</p>
+                            </div>
+                            <Button variant="outline" size="sm" className="min-h-10 gap-2" onClick={() => setShowHolidayDialog(true)}>
+                              <CalendarOff className="h-4 w-4" />
+                              Tambah
                             </Button>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                          <div className="max-h-56 overflow-y-auto">
+                            {holidays.length === 0 ? (
+                              <p className="p-4 text-sm text-muted-foreground">Belum ada hari libur kustom.</p>
+                            ) : (
+                              holidays.map((h) => {
+                                const hDate = new Date(h.date);
+                                return (
+                                  <div key={`${h.date}-${h.class_id || "all"}`} className="flex items-center justify-between gap-3 border-b p-3 last:border-b-0">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-medium">{format(hDate, "EEEE, d MMM yyyy", { locale: idLocale })}</p>
+                                      <p className="truncate text-xs text-muted-foreground">{h.description}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-[10px]">{h.class_id ? "Kelas" : "Sekolah"}</Badge>
+                                      <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => handleRemoveHoliday(h.date, h.class_id)}>
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
 
-                  {/* Delegations Substitute Teacher */}
-                  <div className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-border bg-muted/30 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground">Guru Pengganti (Delegasi)</p>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">Beri izin akses temporer ke guru lain</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-[10px] gap-1 rounded-lg flex-shrink-0"
-                        onClick={() => setShowDelegationDialog(true)}
-                      >
-                        <UserPlus className="w-3 h-3" />
-                        Tambah
-                      </Button>
-                    </div>
-                    
-                    {delegations.length === 0 ? (
-                      <p className="px-3 py-4 text-xs text-muted-foreground text-center">
-                        Belum ada delegasi aktif
-                      </p>
-                    ) : (
-                      <div className="max-h-[140px] overflow-y-auto overscroll-auto">
-                        {delegations.map((del) => (
-                          <div
-                            key={del.id}
-                            className="flex items-center justify-between px-3 py-2 border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors"
-                          >
-                            <div className="min-w-0 flex-1 pr-2">
-                              <p className="text-xs font-medium text-foreground">
-                                {del.grantee_label || del.grantee_user_id}
-                              </p>
-                              <p className="text-[9px] text-muted-foreground truncate">
-                                {format(new Date(del.starts_at), "d MMM")} – {format(new Date(del.ends_at), "d MMM yyyy", { locale: idLocale })}
-                              </p>
+                        <div className="rounded-2xl border bg-card shadow-sm">
+                          <div className="flex items-center justify-between gap-3 border-b p-4">
+                            <div className="min-w-0">
+                              <h4 className="font-semibold">Kegiatan Khusus</h4>
+                              <p className="text-xs text-muted-foreground">Ujian, study tour, class meeting, dan aktivitas lain.</p>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-destructive hover:bg-destructive/10 flex-shrink-0"
-                              onClick={() => handleRevokeDelegationAction(del.id)}
-                              disabled={isRevokingDelegation}
-                            >
-                              <X className="w-3 h-3" />
+                            <Button variant="outline" size="sm" className="min-h-10 gap-2" onClick={() => setShowDayEventDialog(true)}>
+                              <Bookmark className="h-4 w-4" />
+                              Tambah
                             </Button>
                           </div>
-                        ))}
+                          <div className="max-h-56 overflow-y-auto">
+                            {dayEvents.length === 0 ? (
+                              <p className="p-4 text-sm text-muted-foreground">Belum ada kegiatan khusus.</p>
+                            ) : (
+                              dayEvents.map((event) => {
+                                const eventDate = new Date(event.date);
+                                return (
+                                  <div key={event.date} className="flex items-center justify-between gap-3 border-b p-3 last:border-b-0">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-medium">{format(eventDate, "EEEE, d MMM yyyy", { locale: idLocale })}</p>
+                                      <p className="truncate text-xs text-muted-foreground">{event.label}{event.description ? ` - ${event.description}` : ""}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => handleRemoveDayEvent(event.date)}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Column 2: Kalender & Event */}
-                <div className="space-y-4">
-                  {/* Hari Libur Kustom */}
-                  <div className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-border bg-muted/30 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground">Hari Libur Kustom</p>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">Tambahkan tanggal libur sekolah</p>
+                      <div className="rounded-2xl border bg-card shadow-sm">
+                        <div className="border-b p-4">
+                          <h4 className="flex items-center gap-2 font-semibold">
+                            <Globe className="h-4 w-4 text-red-500" />
+                            Libur Nasional dan Akhir Pekan
+                          </h4>
+                          <p className="text-xs text-muted-foreground">Tanggal nasional atau Sabtu/Minggu bisa dioverride menjadi hari kerja bila sekolah tetap masuk.</p>
+                        </div>
+                        <div className="grid gap-0 md:grid-cols-2">
+                          <div className="border-b p-4 md:border-b-0 md:border-r">
+                            <div className="mb-3 flex items-center justify-between">
+                              <p className="text-sm font-semibold">Libur nasional bulan ini</p>
+                              <Badge variant="secondary">{monthNationalHolidays.length}</Badge>
+                            </div>
+                            <div className="max-h-52 overflow-y-auto space-y-2">
+                              {monthNationalHolidays.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">Tidak ada libur nasional bulan ini.</p>
+                              ) : monthNationalHolidays.map((nh) => {
+                                const isOverridden = holidays.some((h) => h.date === nh.date && h.description === "Hari Kerja");
+                                return (
+                                  <div key={nh.date} className="flex items-center justify-between gap-2 rounded-xl border px-3 py-2">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-medium">{format(new Date(nh.date), "d MMM yyyy", { locale: idLocale })}</p>
+                                      <p className="truncate text-xs text-muted-foreground">{nh.name}</p>
+                                    </div>
+                                    <Button
+                                      variant={isOverridden ? "default" : "outline"}
+                                      size="sm"
+                                      className="min-h-9"
+                                      onClick={async () => {
+                                        if (isOverridden) {
+                                          await toggleHoliday({ date: nh.date });
+                                          showSuccess("Dipulihkan", `${nh.name} kembali menjadi hari libur`);
+                                        } else {
+                                          await toggleHoliday({ date: nh.date, description: "Hari Kerja" });
+                                          showSuccess("Diubah", `${nh.name} dijadikan hari kerja`);
+                                        }
+                                      }}
+                                    >
+                                      {isOverridden ? "Pulihkan" : "Jadikan Kerja"}
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="p-4">
+                            <div className="mb-3 flex items-center justify-between">
+                              <p className="text-sm font-semibold">Sabtu/Minggu bulan ini</p>
+                              <Badge variant="secondary">{monthDays.filter((day) => [0, 6].includes(getDay(day))).length}</Badge>
+                            </div>
+                            <div className="max-h-52 overflow-y-auto space-y-2">
+                              {monthDays.filter((day) => [0, 6].includes(getDay(day))).map((day) => {
+                                const dateStr = format(day, "yyyy-MM-dd");
+                                const isOverridden = holidays.some((h) => h.date === dateStr && h.description === "Hari Kerja");
+                                return (
+                                  <div key={dateStr} className="flex items-center justify-between gap-2 rounded-xl border px-3 py-2">
+                                    <div>
+                                      <p className="text-sm font-medium">{format(day, "EEEE, d MMM", { locale: idLocale })}</p>
+                                      <p className="text-xs text-muted-foreground">{isOverridden ? "Dijadikan hari kerja" : "Libur default"}</p>
+                                    </div>
+                                    <Button
+                                      variant={isOverridden ? "default" : "outline"}
+                                      size="sm"
+                                      className="min-h-9"
+                                      onClick={async () => {
+                                        if (isOverridden) {
+                                          await toggleHoliday({ date: dateStr });
+                                          showSuccess("Dipulihkan", `${format(day, "EEEE, d MMM", { locale: idLocale })} kembali menjadi hari libur`);
+                                        } else {
+                                          await toggleHoliday({ date: dateStr, description: "Hari Kerja" });
+                                          showSuccess("Diubah", `${format(day, "EEEE, d MMM", { locale: idLocale })} dijadikan hari kerja`);
+                                        }
+                                      }}
+                                    >
+                                      {isOverridden ? "Pulihkan" : "Jadikan Kerja"}
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-[10px] gap-1 rounded-lg flex-shrink-0"
-                        onClick={() => {
-                          setShowHolidayDialog(true);
-                        }}
-                      >
-                        <CalendarOff className="w-3 h-3" />
-                        Tambah
-                      </Button>
-                    </div>
+                    </section>
+                  )}
 
-                    {holidays.length === 0 ? (
-                      <p className="px-3 py-4 text-xs text-muted-foreground text-center">
-                        Belum ada hari libur kustom
-                      </p>
-                    ) : (
-                      <div className="max-h-[160px] overflow-y-auto overscroll-auto">
-                        {holidays.map((h) => {
-                          const hDate = new Date(h.date);
-                          const dayName = format(hDate, "EEEE", { locale: idLocale });
-                          return (
-                            <div
-                              key={h.date}
-                              className="flex items-center justify-between px-3 py-2.5 border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors"
-                            >
-                              <div className="min-w-0 flex-1 pr-2">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-xs font-medium text-foreground">
-                                    {dayName}, {format(hDate, "d MMM yyyy", { locale: idLocale })}
-                                  </span>
-                                  <Badge 
-                                    variant="outline" 
+                  {settingsSection === "effective" && (
+                    <section className="space-y-4" data-tour="attendance-v2-settings-effective">
+                      <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                        <h3 className="text-base font-semibold">Preview Hari Efektif</h3>
+                        <p className="text-sm text-muted-foreground">Gunakan ringkasan ini sebelum melakukan rekap atau ekspor agar angka penyebut mudah diperiksa.</p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                          {[
+                            { label: "Total Hari", value: monthDays.length, tone: "bg-muted/40" },
+                            { label: "Hari Efektif", value: effectiveDays, tone: "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-300" },
+                            { label: "Libur Kustom", value: holidays.filter((h) => h.description !== "Hari Kerja").length, tone: "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-300" },
+                            { label: "Libur Nasional", value: monthNationalHolidays.length, tone: "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-300" },
+                            { label: "Event", value: dayEvents.length, tone: "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300" },
+                          ].map((item) => (
+                            <div key={item.label} className={cn("rounded-xl border p-3", item.tone)}>
+                              <p className="text-xs opacity-80">{item.label}</p>
+                              <p className="text-2xl font-bold">{item.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border bg-card shadow-sm">
+                        <div className="border-b p-4">
+                          <h4 className="font-semibold">Alasan Tanggal Tidak Efektif</h4>
+                          <p className="text-xs text-muted-foreground">Tanggal yang tidak dihitung sebagai hari efektif harus memiliki alasan yang jelas.</p>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {monthDays.filter((day) => isHolidayCombined(day)).length === 0 ? (
+                            <p className="p-4 text-sm text-muted-foreground">Tidak ada tanggal non-efektif pada bulan ini.</p>
+                          ) : (
+                            monthDays.filter((day) => isHolidayCombined(day)).map((day) => (
+                              <div key={day.toISOString()} className="flex items-center justify-between gap-3 border-b p-3 last:border-b-0">
+                                <div>
+                                  <p className="text-sm font-medium">{format(day, "EEEE, d MMMM yyyy", { locale: idLocale })}</p>
+                                  <p className="text-xs text-muted-foreground">{getHolidayDescriptionCombined(day) || "Akhir pekan / hari tidak efektif"}</p>
+                                </div>
+                                <Badge variant="outline">Tidak efektif</Badge>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                  {settingsSection === "recap" && (
+                    <section className="space-y-4" data-tour="attendance-v2-settings-recap">
+                      <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                        <h3 className="text-base font-semibold">Profil Rekap Presensi</h3>
+                        <p className="text-sm text-muted-foreground">Atur status yang dihitung sebagai hadir, tidak hadir, atau hanya catatan. Pengaturan ini mengikuti kebutuhan sekolah.</p>
+                        {!recapProfile ? (
+                          <div className="mt-4 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Profil rekap belum tersedia untuk kelas ini.</div>
+                        ) : (
+                          <div className="mt-4 space-y-4">
+                            <div>
+                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Kebijakan Penyebut</Label>
+                              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                {[
+                                  { value: "effective_days", label: `Hari Efektif (${effectiveDays})`, desc: "Cocok untuk rekap bulanan resmi." },
+                                  { value: "filled_days", label: "Hari Terisi", desc: "Cocok saat data belum lengkap." },
+                                ].map((item) => (
+                                  <button
+                                    key={item.value}
+                                    type="button"
+                                    onClick={() => handleUpdateRecapProfile({ denominator_policy: item.value as RecapProfile["denominator_policy"] })}
                                     className={cn(
-                                      "text-[9px] px-1 py-0 h-4",
-                                      h.class_id 
-                                        ? "border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
-                                        : "border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300"
+                                      "min-h-16 rounded-xl border px-4 py-3 text-left transition-colors",
+                                      recapProfile.denominator_policy === item.value ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted/50"
                                     )}
                                   >
-                                    {h.class_id ? "Kelas Ini" : "Semua Kelas"}
-                                  </Badge>
+                                    <span className="block font-semibold">{item.label}</span>
+                                    <span className="text-xs text-muted-foreground">{item.desc}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              {[
+                                { type: "present" as const, title: "Status Dianggap Hadir", list: recapProfile.present_statuses, tone: "green" },
+                                { type: "absence" as const, title: "Status Dianggap Tidak Hadir", list: recapProfile.absence_statuses, tone: "red" },
+                              ].map((group) => (
+                                <div key={group.type} className="rounded-xl border p-3">
+                                  <p className="text-sm font-semibold">{group.title}</p>
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {(["H", "S", "I", "A", "D"] as const).map((status) => {
+                                      const selected = group.list.includes(status);
+                                      return (
+                                        <button
+                                          key={`${group.type}-${status}`}
+                                          type="button"
+                                          onClick={() => handleToggleRecapStatus(group.type, status)}
+                                          className={cn(
+                                            "min-h-10 rounded-xl border px-3 text-sm font-semibold transition-colors",
+                                            selected
+                                              ? group.tone === "green"
+                                                ? "border-green-200 bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-300"
+                                                : "border-red-200 bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-300"
+                                              : "border-border text-muted-foreground hover:bg-muted/50"
+                                          )}
+                                        >
+                                          {status}{selected ? " ✓" : ""}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground truncate">{h.description}</p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive hover:bg-destructive/10 flex-shrink-0"
-                                onClick={() => handleRemoveHoliday(h.date, h.class_id)}
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
+                              ))}
                             </div>
-                          );
-                        })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </section>
+                  )}
 
-                  {/* Hari Libur Nasional - Editable */}
-                  <div className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-border bg-red-50/50 dark:bg-red-950/20 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                          <Globe className="w-3.5 h-3.5 text-red-500" />
-                          Hari Libur Nasional
-                        </p>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">
-                          Sinkron otomatis • Ketuk untuk override menjadi hari kerja
-                        </p>
+                  {settingsSection === "audit" && (
+                    <section className="space-y-4" data-tour="attendance-v2-settings-audit">
+                      <div className="rounded-2xl border bg-card p-4 shadow-sm">
+                        <h3 className="text-base font-semibold">Audit Riwayat Perubahan</h3>
+                        <p className="text-sm text-muted-foreground">Riwayat akan menampilkan editor, waktu, nilai lama, nilai baru, dan sumber perubahan ketika audit V2 aktif pada data kelas.</p>
+                        <div className="mt-4 rounded-xl border border-dashed bg-muted/20 p-5 text-center">
+                          <Clock className="mx-auto h-8 w-8 text-muted-foreground" />
+                          <p className="mt-2 font-semibold">Belum ada riwayat yang ditampilkan</p>
+                          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">Perubahan dari input manual, import, OCR, restore, dan delegasi akan tampil di sini setelah audit kelas tersedia.</p>
+                        </div>
                       </div>
-                      <Badge variant="secondary" className="text-[8px] px-1.5 py-0 flex-shrink-0">
-                        {monthNationalHolidays.length} bulan ini
-                      </Badge>
-                    </div>
-                    {monthNationalHolidays.length === 0 ? (
-                      <p className="px-3 py-4 text-xs text-muted-foreground text-center">
-                        Tidak ada libur nasional bulan ini
-                      </p>
-                    ) : (
-                      <div className="max-h-[200px] overflow-y-auto overscroll-auto">
-                        {monthNationalHolidays.map((nh) => {
-                          const nhDate = new Date(nh.date);
-                          const dayName = format(nhDate, "EEEE", { locale: idLocale });
-                          const isOverridden = holidays.some(h => h.date === nh.date && h.description === "Hari Kerja");
-                          return (
-                            <div
-                              key={nh.date}
-                              className={cn(
-                                "flex items-center justify-between px-3 py-2.5 border-b border-border/30 last:border-0 transition-colors",
-                                isOverridden ? "bg-primary/5 opacity-60" : "hover:bg-muted/30"
-                              )}
-                            >
-                              <div className="min-w-0 flex-1 pr-2">
-                                <p className={cn("text-xs font-medium", isOverridden ? "text-muted-foreground line-through" : "text-foreground")}>
-                                  {dayName}, {format(nhDate, "d MMM yyyy", { locale: idLocale })}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground truncate">
-                                  🇮🇩 {nh.name}
-                                  {isOverridden && <span className="ml-1 text-primary font-medium">(Diubah jadi hari kerja)</span>}
-                                </p>
-                              </div>
-                              <Button
-                                variant={isOverridden ? "default" : "outline"}
-                                size="sm"
-                                className={cn("h-7 px-2 text-[9px] gap-1 rounded-lg flex-shrink-0", isOverridden && "bg-primary text-primary-foreground")}
-                                onClick={async () => {
-                                  if (isOverridden) {
-                                    await toggleHoliday({ date: nh.date });
-                                    showSuccess("Dipulihkan", `${nh.name} kembali menjadi hari libur`);
-                                  } else {
-                                    await toggleHoliday({ date: nh.date, description: "Hari Kerja" });
-                                    showSuccess("Diubah", `${nh.name} dijadikan hari kerja`);
-                                  }
-                                }}
-                              >
-                                {isOverridden ? (
-                                  <><CalendarOff className="w-3 h-3" /> Pulihkan</>
-                                ) : (
-                                  <><Check className="w-3 h-3" /> Jadikan Kerja</>
-                                )}
-                              </Button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <div className="px-3 py-2 bg-muted/20 border-t border-border">
-                      <p className="text-[9px] text-muted-foreground leading-relaxed">
-                        💡 Ketuk "Jadikan Kerja" untuk mengubah hari libur nasional menjadi hari sekolah aktif. Ketuk "Pulihkan" untuk mengembalikannya.
-                      </p>
-                    </div>
-                  </div>
+                    </section>
+                  )}
 
-                  {/* Weekend Override - Direct Toggle */}
-                  <div className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-border bg-amber-50/50 dark:bg-amber-950/20 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                          <Sun className="w-3.5 h-3.5 text-grade-warning" />
-                          Jadikan Sabtu/Minggu Hari Kerja
-                        </p>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">
-                          Pilih tanggal untuk dijadikan hari kerja
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {monthDays.filter(day => {
-                      const dayOfWeek = getDay(day);
-                      return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
-                    }).length === 0 ? (
-                      <p className="px-3 py-4 text-xs text-muted-foreground text-center">
-                        Tidak ada hari Sabtu/Minggu bulan ini
-                      </p>
-                    ) : (
-                      <div className="max-h-[220px] overflow-y-auto overscroll-auto">
-                        {monthDays.filter(day => {
-                          const dayOfWeek = getDay(day);
-                          return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
-                        }).map((day) => {
-                          const dayOfWeek = getDay(day);
-                          const dayName = dayOfWeek === 0 ? "Minggu" : "Sabtu";
-                          const dateStr = format(day, "yyyy-MM-dd");
-                          const isOverridden = holidays.some(h => h.date === dateStr && h.description === "Hari Kerja");
-                          
-                          return (
-                            <div
-                              key={dateStr}
-                              className={cn(
-                                "flex items-center justify-between px-3 py-2.5 border-b border-border/30 last:border-0 transition-colors",
-                                isOverridden ? "bg-primary/5" : "hover:bg-muted/30"
-                              )}
-                            >
-                              <div className="min-w-0 flex-1 pr-2">
-                                <p className={cn("text-xs font-medium", isOverridden ? "text-muted-foreground line-through" : "text-foreground")}>
-                                  {dayName}, {format(day, "d MMM yyyy", { locale: idLocale })}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {isOverridden ? "✓ Dijadikan hari kerja" : "Libur"}
-                                </p>
-                              </div>
-                              <Button
-                                variant={isOverridden ? "default" : "outline"}
-                                size="sm"
-                                className={cn("h-7 px-2.5 text-[9px] gap-1 rounded-lg flex-shrink-0", isOverridden && "bg-primary text-primary-foreground")}
-                                onClick={async () => {
-                                  if (isOverridden) {
-                                    // Remove override
-                                    await toggleHoliday({ date: dateStr });
-                                    showSuccess("Dipulihkan", `${dayName}, ${format(day, "d MMM")} kembali menjadi hari libur`);
-                                  } else {
-                                    // Add override
-                                    await toggleHoliday({ date: dateStr, description: "Hari Kerja" });
-                                    showSuccess("Diubah", `${dayName}, ${format(day, "d MMM")} dijadikan hari kerja`);
-                                  }
-                                }}
-                              >
-                                {isOverridden ? (
-                                  <><CalendarOff className="w-3 h-3" /> Pulihkan</>  
-                                ) : (
-                                  <><Check className="w-3 h-3" /> Jadikan Kerja</>
-                                )}
-                              </Button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
-                    <div className="px-3 py-2 bg-muted/20 border-t border-border">
-                      <p className="text-[9px] text-muted-foreground leading-relaxed">
-                        💡 Klik "Jadikan Kerja" untuk mengubah hari Sabtu/Minggu menjadi hari sekolah aktif (misalnya untuk kegiatan di akhir pekan). Klik "Pulihkan" untuk mengembalikannya.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Kegiatan Khusus */}
-                  <div className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="px-3 py-2.5 border-b border-border bg-muted/30 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground">Kegiatan Khusus</p>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">Tandai tanggal khusus (ujian, study tour, dll)</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-[10px] gap-1 rounded-lg flex-shrink-0"
-                        onClick={() => {
-                          setShowDayEventDialog(true);
-                        }}
-                      >
-                        <Bookmark className="w-3 h-3" />
-                        Tambah
-                      </Button>
-                    </div>
-
-                    {dayEvents.length === 0 ? (
-                      <p className="px-3 py-4 text-xs text-muted-foreground text-center">
-                        Belum ada kegiatan khusus
-                      </p>
-                    ) : (
-                      <div className="max-h-[160px] overflow-y-auto overscroll-auto">
-                        {dayEvents.map((e) => {
-                          const eDate = new Date(e.date);
-                          const dayName = format(eDate, "EEEE", { locale: idLocale });
-                          return (
-                            <div
-                              key={e.date}
-                              className="flex items-center justify-between px-3 py-2.5 border-b border-border/30 last:border-0 hover:bg-muted/30 transition-colors"
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
-                                <div
-                                  className={cn(
-                                    "w-2 h-2 rounded-full flex-shrink-0",
-                                    e.color === "red"
-                                      ? "bg-destructive"
-                                      : e.color === "green"
-                                      ? "bg-grade-pass"
-                                      : e.color === "purple"
-                                      ? "bg-purple-500"
-                                      : "bg-primary"
-                                  )}
-                                />
+                  {settingsSection === "delegation" && (
+                    <section className="space-y-4" data-tour="attendance-v2-settings-delegation">
+                      <div className="rounded-2xl border bg-card shadow-sm">
+                        <div className="flex items-center justify-between gap-3 border-b p-4">
+                          <div>
+                            <h3 className="text-base font-semibold">Delegasi Guru Pengganti</h3>
+                            <p className="text-sm text-muted-foreground">Berikan akses sementara kepada guru lain untuk membantu presensi kelas ini.</p>
+                          </div>
+                          <Button variant="outline" className="min-h-10 gap-2" onClick={() => setShowDelegationDialog(true)}>
+                            <UserPlus className="h-4 w-4" />
+                            Tambah Delegasi
+                          </Button>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {delegations.length === 0 ? (
+                            <p className="p-4 text-sm text-muted-foreground">Belum ada delegasi aktif.</p>
+                          ) : (
+                            delegations.map((delegation) => (
+                              <div key={delegation.id} className="flex items-center justify-between gap-3 border-b p-3 last:border-b-0">
                                 <div className="min-w-0">
-                                  <p className="text-xs font-medium text-foreground">
-                                    {dayName}, {format(eDate, "d MMM yyyy", { locale: idLocale })}
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground truncate">
-                                    {e.label}
-                                    {e.description ? ` — ${e.description}` : ""}
+                                  <p className="truncate text-sm font-semibold">{delegation.grantee_label || delegation.grantee_user_id}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(new Date(delegation.starts_at), "d MMM yyyy", { locale: idLocale })} - {format(new Date(delegation.ends_at), "d MMM yyyy", { locale: idLocale })}
                                   </p>
                                 </div>
+                                <Button variant="ghost" size="sm" className="min-h-9 text-destructive" onClick={() => handleRevokeDelegationAction(delegation.id)} disabled={isRevokingDelegation}>
+                                  Cabut
+                                </Button>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive hover:bg-destructive/10 flex-shrink-0"
-                                onClick={() => handleRemoveDayEvent(e.date)}
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          );
-                        })}
+                            ))
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </section>
+                  )}
+
+                  {settingsSection === "backup" && (
+                    <section className="space-y-4" data-tour="attendance-v2-settings-backup">
+                      <div className="rounded-2xl border bg-card shadow-sm">
+                        <div className="flex items-center justify-between gap-3 border-b p-4">
+                          <div>
+                            <h3 className="text-base font-semibold">Backup Bulanan</h3>
+                            <p className="text-sm text-muted-foreground">Simpan snapshot bulan ini sebelum import besar atau perubahan massal.</p>
+                          </div>
+                          <Button variant="outline" className="min-h-10 gap-2" onClick={() => setShowSnapshotReasonDialog(true)} disabled={isCreatingSnapshot}>
+                            <Camera className="h-4 w-4" />
+                            Buat Backup
+                          </Button>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {snapshots.length === 0 ? (
+                            <p className="p-4 text-sm text-muted-foreground">Belum ada backup untuk bulan ini.</p>
+                          ) : (
+                            snapshots.map((snapshot) => (
+                              <div key={snapshot.id} className="flex items-center justify-between gap-3 border-b p-3 last:border-b-0">
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold">{format(new Date(snapshot.created_at), "d MMMM yyyy HH:mm", { locale: idLocale })}</p>
+                                  <p className="truncate text-xs text-muted-foreground">Alasan: {snapshot.reason || "Backup bulanan"}</p>
+                                </div>
+                                <Button variant="outline" size="sm" className="min-h-9 gap-2" onClick={() => handleRestoreSnapshotAction(snapshot.id)} disabled={isRestoringSnapshot}>
+                                  <RotateCcw className="h-4 w-4" />
+                                  Pulihkan
+                                </Button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </section>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Footer — fixed di bawah */}
-            <div className="px-4 pb-4 pt-3 border-t border-border flex-shrink-0">
-              <Button
-                onClick={() => setShowSettingsSheet(false)}
-                size="sm"
-                className="text-xs rounded-xl w-full"
-              >
+            <div className="flex flex-col-reverse gap-2 border-t p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">Pengaturan ini hanya berlaku untuk jalur Presensi V2. Presensi V1 tetap tidak berubah.</p>
+              <Button onClick={() => setShowSettingsSheet(false)} className="min-h-11 rounded-xl sm:min-w-32">
                 Selesai
               </Button>
             </div>
@@ -5546,6 +5549,7 @@ export default function AttendanceV2Page() {
       </Dialog>
 
       <ProductTour steps={attendanceTourSteps} tourKey="attendance" onComplete={cleanupAttendanceTour} />
+      <ProductTour steps={settingsTourSteps} tourKey="attendance-v2-settings" requireOnboarding={false} />
     </>
   );
 }
