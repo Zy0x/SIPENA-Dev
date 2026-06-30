@@ -29,6 +29,7 @@ describe("feature access integration guard", () => {
   it("keeps attendance v2 behind feature runtime resolution", () => {
     const route = readSource("apps/frontend/src/features/attendance/runtime/AttendanceRuntimeRoute.tsx");
     const v2Entry = readSource("apps/frontend/src/features/attendance/ui/AttendanceV2.tsx");
+    const gate = readSource("apps/frontend/src/components/FeatureGate.tsx");
     expect(route).toContain("FEATURE_KEYS.attendanceV2Runtime");
     expect(route).toContain("getAccessStatus");
     expect(route).toContain('runtimeAccessStatus === "loading"');
@@ -36,16 +37,62 @@ describe("feature access integration guard", () => {
     expect(route).toContain("remoteEngine");
     expect(route).not.toContain("AttendanceV2Page");
     expect(route).not.toContain("AttendanceV2Visualizer");
-    expect(v2Entry).toContain("AttendanceV2LegacyMirror");
+    expect(v2Entry).toContain("AttendanceV2Wrapper");
     expect(v2Entry).not.toContain("AttendanceV2Page");
     expect(v2Entry).not.toContain("AttendanceV2Visualizer");
+    expect(gate).not.toContain("Bypass page.attendance-v2");
+    expect(gate).not.toContain('featureKey === "page.attendance-v2"');
   });
 
-  it("keeps attendance v2 as a v1 visual mirror without importing the experimental v2 page", () => {
+  it("keeps the legacy mirror available without importing the experimental v2 page", () => {
     const mirror = readSource("apps/frontend/src/features/attendance/v2/AttendanceV2LegacyMirror.tsx");
     expect(mirror).toContain("AttendanceV1Wrapper");
     expect(mirror).not.toContain("AttendanceV2Page");
     expect(mirror).not.toContain("AttendanceV2Visualizer");
+  });
+
+  it("routes attendance v2 to the V2 control center instead of the archived experimental page", () => {
+    const wrapper = readSource("apps/frontend/src/features/attendance/v2/AttendanceV2Wrapper.tsx");
+    const center = readSource("apps/frontend/src/features/attendance/v2/AttendanceV2ControlCenter.tsx");
+    const panels = readSource("apps/frontend/src/features/attendance/v2/AttendanceV2ControlCenter.panels.tsx");
+    expect(wrapper).toContain("AttendanceV2ControlCenter");
+    expect(wrapper).not.toContain("AttendanceV2Page");
+    expect(center).toContain("Pengaturan Presensi V2");
+    expect(center).toContain("ProductTour");
+    expect(center).toContain("attendance-v2-settings");
+    expect(center).toContain("prepareAttendanceV2Tour");
+    expect(center).not.toContain('from "@/pages/Attendance"');
+    expect(panels).toContain("AcademicCalendarPanel");
+    expect(panels).toContain("EffectiveDayPanel");
+    expect(panels).toContain("RecapProfilePanel");
+    expect(panels).toContain("AuditHistoryPanel");
+    expect(panels).toContain("DelegationPanel");
+    expect(panels).toContain("MonthlyBackupPanel");
+    expect(center).toContain("Kalender Akademik");
+    expect(center).toContain("Hari Efektif");
+    expect(center).toContain("Profil Rekap");
+    expect(panels).toContain("Audit Riwayat Perubahan");
+    expect(panels).toContain("Delegasi Guru Pengganti");
+    expect(panels).toContain("Backup Bulanan");
+  });
+
+  it("keeps attendance v2 settings as a professional guided dashboard", () => {
+    const center = readSource("apps/frontend/src/features/attendance/v2/AttendanceV2ControlCenter.tsx");
+    const panels = readSource("apps/frontend/src/features/attendance/v2/AttendanceV2ControlCenter.panels.tsx");
+    expect(center).toContain("AttendanceV2SectionNav");
+    expect(center).toContain("AttendanceV2MobileSectionNav");
+    expect(center).toContain("AttendanceV2SummaryStrip");
+    expect(center).toContain("createTourCalendarDays");
+    expect(center).toContain("TOUR_CLASS_ID");
+    expect(center).toContain("attendance-v2-tour-section");
+    expect(panels).toContain("SECTION_ITEMS");
+    expect(panels).toContain('data-tour="attendance-v2-calendar-panel"');
+    expect(panels).toContain('data-tour="attendance-v2-add-event"');
+    expect(panels).toContain('data-tour="attendance-v2-effective-panel"');
+    expect(panels).toContain('data-tour="attendance-v2-recap-panel"');
+    expect(panels).toContain('data-tour="attendance-v2-audit-panel"');
+    expect(panels).toContain('data-tour="attendance-v2-delegation-panel"');
+    expect(panels).toContain('data-tour="attendance-v2-backup-panel"');
   });
 
   it("filters sidebar navigation with feature access", () => {
