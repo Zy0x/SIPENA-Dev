@@ -148,7 +148,6 @@ export default function AttendanceV2Page() {
   const [noteText, setNoteText] = useState("");
 
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
-  const [settingsSection, setSettingsSection] = useState<"calendar" | "effective" | "recap" | "audit" | "delegation" | "backup">("calendar");
 
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
   const [selectedHolidayDates, setSelectedHolidayDates] = useState<Date[]>([]);
@@ -328,60 +327,6 @@ export default function AttendanceV2Page() {
       },
     ];
   }, [classes.length, students.length]);
-
-  const settingsTourSteps = useMemo(() => [
-    {
-      target: "[data-tour='attendance-v2-settings-header']",
-      title: "Pusat Pengaturan Presensi",
-      description: "Modal ini mengumpulkan kalender akademik, hari efektif, profil rekap, riwayat, delegasi, dan backup agar pengaturan tidak tersebar.",
-      prepare: () => {
-        setShowSettingsSheet(true);
-        setSettingsSection("calendar");
-      },
-    },
-    {
-      target: "[data-tour='attendance-v2-settings-nav']",
-      title: "Pilih Bagian Pengaturan",
-      description: "Gunakan menu ini untuk berpindah bagian. Di layar kecil menu bisa digeser secara horizontal.",
-      prepare: () => setSettingsSection("calendar"),
-    },
-    {
-      target: "[data-tour='attendance-v2-settings-calendar']",
-      title: "Kalender Akademik",
-      description: "Atur format hari kerja, libur kustom, libur nasional, akhir pekan yang dijadikan hari kerja, dan kegiatan khusus.",
-      prepare: () => setSettingsSection("calendar"),
-    },
-    {
-      target: "[data-tour='attendance-v2-settings-effective']",
-      title: "Preview Hari Efektif",
-      description: "Cek ringkasan jumlah hari kalender, hari efektif, libur, kegiatan, dan hari terkunci sebelum rekap atau ekspor.",
-      prepare: () => setSettingsSection("effective"),
-    },
-    {
-      target: "[data-tour='attendance-v2-settings-recap']",
-      title: "Profil Rekap",
-      description: "Tentukan status yang dianggap hadir dan kebijakan penyebut agar rumus rekap mengikuti kebutuhan sekolah.",
-      prepare: () => setSettingsSection("recap"),
-    },
-    {
-      target: "[data-tour='attendance-v2-settings-audit']",
-      title: "Riwayat Perubahan",
-      description: "Bagian ini disiapkan untuk memeriksa perubahan presensi: siapa editor, kapan berubah, dan nilai lama ke nilai baru.",
-      prepare: () => setSettingsSection("audit"),
-    },
-    {
-      target: "[data-tour='attendance-v2-settings-delegation']",
-      title: "Delegasi Guru Pengganti",
-      description: "Berikan akses sementara kepada guru pengganti. Semua perubahan tetap tercatat atas nama editor sebenarnya.",
-      prepare: () => setSettingsSection("delegation"),
-    },
-    {
-      target: "[data-tour='attendance-v2-settings-backup']",
-      title: "Backup Bulanan",
-      description: "Buat snapshot bulanan dan pulihkan bila terjadi kesalahan import atau edit massal.",
-      prepare: () => setSettingsSection("backup"),
-    },
-  ], []);
 
   const setupFullDummyData = () => {
     setIsTourDummyActive(true);
@@ -1638,27 +1583,6 @@ export default function AttendanceV2Page() {
       />
 
       <ProductTour steps={attendanceTourSteps} tourKey="attendance" onComplete={cleanupAttendanceTour} />
-      <ProductTour steps={settingsTourSteps} tourKey="attendance-v2-settings" requireOnboarding={false} />
-      
-      {/* 
-        Metadata untuk integrasi test:
-        Pengaturan Presensi V2
-        settingsSection
-        settingsTourSteps
-        tourKey="attendance-v2-settings"
-        data-tour="attendance-v2-settings-calendar"
-        data-tour="attendance-v2-settings-effective"
-        data-tour="attendance-v2-settings-recap"
-        data-tour="attendance-v2-settings-audit"
-        data-tour="attendance-v2-settings-delegation"
-        data-tour="attendance-v2-settings-backup"
-        Kalender Akademik
-        Preview Hari Efektif
-        Profil Rekap Presensi
-        Audit Riwayat Perubahan
-        Delegasi Guru Pengganti
-        Backup Bulanan
-      */}
     </>
   );
 }

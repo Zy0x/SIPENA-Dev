@@ -50,23 +50,29 @@ describe("feature access integration guard", () => {
 
   it("keeps the attendance v2 settings modal structured and guided", () => {
     const page = readSource("apps/frontend/src/pages/AttendanceV2.tsx");
-    expect(page).toContain("Pengaturan Presensi V2");
-    expect(page).toContain("settingsSection");
-    expect(page).toContain("settingsTourSteps");
-    expect(page).toContain('tourKey="attendance-v2-settings"');
-    expect(page).toContain('data-tour="attendance-v2-settings-calendar"');
-    expect(page).toContain('data-tour="attendance-v2-settings-effective"');
-    expect(page).toContain('data-tour="attendance-v2-settings-recap"');
-    expect(page).toContain('data-tour="attendance-v2-settings-audit"');
-    expect(page).toContain('data-tour="attendance-v2-settings-delegation"');
-    expect(page).toContain('data-tour="attendance-v2-settings-backup"');
-    expect(page).toContain("Kalender Akademik");
-    expect(page).toContain("Preview Hari Efektif");
-    expect(page).toContain("Profil Rekap Presensi");
-    expect(page).toContain("Audit Riwayat Perubahan");
-    expect(page).toContain("Delegasi Guru Pengganti");
-    expect(page).toContain("Backup Bulanan");
+    const modal = readSource("apps/frontend/src/components/attendance/v2/SettingsDashboard.tsx");
+    expect(page).not.toContain("settingsTourSteps");
     expect(page).not.toContain("Legacy Settings Dialog kept disabled");
+    expect(modal).toContain("!h-[100dvh]");
+    expect(modal).toContain("sm:!h-[min(92dvh,820px)]");
+    expect(modal).toContain("sticky top-0");
+    expect(modal).toContain("sticky bottom-0");
+    expect(modal).toContain("settingsSection");
+    expect(modal).toContain("settingsTourSteps");
+    expect(modal).toContain('tourKey="attendance-v2-settings"');
+    expect(modal).toContain('data-tour="attendance-v2-settings-header"');
+    expect(modal).toContain('data-tour="attendance-v2-settings-nav"');
+    expect(modal).toContain('data-tour="attendance-v2-settings-calendar"');
+    expect(modal).toContain('data-tour="attendance-v2-settings-effective"');
+    expect(modal).toContain('data-tour="attendance-v2-settings-recap"');
+    expect(modal).toContain('data-tour="attendance-v2-settings-audit"');
+    expect(modal).toContain('data-tour="attendance-v2-settings-delegation"');
+    expect(modal).toContain('data-tour="attendance-v2-settings-backup"');
+    expect(modal).toContain("Kalender Akademik");
+    expect(modal).toContain("Profil Rekap Presensi");
+    expect(modal).toContain("Audit Riwayat Perubahan");
+    expect(modal).toContain("Delegasi Guru Pengganti");
+    expect(modal).toContain("Backup Bulanan");
   });
 
   it("filters sidebar navigation with feature access", () => {
