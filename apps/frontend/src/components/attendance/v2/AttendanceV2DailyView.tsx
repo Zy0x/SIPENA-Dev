@@ -51,23 +51,23 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
 }) => {
   return (
     <div data-tour="attendance-table" className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden max-w-full">
-      <div className="flex items-center justify-between gap-2 p-3 sm:p-3.5 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
+        <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
           <Users className="w-4 h-4 text-primary flex-shrink-0" />
-          <span className="text-sm font-semibold truncate">{selectedClass?.name}</span>
+          <span className="text-sm font-semibold truncate flex-1 sm:flex-none">{selectedClass?.name}</span>
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
             {format(selectedDate, "d MMM", { locale: idLocale })}
           </Badge>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
           {saveIndicator && <div className="flex-shrink-0">{saveIndicator}</div>}
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
             <Input 
               placeholder="Cari murid..." 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
-              className="pl-7 h-8 text-xs w-32 xs:w-44 sm:w-56 md:w-64 rounded-xl transition-all" 
+              className="pl-7 h-8 text-xs w-full sm:w-44 md:w-56 lg:w-64 rounded-xl transition-all" 
             />
           </div>
           <Tooltip>
@@ -77,7 +77,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                 size="sm" 
                 onClick={() => setShowBulkDialog(true)} 
                 disabled={isHolidayCombined(selectedDate)} 
-                className="text-xs h-8 px-2.5 gap-1 rounded-xl"
+                className="text-xs h-8 px-2.5 gap-1 rounded-xl flex-shrink-0"
               >
                 <Check className="w-3 h-3" />
                 <span className="hidden xs:inline sm:inline">Semua</span>

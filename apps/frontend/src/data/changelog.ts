@@ -42,6 +42,23 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.141",
+    version: "2.4.141",
+    title: "Optimasi Responsivitas Antarmuka Presensi Lintas Viewport",
+    description: "Meningkatkan responsivitas tampilan presensi harian, rekap bulanan, dan dialog pengaturan presensi agar adaptif terhadap berbagai resolusi layar ponsel, tablet, dan desktop.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Mengubah layout grid 5-kolom kartu statistik presensi menjadi flex horizontal yang dapat digulir (scrollable) pada mobile viewport, mencegah deformasi visual dan pemotongan teks.",
+      "Menyusun ulang header tabel harian dan rekap bulanan presensi menjadi tata letak 2-baris responsif pada layar sempit, mengalokasikan ruang penuh untuk input pencarian dan tombol massal.",
+      "Mengonfigurasi pengelola filter utama (Kelas, Tanggal, Pengaturan Kalender) menjadi grid 3-kolom horizontal pada desktop dan tablet, serta flex vertikal rapi pada mobile.",
+      "Menambahkan batasan tinggi visual (max-height) pada tabel rekap bulanan presensi (V1 & V2) untuk menstabilkan scroll vertikal internal dan menjaga thead tetap sticky.",
+      "Memperbaiki orientasi multi-axis sticky header pada sel sudut ('No. Nama Murid') dengan top-0 left-0 z-30 agar tetap terapung sempurna saat guliran vertikal dan horizontal dilakukan bersamaan.",
+      "Mengaktifkan flex wrapping pada tombol aksi PageHeader guna meniadakan risiko horizontal overflow di perangkat touch mobile berukuran sempit."
+    ]
+  },
+  {
     id: "v2.4.140",
     version: "2.4.140",
     title: "Implementasi Ikon Abjad (Alphabetics Icons) Presensi HSIAD",

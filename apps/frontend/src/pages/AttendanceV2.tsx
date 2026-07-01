@@ -1200,13 +1200,13 @@ export default function AttendanceV2Page() {
               {activeView === "daily" ? (
                 <>
                   {/* Daily View Stats Cards */}
-                  <div ref={statsRef} className="grid grid-cols-5 gap-1.5 sm:gap-2">
+                  <div ref={statsRef} className="flex sm:grid sm:grid-cols-5 gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 sm:pb-0 scrollbar-none scroll-smooth">
                     {allStatuses.map((key) => {
                       const cfg = statusConfig[key];
                       const val = dailyStats[key];
                       const IconComp = cfg.icon;
                       return (
-                        <div key={key} data-stat-card className="rounded-2xl p-2 sm:p-3 border border-border/60 bg-muted/20">
+                        <div key={key} data-stat-card className="rounded-2xl p-2 sm:p-3 border border-border/60 bg-muted/20 flex-shrink-0 min-w-[76px] sm:min-w-0 sm:flex-shrink">
                           <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center mb-1", cfg.bg)}>
                             <IconComp className={cn("w-3 h-3 sm:w-4 sm:h-4", cfg.color)} />
                           </div>

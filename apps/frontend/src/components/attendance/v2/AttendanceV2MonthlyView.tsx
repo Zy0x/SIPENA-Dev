@@ -95,13 +95,13 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
   return (
     <>
       {/* Stats Cards */}
-      <div className="grid grid-cols-5 gap-1.5 sm:gap-2 mb-6">
+      <div className="flex sm:grid sm:grid-cols-5 gap-1.5 sm:gap-2 mb-6 overflow-x-auto pb-1.5 sm:pb-0 scrollbar-none scroll-smooth">
         {allStatuses.map((key) => {
           const cfg = statusConfig[key];
           const val = activeView === "daily" ? dailyStats[key] : monthlyStats[key];
           const IconComp = cfg.icon;
           return (
-            <div key={key} data-stat-card className="rounded-2xl p-2 sm:p-3 border border-border/60 bg-muted/20">
+            <div key={key} data-stat-card className="rounded-2xl p-2 sm:p-3 border border-border/60 bg-muted/20 flex-shrink-0 min-w-[76px] sm:min-w-0 sm:flex-shrink">
               <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center mb-1", cfg.bg)}>
                 <IconComp className={cn("w-3 h-3 sm:w-4 sm:h-4", cfg.color)} />
               </div>
@@ -176,25 +176,27 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
         className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden" 
         data-monthly-table 
       >
-        <div className="flex items-center justify-between gap-2 p-3 sm:p-3.5 border-b border-border">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary flex-shrink-0" />
-            <span className="text-sm font-semibold text-foreground">Rekap Bulanan</span>
-            {saveIndicator && <div className="ml-1.5 flex-shrink-0">{saveIndicator}</div>}
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="flex items-center gap-1">
+        <div className="flex flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary flex-shrink-0" />
+              <span className="text-sm font-semibold text-foreground">Rekap Bulanan</span>
+              {saveIndicator && <div className="ml-1.5 flex-shrink-0">{saveIndicator}</div>}
+            </div>
+            <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant={isLocked ? "default" : "outline"} size="sm" className="h-8 px-2.5 text-xs gap-1 rounded-xl" onClick={handleToggleLock}>
                     {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                    <span className="hidden sm:inline">{isLocked ? "Terkunci" : "Terbuka"}</span>
+                    <span className="hidden xs:inline sm:inline">{isLocked ? "Terkunci" : "Terbuka"}</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs sm:hidden">{isLocked ? "Kunci Aktif" : "Kunci Nonaktif"}</TooltipContent>
               </Tooltip>
               <JumlahCalculationConfig config={jumlahConfig} onConfigChange={setJumlahConfig} />
             </div>
+          </div>
+          <div className="flex items-center justify-center sm:justify-end gap-1 w-full sm:w-auto border-t border-border/30 pt-2.5 sm:border-t-0 sm:pt-0">
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handlePrevMonth}><ChevronLeft className="w-4 h-4" /></Button>
             <span className="text-xs font-medium min-w-[80px] sm:min-w-[100px] text-center text-foreground">{format(currentMonth, "MMM yyyy", { locale: idLocale })}</span>
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handleNextMonth}><ChevronRight className="w-4 h-4" /></Button>
@@ -208,11 +210,11 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
           </div>
         )}
 
-        <SmartScrollTable data-tour="attendance-table">
+        <SmartScrollTable data-tour="attendance-table" className="max-h-[380px] sm:max-h-[480px]">
           <table className="w-full text-center border-collapse min-w-max select-none">
             <thead className="sticky top-0 z-10 bg-card">
               <tr className="border-b border-border">
-                <th className="sticky left-0 z-20 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r border-border min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
+                <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r border-border min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
                 {monthDays.map(day => {
                   const dayNum = getDay(day);
                   const isSun = dayNum === 0;

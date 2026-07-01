@@ -3393,7 +3393,10 @@ export default function Attendance() {
           }
         />
 
-        <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
+        <div className={cn(
+          "rounded-2xl bg-card border border-border overflow-hidden flex flex-col divide-y divide-border sm:divide-y-0 sm:divide-x",
+          selectedClassId ? "sm:grid sm:grid-cols-3" : "sm:grid sm:grid-cols-2"
+        )}>
           <div data-tour="class-select" className="flex items-center gap-3 p-3 sm:p-3.5">
             <School className="w-4 h-4 text-primary flex-shrink-0" />
             <div className="flex-1 min-w-0">
@@ -3593,13 +3596,13 @@ export default function Attendance() {
             {/* Main Content Section */}
             <div className="p-4 sm:p-6 space-y-6">
               {/* Stats Cards */}
-              <div ref={statsRef} className="grid grid-cols-5 gap-1.5 sm:gap-2">
+              <div ref={statsRef} className="flex sm:grid sm:grid-cols-5 gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 sm:pb-0 scrollbar-none scroll-smooth">
                 {allStatuses.map((key) => {
                   const cfg = statusConfig[key];
                   const val = activeView === "daily" ? dailyStats[key] : monthlyStats[key];
                   const IconComp = cfg.icon;
                   return (
-                    <div key={key} data-stat-card className="rounded-2xl p-2 sm:p-3 border border-border/60 bg-muted/20">
+                    <div key={key} data-stat-card className="rounded-2xl p-2 sm:p-3 border border-border/60 bg-muted/20 flex-shrink-0 min-w-[76px] sm:min-w-0 sm:flex-shrink">
                       <div className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center mb-1", cfg.bg)}>
                         <IconComp className={cn("w-3 h-3 sm:w-4 sm:h-4", cfg.color)} />
                       </div>
@@ -3673,20 +3676,21 @@ export default function Attendance() {
               {/* DAILY VIEW */}
               {activeView === "daily" && (
                 <div data-tour="attendance-table" className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden max-w-full">
-                <div className="flex items-center justify-between gap-2 p-3 sm:p-3.5 border-b border-border">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
+                  <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
                     <Users className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="text-sm font-semibold truncate">{selectedClass?.name}</span>
+                    <span className="text-sm font-semibold truncate flex-1 sm:flex-none">{selectedClass?.name}</span>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">{format(selectedDate, "d MMM", { locale: idLocale })}</Badge>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="relative">
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
+                    {renderAttendanceSaveIndicator() && <div className="flex-shrink-0">{renderAttendanceSaveIndicator()}</div>}
+                    <div className="relative flex-1 sm:flex-initial">
                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-                      <Input placeholder="Cari murid..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-7 h-8 text-xs w-24 sm:w-36 rounded-xl" />
+                      <Input placeholder="Cari murid..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-7 h-8 text-xs w-full sm:w-36 rounded-xl transition-all" />
                     </div>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => setShowBulkDialog(true)} disabled={isHolidayCombined(selectedDate)} className="text-xs h-8 px-2.5 gap-1 rounded-xl">
+                        <Button variant="outline" size="sm" onClick={() => setShowBulkDialog(true)} disabled={isHolidayCombined(selectedDate)} className="text-xs h-8 px-2.5 gap-1 rounded-xl flex-shrink-0">
                           <Check className="w-3 h-3" /><span className="hidden xs:inline sm:inline">Semua</span>
                         </Button>
                       </TooltipTrigger>
@@ -3791,29 +3795,31 @@ export default function Attendance() {
                   className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden" 
                   data-monthly-table 
                 >
-                  <div className="flex items-center justify-between gap-2 p-3 sm:p-3.5 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="text-sm font-semibold text-foreground">Rekap Bulanan</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant={isLocked ? "default" : "outline"} size="sm" className="h-8 px-2.5 text-xs gap-1 rounded-xl" onClick={handleToggleLock}>
-                            {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                            <span className="hidden sm:inline">{isLocked ? "Terkunci" : "Terbuka"}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="text-xs sm:hidden">{isLocked ? "Kunci Aktif" : "Kunci Nonaktif"}</TooltipContent>
-                      </Tooltip>
-                      <JumlahCalculationConfig config={jumlahConfig} onConfigChange={setJumlahConfig} />
+                  <div className="flex flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
+                    <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-primary flex-shrink-0" />
+                        <span className="text-sm font-semibold text-foreground">Rekap Bulanan</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant={isLocked ? "default" : "outline"} size="sm" className="h-8 px-2.5 text-xs gap-1 rounded-xl" onClick={handleToggleLock}>
+                              {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                              <span className="hidden xs:inline sm:inline">{isLocked ? "Terkunci" : "Terbuka"}</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="text-xs sm:hidden">{isLocked ? "Kunci Aktif" : "Kunci Nonaktif"}</TooltipContent>
+                        </Tooltip>
+                        <JumlahCalculationConfig config={jumlahConfig} onConfigChange={setJumlahConfig} />
+                      </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handlePrevMonth}><ChevronLeft className="w-4 h-4" /></Button>
-                    <span className="text-xs font-medium min-w-[80px] sm:min-w-[100px] text-center text-foreground">{format(currentMonth, "MMM yyyy", { locale: idLocale })}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handleNextMonth}><ChevronRight className="w-4 h-4" /></Button>
+                    <div className="flex items-center justify-center sm:justify-end gap-1 w-full sm:w-auto border-t border-border/30 pt-2.5 sm:border-t-0 sm:pt-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handlePrevMonth}><ChevronLeft className="w-4 h-4" /></Button>
+                      <span className="text-xs font-medium min-w-[80px] sm:min-w-[100px] text-center text-foreground">{format(currentMonth, "MMM yyyy", { locale: idLocale })}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handleNextMonth}><ChevronRight className="w-4 h-4" /></Button>
+                    </div>
                   </div>
-                </div>
 
                 {isLocked && (
                   <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
@@ -3822,11 +3828,11 @@ export default function Attendance() {
                   </div>
                 )}
 
-                <SmartScrollTable data-tour="attendance-table">
+                <SmartScrollTable data-tour="attendance-table" className="max-h-[380px] sm:max-h-[480px]">
                   <table className="w-full text-center border-collapse min-w-max">
                     <thead className="sticky top-0 z-10 bg-card">
                       <tr className="border-b border-border">
-                        <th className="sticky left-0 z-20 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r border-border min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
+                        <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r border-border min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
                         {monthDays.map(day => {
                           const dayNum = getDay(day);
                           const isSun = dayNum === 0;

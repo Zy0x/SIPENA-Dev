@@ -167,7 +167,7 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
         subtitle="Kelola kehadiran murid"
         breadcrumbs={[{ label: "Presensi" }]}
         actions={
-          <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+          <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-end">
             {/* 0. Merge / Promote Button */}
             {selectedClassId && selectedClassId !== "tour-dummy-class" && dbAvailable && (
               <Button
@@ -292,7 +292,10 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
         }
       />
 
-      <div className="rounded-2xl bg-card border border-border overflow-hidden divide-y divide-border">
+      <div className={cn(
+        "rounded-2xl bg-card border border-border overflow-hidden flex flex-col divide-y divide-border sm:divide-y-0 sm:divide-x",
+        selectedClassId ? "sm:grid sm:grid-cols-3" : "sm:grid sm:grid-cols-2"
+      )}>
         <div data-tour="class-select" className="flex items-center gap-3 p-3 sm:p-3.5">
           <School className="w-4 h-4 text-primary flex-shrink-0" />
           <div className="flex-1 min-w-0">
