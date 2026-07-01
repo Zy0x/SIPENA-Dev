@@ -344,8 +344,8 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
             </tbody>
             {/* Total Row */}
             <tfoot>
-              <tr className="border-t-2 border-border bg-[hsl(var(--muted))]/50" style={{ background: 'hsl(var(--muted) / 0.5)' }}>
-                <td className="sticky left-0 z-10 bg-muted/50 px-2 py-1.5 text-[10px] sm:text-xs font-bold text-foreground border-r border-border" colSpan={1}>
+              <tr className="border-t-2 border-border bg-muted">
+                <td className="sticky left-0 z-10 bg-muted px-2 py-1.5 text-[10px] sm:text-xs font-bold text-foreground border-r border-border" colSpan={1}>
                   Total
                 </td>
                 {monthDays.map(day => {
@@ -386,7 +386,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                           {totals[s]}
                         </td>
                       ))}
-                      <td className="px-1 py-1.5 text-center text-[9px] sm:text-[10px] font-extrabold border-l-2 border-border text-foreground bg-muted/50">
+                      <td className="px-1 py-1.5 text-center text-[9px] sm:text-[10px] font-extrabold border-l-2 border-border text-foreground bg-muted">
                         {grandJumlah}
                       </td>
                     </>

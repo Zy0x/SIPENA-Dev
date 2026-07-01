@@ -70,8 +70,8 @@ export function PercentageRow({
   }, [allStatuses, filteredStudents, monthDays, effectiveDays, getAttendance, isHoliday, jumlahConfig]);
 
   return (
-    <tr className="border-t border-dashed border-border bg-primary/10">
-      <td className="sticky left-0 z-10 bg-primary/5 px-2 py-1.5 text-[10px] sm:text-xs font-bold text-primary border-r border-border" colSpan={1}>
+    <tr className="border-t border-dashed border-border bg-card">
+      <td className="sticky left-0 z-10 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-bold text-primary border-r border-border" colSpan={1}>
         <div className="flex items-center gap-1">
           {/* % icon - shows percentage formula */}
           <Popover>
@@ -156,7 +156,7 @@ export function PercentageRow({
         </td>
       ))}
       {/* Total percentage */}
-      <td className="px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-extrabold border-l-2 border-border text-foreground bg-muted/30">
+      <td className="px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-extrabold border-l-2 border-border text-foreground bg-muted">
         {totalPercentage > 0 ? `${totalPercentage.toFixed(1)}%` : "0%"}
       </td>
     </tr>
