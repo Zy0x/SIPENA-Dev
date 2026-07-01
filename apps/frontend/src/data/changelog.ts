@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.133",
+    version: "2.4.133",
+    title: "Penyesuaian Cerdas Daftar Override Akhir Pekan",
+    description: "Menyesuaikan tampilan daftar override hari libur akhir pekan secara cerdas berdasarkan format hari belajar aktif mingguan yang dipilih (5 hari vs 6 hari).",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Mengubah filter daftar override akhir pekan agar hanya menampilkan hari Minggu jika format sekolah disetel ke 6 hari kerja (Sabtu masuk default).",
+      "Menampilkan hari Sabtu dan Minggu secara lengkap di daftar override jika format sekolah disetel ke 5 hari kerja (Sabtu/Minggu libur default).",
+      "Memperbarui teks label header dan perhitungan jumlah hari pada lencana (badge) secara dinamis mengikuti format hari belajar yang aktif."
+    ]
+  },
+  {
     id: "v2.4.132",
     version: "2.4.132",
     title: "Pemetaan Terperinci Elemen Isi Panduan Pengaturan",

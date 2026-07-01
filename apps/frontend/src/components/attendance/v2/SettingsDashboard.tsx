@@ -716,12 +716,22 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
                       <div className="p-3 sm:p-4">
                         <div className="mb-2 flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-muted-foreground">Sabtu dan Minggu</p>
-                          <Badge variant="secondary">{monthDays.filter((day) => [0, 6].includes(getDay(day))).length}</Badge>
+                          <p className="text-xs font-semibold text-muted-foreground">
+                            {workDayFormat === "6days" ? "Hari Minggu" : "Sabtu dan Minggu"}
+                          </p>
+                          <Badge variant="secondary">
+                            {monthDays.filter((day) => {
+                              const dayOfWeek = getDay(day);
+                              return workDayFormat === "6days" ? dayOfWeek === 0 : [0, 6].includes(dayOfWeek);
+                            }).length}
+                          </Badge>
                         </div>
                         <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
                           {monthDays
-                            .filter((day) => [0, 6].includes(getDay(day)))
+                            .filter((day) => {
+                              const dayOfWeek = getDay(day);
+                              return workDayFormat === "6days" ? dayOfWeek === 0 : [0, 6].includes(dayOfWeek);
+                            })
                             .map((day) => {
                               const date = format(day, "yyyy-MM-dd");
                               const isOverridden = holidays.some((h) => h.date === date && h.description === "Hari Kerja");
