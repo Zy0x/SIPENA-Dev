@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.130",
+    version: "2.4.130",
+    title: "Peningkatan Mutu Teks Panduan & Alur Runtut Pengaturan",
+    description: "Menyederhanakan alur panduan pengaturan presensi secara teratur mengikuti urutan menu samping, serta menyunting seluruh teks deskripsi panduan menggunakan istilah akademis murni tanpa istilah teknis pengembangan.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Mengurutkan langkah panduan secara runtut mengikuti urutan kategori menu samping (kalender akademik, hari libur, kebijakan rekap, log riwayat, pendelegasian, dan pencadangan).",
+      "Menyunting seluruh judul dan deskripsi langkah panduan dengan bahasa Indonesia administratif yang formal dan mudah dipahami oleh guru dan staf tata usaha.",
+      "Menghilangkan seluruh istilah teknis pengembangan (seperti 'DOM', 'SaaS', 'Sidebar', 'Portal', 'Z-Index') agar panduan terasa ramah pengguna dan profesional untuk lingkungan sekolah."
+    ]
+  },
+  {
     id: "v2.4.129",
     version: "2.4.129",
     title: "Perbaikan Navigasi Tombol Panduan Pengaturan",
