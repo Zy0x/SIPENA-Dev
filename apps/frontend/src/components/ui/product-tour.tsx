@@ -285,7 +285,7 @@ export function ProductTour({
   return (
     <>
       {/* Backdrop with spotlight cutout */}
-      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: tourZIndexBase }}>
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: tourZIndexBase }} data-sipena-tour="true">
         {targetRect && (
           <div
             className="absolute rounded-xl transition-all duration-200 ease-out"
@@ -302,6 +302,7 @@ export function ProductTour({
 
       {/* Click blocker */}
       <div 
+        data-sipena-tour="true"
         className="fixed inset-0 pointer-events-auto"
         style={{ zIndex: tourZIndexBase + 1 }}
         onClick={handleSkip}
@@ -310,6 +311,7 @@ export function ProductTour({
       {/* Highlight border */}
       {targetRect && (
         <div
+          data-sipena-tour="true"
           className="fixed pointer-events-none rounded-xl border-[3px] border-primary animate-pulse"
           style={{
             top: targetRect.top - 8,
@@ -325,6 +327,7 @@ export function ProductTour({
       {/* Tooltip */}
       <div
         ref={popupRef}
+        data-sipena-tour="true"
         className={cn(
           "fixed w-[320px] max-w-[calc(100vw-2rem)] bg-card border-2 border-primary/30 rounded-2xl shadow-2xl p-4 pointer-events-auto",
           "animate-fade-in"

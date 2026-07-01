@@ -400,6 +400,18 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           "!flex !h-[100dvh] !max-h-[100dvh] !w-screen !max-w-none !flex-col !gap-0 !overflow-hidden !rounded-none !border-0 !p-0",
           "sm:!h-[min(92dvh,820px)] sm:!max-h-[92dvh] sm:!w-[calc(100vw-2rem)] sm:!max-w-6xl sm:!rounded-2xl sm:!border",
         )}
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target && (target.closest("[data-sipena-tour]") || target.closest(".sipena-tour-action"))) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target && (target.closest("[data-sipena-tour]") || target.closest(".sipena-tour-action"))) {
+            e.preventDefault();
+          }
+        }}
       >
         <DialogHeader
           className="sticky top-0 z-20 shrink-0 border-b bg-background/95 px-3 pb-2 pt-3 backdrop-blur sm:px-5 sm:pb-3 sm:pt-4"

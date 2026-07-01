@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.129",
+    version: "2.4.129",
+    title: "Perbaikan Navigasi Tombol Panduan Pengaturan",
+    description: "Memperbaiki kendala penutupan otomatis Dialog Pengaturan Presensi saat pengguna mengklik tombol navigasi 'Lanjut' atau area interaksi lain di dalam Panduan Interaktif.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Menandai seluruh elemen visual Panduan Interaktif (backdrop, click blocker, spotlight border, tooltip) dengan penanda data-sipena-tour.",
+      "Mengintegrasikan handler onPointerDownOutside dan onInteractOutside pada DialogContent di SettingsDashboard.tsx guna mendeteksi interaksi dengan data-sipena-tour dan mencegah penutupan otomatis dialog.",
+      "Memastikan dialog tetap terbuka saat pengguna mengklik Lanjut/Kembali/Lewati di tooltip, namun tetap mengizinkan penutupan normal ketika mengklik di luar area dialog di luar panduan."
+    ]
+  },
+  {
     id: "v2.4.128",
     version: "2.4.128",
     title: "Peningkatan Kinerja Pemuatan Data & Perbaikan Panduan Interaktif",
