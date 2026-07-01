@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.142",
+    version: "2.4.142",
+    title: "Optimasi Touch Target Presensi Harian pada Layar Mobile",
+    description: "Meningkatkan ukuran target sentuh (touch target) tombol status kehadiran (H, S, I, A, D) dan tombol catatan pada tampilan harian agar lebih adaptif dan mudah ditekan pada berbagai resolusi ponsel.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Mengganti ukuran tombol status presensi tetap (w-[26px] h-7) menjadi dinamis menggunakan kustom media query Tailwind: w-7 h-7 untuk layar di bawah 360px, dan w-8 h-8 untuk layar ponsel di atas 360px.",
+      "Mengoptimalkan tombol catatan (Note button) di baris murid agar ikut membesar dari 28px ke 32px secara proporsional sesuai lebar layar ponsel yang digunakan.",
+      "Memastikan ukuran touch target tetap mematuhi pedoman keterjangkauan tombol tanpa mengurangi ruang baca nama murid di sebelah kiri.",
+      "Menyelaraskan modifikasi ukuran tombol status presensi pada antarmuka Presensi V1 dan V2 untuk konsistensi pengalaman pengguna."
+    ]
+  },
+  {
     id: "v2.4.141",
     version: "2.4.141",
     title: "Optimasi Responsivitas Antarmuka Presensi Lintas Viewport",
