@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { format, getDay } from "date-fns";
+import { format, getDay, addMonths } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
   Activity,
@@ -18,6 +18,8 @@ import {
   ShieldCheck,
   UserPlus,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +46,7 @@ interface SettingsDashboardProps {
   onOpenChange: (open: boolean) => void;
   selectedClass: any;
   currentMonth: Date;
+  setCurrentMonth?: (month: Date) => void;
   effectiveDays: number;
   monthDays: Date[];
   isLocked: boolean;
@@ -224,6 +227,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   onOpenChange,
   selectedClass,
   currentMonth,
+  setCurrentMonth,
   effectiveDays,
   monthDays,
   isLocked,
@@ -545,7 +549,42 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
           <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
             <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
-            <CompactMetric label="Bulan" value={format(currentMonth, "MMMM yyyy", { locale: idLocale })} />
+            <CompactMetric
+              label="Bulan"
+              value={
+                <div className="flex items-center justify-between gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 rounded-lg text-foreground hover:bg-muted/80"
+                    onClick={() => {
+                      if (setCurrentMonth) {
+                        setCurrentMonth(addMonths(currentMonth, -1));
+                      }
+                    }}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs sm:text-sm font-bold min-w-[5.5rem] text-center">
+                    {format(currentMonth, "MMMM yyyy", { locale: idLocale })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 rounded-lg text-foreground hover:bg-muted/80"
+                    onClick={() => {
+                      if (setCurrentMonth) {
+                        setCurrentMonth(addMonths(currentMonth, 1));
+                      }
+                    }}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              }
+            />
             <CompactMetric label="Hari efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
             <CompactMetric
               label="Status"

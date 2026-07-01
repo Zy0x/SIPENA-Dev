@@ -1393,6 +1393,7 @@ export default function AttendanceV2Page() {
           onOpenChange={setShowSettingsSheet}
           selectedClass={selectedClass}
           currentMonth={currentMonth}
+          setCurrentMonth={setCurrentMonth}
           effectiveDays={effectiveDays}
           monthDays={monthDays}
           isLocked={isLocked}

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.134",
+    version: "2.4.134",
+    title: "Navigasi Bulan Cepat dari Pengaturan Kelas",
+    description: "Menambahkan kontrol navigasi tombol bulan sebelumnya dan berikutnya di baris ringkasan pengaturan agar pengguna dapat berpindah periode secara instan tanpa perlu menutup dialog.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Mengganti teks bulan statis di baris metrik ringkasan pengaturan dengan komponen interaktif berisi tombol panah kiri-kanan.",
+      "Menyambungkan fungsi pengubah bulan (setCurrentMonth) dari halaman utama presensi ke dalam SettingsDashboard.tsx.",
+      "Memastikan seluruh setelan, kalender akademik, libur kustom, rekap, dan backup ter-render ulang secara otomatis mengikuti bulan aktif yang baru."
+    ]
+  },
+  {
     id: "v2.4.133",
     version: "2.4.133",
     title: "Penyesuaian Cerdas Daftar Override Akhir Pekan",
