@@ -101,6 +101,38 @@ export function MaintenanceBanner() {
     };
   }, [alert, dismissed]);
 
+  // Dynamic CSS variable for banner height (for pushing fixed layout elements like sidebar)
+  useEffect(() => {
+    const updateBannerHeight = () => {
+      if (bannerRef.current && alert && dismissed !== alert.id && alert.display_mode === "flat") {
+        const height = bannerRef.current.offsetHeight;
+        document.documentElement.style.setProperty("--banner-height", `${height}px`);
+      } else {
+        document.documentElement.style.setProperty("--banner-height", "0px");
+      }
+    };
+
+    updateBannerHeight();
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (bannerRef.current && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        updateBannerHeight();
+      });
+      resizeObserver.observe(bannerRef.current);
+    }
+
+    window.addEventListener("resize", updateBannerHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateBannerHeight);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      document.documentElement.style.setProperty("--banner-height", "0px");
+    };
+  }, [alert, dismissed]);
+
   // Dismiss with GSAP
   const handleDismiss = useCallback(() => {
     if (!alert || !bannerRef.current) return;

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.137",
+    version: "2.4.137",
+    title: "Penyesuaian Tata Letak Sidebar terhadap Banner Pengumuman",
+    description: "Memperbaiki posisi sidebar agar bergeser ke bawah secara otomatis saat Banner Pemberitahuan/Pengumuman (Maintenance) dalam mode Flat aktif, mencegah tumpang tindih visual pada logo dan menu.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Mengintegrasikan deteksi tinggi banner di MaintenanceBanner.tsx menggunakan ResizeObserver untuk menyetel CSS custom property --banner-height secara dinamis.",
+      "Memodifikasi elemen aside di AppLayout.tsx agar menggunakan posisi top dan tinggi (height) yang diperhitungkan secara dinamis berdasarkan tinggi banner pengumuman.",
+      "Menghindari tabrakan layout antara sidebar statis/fixed dengan banner pengumuman tipe flat di bagian atas layar."
+    ]
+  },
+  {
     id: "v2.4.136",
     version: "2.4.136",
     title: "Perbaikan Klik Pemilih Bulan di Dialog Pengaturan",
