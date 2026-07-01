@@ -29,6 +29,7 @@ interface AttendanceV2DailyViewProps {
   handleSetAttendance: (studentId: string, date: Date, status: string | null) => void;
   allStatuses: string[];
   statusConfig: any;
+  saveIndicator?: React.ReactNode;
 }
 
 export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
@@ -46,6 +47,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
   handleSetAttendance,
   allStatuses,
   statusConfig,
+  saveIndicator,
 }) => {
   return (
     <div data-tour="attendance-table" className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden max-w-full">
@@ -58,13 +60,14 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
           </Badge>
         </div>
         <div className="flex items-center gap-1.5">
+          {saveIndicator && <div className="flex-shrink-0">{saveIndicator}</div>}
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
             <Input 
               placeholder="Cari murid..." 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
-              className="pl-7 h-8 text-xs w-24 sm:w-36 rounded-xl" 
+              className="pl-7 h-8 text-xs w-32 xs:w-44 sm:w-56 md:w-64 rounded-xl transition-all" 
             />
           </div>
           <Tooltip>

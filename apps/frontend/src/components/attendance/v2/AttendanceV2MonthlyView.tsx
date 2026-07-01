@@ -52,6 +52,7 @@ interface AttendanceV2MonthlyViewProps {
   dailyStats: Record<string, number>;
   monthlyStats: Record<string, number>;
   activeView: "daily" | "monthly";
+  saveIndicator?: React.ReactNode;
 }
 
 const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -89,6 +90,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
   dailyStats,
   monthlyStats,
   activeView,
+  saveIndicator,
 }) => {
   return (
     <>
@@ -178,6 +180,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
           <div className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary flex-shrink-0" />
             <span className="text-sm font-semibold text-foreground">Rekap Bulanan</span>
+            {saveIndicator && <div className="ml-1.5 flex-shrink-0">{saveIndicator}</div>}
           </div>
           <div className="flex items-center gap-1">
             <div className="flex items-center gap-1">

@@ -1173,9 +1173,6 @@ export default function AttendanceV2Page() {
                   </button>
                 ))}
               </div>
-              <div className="mt-3 flex justify-end">
-                {renderAttendanceSaveIndicator()}
-              </div>
             </div>
 
             {/* Main Content Section */}
@@ -1215,6 +1212,7 @@ export default function AttendanceV2Page() {
                     handleSetAttendance={handleSetAttendance}
                     allStatuses={allStatuses}
                     statusConfig={statusConfig}
+                    saveIndicator={renderAttendanceSaveIndicator()}
                   />
                 </>
               ) : (
@@ -1251,6 +1249,7 @@ export default function AttendanceV2Page() {
                   dailyStats={dailyStats}
                   monthlyStats={monthlyStats}
                   activeView={activeView}
+                  saveIndicator={renderAttendanceSaveIndicator()}
                 />
               )}
             </div>
