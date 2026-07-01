@@ -317,10 +317,11 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           await delayForTour();
         },
       },
+      // 1. Kalender Akademik
       {
-        target: "[data-tour='attendance-v2-settings-nav']",
-        title: "Bilah Menu Pengaturan",
-        description: "Gunakan menu di sisi kiri ini untuk berpindah kategori pengaturan secara cepat. Menu ini tersusun secara berurutan mulai dari kalender akademik hingga pencadangan data kelas.",
+        target: "[data-tour='attendance-v2-settings-nav-calendar']",
+        title: "Menu Kalender Akademik",
+        description: "Arahkan perhatian Anda ke tombol menu Kalender Akademik. Menu ini digunakan untuk mengatur format hari belajar aktif mingguan bagi kelas Anda.",
         prepare: async () => {
           setSettingsSection("calendar");
           await delayForTour();
@@ -328,53 +329,103 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-calendar']",
-        title: "1. Kalender Akademik & Hari Sekolah",
-        description: "Tentukan format hari belajar aktif kelas Anda (sistem 5 hari sekolah atau 6 hari sekolah). Pilihan ini akan secara otomatis mereset dan memformat hari belajar efektif pada kalender presensi harian.",
+        title: "Isi Kalender Akademik & Hari Sekolah",
+        description: "Di panel ini, Anda dapat menentukan format hari belajar aktif kelas Anda (sistem 5 hari sekolah atau 6 hari sekolah). Pilihan ini akan secara otomatis mereset dan memformat hari belajar efektif pada kalender presensi harian.",
         prepare: async () => {
           setSettingsSection("calendar");
           await delayForTour();
         },
       },
+      // 2. Hari Libur
       {
-        target: "[data-tour='attendance-v2-settings-effective']",
-        title: "2. Hari Libur & Kegiatan Khusus",
-        description: "Catat agenda khusus kelas seperti libur semester, kegiatan jeda tengah semester, atau hari raya keagamaan. Tanggal yang dinonaktifkan di sini otomatis dikecualikan sebagai pembagi persentase presensi murid.",
+        target: "[data-tour='attendance-v2-settings-nav-effective']",
+        title: "Menu Hari Libur & Kegiatan",
+        description: "Tombol menu ini mengarahkan Anda ke pengaturan hari libur khusus kelas serta pencatatan kegiatan belajar non-efektif.",
         prepare: async () => {
           setSettingsSection("effective");
           await delayForTour();
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-recap']",
-        title: "3. Kebijakan Rekap Kehadiran Murid",
-        description: "Atur kebijakan persentase kehadiran murid sesuai peraturan sekolah Anda. Anda dapat menentukan bobot keikutsertaan nilai status Sakit (S), Izin (I), Alpha (A), dan Dispensasi (D) terhadap nilai kehadiran akhir.",
+        target: "[data-tour='attendance-v2-settings-effective']",
+        title: "Isi Pengaturan Hari Libur & Kegiatan",
+        description: "Di panel ini, catat agenda khusus kelas seperti libur semester, kegiatan jeda tengah semester, atau hari raya keagamaan. Tanggal yang dinonaktifkan di sini otomatis dikecualikan sebagai pembagi persentase presensi murid.",
+        prepare: async () => {
+          setSettingsSection("effective");
+          await delayForTour();
+        },
+      },
+      // 3. Kebijakan Rekap
+      {
+        target: "[data-tour='attendance-v2-settings-nav-recap']",
+        title: "Menu Kebijakan Rekap Kehadiran",
+        description: "Tombol menu ini membawa Anda ke pengaturan formula pembagi rekapitulasi nilai kehadiran murid.",
         prepare: async () => {
           setSettingsSection("recap");
           await delayForTour();
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-audit']",
-        title: "4. Catatan Riwayat Perubahan",
-        description: "Demi keaslian dan transparansi data nilai sekolah, sistem menyimpan jurnal log setiap kali ada pengisian atau pengubahan kehadiran murid, lengkap dengan waktu perubahan dan nama guru yang mengubah.",
+        target: "[data-tour='attendance-v2-settings-recap']",
+        title: "Isi Kebijakan Rekap Kehadiran Murid",
+        description: "Di panel ini, atur kebijakan persentase kehadiran murid sesuai peraturan sekolah Anda. Anda dapat menentukan bobot keikutsertaan nilai status Sakit (S), Izin (I), Alpha (A), dan Dispensasi (D) terhadap nilai kehadiran akhir.",
+        prepare: async () => {
+          setSettingsSection("recap");
+          await delayForTour();
+        },
+      },
+      // 4. Log Audit
+      {
+        target: "[data-tour='attendance-v2-settings-nav-audit']",
+        title: "Menu Catatan Riwayat Perubahan",
+        description: "Tombol menu ini digunakan untuk membuka halaman peninjauan riwayat perubahan presensi kelas.",
         prepare: async () => {
           setSettingsSection("audit");
           await delayForTour();
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-delegation']",
-        title: "5. Pendelegasian Akses Guru Piket",
-        description: "Berikan wewenang pengisian presensi kelas kepada guru piket atau guru pendamping sementara tanpa harus membagikan kata sandi akun Anda. Batas waktu akses dapat diatur agar dinonaktifkan otomatis.",
+        target: "[data-tour='attendance-v2-settings-audit']",
+        title: "Isi Catatan Riwayat Perubahan",
+        description: "Di panel ini, sistem menyimpan jurnal log setiap kali ada pengisian atau pengubahan kehadiran murid, lengkap dengan waktu perubahan, status awal, status baru, serta nama guru yang mengubah demi menjaga keaslian data.",
+        prepare: async () => {
+          setSettingsSection("audit");
+          await delayForTour();
+        },
+      },
+      // 5. Delegasi
+      {
+        target: "[data-tour='attendance-v2-settings-nav-delegation']",
+        title: "Menu Pendelegasian Akses",
+        description: "Tombol menu ini mengarahkan Anda ke pendelegasian wewenang pengisian presensi kelas kepada rekan guru pendamping.",
         prepare: async () => {
           setSettingsSection("delegation");
           await delayForTour();
         },
       },
       {
+        target: "[data-tour='attendance-v2-settings-delegation']",
+        title: "Isi Pendelegasian Akses Guru Piket",
+        description: "Di panel ini, berikan wewenang pengisian presensi kelas kepada guru piket atau guru pendamping sementara tanpa harus membagikan kata sandi akun Anda. Batas waktu akses dapat diatur agar dinonaktifkan otomatis.",
+        prepare: async () => {
+          setSettingsSection("delegation");
+          await delayForTour();
+        },
+      },
+      // 6. Backup
+      {
+        target: "[data-tour='attendance-v2-settings-nav-backup']",
+        title: "Menu Pencadangan & Pemulihan",
+        description: "Tombol menu ini merupakan pintu gerbang untuk membuat cadangan data (snapshot) kelas Anda.",
+        prepare: async () => {
+          setSettingsSection("backup");
+          await delayForTour();
+        },
+      },
+      {
         target: "[data-tour='attendance-v2-settings-backup']",
-        title: "6. Pencadangan & Pemulihan Data",
-        description: "Buat salinan data presensi kelas Anda sebelum melakukan pengimporan data murid. Jika terjadi kekeliruan saat pengisian massal, Anda dapat memulihkan data kembali ke titik cadangan sebelumnya dalam sekejap.",
+        title: "Isi Pencadangan & Pemulihan Data",
+        description: "Di panel ini, buat salinan data presensi kelas Anda sebelum melakukan pengimporan data murid. Jika terjadi kekeliruan saat pengisian massal, Anda dapat memulihkan data kembali ke titik cadangan sebelumnya dalam sekejap.",
         prepare: async () => {
           setSettingsSection("backup");
           await delayForTour();
@@ -455,6 +506,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   <button
                     key={item.id}
                     type="button"
+                    data-tour={`attendance-v2-settings-nav-${item.id}`}
                     data-selected={active ? "true" : "false"}
                     aria-pressed={active}
                     onClick={() => setSettingsSection(item.id)}

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.131",
+    version: "2.4.131",
+    title: "Navigasi Bertahap Runtut Panduan Pengaturan",
+    description: "Mengembangkan alur penuntun langkah panduan pengaturan presensi agar menyorot tombol kategori di bilah menu terlebih dahulu sebelum menyorot isi panel pengaturan yang bersangkutan.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Menyematkan penanda pencarian data-tour yang unik pada masing-masing tombol kategori menu samping di SettingsDashboard.tsx.",
+      "Mengatur alur langkah panduan agar membimbing pengguna secara bertahap: menyorot tombol menu kategori terlebih dahulu, kemudian menyorot panel isi pengaturannya secara bergantian untuk semua kategori.",
+      "Memastikan panel kanan ter-render otomatis di prepare callback dari langkah tombol menu agar data-tour panel isi dapat terbaca secara tepat."
+    ]
+  },
+  {
     id: "v2.4.130",
     version: "2.4.130",
     title: "Peningkatan Mutu Teks Panduan & Alur Runtut Pengaturan",
