@@ -24,6 +24,7 @@ import {
   Sparkles, Loader2, Lock, Unlock, Sun, CalendarOff, UserCheck,
   Clock, CheckCircle2, XCircle, ShieldAlert, Settings2, MessageSquare, AlertCircle,
   FileText, Image as ImageIcon, Bookmark, Info, Upload, Camera, ChevronDown, Globe,
+  Mail, HeartPulse,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -242,8 +243,8 @@ const SIPENA_FULL = "SIPENA — Sistem Informasi Penilaian Akademik";
 // ── Status config with FIXED colors for readability ──
 const statusConfig: Record<string, { color: string; bg: string; bgActive: string; label: string; icon: React.ComponentType<{ className?: string }> }> = {
   H: { color: "text-grade-pass", bg: "bg-grade-pass/10", bgActive: "bg-grade-pass text-grade-pass-foreground", label: "Hadir", icon: CheckCircle2 },
-  I: { color: "text-primary", bg: "bg-primary/10", bgActive: "bg-primary text-primary-foreground", label: "Izin", icon: Clock },
-  S: { color: "text-grade-warning", bg: "bg-grade-warning/10", bgActive: "bg-grade-warning text-grade-warning-foreground", label: "Sakit", icon: ShieldAlert },
+  I: { color: "text-primary", bg: "bg-primary/10", bgActive: "bg-primary text-primary-foreground", label: "Izin", icon: Mail },
+  S: { color: "text-grade-warning", bg: "bg-grade-warning/10", bgActive: "bg-grade-warning text-grade-warning-foreground", label: "Sakit", icon: HeartPulse },
   A: { color: "text-grade-fail", bg: "bg-grade-fail/10", bgActive: "bg-grade-fail text-grade-fail-foreground", label: "Alpha", icon: XCircle },
   D: { color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-500/10", bgActive: "bg-purple-600 text-white dark:bg-purple-500 dark:text-white", label: "Dispensasi", icon: Bookmark },
 };

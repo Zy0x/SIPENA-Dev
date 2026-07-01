@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.139",
+    version: "2.4.139",
+    title: "Pembaruan Ikon Status Presensi HSIAD",
+    description: "Mengganti ikon status presensi Sakit (S) dan Izin (I) pada modul presensi agar selaras dengan kondisi nyata di sekolah, menggantikan ikon bawaan yang kurang relevan.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Mengubah ikon status Sakit (S) dari ikon dolar menjadi ikon grafik detak jantung (HeartPulse) medis yang lebih representatif di modul presensi V1 dan V2.",
+      "Mengubah ikon status Izin (I) dari ikon kalender/jam menjadi ikon surat/amplop (Mail) untuk melambangkan surat izin dari orang tua murid secara kontekstual.",
+      "Memastikan seluruh tampilan di baris kartu statistik harian dan dialog presensi massal menggunakan ikon baru secara serasi."
+    ]
+  },
+  {
     id: "v2.4.138",
     version: "2.4.138",
     title: "Penyesuaian Scroll Dinamis Posisi Sidebar",
