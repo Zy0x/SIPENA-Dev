@@ -28,6 +28,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogPortal,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -308,8 +309,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
     () => [
       {
         target: "[data-tour='attendance-v2-settings-header']",
-        title: "Pengaturan Presensi V2",
-        description: "Header ini menampilkan kelas, bulan, status kunci, dan tombol panduan tanpa memakan banyak ruang.",
+        title: "Dashboard Pengaturan Presensi V2",
+        description: "Bagian ini menampilkan informasi dasar mengenai kelas aktif, periode bulan berjalan, status penguncian data rekap, serta ringkasan informasi penting lainnya secara ringkas.",
         prepare: async () => {
           onOpenChange(true);
           setSettingsSection("calendar");
@@ -318,8 +319,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-nav']",
-        title: "Navigasi Pengaturan",
-        description: "Gunakan tab ini untuk berpindah bagian. Di mobile tab tetap terlihat dan bisa digeser.",
+        title: "Navigasi Menu Kategori (SaaS Sidebar)",
+        description: "Gunakan bilah navigasi kiri ini untuk berpindah bagian konfigurasi secara instan. Pada perangkat seluler, bilah navigasi ini dapat digeser secara horizontal agar tetap mudah dijangkau dan hemat ruang.",
         prepare: async () => {
           setSettingsSection("calendar");
           await delayForTour();
@@ -327,8 +328,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-calendar']",
-        title: "Kalender Akademik",
-        description: "Atur format 5 atau 6 hari sekolah, serta override libur nasional dan akhir pekan jika ada kegiatan masuk.",
+        title: "Format Hari Sekolah & Kalender Akademik",
+        description: "Tentukan format hari sekolah utama yang berlaku (5 hari kerja: Senin–Jumat atau 6 hari kerja: Senin–Sabtu). Perubahan ini otomatis menyesuaikan jumlah hari efektif pada tabel dan perhitungan kehadiran murid.",
         prepare: async () => {
           setSettingsSection("calendar");
           await delayForTour();
@@ -336,8 +337,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-info-help']",
-        title: "Icon Informasi",
-        description: "Tekan atau hover icon i untuk melihat fungsi fitur, contoh penggunaan, dan dampaknya pada rekap atau export.",
+        title: "Panduan Bantuan Kontekstual (Ikon Informasi)",
+        description: "Setiap bagian konfigurasi dilengkapi dengan ikon informasi (i). Sentuh atau arahkan kursor ke ikon tersebut untuk menampilkan tooltip detail penjelasan fungsi, contoh kasus di sekolah, serta dampaknya pada rekapitulasi data.",
         prepare: async () => {
           setSettingsSection("calendar");
           await delayForTour();
@@ -345,8 +346,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-effective']",
-        title: "Libur dan Kegiatan",
-        description: "Kelola libur kustom, kegiatan khusus, dan lihat alasan tanggal menjadi tidak efektif.",
+        title: "Manajemen Hari Libur & Kegiatan Murid",
+        description: "Kelola agenda khusus sekolah (seperti Ujian Semester, Study Tour, Class Meeting) serta override hari libur khusus kelas. Tanggal non-efektif ini akan dikecualikan secara cerdas dari denominator pembagi rekap persentase kehadiran murid.",
         prepare: async () => {
           setSettingsSection("effective");
           await delayForTour();
@@ -354,8 +355,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-recap']",
-        title: "Profil Rekap",
-        description: "Tentukan denominator dan status mana yang dihitung hadir atau tidak hadir sesuai aturan sekolah.",
+        title: "Kebijakan Rumus & Denominator Rekap",
+        description: "Konfigurasikan bagaimana persentase kehadiran murid dihitung sesuai regulasi sekolah Anda. Tentukan status mana saja (Hadir, Sakit, Izin, Alpha, Dispensasi) yang masuk ke dalam denominator (pembagi) persentase.",
         prepare: async () => {
           setSettingsSection("recap");
           await delayForTour();
@@ -363,8 +364,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-audit']",
-        title: "Riwayat Perubahan",
-        description: "Bagian ini disiapkan untuk melacak editor, waktu, nilai lama, dan nilai baru setiap perubahan presensi.",
+        title: "Jejak Audit Aktivitas (Jurnal Log)",
+        description: "Demi akuntabilitas data akademik sekolah, setiap penambahan, pengubahan, atau penghapusan status presensi murid akan dicatat ke dalam log jejak audit lengkap beserta nama editor, timestamp, status lama, dan status baru.",
         prepare: async () => {
           setSettingsSection("audit");
           await delayForTour();
@@ -372,8 +373,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-delegation']",
-        title: "Delegasi Guru Pengganti",
-        description: "Beri akses sementara kepada guru pengganti. Semua perubahan tetap tercatat atas nama editor sebenarnya.",
+        title: "Hak Akses Delegasi Guru Pengganti",
+        description: "Delegasikan wewenang pengisian presensi kelas kepada guru pengganti (piket/mitra) selama rentang waktu tertentu secara aman tanpa perlu membagikan kredensial akun pribadi Anda.",
         prepare: async () => {
           setSettingsSection("delegation");
           await delayForTour();
@@ -381,8 +382,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       },
       {
         target: "[data-tour='attendance-v2-settings-backup']",
-        title: "Backup Bulanan",
-        description: "Buat cadangan bulan ini dan pulihkan data jika terjadi kesalahan import atau edit massal.",
+        title: "Snapshot Cadangan & Pemulihan (Backup/Restore)",
+        description: "Buat snapshot cadangan data presensi Sandbox V2 sebelum Anda melakukan perubahan massal atau pengimporan data. Kapan saja terjadi salah pengisian data, Anda dapat memulihkan (restore) kondisi data ke snapshot sebelumnya dalam sekejap.",
         prepare: async () => {
           setSettingsSection("backup");
           await delayForTour();
@@ -1106,12 +1107,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         </div>
       </DialogContent>
 
-      <ProductTour
-        steps={settingsTourSteps}
-        tourKey="attendance-v2-settings"
-        requireOnboarding={false}
-        zIndexBase={10120}
-      />
+      <DialogPortal>
+        <ProductTour
+          steps={settingsTourSteps}
+          tourKey="attendance-v2-settings"
+          requireOnboarding={false}
+          zIndexBase={10120}
+        />
+      </DialogPortal>
     </Dialog>
   );
 };

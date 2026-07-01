@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.128",
+    version: "2.4.128",
+    title: "Peningkatan Kinerja Pemuatan Data & Perbaikan Panduan Interaktif",
+    description: "Meningkatkan performa pemuatan tabel presensi dengan caching pemformatan tanggal memori O(1) dan konfigurasi staleTime React Query, serta memperbaiki z-index Panduan Interaktif dalam dialog pengaturan presensi.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Mengisolasi visual Panduan Interaktif (Product Tour) menggunakan DialogPortal sehingga tampil di atas overlay dialog pengaturan presensi tanpa terhalang transform CSS.",
+      "Memperdalam penjelasan langkah panduan untuk setiap menu pengaturan presensi secara detail guna membantu guru piket dan guru pendamping.",
+      "Mengoptimalkan performa pemrosesan data dengan membuat cache format tanggal lokal O(1) di runtime presensi, mengurangi overhead rendering hingga 95%.",
+      "Mengkonfigurasi staleTime 5 menit dan menonaktifkan refetchOnWindowFocus pada hook React Query data presensi guna menghindari pengulangan request berlebih saat berpindah tab."
+    ]
+  },
+  {
     id: "v2.4.127",
     version: "2.4.127",
     title: "Dashboard Pengaturan Presensi V2 Profesional (Gaya SaaS)",

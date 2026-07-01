@@ -192,6 +192,24 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const [localLocked, setLocalLocked] = useState(true);
   const [dbAvailable, setDbAvailable] = useState(false);
   const attendanceRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dateCacheRef = useRef<Map<number, string>>(new Map());
+  const prevMonthStartRef = useRef(monthStart);
+  if (prevMonthStartRef.current !== monthStart) {
+    dateCacheRef.current.clear();
+    prevMonthStartRef.current = monthStart;
+  }
+
+  const getFormattedDate = useCallback((date: Date) => {
+    const time = date.getTime();
+    let cached = dateCacheRef.current.get(time);
+    if (!cached) {
+      cached = format(date, "yyyy-MM-dd");
+      dateCacheRef.current.set(time, cached);
+    }
+    return cached;
+  }, [monthStart]);
+
   const attendanceDatasetQueryKey = useMemo(
     () => ["attendance_v2_dataset", classId, monthStart, dbAvailable] as const,
     [classId, monthStart, dbAvailable]
@@ -292,6 +310,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       } as AttendanceDatasetCanonical;
     },
     enabled: !!classId && !!user && dbAvailable,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 
   const attendanceRecords = useMemo(() => {
@@ -400,28 +420,28 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
 
   const getAttendance = useCallback(
     (studentId: string, date: Date): AttendanceStatusValue | null => {
-      const dateStr = format(date, "yyyy-MM-dd");
+      const dateStr = getFormattedDate(date);
       const record = attendanceRecordMap.get(buildAttendanceLookupKey(studentId, dateStr));
       return (record?.status as AttendanceStatusValue) ?? null;
     },
-    [attendanceRecordMap]
+    [attendanceRecordMap, getFormattedDate]
   );
 
   const getAttendanceNote = useCallback(
     (studentId: string, date: Date): string | null => {
-      const dateStr = format(date, "yyyy-MM-dd");
+      const dateStr = getFormattedDate(date);
       const record = attendanceRecordMap.get(buildAttendanceLookupKey(studentId, dateStr));
       return record?.note ?? null;
     },
-    [attendanceRecordMap]
+    [attendanceRecordMap, getFormattedDate]
   );
 
   const getDayEvent = useCallback(
     (date: Date): DayEvent | null => {
-      const dateStr = format(date, "yyyy-MM-dd");
+      const dateStr = getFormattedDate(date);
       return dayEventMap.get(dateStr) || null;
     },
-    [dayEventMap]
+    [dayEventMap, getFormattedDate]
   );
 
   const isHoliday = useCallback(
@@ -429,10 +449,10 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const dayOfWeek = getDay(date);
       if (dayOfWeek === 0) return true;
       if (workDayFormat === "5days" && dayOfWeek === 6) return true;
-      const dateStr = format(date, "yyyy-MM-dd");
+      const dateStr = getFormattedDate(date);
       return holidayMap.has(dateStr);
     },
-    [holidayMap, workDayFormat]
+    [holidayMap, workDayFormat, getFormattedDate]
   );
 
   const getHolidayDescription = useCallback(
@@ -440,11 +460,11 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const dayOfWeek = getDay(date);
       if (dayOfWeek === 0) return "Hari Minggu";
       if (workDayFormat === "5days" && dayOfWeek === 6) return "Hari Sabtu (Libur)";
-      const dateStr = format(date, "yyyy-MM-dd");
+      const dateStr = getFormattedDate(date);
       const holiday = holidayMap.get(dateStr);
       return holiday?.description || null;
     },
-    [holidayMap, workDayFormat]
+    [holidayMap, workDayFormat, getFormattedDate]
   );
 
   interface OfflineMutation {
@@ -1154,6 +1174,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       };
     },
     enabled: !!user && !!classId && dbAvailable,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 
   const recapProfile = recapProfileQuery.data || {
@@ -1218,6 +1240,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       return (data as any || []) as MonthSnapshot[];
     },
     enabled: !!user && !!classId && dbAvailable,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 
   const snapshots = snapshotsQuery.data || [];
@@ -1300,6 +1324,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       return (data as any || []) as Delegation[];
     },
     enabled: !!user && !!classId && dbAvailable,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
 
   const delegations = delegationsQuery.data || [];
