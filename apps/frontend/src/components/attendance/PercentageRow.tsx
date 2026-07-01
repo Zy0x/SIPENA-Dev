@@ -72,7 +72,7 @@ export function PercentageRow({
   return (
     <tr className="border-t border-dashed border-border bg-card">
       <td className="sticky left-0 z-10 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-bold text-primary border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)]" colSpan={1}>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 w-[120px] sm:w-[160px]">
           {/* % icon - shows percentage formula */}
           <Popover>
             <PopoverTrigger asChild>

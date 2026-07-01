@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.144",
+    version: "2.4.144",
+    title: "Perbaikan Ulang Toolbar Rekap & Stabilitas Kolom Freeze",
+    description: "Memperbaiki penataan layout toolbar tabel rekap bulanan agar tidak menumpuk di perangkat mobile, serta menjamin kekokohan visual kolom beku (freeze column) nama murid.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Mengatur tata letak toolbar rekap bulanan secara dinamis di perangkat mobile: Judul dan Save Indicator di baris pertama, sedangkan tombol Aksi (Kunci & Konfigurasi) beserta Bulan Navigasi berdampingan secara rapi di baris kedua.",
+      "Menyematkan properti 'whitespace-nowrap' pada judul Rekap Bulanan untuk mencegah pemotongan teks atau pemisahan baris kata yang tidak teratur.",
+      "Menerapkan pembungkus div dengan lebar tetap (w-[120px] sm:w-[160px]) pada sel sudut header (No. Nama Murid) dan sel baris murid untuk mencegah kompresi/squeezing kolom beku oleh mesin render browser.",
+      "Penyelarasan layout toolbar, shadow-elevation, dan pembungkus div lebar tetap pada total row di modul presensi V1 dan V2."
+    ]
+  },
+  {
     id: "v2.4.143",
     version: "2.4.143",
     title: "Peningkatan Responsivitas & Aksesibilitas Tabel Rekap Bulanan",

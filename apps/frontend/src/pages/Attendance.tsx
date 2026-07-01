@@ -3795,17 +3795,23 @@ export default function Attendance() {
                   className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden" 
                   data-monthly-table 
                 >
-                  <div className="flex flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
-                    <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+                  <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
+                    {/* Left section: Title & Save Indicator */}
+                    <div className="flex items-center justify-between sm:justify-start gap-2">
                       <div className="flex items-center gap-2">
                         <BarChart3 className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span className="text-sm font-semibold text-foreground">Rekap Bulanan</span>
+                        <span className="text-sm font-semibold text-foreground whitespace-nowrap">Rekap Bulanan</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
+                    </div>
+
+                    {/* Right section: Navigation & Action Buttons */}
+                    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t border-border/30 pt-2 sm:border-t-0 sm:pt-0">
+                      {/* Action buttons (Lock & Config) */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant={isLocked ? "default" : "outline"} size="sm" className="h-8 px-2.5 text-xs gap-1 rounded-xl" onClick={handleToggleLock}>
-                              {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                              {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                               <span className="hidden xs:inline sm:inline">{isLocked ? "Terkunci" : "Terbuka"}</span>
                             </Button>
                           </TooltipTrigger>
@@ -3813,26 +3819,30 @@ export default function Attendance() {
                         </Tooltip>
                         <JumlahCalculationConfig config={jumlahConfig} onConfigChange={setJumlahConfig} />
                       </div>
-                    </div>
-                    <div className="flex items-center justify-center sm:justify-end gap-1 w-full sm:w-auto border-t border-border/30 pt-2.5 sm:border-t-0 sm:pt-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handlePrevMonth}><ChevronLeft className="w-4 h-4" /></Button>
-                      <span className="text-xs font-medium min-w-[80px] sm:min-w-[100px] text-center text-foreground">{format(currentMonth, "MMM yyyy", { locale: idLocale })}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handleNextMonth}><ChevronRight className="w-4 h-4" /></Button>
+
+                      {/* Month Navigation */}
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handlePrevMonth}><ChevronLeft className="w-4 h-4" /></Button>
+                        <span className="text-xs font-medium min-w-[70px] sm:min-w-[85px] text-center text-foreground">{format(currentMonth, "MMM yyyy", { locale: idLocale })}</span>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={handleNextMonth}><ChevronRight className="w-4 h-4" /></Button>
+                      </div>
                     </div>
                   </div>
 
-                {isLocked && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
-                    <Lock className="w-3 h-3" />
-                    <span>Rekap terkunci. Buka kunci untuk mengedit.</span>
-                  </div>
-                )}
+                  {isLocked && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
+                      <Lock className="w-3 h-3" />
+                      <span>Rekap terkunci. Buka kunci untuk mengedit.</span>
+                    </div>
+                  )}
 
-                <SmartScrollTable data-tour="attendance-table" className="max-h-[380px] sm:max-h-[480px]">
-                  <table className="w-full text-center border-collapse min-w-max">
-                    <thead className="sticky top-0 z-10 bg-card">
-                      <tr className="border-b border-border">
-                        <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
+                  <SmartScrollTable data-tour="attendance-table" className="max-h-[380px] sm:max-h-[480px]">
+                    <table className="w-full text-center border-collapse min-w-max">
+                      <thead className="sticky top-0 z-10 bg-card">
+                        <tr className="border-b border-border">
+                          <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]">
+                            <div className="w-[120px] sm:w-[160px] text-left truncate">No. Nama Murid</div>
+                          </th>
                         {monthDays.map(day => {
                           const dayNum = getDay(day);
                           const isSun = dayNum === 0;
@@ -3889,7 +3899,7 @@ export default function Attendance() {
                         return (
                           <tr key={student.id} className={cn("border-b border-border/30", idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
                             <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
-                              <div className="flex items-start gap-0.5">
+                              <div className="flex items-start gap-0.5 w-[120px] sm:w-[160px]">
                                 <span className="text-muted-foreground font-medium flex-shrink-0">{idx + 1}.</span>
                                 <span className="text-foreground break-words leading-tight">{student.name}</span>
                               </div>
@@ -3966,7 +3976,7 @@ export default function Attendance() {
                     <tfoot>
                       <tr className="border-t-2 border-border bg-muted/50" style={{ background: 'hsl(var(--muted) / 0.5)' }}>
                         <td className="sticky left-0 z-10 bg-muted px-2 py-1.5 text-[10px] sm:text-xs font-bold text-foreground border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] bg-muted/95" colSpan={1}>
-                          Total
+                          <div className="w-[120px] sm:w-[160px] text-left">Total</div>
                         </td>
                         {monthDays.map(day => {
                           const dayCounts: Record<string, number> = { H: 0, S: 0, I: 0, A: 0, D: 0 };
