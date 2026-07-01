@@ -206,7 +206,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
         )}
 
         <SmartScrollTable data-tour="attendance-table">
-          <table className="w-full text-center border-collapse min-w-max">
+          <table className="w-full text-center border-collapse min-w-max select-none">
             <thead className="sticky top-0 z-10 bg-card">
               <tr className="border-b border-border">
                 <th className="sticky left-0 z-20 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r border-border min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
@@ -282,7 +282,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div
-                                className={cn("w-5 h-5 sm:w-6 sm:h-6 mx-auto flex items-center justify-center text-[8px] sm:text-[9px] font-bold rounded-md transition-colors",
+                                className={cn("select-none w-5 h-5 sm:w-6 sm:h-6 mx-auto flex items-center justify-center text-[8px] sm:text-[9px] font-bold rounded-md transition-colors",
                                   !isLocked && !holidayActive && "cursor-pointer",
                                   holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
                                     : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",

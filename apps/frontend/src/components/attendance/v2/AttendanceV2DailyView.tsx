@@ -144,7 +144,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                         onClick={() => handleSetAttendance(student.id, selectedDate, isSelected ? null : s)}
                         disabled={holidayActive}
                         className={cn(
-                          "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation",
+                          "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation select-none",
                           "w-[26px] h-7 sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col",
                           isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground hover:bg-muted active:bg-muted/80",
                           holidayActive && "cursor-not-allowed opacity-40"
