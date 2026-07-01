@@ -3837,10 +3837,10 @@ export default function Attendance() {
                   )}
 
                   <SmartScrollTable data-tour="attendance-table" className="max-h-[380px] sm:max-h-[480px]">
-                    <table className="w-full text-center border-collapse min-w-max">
-                      <thead className="sticky top-0 z-10 bg-card">
-                        <tr className="border-b border-border">
-                          <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]">
+                    <table className="w-full text-center border-separate border-spacing-0 min-w-max">
+                      <thead className="z-10 bg-card">
+                        <tr>
+                          <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-b border-r-border/80 border-b-border shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]">
                             <div className="w-[120px] sm:w-[160px] text-left truncate">No. Nama Murid</div>
                           </th>
                         {monthDays.map(day => {
@@ -3851,7 +3851,7 @@ export default function Attendance() {
                           const holCustom = holidays.some(h => h.date === format(day, "yyyy-MM-dd"));
                           const isNatHol = isNationalHoliday(day);
                           return (
-                            <th key={day.toISOString()} className={cn("sticky top-0 z-20 px-0.5 py-1 min-w-[28px] sm:min-w-[32px] border-l border-border/30 bg-card",
+                            <th key={day.toISOString()} className={cn("sticky top-0 z-20 px-0.5 py-1 min-w-[28px] sm:min-w-[32px] border-l border-b border-l-border/30 border-b-border bg-card",
                               isSun && "bg-grade-warning/5",
                               holCustom && "bg-red-50 dark:bg-red-900/10",
                               isNatHol && !holCustom && "bg-red-50/50 dark:bg-red-950/10",
@@ -3880,9 +3880,9 @@ export default function Attendance() {
                           );
                         })}
                         {allStatuses.map(s => (
-                          <th key={s} className={cn("sticky top-0 z-20 px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[28px] sm:min-w-[32px] border-l border-border/50 bg-card", statusConfig[s]?.color)}>{s}</th>
+                          <th key={s} className={cn("sticky top-0 z-20 px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[28px] sm:min-w-[32px] border-l border-b border-l-border/50 border-b-border bg-card", statusConfig[s]?.color)}>{s}</th>
                         ))}
-                        <th className="sticky top-0 z-20 px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[32px] sm:min-w-[36px] border-l-2 border-border bg-muted/95 text-foreground">
+                        <th className="sticky top-0 z-20 px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[32px] sm:min-w-[36px] border-l-2 border-b border-l-border border-b-border bg-muted/95 text-foreground">
                           Jml
                         </th>
                       </tr>
@@ -3897,8 +3897,8 @@ export default function Attendance() {
                           }
                         });
                         return (
-                          <tr key={student.id} className={cn("border-b border-border/30", idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
-                            <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
+                          <tr key={student.id} className={cn(idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
+                            <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-b border-r-border/80 border-b-border/30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
                               <div className="flex items-start gap-0.5 w-[120px] sm:w-[160px]">
                                 <span className="text-muted-foreground font-medium flex-shrink-0">{idx + 1}.</span>
                                 <span className="text-foreground break-words leading-tight">{student.name}</span>
@@ -3911,7 +3911,7 @@ export default function Attendance() {
                               const dayNum = getDay(day);
                               const isSunday = dayNum === 0;
                               return (
-                                <td key={day.toISOString()} className={cn("p-0.5 text-center relative", holidayActive && "bg-grade-warning/5")}>
+                                <td key={day.toISOString()} className={cn("p-0.5 text-center relative border-b border-b-border/30", holidayActive && "bg-grade-warning/5")}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div
@@ -3961,11 +3961,11 @@ export default function Attendance() {
                               );
                             })}
                             {allStatuses.map(s => (
-                              <td key={s} className={cn("px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l border-border/30", statusConfig[s]?.color)}>
+                              <td key={s} className={cn("px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l border-b border-l-border/30 border-b-border/30", statusConfig[s]?.color)}>
                                 {studentStats[s]}
                               </td>
                             ))}
-                            <td className="px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l-2 border-border bg-muted/20 text-foreground">
+                            <td className="px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l-2 border-b border-l-border border-b-border/30 bg-muted/20 text-foreground">
                               {calculateJumlah(studentStats, jumlahConfig)}
                             </td>
                           </tr>
@@ -3975,7 +3975,7 @@ export default function Attendance() {
                     {/* Total Row */}
                     <tfoot>
                       <tr className="border-t-2 border-border bg-muted/50" style={{ background: 'hsl(var(--muted) / 0.5)' }}>
-                        <td className="sticky left-0 z-10 bg-muted px-2 py-1.5 text-[10px] sm:text-xs font-bold text-foreground border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] bg-muted/95" colSpan={1}>
+                        <td className="sticky left-0 z-10 bg-muted px-2 py-1.5 text-[10px] sm:text-xs font-bold text-foreground border-r-2 border-b border-r-border/80 border-b-border shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] bg-muted/95" colSpan={1}>
                           <div className="w-[120px] sm:w-[160px] text-left">Total</div>
                         </td>
                         {monthDays.map(day => {
@@ -3988,7 +3988,7 @@ export default function Attendance() {
                           });
                           const dayTotal = dayCounts.H + dayCounts.S + dayCounts.I + dayCounts.A + dayCounts.D;
                           return (
-                            <td key={day.toISOString()} className="p-0.5 text-center text-[9px] sm:text-[10px] font-bold">
+                            <td key={day.toISOString()} className="p-0.5 text-center text-[9px] sm:text-[10px] font-bold border-b border-b-border">
                               {dayTotal || ""}
                             </td>
                           );
@@ -4012,11 +4012,11 @@ export default function Attendance() {
                           return (
                             <>
                               {allStatuses.map(s => (
-                                <td key={s} className={cn("px-1 py-1.5 text-center text-[9px] sm:text-[10px] font-bold border-l border-border/30", statusConfig[s]?.color)}>
+                                <td key={s} className={cn("px-1 py-1.5 text-center text-[9px] sm:text-[10px] font-bold border-l border-b border-l-border/30 border-b-border", statusConfig[s]?.color)}>
                                   {totals[s]}
                                 </td>
                               ))}
-                              <td className="px-1 py-1.5 text-center text-[9px] sm:text-[10px] font-extrabold border-l-2 border-border text-foreground bg-muted/95">
+                              <td className="px-1 py-1.5 text-center text-[9px] sm:text-[10px] font-extrabold border-l-2 border-b border-l-border border-b-border text-foreground bg-muted/95">
                                 {grandJumlah}
                               </td>
                             </>

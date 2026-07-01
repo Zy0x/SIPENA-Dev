@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.146",
+    version: "2.4.146",
+    title: "Migrasi ke Layout Table border-separate untuk Koreksi Scroll Sticky",
+    description: "Memperbaiki bug rendering sticky header yang melayang salah posisi di browser tertentu dengan memigrasikan tabel rekap bulanan ke model 'border-separate border-spacing-0'.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Mengganti properti CSS 'border-collapse' menjadi 'border-separate border-spacing-0' pada tabel rekap bulanan V1 dan V2 untuk mengatasi bug kalkulasi bounding box sticky bawaan browser.",
+      "Menghapus properti sticky dari elemen thead agar perhitungan sticky day headers th murni merujuk langsung ke batas atas scroll container.",
+      "Menyematkan border-b (garis batas bawah) eksplisit pada seluruh sel th dan td (karena border-separate mengabaikan border pada elemen tr) untuk menjaga visualisasi baris pembatas data tetap rapi.",
+      "Penyelarasan layout, z-index, dan border bottom pada modul shared PercentageRow."
+    ]
+  },
+  {
     id: "v2.4.145",
     version: "2.4.145",
     title: "Pemantapan Sticky Header Th pada Sumbu Vertikal",

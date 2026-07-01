@@ -71,7 +71,7 @@ export function PercentageRow({
 
   return (
     <tr className="border-t border-dashed border-border bg-card">
-      <td className="sticky left-0 z-10 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-bold text-primary border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)]" colSpan={1}>
+      <td className="sticky left-0 z-10 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-bold text-primary border-r-2 border-b border-r-border/80 border-b-border/30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)]" colSpan={1}>
         <div className="flex items-center gap-1 w-[120px] sm:w-[160px]">
           {/* % icon - shows percentage formula */}
           <Popover>
@@ -141,14 +141,14 @@ export function PercentageRow({
       </td>
       {/* Empty cells for day columns */}
       {monthDays.map((day) => (
-        <td key={day.toISOString()} className="p-0.5" />
+        <td key={day.toISOString()} className="p-0.5 border-b border-b-border/10" />
       ))}
       {/* Percentage per status */}
       {allStatuses.map((s) => (
         <td
           key={s}
           className={cn(
-            "px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-bold border-l border-border/30",
+            "px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-bold border-l border-b border-l-border/30 border-b-border/30",
             statusConfig[s]?.color
           )}
         >
@@ -156,7 +156,7 @@ export function PercentageRow({
         </td>
       ))}
       {/* Total percentage */}
-      <td className="px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-extrabold border-l-2 border-border text-foreground bg-muted">
+      <td className="px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-extrabold border-l-2 border-b border-l-border border-b-border/30 text-foreground bg-muted">
         {totalPercentage > 0 ? `${totalPercentage.toFixed(1)}%` : "0%"}
       </td>
     </tr>
