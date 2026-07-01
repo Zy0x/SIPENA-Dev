@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.132",
+    version: "2.4.132",
+    title: "Pemetaan Terperinci Elemen Isi Panduan Pengaturan",
+    description: "Memisahkan sorotan panduan interaktif isi pengaturan untuk menargetkan setiap elemen kartu/komponen secara spesifik daripada menyorot satu panel isi secara utuh.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Menyematkan penanda data-tour pada kartu Format Hari Kerja dan Override Hari Libur di Kalender Akademik.",
+      "Menyematkan penanda data-tour pada kartu Libur Kustom, Kegiatan Khusus, dan Pratinjau Hari Tidak Efektif di menu Hari Libur.",
+      "Menyematkan penanda data-tour pada kartu Denominator dan Pemetaan Status Kehadiran di menu Kebijakan Rekap.",
+      "Menyematkan penanda data-tour pada Tombol Tambah Delegasi/Cadangan dan Tabel Riwayat untuk memberikan fokus sorotan panduan yang lebih presisi."
+    ]
+  },
+  {
     id: "v2.4.131",
     version: "2.4.131",
     title: "Navigasi Bertahap Runtut Panduan Pengaturan",

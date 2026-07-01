@@ -328,15 +328,24 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-calendar']",
-        title: "Isi Kalender Akademik & Hari Sekolah",
-        description: "Di panel ini, Anda dapat menentukan format hari belajar aktif kelas Anda (sistem 5 hari sekolah atau 6 hari sekolah). Pilihan ini akan secara otomatis mereset dan memformat hari belajar efektif pada kalender presensi harian.",
+        target: "[data-tour='attendance-v2-settings-calendar-format']",
+        title: "Format Hari Belajar Mingguan",
+        description: "Di bagian ini, Anda dapat menentukan pola belajar mingguan murid (sistem 5 hari sekolah atau 6 hari sekolah). Pilihan ini menjadi acuan sistem untuk memformat hari efektif belajar.",
         prepare: async () => {
           setSettingsSection("calendar");
           await delayForTour();
         },
       },
-      // 2. Hari Libur
+      {
+        target: "[data-tour='attendance-v2-settings-calendar-override']",
+        title: "Penyesuaian Hari Libur & Akhir Pekan",
+        description: "Gunakan fitur ini jika ada kegiatan sekolah khusus yang mengharuskan kelas masuk pada akhir pekan (Sabtu/Minggu) atau libur nasional. Hari yang ditandai masuk akan dihitung dalam hari efektif.",
+        prepare: async () => {
+          setSettingsSection("calendar");
+          await delayForTour();
+        },
+      },
+      // 2. Hari Libur & Kegiatan Khusus
       {
         target: "[data-tour='attendance-v2-settings-nav-effective']",
         title: "Menu Hari Libur & Kegiatan",
@@ -347,9 +356,27 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-effective']",
-        title: "Isi Pengaturan Hari Libur & Kegiatan",
-        description: "Di panel ini, catat agenda khusus kelas seperti libur semester, kegiatan jeda tengah semester, atau hari raya keagamaan. Tanggal yang dinonaktifkan di sini otomatis dikecualikan sebagai pembagi persentase presensi murid.",
+        target: "[data-tour='attendance-v2-settings-effective-holiday']",
+        title: "Daftar Hari Libur Kustom",
+        description: "Tambahkan tanggal libur kustom tertentu di luar hari libur nasional (misalnya libur semester, rapat guru, atau renovasi sekolah). Murid tidak akan dihitung hadir pada tanggal ini.",
+        prepare: async () => {
+          setSettingsSection("effective");
+          await delayForTour();
+        },
+      },
+      {
+        target: "[data-tour='attendance-v2-settings-effective-event']",
+        title: "Pencatatan Kegiatan Khusus",
+        description: "Catat agenda khusus kelas yang bukan merupakan kegiatan belajar mengajar rutin (KBM) tetapi tetap perlu diketahui (seperti study tour, pentas seni, atau rapat wali murid).",
+        prepare: async () => {
+          setSettingsSection("effective");
+          await delayForTour();
+        },
+      },
+      {
+        target: "[data-tour='attendance-v2-settings-effective-preview']",
+        title: "Pratinjau Hari Tidak Efektif",
+        description: "Halaman ringkasan ini merinci seluruh tanggal di bulan berjalan yang berstatus tidak efektif beserta alasannya (seperti libur rutin, hari Minggu, atau hari libur khusus).",
         prepare: async () => {
           setSettingsSection("effective");
           await delayForTour();
@@ -366,9 +393,18 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-recap']",
-        title: "Isi Kebijakan Rekap Kehadiran Murid",
-        description: "Di panel ini, atur kebijakan persentase kehadiran murid sesuai peraturan sekolah Anda. Anda dapat menentukan bobot keikutsertaan nilai status Sakit (S), Izin (I), Alpha (A), dan Dispensasi (D) terhadap nilai kehadiran akhir.",
+        target: "[data-tour='attendance-v2-settings-recap-denominator']",
+        title: "Kebijakan Angka Pembagi (Denominator)",
+        description: "Tentukan dasar pembagian untuk persentase kehadiran murid: apakah dihitung berdasarkan jumlah hari efektif kalender akademik, atau hanya berdasarkan hari yang sudah diisi presensi.",
+        prepare: async () => {
+          setSettingsSection("recap");
+          await delayForTour();
+        },
+      },
+      {
+        target: "[data-tour='attendance-v2-settings-recap-mapping']",
+        title: "Pemetaan Status Kehadiran Murid",
+        description: "Atur pengelompokan status presensi (Hadir, Sakit, Izin, Alpha, Dispensasi) untuk menentukan apakah status tertentu dihitung sebagai kehadiran fisik atau ketidakhadiran dalam nilai akhir murid.",
         prepare: async () => {
           setSettingsSection("recap");
           await delayForTour();
@@ -385,9 +421,9 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-audit']",
-        title: "Isi Catatan Riwayat Perubahan",
-        description: "Di panel ini, sistem menyimpan jurnal log setiap kali ada pengisian atau pengubahan kehadiran murid, lengkap dengan waktu perubahan, status awal, status baru, serta nama guru yang mengubah demi menjaga keaslian data.",
+        target: "[data-tour='attendance-v2-settings-audit-history']",
+        title: "Riwayat Aktivitas & Perubahan Data",
+        description: "Setiap perubahan status kehadiran murid akan dicatat di panel ini secara terperinci (nama guru pengubah, tanggal perubahan, status awal, dan status baru) demi menjaga akurasi data.",
         prepare: async () => {
           setSettingsSection("audit");
           await delayForTour();
@@ -404,9 +440,18 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-delegation']",
-        title: "Isi Pendelegasian Akses Guru Piket",
-        description: "Di panel ini, berikan wewenang pengisian presensi kelas kepada guru piket atau guru pendamping sementara tanpa harus membagikan kata sandi akun Anda. Batas waktu akses dapat diatur agar dinonaktifkan otomatis.",
+        target: "[data-tour='attendance-v2-settings-delegation-add']",
+        title: "Tombol Pemberian Akses Sementara",
+        description: "Klik tombol ini untuk menunjuk rekan guru lain agar dapat mengisi presensi kelas Anda secara aman dalam kurun waktu tertentu tanpa perlu membagikan kata sandi akun Anda.",
+        prepare: async () => {
+          setSettingsSection("delegation");
+          await delayForTour();
+        },
+      },
+      {
+        target: "[data-tour='attendance-v2-settings-delegation-list']",
+        title: "Daftar Hak Akses Aktif",
+        description: "Di sini Anda dapat melihat siapa saja rekan guru yang saat ini sedang didelegasikan untuk membantu mengisi presensi, lengkap dengan masa berlakunya dan tombol pembatalan izin.",
         prepare: async () => {
           setSettingsSection("delegation");
           await delayForTour();
@@ -423,9 +468,27 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         },
       },
       {
-        target: "[data-tour='attendance-v2-settings-backup']",
-        title: "Isi Pencadangan & Pemulihan Data",
-        description: "Di panel ini, buat salinan data presensi kelas Anda sebelum melakukan pengimporan data murid. Jika terjadi kekeliruan saat pengisian massal, Anda dapat memulihkan data kembali ke titik cadangan sebelumnya dalam sekejap.",
+        target: "[data-tour='attendance-v2-settings-backup-create']",
+        title: "Tombol Pembuatan Cadangan Baru",
+        description: "Klik tombol ini sebelum Anda mengimpor data murid secara massal untuk menyimpan kondisi data saat ini sebagai titik aman yang dapat dipulihkan kapan saja.",
+        prepare: async () => {
+          setSettingsSection("backup");
+          await delayForTour();
+        },
+      },
+      {
+        target: "[data-tour='attendance-v2-settings-backup-summary']",
+        title: "Statistik Presensi Bulan Ini",
+        description: "Menampilkan ringkasan statistik bulan aktif seperti jumlah hari efektif sekolah, libur kelas, dan kegiatan khusus sebagai catatan referensi sebelum pencadangan.",
+        prepare: async () => {
+          setSettingsSection("backup");
+          await delayForTour();
+        },
+      },
+      {
+        target: "[data-tour='attendance-v2-settings-backup-list']",
+        title: "Daftar Titik Cadangan Data",
+        description: "Menampilkan daftar seluruh cadangan data yang pernah Anda buat beserta tombol untuk memulihkan (restore) kondisi data kelas kembali ke titik waktu tersebut jika terjadi kesalahan.",
         prepare: async () => {
           setSettingsSection("backup");
           await delayForTour();
@@ -549,8 +612,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   }
                 />
 
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-                  <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4">
+                 <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+                  <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4" data-tour="attendance-v2-settings-calendar-format">
                     <div className="mb-3 flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <h4 className="text-sm font-semibold">Format Hari Sekolah</h4>
@@ -593,7 +656,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border bg-card shadow-sm">
+                  <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-calendar-override">
                     <div className="flex items-center justify-between gap-3 border-b p-3 sm:p-4">
                       <div className="min-w-0">
                         <h4 className="flex items-center gap-2 text-sm font-semibold">
@@ -712,7 +775,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 />
 
                 <div className="grid gap-3 xl:grid-cols-2">
-                  <div className="rounded-2xl border bg-card shadow-sm">
+                  <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-effective-holiday">
                     <div className="flex items-center justify-between gap-3 border-b p-3 sm:p-4">
                       <div className="min-w-0">
                         <h4 className="text-sm font-semibold">Libur Kustom</h4>
@@ -760,7 +823,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border bg-card shadow-sm">
+                  <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-effective-event">
                     <div className="flex items-center justify-between gap-3 border-b p-3 sm:p-4">
                       <div className="min-w-0">
                         <h4 className="text-sm font-semibold">Kegiatan Khusus</h4>
@@ -809,7 +872,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border bg-card shadow-sm">
+                <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-effective-preview">
                   <div className="flex flex-col gap-1 border-b p-3 sm:p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -877,7 +940,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   </div>
                 ) : (
                   <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                    <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4">
+                    <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4" data-tour="attendance-v2-settings-recap-denominator">
                       <div className="flex items-center justify-between gap-2">
                         <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Denominator</Label>
                         <InfoHelp
@@ -925,7 +988,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4">
+                    <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4" data-tour="attendance-v2-settings-recap-mapping">
                       <div className="flex items-center justify-between gap-2">
                         <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pemetaan Status H/S/I/A/D</Label>
                         <InfoHelp
@@ -1000,7 +1063,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     />
                   }
                 />
-                <div className="rounded-2xl border bg-card shadow-sm">
+                <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-audit-history">
                   <div className="grid gap-2 border-b p-3 sm:grid-cols-3 sm:p-4">
                     <CompactMetric label="Sumber" value="Manual, import, OCR, restore" tone="blue" />
                     <CompactMetric label="Editor" value="Guru asli / pengganti" />
@@ -1030,14 +1093,20 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     />
                   }
                   action={
-                    <Button type="button" variant="outline" className="min-h-10 rounded-xl text-xs" onClick={onAddDelegationClick}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-10 rounded-xl text-xs"
+                      onClick={onAddDelegationClick}
+                      data-tour="attendance-v2-settings-delegation-add"
+                    >
                       <UserPlus className="mr-1.5 h-3.5 w-3.5" />
                       Tambah Delegasi
                     </Button>
                   }
                 />
 
-                <div className="rounded-2xl border bg-card shadow-sm">
+                <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-delegation-list">
                   <div className="max-h-[22rem] overflow-y-auto divide-y">
                     {delegations.length === 0 ? (
                       <EmptyState icon={UserPlus} text="Belum ada delegasi untuk kelas ini." />
@@ -1089,6 +1158,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       className="min-h-10 rounded-xl text-xs"
                       onClick={onAddSnapshotClick}
                       disabled={isCreatingSnapshot}
+                      data-tour="attendance-v2-settings-backup-create"
                     >
                       <Camera className="mr-1.5 h-3.5 w-3.5" />
                       Buat Cadangan
@@ -1097,7 +1167,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 />
 
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                  <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4">
+                  <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4" data-tour="attendance-v2-settings-backup-summary">
                     <h4 className="text-sm font-semibold">Ringkasan Bulan Ini</h4>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <CompactMetric label="Hari kalender" value={monthDays.length} />
@@ -1107,7 +1177,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border bg-card shadow-sm">
+                  <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-backup-list">
                     <div className="border-b p-3 sm:p-4">
                       <h4 className="text-sm font-semibold">Daftar Cadangan</h4>
                       <p className="text-xs text-muted-foreground">Pilih cadangan yang ingin dipulihkan.</p>
