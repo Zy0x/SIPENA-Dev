@@ -233,7 +233,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                   const holCustom = holidays.some(h => h.date === format(day, "yyyy-MM-dd"));
                   const isNatHol = isNationalHoliday(day);
                   return (
-                    <th key={day.toISOString()} className={cn("px-0.5 py-1 min-w-[28px] sm:min-w-[32px] border-l border-border/30 bg-card",
+                    <th key={day.toISOString()} className={cn("sticky top-0 z-20 px-0.5 py-1 min-w-[28px] sm:min-w-[32px] border-l border-border/30 bg-card",
                       isSun && "bg-grade-warning/5",
                       holCustom && "bg-red-50 dark:bg-red-900/10",
                       isNatHol && !holCustom && "bg-red-50/50 dark:bg-red-950/10",
@@ -262,9 +262,9 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                   );
                 })}
                 {allStatuses.map(s => (
-                  <th key={s} className={cn("px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[28px] sm:min-w-[32px] border-l border-border/50 bg-card", statusConfig[s]?.color)}>{s}</th>
+                  <th key={s} className={cn("sticky top-0 z-20 px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[28px] sm:min-w-[32px] border-l border-border/50 bg-card", statusConfig[s]?.color)}>{s}</th>
                 ))}
-                <th className="px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[32px] sm:min-w-[36px] border-l-2 border-border bg-muted/95 text-foreground">
+                <th className="sticky top-0 z-20 px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[32px] sm:min-w-[36px] border-l-2 border-border bg-muted/95 text-foreground">
                   Jml
                 </th>
               </tr>

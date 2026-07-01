@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.145",
+    version: "2.4.145",
+    title: "Pemantapan Sticky Header Th pada Sumbu Vertikal",
+    description: "Memperbaiki keandalan baris header tabel rekap bulanan agar tidak ikut tergulung (scroll) ke atas secara vertikal dengan menerapkan sticky top pada seluruh sel th header.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Menerapkan properti 'sticky top-0 z-20' secara eksplisit pada setiap elemen th kolom tanggal harian dan kolom rekap jumlah untuk menjamin kestabilan header saat digulir vertikal.",
+      "Menjamin sel sudut header (No. Nama Murid) tetap memiliki prioritas z-index tertinggi (z-30) agar bertindak sebagai persimpangan beku multi-sumbu yang kokoh.",
+      "Menyelaraskan perbaikan sticky header th pada modul Presensi V1 dan V2 untuk konsistensi pengalaman gulir tabel."
+    ]
+  },
+  {
     id: "v2.4.144",
     version: "2.4.144",
     title: "Perbaikan Ulang Toolbar Rekap & Stabilitas Kolom Freeze",
