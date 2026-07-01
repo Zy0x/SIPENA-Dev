@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.140",
+    version: "2.4.140",
+    title: "Implementasi Ikon Abjad (Alphabetics Icons) Presensi HSIAD",
+    description: "Menerapkan ikon berbasis huruf abjad H, S, I, A, D yang konsisten dan premium untuk kartu statistik harian dan pilihan presensi massal, membuang ketergantungan pada ikon simbolik lama.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Mengganti seluruh ikon status presensi pada statusConfig dengan gambaran vektor SVG abjad geometris modern (H, S, I, A, D) dengan tebal garis strokeWidth=3 yang konsisten.",
+      "Menyajikan huruf H (Hadir), S (Sakit), I (Izin), A (Alpha), dan D (Dispensasi) secara terintegrasi langsung di dalam kode (inline SVG) tanpa menggunakan file aset eksternal.",
+      "Menjamin kompatibilitas penuh saat aplikasi berjalan offline (PWA) serta penyesuaian warna otomatis terhadap mode gelap (dark mode) dan mode terang."
+    ]
+  },
+  {
     id: "v2.4.139",
     version: "2.4.139",
     title: "Pembaruan Ikon Status Presensi HSIAD",

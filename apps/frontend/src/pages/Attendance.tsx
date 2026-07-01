@@ -242,11 +242,61 @@ const SIPENA_FULL = "SIPENA — Sistem Informasi Penilaian Akademik";
 
 // ── Status config with FIXED colors for readability ──
 const statusConfig: Record<string, { color: string; bg: string; bgActive: string; label: string; icon: React.ComponentType<{ className?: string }> }> = {
-  H: { color: "text-grade-pass", bg: "bg-grade-pass/10", bgActive: "bg-grade-pass text-grade-pass-foreground", label: "Hadir", icon: CheckCircle2 },
-  I: { color: "text-primary", bg: "bg-primary/10", bgActive: "bg-primary text-primary-foreground", label: "Izin", icon: Mail },
-  S: { color: "text-grade-warning", bg: "bg-grade-warning/10", bgActive: "bg-grade-warning text-grade-warning-foreground", label: "Sakit", icon: HeartPulse },
-  A: { color: "text-grade-fail", bg: "bg-grade-fail/10", bgActive: "bg-grade-fail text-grade-fail-foreground", label: "Alpha", icon: XCircle },
-  D: { color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-500/10", bgActive: "bg-purple-600 text-white dark:bg-purple-500 dark:text-white", label: "Dispensasi", icon: Bookmark },
+  H: {
+    color: "text-grade-pass",
+    bg: "bg-grade-pass/10",
+    bgActive: "bg-grade-pass text-grade-pass-foreground",
+    label: "Hadir",
+    icon: (props: any) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M6 5v14M18 5v14M6 12h12" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  },
+  I: {
+    color: "text-primary",
+    bg: "bg-primary/10",
+    bgActive: "bg-primary text-primary-foreground",
+    label: "Izin",
+    icon: (props: any) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M12 5v14M8 5h8M8 19h8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  },
+  S: {
+    color: "text-grade-warning",
+    bg: "bg-grade-warning/10",
+    bgActive: "bg-grade-warning text-grade-warning-foreground",
+    label: "Sakit",
+    icon: (props: any) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M17 8.5a3.5 3.5 0 0 0-3.5-3.5h-3A3.5 3.5 0 0 0 7 8.5v1a3.5 3.5 0 0 0 3.5 3.5h3a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1-3.5 3.5h-3A3.5 3.5 0 0 1 7 15.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  },
+  A: {
+    color: "text-grade-fail",
+    bg: "bg-grade-fail/10",
+    bgActive: "bg-grade-fail text-grade-fail-foreground",
+    label: "Alpha",
+    icon: (props: any) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M12 5L6 19M12 5l6 14M8.5 13.5h7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  },
+  D: {
+    color: "text-purple-600 dark:text-purple-400",
+    bg: "bg-purple-500/10",
+    bgActive: "bg-purple-600 text-white dark:bg-purple-500 dark:text-white",
+    label: "Dispensasi",
+    icon: (props: any) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M6 5v14M6 5h5.5a7 7 0 0 1 0 14H6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  },
 };
 
 const allStatuses: AttendanceStatusValue[] = ["H", "S", "I", "A", "D"];

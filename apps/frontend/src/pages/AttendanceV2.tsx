@@ -73,7 +73,11 @@ const statusConfig = {
     color: "text-grade-pass dark:text-emerald-400",
     bg: "bg-grade-pass/10 dark:bg-emerald-950/30",
     bgActive: "bg-grade-pass text-white border-none",
-    icon: (props: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    icon: (props: any) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M6 5v14M18 5v14M6 12h12" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
   },
   I: {
     label: "Izin",
@@ -81,9 +85,8 @@ const statusConfig = {
     bg: "bg-blue-50 dark:bg-blue-950/30",
     bgActive: "bg-blue-600 text-white border-none",
     icon: (props: any) => (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" {...props}>
-        <rect x="2" y="4" width="20" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M22 6l-10 7L2 6" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M12 5v14M8 5h8M8 19h8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   },
@@ -93,9 +96,8 @@ const statusConfig = {
     bg: "bg-grade-warning/10 dark:bg-amber-950/30",
     bgActive: "bg-grade-warning text-white border-none",
     icon: (props: any) => (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" {...props}>
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M3.22 12H9.5l1.5-3 2 6 1.5-3h3.78" strokeLinecap="round" strokeLinejoin="round"/>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M17 8.5a3.5 3.5 0 0 0-3.5-3.5h-3A3.5 3.5 0 0 0 7 8.5v1a3.5 3.5 0 0 0 3.5 3.5h3a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1-3.5 3.5h-3A3.5 3.5 0 0 1 7 15.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   },
@@ -104,14 +106,22 @@ const statusConfig = {
     color: "text-grade-fail dark:text-red-400",
     bg: "bg-grade-fail/10 dark:bg-red-950/30",
     bgActive: "bg-grade-fail text-white border-none",
-    icon: (props: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    icon: (props: any) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M12 5L6 19M12 5l6 14M8.5 13.5h7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
   },
   D: {
     label: "Dispensasi",
     color: "text-purple-600 dark:text-purple-400",
     bg: "bg-purple-50 dark:bg-purple-950/30",
     bgActive: "bg-purple-600 text-white border-none",
-    icon: (props: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    icon: (props: any) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
+        <path d="M6 5v14M6 5h5.5a7 7 0 0 1 0 14H6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
   }
 };
 
