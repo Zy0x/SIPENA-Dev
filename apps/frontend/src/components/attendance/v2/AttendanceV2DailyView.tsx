@@ -105,39 +105,42 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
               <div 
                 key={student.id} 
                 className={cn(
-                  "flex items-center gap-1 sm:gap-2 px-1.5 sm:px-4 py-1.5 sm:py-2.5 transition-colors", 
+                  "flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-2.5 transition-colors", 
                   holidayActive ? "opacity-40" : "hover:bg-muted/30 active:bg-muted/50"
                 )}
               >
-                {/* Number badge */}
-                <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <span className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground">{index + 1}</span>
-                </div>
+                {/* Number + Name Container */}
+                <div className="flex items-center gap-2 w-full sm:w-auto min-w-0 flex-1">
+                  {/* Number badge */}
+                  <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <span className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground">{index + 1}</span>
+                  </div>
 
-                {/* Name */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1">
-                    <p className="text-[11px] sm:text-sm font-medium text-foreground leading-snug break-words">
-                      {student.name}
-                    </p>
-                    {note && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button 
-                            onClick={() => handleOpenNote(student.id, student.name, selectedDate)} 
-                            className="flex-shrink-0 touch-manipulation"
-                          >
-                            <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[200px] text-xs">{note}</TooltipContent>
-                      </Tooltip>
-                    )}
+                  {/* Name */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[12px] sm:text-sm font-semibold sm:font-medium text-foreground leading-snug break-words">
+                        {student.name}
+                      </p>
+                      {note && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button 
+                              onClick={() => handleOpenNote(student.id, student.name, selectedDate)} 
+                              className="flex-shrink-0 touch-manipulation"
+                            >
+                              <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[200px] text-xs">{note}</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {/* Status buttons + Note */}
-                <div className="flex items-center gap-[2px] sm:gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-[2px] sm:gap-1.5 flex-shrink-0 ml-7 sm:ml-0">
                   {allStatuses.map((s) => {
                     const isSelected = status === s;
                     const cfg = statusConfig[s];

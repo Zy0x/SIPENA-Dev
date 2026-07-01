@@ -3716,31 +3716,37 @@ export default function Attendance() {
                       const holidayActive = isHolidayCombined(selectedDate);
 
                       return (
-                        <div key={student.id} className={cn("flex items-center gap-1 sm:gap-2 px-1.5 sm:px-4 py-1.5 sm:py-2.5 transition-colors", holidayActive ? "opacity-40" : "hover:bg-muted/30 active:bg-muted/50")}>
-                          {/* Number badge */}
-                          <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                            <span className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground">{index + 1}</span>
-                          </div>
+                        <div key={student.id} className={cn(
+                          "flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-2.5 transition-colors", 
+                          holidayActive ? "opacity-40" : "hover:bg-muted/30 active:bg-muted/50"
+                        )}>
+                          {/* Number + Name Container */}
+                          <div className="flex items-center gap-2 w-full sm:w-auto min-w-0 flex-1">
+                            {/* Number badge */}
+                            <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                              <span className="text-[8px] sm:text-[10px] font-semibold text-muted-foreground">{index + 1}</span>
+                            </div>
 
-                          {/* Name - wraps naturally, never pushes buttons off screen */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1">
-                              <p className="text-[11px] sm:text-sm font-medium text-foreground leading-snug break-words">{student.name}</p>
-                              {note && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button onClick={() => handleOpenNote(student.id, student.name, selectedDate)} className="flex-shrink-0 touch-manipulation">
-                                      <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="max-w-[200px] text-xs">{note}</TooltipContent>
-                                </Tooltip>
-                              )}
+                            {/* Name */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-[12px] sm:text-sm font-semibold sm:font-medium text-foreground leading-snug break-words">{student.name}</p>
+                                {note && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button onClick={() => handleOpenNote(student.id, student.name, selectedDate)} className="flex-shrink-0 touch-manipulation">
+                                        <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[200px] text-xs">{note}</TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
                             </div>
                           </div>
 
-                          {/* Status buttons + Note - fixed width container */}
-                          <div className="flex items-center gap-[2px] sm:gap-1.5 flex-shrink-0">
+                          {/* Status buttons + Note */}
+                          <div className="flex items-center gap-[2px] sm:gap-1.5 flex-shrink-0 ml-7 sm:ml-0">
                             {allStatuses.map((s) => {
                               const isSelected = status === s;
                               const cfg = statusConfig[s];
@@ -3749,7 +3755,7 @@ export default function Attendance() {
                                   onClick={() => handleSetAttendance(student.id, selectedDate, isSelected ? null : s)}
                                   disabled={holidayActive}
                                   className={cn(
-                                    "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation",
+                                    "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation select-none",
                                     "w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col",
                                     isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground hover:bg-muted active:bg-muted/80",
                                     holidayActive && "cursor-not-allowed opacity-40"

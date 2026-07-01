@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.147",
+    version: "2.4.147",
+    title: "Optimasi Layout Presensi Harian Mobile untuk Nama Panjang",
+    description: "Meningkatkan kegunaan dan keterbacaan baris daftar presensi harian pada perangkat mobile dengan memisahkan kolom nama siswa dan kelompok tombol presensi secara vertikal.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Mengubah tata letak baris presensi harian dari horizontal menjadi vertikal stack (flex-col) secara responsif pada ukuran layar di bawah 640px.",
+      "Menjamin nama murid mendapatkan lebar horizontal 100% penuh di mobile agar tidak terpotong, terkompresi, atau berdesakan dengan tombol presensi.",
+      "Memposisikan kelompok tombol presensi (H, S, I, A, D, Catatan) di bawah baris nama murid dengan indentasi kiri 'ml-7' (selaras dengan teks nama siswa) untuk kemudahan penekanan jari guru.",
+      "Menyelaraskan perbaikan responsivitas layout presensi harian pada modul Presensi V1 dan V2."
+    ]
+  },
+  {
     id: "v2.4.146",
     version: "2.4.146",
     title: "Migrasi ke Layout Table border-separate untuk Koreksi Scroll Sticky",
