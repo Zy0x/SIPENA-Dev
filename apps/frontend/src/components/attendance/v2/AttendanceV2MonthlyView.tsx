@@ -214,7 +214,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
           <table className="w-full text-center border-collapse min-w-max select-none">
             <thead className="sticky top-0 z-10 bg-card">
               <tr className="border-b border-border">
-                <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r border-border min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
+                <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]">No. Nama Murid</th>
                 {monthDays.map(day => {
                   const dayNum = getDay(day);
                   const isSun = dayNum === 0;
@@ -223,7 +223,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                   const holCustom = holidays.some(h => h.date === format(day, "yyyy-MM-dd"));
                   const isNatHol = isNationalHoliday(day);
                   return (
-                    <th key={day.toISOString()} className={cn("px-0.5 py-1 min-w-[24px] border-l border-border/30",
+                    <th key={day.toISOString()} className={cn("px-0.5 py-1 min-w-[28px] sm:min-w-[32px] border-l border-border/30 bg-card",
                       isSun && "bg-grade-warning/5",
                       holCustom && "bg-red-50 dark:bg-red-900/10",
                       isNatHol && !holCustom && "bg-red-50/50 dark:bg-red-950/10",
@@ -252,9 +252,9 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                   );
                 })}
                 {allStatuses.map(s => (
-                  <th key={s} className={cn("px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[24px] border-l border-border/50", statusConfig[s]?.color)}>{s}</th>
+                  <th key={s} className={cn("px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[28px] sm:min-w-[32px] border-l border-border/50 bg-card", statusConfig[s]?.color)}>{s}</th>
                 ))}
-                <th className="px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[28px] border-l-2 border-border bg-muted/30 text-foreground">
+                <th className="px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[32px] sm:min-w-[36px] border-l-2 border-border bg-muted/95 text-foreground">
                   Jml
                 </th>
               </tr>
@@ -270,7 +270,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                 });
                 return (
                   <tr key={student.id} className={cn("border-b border-border/30", idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
-                    <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r border-border min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
+                    <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-border/80 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
                       <div className="flex items-start gap-0.5">
                         <span className="text-muted-foreground font-medium flex-shrink-0">{idx + 1}.</span>
                         <span className="text-foreground break-words leading-tight">{student.name}</span>
@@ -287,7 +287,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div
-                                className={cn("select-none w-5 h-5 sm:w-6 sm:h-6 mx-auto flex items-center justify-center text-[8px] sm:text-[9px] font-bold rounded-md transition-colors",
+                                className={cn("select-none w-6 h-6 sm:w-7 sm:h-7 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors",
                                   !isLocked && !holidayActive && "cursor-pointer",
                                   holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
                                     : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
@@ -337,7 +337,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                         {studentStats[s]}
                       </td>
                     ))}
-                    <td className="px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l-2 border-border bg-muted/10 text-foreground">
+                    <td className="px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l-2 border-border bg-muted/20 text-foreground">
                       {calculateJumlah(studentStats, jumlahConfig)}
                     </td>
                   </tr>

@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.143",
+    version: "2.4.143",
+    title: "Peningkatan Responsivitas & Aksesibilitas Tabel Rekap Bulanan",
+    description: "Mengoptimalkan visualisasi tabel rekap bulanan presensi (V1 & V2) dengan background solid pada header, memperlebar sel untuk touch target mobile, serta menambahkan efek elevasi bayangan pada kolom beku.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Menjamin header tabel rekap bulanan (thead) selalu memiliki background solid (bg-card / bg-muted) agar tulisan data murid tidak menerawang (bleed through) di bawahnya ketika digulir vertikal.",
+      "Memperlebar ukuran sel tanggal harian pada rekap bulanan dari min-w-[24px] ke min-w-[28px] di mobile (dan min-w-[32px] di desktop) agar area ketuk (touch target) lebih bersahabat bagi jari pengguna.",
+      "Mengubah dimensi indikator status kehadiran bulanan dari w-5 h-5 ke w-6 h-6 di seluler untuk mempermudah guru melakukan siklus perubahan nilai via ketukan langsung.",
+      "Menambahkan visualisasi elevasi drop shadow (shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)]) serta border-r-2 pada kolom beku nama murid untuk mempertegas pemisahan navigasi horizontal.",
+      "Penyelarasan perubahan structural table cells dan total footer pada modul V1, V2, dan shared PercentageRow."
+    ]
+  },
+  {
     id: "v2.4.142",
     version: "2.4.142",
     title: "Optimasi Touch Target Presensi Harian pada Layar Mobile",
