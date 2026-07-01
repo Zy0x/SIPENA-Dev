@@ -103,33 +103,53 @@ export function MaintenanceBanner() {
 
   // Dynamic CSS variable for banner height (for pushing fixed layout elements like sidebar)
   useEffect(() => {
-    const updateBannerHeight = () => {
+    const updateBannerPositions = () => {
       if (bannerRef.current && alert && dismissed !== alert.id && alert.display_mode === "flat") {
         const height = bannerRef.current.offsetHeight;
         document.documentElement.style.setProperty("--banner-height", `${height}px`);
+        
+        // Calculate dynamic top offset based on window scroll
+        const scrollY = window.scrollY;
+        const topOffset = Math.max(0, height - scrollY);
+        document.documentElement.style.setProperty("--banner-top-offset", `${topOffset}px`);
       } else {
         document.documentElement.style.setProperty("--banner-height", "0px");
+        document.documentElement.style.setProperty("--banner-top-offset", "0px");
       }
     };
 
-    updateBannerHeight();
+    updateBannerPositions();
+
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          updateBannerPositions();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
 
     let resizeObserver: ResizeObserver | null = null;
     if (bannerRef.current && typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(() => {
-        updateBannerHeight();
+        updateBannerPositions();
       });
       resizeObserver.observe(bannerRef.current);
     }
 
-    window.addEventListener("resize", updateBannerHeight);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", updateBannerPositions);
 
     return () => {
-      window.removeEventListener("resize", updateBannerHeight);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", updateBannerPositions);
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
       document.documentElement.style.setProperty("--banner-height", "0px");
+      document.documentElement.style.setProperty("--banner-top-offset", "0px");
     };
   }, [alert, dismissed]);
 

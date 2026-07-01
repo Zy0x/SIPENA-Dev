@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.138",
+    version: "2.4.138",
+    title: "Penyesuaian Scroll Dinamis Posisi Sidebar",
+    description: "Memperbaiki efek pergeseran sidebar saat halaman digulir (scroll) ketika banner pengumuman aktif, menghilangkan celah kosong di atas sidebar secara otomatis.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-02",
+    details: [
+      "Mengintegrasikan event listener scroll dengan requestAnimationFrame di MaintenanceBanner.tsx untuk menghitung sisa tinggi banner yang terlihat di layar (--banner-top-offset).",
+      "Menghubungkan properti top dan height pada sidebar aside dengan --banner-top-offset agar meluncur ke posisi 0px secara mulus saat banner digulir ke luar layar.",
+      "Menghilangkan properti top dan height dari daftar CSS transitions pada sidebar untuk mencegah efek visual melompat (jitter/rubber-banding) saat digulir."
+    ]
+  },
+  {
     id: "v2.4.137",
     version: "2.4.137",
     title: "Penyesuaian Tata Letak Sidebar terhadap Banner Pengumuman",

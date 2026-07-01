@@ -483,14 +483,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
             "lg:bg-card lg:border-r lg:border-border",
             "bg-card/95 backdrop-blur-xl border-r border-border",
             "shadow-2xl shadow-black/10",
-           "lg:translate-x-0 transition-[width,top,height] duration-300 ease-out",
+           "lg:translate-x-0 transition-[width] duration-300 ease-out",
            effectiveSidebarCollapsed ? "lg:w-[72px]" : "lg:w-[260px]",
            !isDesktopSidebar && sidebarOpen && "sipena-scroll-isolated"
          )}
          style={{
            transform: "translateX(-100%)",
-           top: "var(--banner-height, 0px)",
-           height: "calc(100vh - var(--banner-height, 0px))",
+           top: "var(--banner-top-offset, 0px)",
+           height: "calc(100vh - var(--banner-top-offset, 0px))",
            "--sipena-sidebar-expanded-width": `${SIDEBAR_EXPANDED_WIDTH}px`,
            "--sipena-sidebar-collapsed-width": `${SIDEBAR_COLLAPSED_WIDTH}px`,
          } as React.CSSProperties}
