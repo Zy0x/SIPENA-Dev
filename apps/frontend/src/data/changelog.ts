@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.136",
+    version: "2.4.136",
+    title: "Perbaikan Klik Pemilih Bulan di Dialog Pengaturan",
+    description: "Mengganti portalled Popover dengan Popover inline di dalam DialogContent agar tidak diblokir oleh overlays dan pointer-events dialog modal Radix UI.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Membuat komponen InlinePopoverContent yang tidak menggunakan portal agar elemen popover bulan berada di dalam batas DOM DialogContent.",
+      "Mengatasi isu di mana tombol bulan tidak bisa ditekan karena terhalang oleh focus-trap dan style pointer-events: none dari modal Dialog.",
+      "Memverifikasi fungsionalitas navigasi bulan secara langsung dan melompat antar periode di lingkungan pengembangan lokal."
+    ]
+  },
+  {
     id: "v2.4.135",
     version: "2.4.135",
     title: "Menu Dropdown Pemilih Bulan di Pengaturan",
