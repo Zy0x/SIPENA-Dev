@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { format, getDay, addMonths } from "date-fns";
+import { format, getDay, addMonths, addYears } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
   Activity,
@@ -20,6 +20,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -260,6 +261,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
   const customHolidayCount = holidays.filter((h) => h.description !== "Hari Kerja").length;
   const nonEffectiveDays = monthDays.filter((day) => isHolidayCombined(day));
+
+  const monthOptions = useMemo(() => {
+    const options: Date[] = [];
+    const baseYear = currentMonth.getFullYear();
+    for (let m = 0; m < 12; m++) {
+      options.push(new Date(baseYear, m, 1));
+    }
+    return options;
+  }, [currentMonth.getFullYear()]);
 
   const sectionItems = useMemo(
     () => [
@@ -566,9 +576,75 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span className="text-xs sm:text-sm font-bold min-w-[5.5rem] text-center">
-                    {format(currentMonth, "MMMM yyyy", { locale: idLocale })}
-                  </span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-xs sm:text-sm font-bold hover:bg-muted/80 text-foreground transition-colors cursor-pointer select-none"
+                      >
+                        <span className="truncate max-w-[5.25rem] sm:max-w-none">
+                          {format(currentMonth, "MMMM yyyy", { locale: idLocale })}
+                        </span>
+                        <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-2 rounded-xl" align="center">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 mb-1">
+                        Pilih Bulan
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 max-h-64 overflow-y-auto">
+                        {monthOptions.map((month) => {
+                          const isSelected = month.getMonth() === currentMonth.getMonth() && month.getFullYear() === currentMonth.getFullYear();
+                          return (
+                            <button
+                              key={month.toISOString()}
+                              type="button"
+                              onClick={() => {
+                                if (setCurrentMonth) {
+                                  setCurrentMonth(month);
+                                }
+                              }}
+                              className={cn(
+                                "px-2 py-1.5 rounded-lg text-xs text-left font-medium transition-colors truncate",
+                                isSelected
+                                  ? "bg-primary text-primary-foreground font-semibold"
+                                  : "hover:bg-muted text-foreground"
+                              )}
+                            >
+                              {format(month, "MMMM", { locale: idLocale })}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="border-t mt-2 pt-1.5 flex items-center justify-between gap-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-7 flex-1 px-1.5 rounded-lg text-[10px] font-semibold hover:bg-muted"
+                          onClick={() => {
+                            if (setCurrentMonth) {
+                              setCurrentMonth(addYears(currentMonth, -1));
+                            }
+                          }}
+                        >
+                          Tahun Lalu
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-7 flex-1 px-1.5 rounded-lg text-[10px] font-semibold hover:bg-muted"
+                          onClick={() => {
+                            if (setCurrentMonth) {
+                              setCurrentMonth(addYears(currentMonth, 1));
+                            }
+                          }}
+                        >
+                          Tahun Depan
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
                   <Button
                     type="button"
                     variant="ghost"

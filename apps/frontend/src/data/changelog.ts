@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.135",
+    version: "2.4.135",
+    title: "Menu Dropdown Pemilih Bulan di Pengaturan",
+    description: "Menambahkan menu pilihan popover dropdown pada teks bulan di ringkasan pengaturan agar pengguna dapat langsung melompat ke bulan/tahun manapun dengan satu ketukan.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-01",
+    details: [
+      "Mengubah tombol teks bulan menjadi pemicu popover yang menampilkan grid daftar 12 bulan pada tahun berjalan.",
+      "Menyediakan tombol navigasi Tahun Lalu dan Tahun Depan di bagian bawah popover untuk melompat antar tahun.",
+      "Tetap mempertahankan tombol panah kiri dan kanan di samping kiri-kanan teks bulan untuk navigasi sekuensial bulan demi bulan."
+    ]
+  },
+  {
     id: "v2.4.134",
     version: "2.4.134",
     title: "Navigasi Bulan Cepat dari Pengaturan Kelas",
