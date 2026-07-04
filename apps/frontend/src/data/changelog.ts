@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.150",
+    version: "2.4.150",
+    title: "Penyusunan Ulang Navigasi Pengaturan Presensi V2 Mobile tanpa Horizontal Scroll",
+    description: "Mengatur ulang menu navigasi modal Pengaturan Presensi V2 di mobile/tablet menjadi grid responsif yang terpasang pas sehingga mengeliminasi scrollbar horizontal.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-04",
+    details: [
+      "Mengubah list menu navigasi horizontal scroll di mobile menjadi layout grid 3-kolom statis (2 baris x 3 kolom) yang pas dengan lebar layar mobile terkecil.",
+      "Mengonfigurasi layout grid 6-kolom horizontal pada ukuran tablet (sm) agar seluruh 6 opsi menu langsung terlihat dalam satu baris tanpa perlu digeser.",
+      "Menyembunyikan sub-detail keterangan navigasi pada mobile & tablet untuk menghemat ruang vertikal secara cerdas.",
+      "Mempertahankan model menu samping sidebar vertikal yang lengkap dengan deskripsi detail pada perangkat desktop."
+    ]
+  },
+  {
     id: "v2.4.149",
     version: "2.4.149",
     title: "Overhaul Layout Scroll Modal Pengaturan Presensi V2 untuk Mobile/Tablet",

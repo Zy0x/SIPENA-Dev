@@ -694,7 +694,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             className="sticky top-0 z-10 shrink-0 border-b bg-background/95 px-3 py-2 backdrop-blur lg:static lg:border-b-0 lg:border-r lg:bg-muted/10 lg:p-3"
             data-tour="attendance-v2-settings-nav"
           >
-            <div className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:block lg:space-y-2 lg:gap-0">
               {sectionItems.map((item) => {
                 const Icon = item.icon;
                 const active = settingsSection === item.id;
@@ -708,17 +708,24 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     aria-pressed={active}
                     onClick={() => setSettingsSection(item.id)}
                     className={cn(
-                      "min-h-11 min-w-[8.75rem] touch-manipulation rounded-xl border px-3 py-2 text-left transition-colors lg:flex lg:w-full lg:min-w-0 lg:items-center lg:gap-2.5",
+                      "flex flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition-colors min-h-[4.25rem] touch-manipulation",
+                      "sm:min-h-[3.25rem] sm:flex-row sm:gap-2 sm:px-3 sm:py-1.5",
+                      "lg:w-full lg:min-h-[3.25rem] lg:flex-col lg:items-start lg:justify-start lg:gap-0 lg:p-3 lg:text-left",
                       active
                         ? "border-primary bg-primary text-primary-foreground shadow-sm"
                         : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                     )}
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex flex-col items-center gap-1 sm:flex-row sm:gap-2 lg:flex-row lg:gap-2.5">
                       <Icon className="h-4 w-4 shrink-0" />
-                      <span className="truncate text-xs font-semibold sm:text-sm">{item.title}</span>
+                      <span className="text-[10px] font-bold leading-tight sm:text-xs lg:text-sm lg:font-semibold truncate">
+                        {item.title}
+                      </span>
                     </span>
-                    <span className={cn("mt-0.5 block truncate text-[10px] lg:mt-0.5", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                    <span className={cn(
+                      "hidden lg:block mt-0.5 truncate text-[10px]", 
+                      active ? "text-primary-foreground/80" : "text-muted-foreground"
+                    )}>
                       {item.detail}
                     </span>
                   </button>
