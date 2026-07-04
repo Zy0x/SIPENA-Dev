@@ -55,8 +55,8 @@ describe("feature access integration guard", () => {
     expect(page).not.toContain("settingsTourSteps");
     expect(modal).toContain("fullScreenMobile");
     expect(modal).toContain("sm:h-[min(92dvh,820px)]");
-    expect(modal).toContain("sticky top-0");
-    expect(modal).toContain("sticky bottom-0");
+    expect(modal).toContain("lg:sticky lg:top-0");
+    expect(modal).toContain("lg:sticky lg:bottom-0");
     expect(modal).toContain("settingsSection");
     expect(modal).toContain("settingsTourSteps");
     expect(modal).toContain('tourKey="attendance-v2-settings"');

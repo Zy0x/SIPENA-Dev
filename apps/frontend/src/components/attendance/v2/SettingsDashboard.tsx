@@ -552,7 +552,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         }}
       >
         <DialogHeader
-          className="sticky top-0 z-20 shrink-0 border-b bg-background/95 px-3 pb-2 pt-3 backdrop-blur sm:px-5 sm:pb-3 sm:pt-4"
+          className="border-b bg-background px-3 pb-2 pt-3 sm:px-5 sm:pb-3 sm:pt-4 lg:sticky lg:top-0 lg:z-20 lg:bg-background/95 lg:backdrop-blur"
           data-tour="attendance-v2-settings-header"
         >
           <div className="flex items-start justify-between gap-3 pr-10">
@@ -691,7 +691,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
         <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:grid-rows-none">
           <aside
-            className="sticky top-0 z-10 shrink-0 border-b bg-background/95 px-3 py-2 backdrop-blur lg:static lg:border-b-0 lg:border-r lg:bg-muted/10 lg:p-3"
+            className="shrink-0 border-b bg-background px-3 py-2 lg:static lg:border-b-0 lg:border-r lg:bg-muted/10 lg:p-3"
             data-tour="attendance-v2-settings-nav"
           >
             <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:block lg:space-y-2 lg:gap-0">
@@ -1366,7 +1366,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           </main>
         </div>
 
-        <div className="sticky bottom-0 z-20 shrink-0 border-t bg-background/95 px-3 py-2 backdrop-blur sm:px-5">
+        <div className="shrink-0 border-t bg-background px-3 py-2 sm:px-5 lg:sticky lg:bottom-0 lg:z-20 lg:bg-background/95 lg:backdrop-blur">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="line-clamp-2 text-[11px] leading-normal text-muted-foreground">
               <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
