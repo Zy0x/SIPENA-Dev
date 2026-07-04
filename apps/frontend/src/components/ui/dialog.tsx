@@ -142,8 +142,11 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { motionProfile?: "default" | "adaptive" }
->(({ className, children, style, motionProfile = "default", ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    motionProfile?: "default" | "adaptive";
+    fullScreenMobile?: boolean;
+  }
+>(({ className, children, style, motionProfile = "default", fullScreenMobile = false, ...props }, ref) => {
   const stackDepth = React.useContext(DialogStackDepthContext);
   const stackOffset = Math.max(stackDepth - 1, 0) * 20;
 
@@ -153,7 +156,10 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "sipena-scroll-isolated fixed left-[50%] top-[50%] z-[10090] grid w-[calc(100vw-1.5rem)] max-w-lg max-h-[calc(100dvh-1.5rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto scrollbar-thin border border-border bg-background text-foreground p-5 shadow-lg duration-200 rounded-2xl sm:w-[calc(100vw-3rem)] sm:p-6 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+          "sipena-scroll-isolated fixed left-[50%] top-[50%] z-[10090] grid translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto scrollbar-thin border border-border bg-background text-foreground shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+          fullScreenMobile
+            ? "w-screen h-[100dvh] max-h-[100dvh] max-w-none rounded-none border-0 p-0 sm:w-[calc(100vw-3rem)] sm:max-w-lg sm:max-h-[calc(100dvh-1.5rem)] sm:border sm:rounded-2xl"
+            : "w-[calc(100vw-1.5rem)] max-w-lg max-h-[calc(100dvh-1.5rem)] rounded-2xl p-5 border sm:w-[calc(100vw-3rem)] sm:p-6",
           motionProfile === "adaptive" && "sipena-dialog-motion-adaptive",
           className,
         )}
@@ -163,7 +169,12 @@ const DialogContent = React.forwardRef<
         {children}
         <DialogPrimitive.Close
           aria-label="Tutup dialog"
-          className="sipena-danger-icon-button absolute right-2 top-2 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+          className={cn(
+            "sipena-danger-icon-button absolute z-50 inline-flex h-9 w-9 items-center justify-center rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none",
+            fullScreenMobile
+              ? "right-3 top-3 sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+              : "right-2 top-2 sm:right-3 sm:top-3 sm:h-8 sm:w-8"
+          )}
         >
           <X className="h-3.5 w-3.5" />
           <span className="sr-only">Tutup</span>

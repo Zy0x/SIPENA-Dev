@@ -533,9 +533,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        fullScreenMobile
         className={cn(
-          "!flex !h-[100dvh] !max-h-[100dvh] !w-screen !max-w-none !flex-col !gap-0 !overflow-hidden !rounded-none !border-0 !p-0",
-          "sm:!h-[min(92dvh,820px)] sm:!max-h-[92dvh] sm:!w-[calc(100vw-2rem)] sm:!max-w-6xl sm:!rounded-2xl sm:!border",
+          "flex flex-col gap-0 overflow-hidden",
+          "sm:h-[min(92dvh,820px)] sm:max-h-[92dvh] sm:w-[calc(100vw-2rem)] sm:max-w-6xl",
         )}
         onPointerDownOutside={(e) => {
           const target = e.target as HTMLElement;

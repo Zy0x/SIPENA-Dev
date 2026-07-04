@@ -42,6 +42,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.148",
+    version: "2.4.148",
+    title: "Koreksi Responsivitas Modal Pengaturan Presensi V2 untuk Layar Seluler",
+    description: "Memperbaiki bug tampilan modal Pengaturan Presensi V2 yang terpotong di mobile dengan memigrasikan dialog ke prop fullScreenMobile pada komponen DialogContent primitive.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-07-04",
+    details: [
+      "Memperkenalkan prop `fullScreenMobile` pada primitive `DialogContent` untuk menghasilkan layout dialog full-screen pada mobile tanpa memicu tabrakan class `tailwind-merge`.",
+      "Mengonfigurasi modal Dashboard Pengaturan Presensi V2 untuk memakai prop `fullScreenMobile` sehingga pada layar kecil (< 640px) dialog memenuhi layar penuh (100dvh dan w-screen).",
+      "Menghapus modifikasi class dengan prefiks `!` (important) yang menyebabkan kegagalan override layout dialog default.",
+      "Menjamin layout flex vertikal modal berjalan stabil, sehingga area navigasi tab samping/atas tetap terpasang rapi dan area konten utama (main) dapat di-scroll secara mandiri tanpa terpotong.",
+      "Memperbarui unit test terintegrasi di `featureAccessIntegration.test.ts` untuk memverifikasi penyesuaian fungsional modal."
+    ]
+  },
+  {
     id: "v2.4.147",
     version: "2.4.147",
     title: "Optimasi Layout Presensi Harian Mobile untuk Nama Panjang",
