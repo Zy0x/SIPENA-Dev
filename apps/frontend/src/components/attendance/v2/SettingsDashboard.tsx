@@ -536,7 +536,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         fullScreenMobile
         className={cn(
           "flex flex-col gap-0 lg:overflow-hidden",
-          "sm:h-[min(92dvh,820px)] sm:max-h-[92dvh] sm:w-[calc(100vw-2rem)] sm:max-w-6xl",
+          "lg:h-[min(92dvh,820px)] lg:max-h-[92dvh] lg:w-[calc(100vw-2rem)] lg:max-w-6xl",
         )}
         onPointerDownOutside={(e) => {
           const target = e.target as HTMLElement;
@@ -552,7 +552,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         }}
       >
         <DialogHeader
-          className="border-b bg-background px-3 pb-2 pt-3 sm:px-5 sm:pb-3 sm:pt-4 lg:sticky lg:top-0 lg:z-20 lg:bg-background/95 lg:backdrop-blur"
+          className="border-b bg-background p-4 pb-3 sm:p-6 sm:pb-4 lg:sticky lg:top-0 lg:z-20 lg:bg-background/95 lg:backdrop-blur"
           data-tour="attendance-v2-settings-header"
         >
           <div className="flex items-start justify-between gap-3 pr-10">
@@ -561,7 +561,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 <Settings2 className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
                 Pengaturan Presensi V2
               </DialogTitle>
-              <DialogDescription className="mt-1 line-clamp-2 text-xs sm:text-sm">
+              <DialogDescription className="mt-1.5 line-clamp-2 text-xs sm:text-sm">
                 Kelola kalender akademik, hari efektif, rekap, delegasi, audit, dan backup untuk kelas aktif.
               </DialogDescription>
             </div>
@@ -576,7 +576,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             />
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
             <CompactMetric
               label="Bulan"
@@ -691,10 +691,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
         <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:grid-rows-none">
           <aside
-            className="shrink-0 border-b bg-background px-3 py-2 lg:static lg:border-b-0 lg:border-r lg:bg-muted/10 lg:p-3"
+            className="shrink-0 border-b bg-background p-4 sm:p-5 lg:static lg:border-b-0 lg:border-r lg:bg-muted/10 lg:p-3"
             data-tour="attendance-v2-settings-nav"
           >
-            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:block lg:space-y-2 lg:gap-0">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:block lg:space-y-2 lg:gap-0">
               {sectionItems.map((item) => {
                 const Icon = item.icon;
                 const active = settingsSection === item.id;
@@ -708,8 +708,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     aria-pressed={active}
                     onClick={() => setSettingsSection(item.id)}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition-colors min-h-[4.25rem] touch-manipulation",
-                      "sm:min-h-[3.25rem] sm:flex-row sm:gap-2 sm:px-3 sm:py-1.5",
+                      "flex flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition-colors min-h-[4.75rem] touch-manipulation",
+                      "sm:min-h-[3.5rem] sm:flex-row sm:gap-2 sm:px-3 sm:py-1.5",
                       "lg:w-full lg:min-h-[3.25rem] lg:flex-col lg:items-start lg:justify-start lg:gap-0 lg:p-3 lg:text-left",
                       active
                         ? "border-primary bg-primary text-primary-foreground shadow-sm"
@@ -734,7 +734,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             </div>
           </aside>
 
-          <main className="px-3 py-3 sm:px-5 sm:py-4 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">
+          <main className="p-4 sm:p-6 lg:p-5 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">
             {settingsSection === "calendar" && (
               <section className="space-y-3" data-tour="attendance-v2-settings-calendar">
                 <SectionIntro
@@ -1366,10 +1366,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           </main>
         </div>
 
-        <div className="shrink-0 border-t bg-background px-3 py-2 sm:px-5 lg:sticky lg:bottom-0 lg:z-20 lg:bg-background/95 lg:backdrop-blur">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="shrink-0 border-t bg-background p-4 sm:p-6 lg:p-4 lg:sticky lg:bottom-0 lg:z-20 lg:bg-background/95 lg:backdrop-blur">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="line-clamp-2 text-[11px] leading-normal text-muted-foreground">
-              <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
+              <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5" />
               Perubahan ini hanya berlaku untuk jalur Presensi V2. V1 dan export V1 tetap tidak disentuh.
             </p>
             <Button

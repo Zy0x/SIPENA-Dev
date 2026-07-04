@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.151",
+    version: "2.4.151",
+    title: "Rombak Total Layout Full-Screen Mobile Modal Pengaturan V2 & Spacing Longgar",
+    description: "Mengubah breakpoint fullScreenMobile dari sm ke lg agar modal berjalan 100% full-screen pada mobile/tablet, serta menambah margin & padding untuk tata letak yang rapi dan lapang.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-04",
+    details: [
+      "Menggeser breakpoint `fullScreenMobile` pada komponen dasar DialogContent dari `sm:` (640px) ke `lg:` (1024px) untuk memastikan modal tampil penuh (100% viewport) pada seluruh perangkat non-desktop.",
+      "Menyesuaikan tinggi modal di `SettingsDashboard.tsx` agar memanfaatkan 100vh sepenuhnya pada mobile/tablet, membebaskan elemen dari pembatasan tinggi kartu yang sempit.",
+      "Memperluas padding luar (p-4/p-6) dan gap elemen di seluruh area modal (Header, Aside Navigation, Main Content, dan Footer).",
+      "Menyusun jarak tombol 'Selesai' dan teks panduan keamanan di footer secara rapi dan proporsional untuk mencegah dempetan elemen."
+    ]
+  },
+  {
     id: "v2.4.150",
     version: "2.4.150",
     title: "Penyusunan Ulang Navigasi Pengaturan Presensi V2 Mobile tanpa Horizontal Scroll",
