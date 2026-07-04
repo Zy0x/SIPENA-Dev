@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.149",
+    version: "2.4.149",
+    title: "Overhaul Layout Scroll Modal Pengaturan Presensi V2 untuk Mobile/Tablet",
+    description: "Merombak total arsitektur scroll modal Pengaturan Presensi V2 di mobile/tablet dengan memindahkan scroll area ke tingkat modal utama (DialogContent) untuk mencegah clipping konten.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-07-04",
+    details: [
+      "Mengubah overflow modal menjadi visible di mobile/tablet dengan membatasi properti `overflow-hidden` dan `overflow-y-auto` hanya berlaku pada viewport desktop (layar lg/1024px ke atas).",
+      "Membiarkan seluruh kontainer konten modal (aside dan main) merender tinggi alaminya di mobile/tablet agar digulung (scroll) secara utuh langsung oleh scrollbar modal utama (DialogContent).",
+      "Mencegah bug clipping CSS Flexbox akibat perhitungan tinggi flex-1 yang tidak valid saat viewport dijalankan di dalam simulator web ter-skala.",
+      "Mempertahankan layout dashboard modern dengan navigasi samping terpisah dan scroll area mandiri (nested scrolling) pada perangkat desktop."
+    ]
+  },
+  {
     id: "v2.4.148",
     version: "2.4.148",
     title: "Koreksi Responsivitas Modal Pengaturan Presensi V2 untuk Layar Seluler",

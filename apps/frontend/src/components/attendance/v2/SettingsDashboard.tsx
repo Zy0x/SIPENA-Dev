@@ -535,7 +535,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       <DialogContent
         fullScreenMobile
         className={cn(
-          "flex flex-col gap-0 overflow-hidden",
+          "flex flex-col gap-0 lg:overflow-hidden",
           "sm:h-[min(92dvh,820px)] sm:max-h-[92dvh] sm:w-[calc(100vw-2rem)] sm:max-w-6xl",
         )}
         onPointerDownOutside={(e) => {
@@ -689,7 +689,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           </div>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:grid-rows-none">
+        <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:grid-rows-none">
           <aside
             className="sticky top-0 z-10 shrink-0 border-b bg-background/95 px-3 py-2 backdrop-blur lg:static lg:border-b-0 lg:border-r lg:bg-muted/10 lg:p-3"
             data-tour="attendance-v2-settings-nav"
@@ -727,7 +727,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             </div>
           </aside>
 
-          <main className="min-h-0 overflow-y-auto overscroll-contain px-3 py-3 sm:px-5 sm:py-4">
+          <main className="px-3 py-3 sm:px-5 sm:py-4 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">
             {settingsSection === "calendar" && (
               <section className="space-y-3" data-tour="attendance-v2-settings-calendar">
                 <SectionIntro
