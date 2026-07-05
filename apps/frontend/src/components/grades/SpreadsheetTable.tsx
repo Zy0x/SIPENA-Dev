@@ -2089,7 +2089,7 @@ export function SpreadsheetTable({
               variant={formatLocked || scrollLockMode ? "default" : "ghost"}
               size="sm"
               onClick={handleProtectionButtonClick}
-              className="gap-1.5 lg:gap-2 h-9 lg:h-10 rounded-none border-0 px-2.5 lg:px-3"
+              className="sipena-protection-btn gap-1.5 lg:gap-2 h-9 lg:h-10 rounded-none border-0 px-2.5 lg:px-3"
               title="Aktifkan proteksi penuh: kunci tata letak dan mode navigasi"
               style={{ minWidth: 40, touchAction: 'manipulation' }}
             >
@@ -2105,7 +2105,7 @@ export function SpreadsheetTable({
                   type="button"
                   variant={formatLocked || scrollLockMode ? "default" : "ghost"}
                   size="sm"
-                  className="h-9 lg:h-10 w-9 lg:w-10 rounded-none border-0 border-l border-border/50 px-0"
+                  className="sipena-protection-btn h-9 lg:h-10 w-9 lg:w-10 rounded-none border-0 border-l border-border/50 px-0"
                   title="Pilih mode proteksi spreadsheet"
                   onPointerDown={protectionDropdownTapGuard.onPointerDown}
                   onPointerMove={protectionDropdownTapGuard.onPointerMove}
