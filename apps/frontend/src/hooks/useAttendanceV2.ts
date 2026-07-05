@@ -352,7 +352,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const isLocked = useMemo(() => {
     if (!dbAvailable) return localLocked;
     const locks = datasetQuery.data?.locks || [];
-    return locks.some((l) => l.isLocked);
+    return locks.some((l: any) => l.isLocked === true || l.is_locked === true);
   }, [dbAvailable, datasetQuery.data?.locks, localLocked]);
 
   const runtime = useAttendanceRuntime();
@@ -1118,7 +1118,39 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
 
       return locked;
     },
-    onSuccess: () => {
+    onMutate: async (locked: boolean) => {
+      // Cancel active query refetches
+      await queryClient.cancelQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+
+      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey);
+
+      // Optimistically update query cache
+      queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, (current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          locks: [
+            {
+              classId: classId || "",
+              month: monthStart.substring(0, 7),
+              isLocked: locked,
+              lockedAt: locked ? new Date().toISOString() : null,
+              lockedBy: user?.id || null,
+            }
+          ]
+        };
+      });
+
+      return { previousDataset };
+    },
+    onError: (err, locked, context) => {
+      // Rollback cache to previous state on failure
+      if (context?.previousDataset) {
+        queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, context.previousDataset);
+      }
+    },
+    onSuccess: (locked) => {
+      setLocalLocked(locked);
       if (dbAvailable) {
         queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
       }
