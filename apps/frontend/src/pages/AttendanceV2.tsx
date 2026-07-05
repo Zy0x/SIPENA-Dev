@@ -1380,7 +1380,7 @@ export default function AttendanceV2Page() {
                 <DialogFooter className="gap-2 sm:gap-0">
                   <Button variant="outline" onClick={() => setShowBulkDialog(false)} size="sm" className="text-xs rounded-xl">Batal</Button>
                   <Button
-                    onClick={bulkStatus === null ? handleBulkClear : handleBulkAttendance}
+                    onClick={bulkStatus === null ? handleBulkClear : () => handleBulkAttendance(false)}
                     disabled={isSaving}
                     size="sm"
                     className="text-xs rounded-xl"
