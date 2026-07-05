@@ -660,7 +660,9 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       return;
     }
 
-    void queryClient.cancelQueries({ queryKey: attendanceDatasetQueryKey });
+    if (queryClient.isFetching({ queryKey: attendanceDatasetQueryKey }) > 0) {
+      void queryClient.cancelQueries({ queryKey: attendanceDatasetQueryKey });
+    }
     queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, (current) =>
       applyAttendanceDatasetPatch(current, patch.classId, patch) as AttendanceDatasetCanonical | null
     );

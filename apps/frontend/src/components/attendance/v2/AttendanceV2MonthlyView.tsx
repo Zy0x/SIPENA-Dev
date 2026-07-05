@@ -19,6 +19,127 @@ interface Student {
   name: string;
 }
 
+interface MonthlyAttendanceRowProps {
+  student: Student;
+  idx: number;
+  isLocked: boolean;
+  monthDays: Date[];
+  isHolidayCombined: (date: Date) => boolean;
+  getAttendance: (studentId: string, date: Date) => string | null;
+  getAttendanceNote: (studentId: string, date: Date) => string | null;
+  isNationalHoliday: (date: Date) => boolean;
+  getHolidayDescriptionCombined: (date: Date) => string | null;
+  getHolidayDescription: (date: Date) => string | null;
+  getNationalHolidayName: (date: Date) => string | null;
+  handleSetMonthlyAttendance: (studentId: string, date: Date, status: "H" | "I" | "S" | "A" | "D" | null) => void;
+  allStatuses: ("H" | "I" | "S" | "A" | "D")[];
+  statusConfig: any;
+  jumlahConfig: JumlahConfig;
+}
+
+const MonthlyAttendanceRow: React.FC<MonthlyAttendanceRowProps> = React.memo(({
+  student,
+  idx,
+  isLocked,
+  monthDays,
+  isHolidayCombined,
+  getAttendance,
+  getAttendanceNote,
+  isNationalHoliday,
+  getHolidayDescriptionCombined,
+  getHolidayDescription,
+  getNationalHolidayName,
+  handleSetMonthlyAttendance,
+  allStatuses,
+  statusConfig,
+  jumlahConfig,
+}) => {
+  const studentStats: Record<string, number> = { H: 0, I: 0, S: 0, A: 0, D: 0 };
+  monthDays.forEach(day => {
+    if (!isHolidayCombined(day)) {
+      const st = getAttendance(student.id, day);
+      if (st && st in studentStats) studentStats[st as keyof typeof studentStats]++;
+    }
+  });
+
+  return (
+    <tr className={cn(idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
+      <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-b border-r-border/80 border-b-border/30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
+        <div className="flex items-start gap-0.5 w-[120px] sm:w-[160px]">
+          <span className="text-muted-foreground font-medium flex-shrink-0">{idx + 1}.</span>
+          <span className="text-foreground break-words leading-tight">{student.name}</span>
+        </div>
+      </td>
+      {monthDays.map(day => {
+        const st = getAttendance(student.id, day);
+        const note = getAttendanceNote(student.id, day);
+        const holidayActive = isHolidayCombined(day);
+        const dayNum = getDay(day);
+        const isSunday = dayNum === 0;
+        return (
+          <td key={day.toISOString()} className={cn("p-0.5 text-center relative border-b border-b-border/30", holidayActive && "bg-grade-warning/5")}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn("select-none w-6 h-6 sm:w-7 sm:h-7 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors",
+                    !isLocked && !holidayActive && "cursor-pointer",
+                    holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
+                      : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
+                    isSunday && !st && "text-grade-warning/40"
+                  )}
+                  onClick={() => {
+                    if (!holidayActive) {
+                      const cycle: (("H" | "I" | "S" | "A" | "D") | null)[] = ["H", "I", "S", "A", "D", null];
+                      const currIdx = cycle.indexOf(st as any);
+                      const nextStatus = cycle[(currIdx + 1) % cycle.length];
+                      handleSetMonthlyAttendance(student.id, day, nextStatus);
+                    }
+                  }}
+                >
+                  {holidayActive ? "L" : st || "-"}
+                </div>
+              </TooltipTrigger>
+              {holidayActive && (
+                <TooltipContent side="top" className="text-[10px] p-2 rounded-xl">
+                  <p className="font-bold text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1.5">
+                    <CalendarOff className="w-3 h-3" /> {isNationalHoliday(day) ? "Libur Nasional" : "Hari Libur"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {getHolidayDescription(day) || getNationalHolidayName(day) || (isSunday ? "Hari Minggu" : "Libur")}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            {note && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary flex items-center justify-center cursor-pointer">
+                    <MessageSquare className="w-1.5 h-1.5 text-primary-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[10px] max-w-[200px]">
+                  <p className="font-semibold text-foreground">{student.name}</p>
+                  <p className="text-muted-foreground">{note}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </td>
+        );
+      })}
+      {allStatuses.map(s => (
+        <td key={s} className={cn("px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l border-b border-l-border/30 border-b-border/30", statusConfig[s]?.color)}>
+          {studentStats[s]}
+        </td>
+      ))}
+      <td className="px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l-2 border-b border-l-border border-b-border/30 bg-muted/20 text-foreground">
+        {calculateJumlah(studentStats, jumlahConfig)}
+      </td>
+    </tr>
+  );
+});
+
+MonthlyAttendanceRow.displayName = "MonthlyAttendanceRow";
+
 interface AttendanceV2MonthlyViewProps {
   isLocked: boolean;
   handleToggleLock: () => void;
@@ -270,89 +391,26 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
               </tr>
             </thead>
             <tbody>
-              {filteredStudents.map((student, idx) => {
-                const studentStats: Record<string, number> = { H: 0, I: 0, S: 0, A: 0, D: 0 };
-                monthDays.forEach(day => {
-                  if (!isHolidayCombined(day)) {
-                    const st = getAttendance(student.id, day);
-                    if (st && st in studentStats) studentStats[st as keyof typeof studentStats]++;
-                  }
-                });
-                return (
-                  <tr key={student.id} className={cn(idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
-                    <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-b border-r-border/80 border-b-border/30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
-                      <div className="flex items-start gap-0.5 w-[120px] sm:w-[160px]">
-                        <span className="text-muted-foreground font-medium flex-shrink-0">{idx + 1}.</span>
-                        <span className="text-foreground break-words leading-tight">{student.name}</span>
-                      </div>
-                    </td>
-                    {monthDays.map(day => {
-                      const st = getAttendance(student.id, day);
-                      const note = getAttendanceNote(student.id, day);
-                      const holidayActive = isHolidayCombined(day);
-                      const dayNum = getDay(day);
-                      const isSunday = dayNum === 0;
-                      return (
-                        <td key={day.toISOString()} className={cn("p-0.5 text-center relative border-b border-b-border/30", holidayActive && "bg-grade-warning/5")}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div
-                                className={cn("select-none w-6 h-6 sm:w-7 sm:h-7 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors",
-                                  !isLocked && !holidayActive && "cursor-pointer",
-                                  holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
-                                    : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
-                                  isSunday && !st && "text-grade-warning/40"
-                                )}
-                                onClick={() => {
-                                  if (!holidayActive) {
-                                    const cycle: (("H" | "I" | "S" | "A" | "D") | null)[] = ["H", "I", "S", "A", "D", null];
-                                    const currIdx = cycle.indexOf(st as any);
-                                    const nextStatus = cycle[(currIdx + 1) % cycle.length];
-                                    handleSetMonthlyAttendance(student.id, day, nextStatus);
-                                  }
-                                }}
-                              >
-                                {holidayActive ? "L" : st || "-"}
-                              </div>
-                            </TooltipTrigger>
-                            {holidayActive && (
-                              <TooltipContent side="top" className="text-[10px] p-2 rounded-xl">
-                                <p className="font-bold text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1.5">
-                                  <CalendarOff className="w-3 h-3" /> {isNationalHoliday(day) ? "Libur Nasional" : "Hari Libur"}
-                                </p>
-                                <p className="text-muted-foreground">
-                                  {getHolidayDescription(day) || getNationalHolidayName(day) || (isSunday ? "Hari Minggu" : "Libur")}
-                                </p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                          {note && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary flex items-center justify-center cursor-pointer">
-                                  <MessageSquare className="w-1.5 h-1.5 text-primary-foreground" />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-[10px] max-w-[200px]">
-                                <p className="font-semibold text-foreground">{student.name}</p>
-                                <p className="text-muted-foreground">{note}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </td>
-                      );
-                    })}
-                    {allStatuses.map(s => (
-                      <td key={s} className={cn("px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l border-b border-l-border/30 border-b-border/30", statusConfig[s]?.color)}>
-                        {studentStats[s]}
-                      </td>
-                    ))}
-                    <td className="px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l-2 border-b border-l-border border-b-border/30 bg-muted/20 text-foreground">
-                      {calculateJumlah(studentStats, jumlahConfig)}
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredStudents.map((student, idx) => (
+                <MonthlyAttendanceRow
+                  key={student.id}
+                  student={student}
+                  idx={idx}
+                  isLocked={isLocked}
+                  monthDays={monthDays}
+                  isHolidayCombined={isHolidayCombined}
+                  getAttendance={getAttendance}
+                  getAttendanceNote={getAttendanceNote}
+                  isNationalHoliday={isNationalHoliday}
+                  getHolidayDescriptionCombined={getHolidayDescriptionCombined}
+                  getHolidayDescription={getHolidayDescription}
+                  getNationalHolidayName={getNationalHolidayName}
+                  handleSetMonthlyAttendance={handleSetMonthlyAttendance}
+                  allStatuses={allStatuses}
+                  statusConfig={statusConfig}
+                  jumlahConfig={jumlahConfig}
+                />
+              ))}
             </tbody>
             {/* Total Row */}
             <tfoot>
