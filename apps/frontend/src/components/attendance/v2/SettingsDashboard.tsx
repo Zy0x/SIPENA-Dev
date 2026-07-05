@@ -107,15 +107,15 @@ function CompactMetric({
   icon?: React.ElementType;
 }) {
   const toneClass = {
-    default: "border-border bg-muted/25 text-foreground",
-    green: "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/20 dark:text-green-300",
-    amber: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300",
-    red: "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300",
-    blue: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-300",
+    default: "bg-muted/30 text-foreground",
+    green: "bg-green-50/80 text-green-700 dark:bg-green-950/20 dark:text-green-300",
+    amber: "bg-amber-50/80 text-amber-700 dark:bg-amber-950/20 dark:text-amber-300",
+    red: "bg-red-50/80 text-red-700 dark:bg-red-950/20 dark:text-red-300",
+    blue: "bg-blue-50/80 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300",
   }[tone];
 
   return (
-    <div className={cn("min-w-0 rounded-xl border px-3 py-2.5 transition-all", toneClass)}>
+    <div className={cn("min-w-0 rounded-xl px-3.5 py-3 transition-all", toneClass)}>
       <p className="line-clamp-2 text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
       <div className="mt-1 flex items-center gap-1.5">
         {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden="true" />}
@@ -811,7 +811,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   }
                 />
 
-                 <div className="grid gap-3 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+                 <div className="flex flex-col gap-4">
                   <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4" data-tour="attendance-v2-settings-calendar-format">
                     <div className="mb-3 flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -878,7 +878,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                           <p className="text-xs font-semibold text-muted-foreground">Libur nasional</p>
                           <Badge variant="secondary">{monthNationalHolidays.length}</Badge>
                         </div>
-                        <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                        <div className="max-h-72 overflow-y-auto divide-y">
                           {monthNationalHolidays.length === 0 ? (
                             <EmptyState icon={Globe} text="Tidak ada libur nasional bulan ini." compact />
                           ) : (
@@ -891,17 +891,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                 <div
                                   key={holiday.date}
                                   className={cn(
-                                    "flex items-center justify-between gap-2 rounded-xl border p-2 transition-colors",
-                                    isOverridden
-                                      ? "border-primary/30 bg-primary/5"
-                                      : "border-border bg-background"
+                                    "flex items-start justify-between gap-3 p-3 transition-colors sm:p-4 hover:bg-muted/30",
+                                    isOverridden && "bg-primary/5 hover:bg-primary/10"
                                   )}
                                 >
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-semibold break-words whitespace-normal">{formatDateOnly(holiday.date)}</p>
-                                    <p className="text-[11px] text-muted-foreground break-words whitespace-normal">{holiday.name}</p>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[13px] font-semibold break-words whitespace-normal">{formatDateOnly(holiday.date)}</p>
+                                    <p className="mt-0.5 text-[11px] text-muted-foreground break-words whitespace-normal">{holiday.name}</p>
                                     {isOverridden && (
-                                      <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
+                                      <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
                                         <Check className="h-3 w-3" />
                                         Jadwal masuk khusus
                                       </span>
@@ -911,7 +909,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                     type="button"
                                     variant={isOverridden ? "default" : "outline"}
                                     size="sm"
-                                    className="min-h-[44px] shrink-0 rounded-xl px-3 text-xs font-semibold select-none touch-manipulation"
+                                    className="min-h-10 shrink-0 rounded-xl px-3 text-xs font-semibold select-none touch-manipulation shadow-sm"
                                     data-touch-scroll-click-target="true"
                                     onClick={() =>
                                       isOverridden
@@ -940,7 +938,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                             }).length}
                           </Badge>
                         </div>
-                        <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                        <div className="max-h-72 overflow-y-auto divide-y">
                           {monthDays
                             .filter((day) => {
                               const dayOfWeek = getDay(day);
@@ -953,28 +951,26 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                 <div
                                   key={date}
                                   className={cn(
-                                    "flex items-center justify-between gap-2 rounded-xl border p-2 transition-colors",
-                                    isOverridden
-                                      ? "border-primary/30 bg-primary/5"
-                                      : "border-border bg-background"
+                                    "flex items-start justify-between gap-3 p-3 transition-colors sm:p-4 hover:bg-muted/30",
+                                    isOverridden && "bg-primary/5 hover:bg-primary/10"
                                   )}
                                 >
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-semibold break-words whitespace-normal">{format(day, "EEEE, d MMM", { locale: idLocale })}</p>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[13px] font-semibold whitespace-nowrap">{format(day, "EEEE, d MMM", { locale: idLocale })}</p>
                                     {isOverridden ? (
-                                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
+                                      <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
                                         <Check className="h-3 w-3" />
                                         Jadwal masuk khusus
                                       </span>
                                     ) : (
-                                      <p className="text-[11px] text-muted-foreground">Libur default</p>
+                                      <p className="mt-0.5 text-[11px] text-muted-foreground">Libur default</p>
                                     )}
                                   </div>
                                   <Button
                                     type="button"
                                     variant={isOverridden ? "default" : "outline"}
                                     size="sm"
-                                    className="min-h-[44px] shrink-0 rounded-xl px-3 text-xs font-semibold select-none touch-manipulation"
+                                    className="min-h-10 shrink-0 rounded-xl px-3 text-xs font-semibold select-none touch-manipulation shadow-sm"
                                     data-touch-scroll-click-target="true"
                                     onClick={() =>
                                       isOverridden
@@ -1012,7 +1008,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   }
                 />
 
-                <div className="grid gap-3 xl:grid-cols-2">
+                <div className="flex flex-col gap-4">
                   <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-effective-holiday">
                     <div className="flex items-center justify-between gap-3 border-b p-3 sm:p-4">
                       <div className="min-w-0">
@@ -1040,11 +1036,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         holidays.map((holiday) => (
                           <div key={`${holiday.date}-${holiday.class_id || "school"}`} className="flex items-start justify-between gap-3 p-3 hover:bg-muted/30 transition-colors">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold">{formatDateOnly(holiday.date)}</p>
-                              <p
-                                className="mt-0.5 text-[11px] text-muted-foreground break-words whitespace-normal"
-                                style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
-                              >
+                              <p className="text-[13px] font-semibold">{formatDateOnly(holiday.date)}</p>
+                              <p className="mt-0.5 text-[12px] text-muted-foreground leading-relaxed pr-2">
                                 {holiday.description}
                               </p>
                             </div>
@@ -1102,12 +1095,11 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <EmptyState icon={Bookmark} text="Belum ada kegiatan khusus." />
                       ) : (
                         dayEvents.map((event) => (
-                          <div key={event.date} className="flex items-start justify-between gap-3 p-3 hover:bg-muted/30 transition-colors">
+                          <div key={event.date} className="flex flex-col gap-2 p-3 hover:bg-muted/30 transition-colors sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold">{formatDateOnly(event.date)}</p>
+                              <p className="text-[13px] font-semibold">{formatDateOnly(event.date)}</p>
                               <p
-                                className="mt-0.5 text-[11px] text-muted-foreground break-words whitespace-normal"
-                                style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
+                                className="mt-0.5 text-[12px] text-muted-foreground leading-relaxed"
                               >
                                 {event.label}
                                 {event.description ? ` — ${event.description}` : ""}
@@ -1197,7 +1189,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     <EmptyState icon={Info} text="Profil rekap belum tersedia untuk kelas ini." />
                   </div>
                 ) : (
-                  <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                  <div className="flex flex-col gap-4">
                     <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4" data-tour="attendance-v2-settings-recap-denominator">
                       <div className="flex items-center justify-between gap-2">
                         <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Denominator</Label>
@@ -1396,9 +1388,9 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       delegations.map((delegation) => (
                         <div key={delegation.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold break-words whitespace-normal">{delegation.grantee_label || delegation.grantee_user_id}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDateOnly(delegation.starts_at)} sampai {formatDateOnly(delegation.ends_at)}
+                            <p className="text-[13px] font-semibold break-words leading-snug">{delegation.grantee_label || delegation.grantee_user_id}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground whitespace-nowrap">
+                              {formatDateOnly(delegation.starts_at)} - {formatDateOnly(delegation.ends_at)}
                             </p>
                           </div>
                           <Button
@@ -1448,7 +1440,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   }
                 />
 
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <div className="flex flex-col gap-4">
                   <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4" data-tour="attendance-v2-settings-backup-summary">
                     <h4 className="text-sm font-semibold">Ringkasan Bulan Ini</h4>
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -1470,11 +1462,11 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       ) : (
                         snapshots.map((snapshot) => (
                           <div key={snapshot.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold break-words whitespace-normal">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] font-semibold whitespace-nowrap">
                                 {format(new Date(snapshot.created_at), "d MMM yyyy HH:mm", { locale: idLocale })}
                               </p>
-                              <p className="text-xs text-muted-foreground break-words whitespace-normal">{snapshot.reason || "Backup rutin"}</p>
+                              <p className="mt-0.5 text-[12px] text-muted-foreground leading-relaxed break-words">{snapshot.reason || "Backup rutin"}</p>
                             </div>
                             <Button
                               type="button"
