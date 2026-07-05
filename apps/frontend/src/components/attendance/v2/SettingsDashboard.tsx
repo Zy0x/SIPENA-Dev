@@ -751,10 +751,11 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
         {/* ──── Mobile / Tablet: Horizontal Tab Strip (hidden on lg+) ──── */}
         <nav
-          className="shrink-0 border-b bg-muted/10 lg:hidden relative pt-2"
+          className="shrink-0 relative lg:hidden pt-2 bg-muted/10"
           aria-label="Navigasi pengaturan"
         >
-          <div className="flex gap-1 overflow-x-auto px-2 sm:px-4 scrollbar-none items-end" style={{ paddingRight: '3.5rem' }}>
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-border" />
+          <div className="flex gap-1 overflow-x-auto px-2 sm:px-4 pb-[2px] -mb-[2px] scrollbar-none items-end relative z-10" style={{ paddingRight: '3.5rem' }}>
             {sectionItems.map((item) => {
               const Icon = item.icon;
               const active = settingsSection === item.id;
@@ -767,12 +768,11 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   data-state={active ? "active" : "inactive"}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger relative shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 min-h-[42px] rounded-tl-xl rounded-tr-[1.5rem] border border-b-0 text-[13px] font-bold transition-all duration-200 touch-manipulation select-none overflow-hidden",
+                    "sipena-tab-trigger relative shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 min-h-[42px] rounded-tl-xl rounded-tr-[1.5rem] border text-[13px] font-bold transition-all duration-200 touch-manipulation select-none overflow-hidden",
                     active
-                      ? "bg-background text-primary border-border shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.1)] z-10 before:absolute before:top-0 before:inset-x-0 before:h-[3px] before:bg-primary"
+                      ? "bg-background text-primary border-border border-b-transparent shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.1)] z-20 translate-y-[1px] before:absolute before:top-0 before:inset-x-0 before:h-[3px] before:bg-primary"
                       : "bg-muted/40 text-muted-foreground border-transparent hover:bg-muted/60 active:bg-muted hover:text-foreground",
                   )}
-                  style={active ? { marginBottom: "-1px", paddingBottom: "calc(0.625rem + 1px)" } : {}}
                 >
                   <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "opacity-70")} aria-hidden="true" />
                   <span>{item.title}</span>
@@ -788,9 +788,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         <div className="min-h-0 flex-1 flex flex-col overflow-hidden lg:flex-row">
 
           <aside
-            className="hidden lg:flex lg:flex-col w-64 shrink-0 border-r bg-muted/10 py-4 pl-4 pr-0 gap-1 overflow-y-auto"
+            className="hidden lg:flex lg:flex-col w-64 shrink-0 bg-muted/10 py-4 pl-4 pr-0 gap-1 overflow-y-auto relative"
             data-tour="attendance-v2-settings-nav"
           >
+            <div className="absolute top-0 bottom-0 right-0 w-[1px] bg-border" />
             {sectionItems.map((item) => {
               const Icon = item.icon;
               const active = settingsSection === item.id;
@@ -804,12 +805,11 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   aria-pressed={active}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger relative w-full flex items-center gap-3 min-h-[52px] rounded-tl-xl rounded-bl-[1.5rem] rounded-r-none px-4 text-left transition-all duration-200 touch-manipulation select-none border border-r-0 overflow-hidden",
+                    "sipena-tab-trigger relative w-full flex items-center gap-3 min-h-[52px] rounded-tl-xl rounded-bl-[1.5rem] rounded-r-none px-4 text-left transition-all duration-200 touch-manipulation select-none border overflow-hidden z-10",
                     active
-                      ? "bg-background text-primary border-border shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] z-10 before:absolute before:left-0 before:inset-y-0 before:w-[3px] before:bg-primary"
+                      ? "bg-background text-primary border-border border-r-transparent shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] z-20 translate-x-[1px] before:absolute before:left-0 before:inset-y-0 before:w-[3px] before:bg-primary"
                       : "bg-transparent border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                   )}
-                  style={active ? { marginRight: "-1px", paddingRight: "calc(1rem + 1px)" } : { paddingRight: "1rem" }}
                 >
                   <span className={cn(
                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
