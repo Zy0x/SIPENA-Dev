@@ -140,7 +140,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                 </div>
 
                 {/* Status buttons + Note */}
-                <div className="flex items-center gap-3 sm:gap-1.5 flex-shrink-0 ml-7 sm:ml-0">
+                <div className="grid grid-cols-6 gap-1.5 w-full mt-1.5 sm:mt-0 sm:flex sm:w-auto sm:flex-row sm:items-center sm:gap-1.5 sm:ml-0 flex-shrink-0">
                   {allStatuses.map((s) => {
                     const isSelected = status === s;
                     const cfg = statusConfig[s];
@@ -150,14 +150,14 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                         onClick={() => handleSetAttendance(student.id, selectedDate, isSelected ? null : s)}
                         disabled={holidayActive}
                         className={cn(
-                          "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation select-none",
-                          "relative w-8 h-8 sm:w-auto sm:h-auto sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col after:absolute after:inset-[-6px] sm:after:hidden",
+                          "flex items-center justify-center transition-all touch-manipulation select-none",
+                          "aspect-square rounded-xl sm:rounded-xl sm:w-auto sm:h-auto sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col sm:aspect-auto",
                           isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground active:bg-muted/80 lg:hover:bg-muted",
                           holidayActive && "cursor-not-allowed opacity-40"
                         )}
                         aria-label={cfg.label}
                       >
-                        <span className="text-[9px] sm:text-xs font-bold leading-none">{s}</span>
+                        <span className="text-[12px] sm:text-xs font-bold leading-none">{s}</span>
                         <span className={cn("text-[5px] sm:text-[7px] leading-none mt-0.5 font-medium hidden sm:block", isSelected ? "opacity-80" : "opacity-60")}>
                           {cfg.label}
                         </span>
@@ -171,12 +171,12 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                         onClick={() => handleOpenNote(student.id, student.name, selectedDate)}
                         disabled={holidayActive}
                         className={cn(
-                          "relative flex w-8 h-8 rounded-md sm:rounded-lg items-center justify-center flex-shrink-0 transition-colors touch-manipulation after:absolute after:inset-[-6px] sm:after:hidden",
+                          "flex aspect-square rounded-xl sm:rounded-lg sm:w-auto sm:h-auto sm:min-w-[38px] sm:min-h-[40px] items-center justify-center transition-colors touch-manipulation sm:aspect-auto",
                           note ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground active:bg-muted/80 lg:hover:bg-muted",
                           holidayActive && "opacity-40 cursor-not-allowed"
                         )}
                       >
-                        <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <MessageSquare className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent className="text-xs">Catatan</TooltipContent>
