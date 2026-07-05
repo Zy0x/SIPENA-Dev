@@ -3581,7 +3581,7 @@ export default function Attendance() {
                       "sipena-tab-trigger flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 touch-manipulation min-h-[44px]",
                       activeView === key 
                         ? "bg-primary text-primary-foreground shadow-md scale-[1.02] ring-2 ring-primary/20" 
-                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        : "text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/50 lg:hover:text-foreground"
                     )}
                   >
                     <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5", activeView === key ? "animate-pulse" : "")} />

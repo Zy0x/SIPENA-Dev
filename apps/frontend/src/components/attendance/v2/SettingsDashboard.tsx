@@ -556,19 +556,19 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           data-tour="attendance-v2-settings-header"
         >
           {/* Title + Tour Button */}
-          <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3 pr-14 sm:px-5 sm:pt-5 sm:pb-3 sm:pr-16">
+          <div className="flex items-center justify-between gap-3 px-4 pt-5 pb-4 pr-14 sm:px-6 sm:pt-6 sm:pb-4 sm:pr-16 lg:px-8 lg:pt-8">
             <div className="min-w-0">
-              <DialogTitle className="flex items-center gap-2 text-sm font-semibold sm:text-base">
-                <Settings2 className="h-4 w-4 text-primary shrink-0 sm:h-5 sm:w-5" />
+              <DialogTitle className="flex items-center gap-2 text-base font-bold sm:text-lg">
+                <Settings2 className="h-5 w-5 text-primary shrink-0" />
                 <span className="truncate">Pengaturan Presensi V2</span>
               </DialogTitle>
-              <DialogDescription className="mt-1 hidden text-xs leading-relaxed sm:block sm:text-sm">
+              <DialogDescription className="mt-1.5 text-xs leading-relaxed sm:text-sm max-w-xl">
                 Kelola kalender akademik, hari efektif, rekap, delegasi, audit, dan backup untuk kelas aktif.
               </DialogDescription>
             </div>
             <TourButton
               tourKey="attendance-v2-settings"
-              className="min-h-9 shrink-0 justify-center rounded-xl px-2.5 text-xs sm:min-h-10 sm:px-3"
+              className="min-h-10 shrink-0 justify-center rounded-xl px-3 text-xs sm:min-h-11 sm:px-4 sm:text-sm font-bold"
               onBeforeStart={async () => {
                 onOpenChange(true);
                 setSettingsSection("calendar");
@@ -577,9 +577,9 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             />
           </div>
 
-          {/* Metrics: horizontal scroll on mobile, 4-col grid on sm+ */}
-          <div className="flex gap-2 overflow-x-auto px-4 pb-4 sm:grid sm:grid-cols-4 sm:gap-3 sm:px-5 sm:pb-5">
-            <div className="shrink-0 min-w-[108px] sm:min-w-0">
+          {/* Metrics: 2-col grid on mobile, 4-col grid on sm+ */}
+          <div className="grid grid-cols-2 gap-3 px-4 pb-5 sm:grid-cols-4 sm:gap-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+            <div className="min-w-0">
               <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
             </div>
             <div className="shrink-0 min-w-[156px] sm:min-w-0">
@@ -591,22 +591,22 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5 shrink-0 rounded-md text-foreground hover:bg-muted/80 active:bg-muted"
+                      className="h-6 w-6 shrink-0 rounded-md text-foreground active:bg-muted lg:hover:bg-muted/80"
                       onClick={() => {
                         if (setCurrentMonth) {
                           setCurrentMonth(addMonths(currentMonth, -1));
                         }
                       }}
                     >
-                      <ChevronLeft className="h-3.5 w-3.5" />
+                      <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <Popover>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="flex items-center gap-0.5 px-1 py-0.5 rounded-md text-[11px] font-bold hover:bg-muted/80 active:bg-muted text-foreground transition-colors cursor-pointer select-none"
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] sm:text-xs font-bold active:bg-muted lg:hover:bg-muted/80 text-foreground transition-colors cursor-pointer select-none"
                         >
-                          <span className="truncate max-w-[4.25rem] sm:max-w-none">
+                          <span className="truncate max-w-[5rem] sm:max-w-none">
                             {format(currentMonth, "MMM yyyy", { locale: idLocale })}
                           </span>
                           <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
@@ -629,10 +629,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                   }
                                 }}
                                 className={cn(
-                                  "px-2 py-1.5 rounded-lg text-xs text-left font-medium transition-colors truncate",
+                                  "px-2 py-2 rounded-lg text-xs text-left font-medium transition-colors truncate active:scale-95 touch-manipulation",
                                   isSelected
-                                    ? "bg-primary text-primary-foreground font-semibold"
-                                    : "hover:bg-muted text-foreground"
+                                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                                    : "active:bg-muted lg:hover:bg-muted text-foreground"
                                 )}
                               >
                                 {format(month, "MMMM", { locale: idLocale })}
@@ -644,7 +644,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                           <Button
                             type="button"
                             variant="ghost"
-                            className="h-7 flex-1 px-1.5 rounded-lg text-[10px] font-semibold hover:bg-muted"
+                            className="h-8 flex-1 px-2 rounded-lg text-[11px] font-bold active:bg-muted lg:hover:bg-muted"
                             onClick={() => {
                               if (setCurrentMonth) {
                                 setCurrentMonth(addYears(currentMonth, -1));
@@ -656,7 +656,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                           <Button
                             type="button"
                             variant="ghost"
-                            className="h-7 flex-1 px-1.5 rounded-lg text-[10px] font-semibold hover:bg-muted"
+                            className="h-8 flex-1 px-2 rounded-lg text-[11px] font-bold active:bg-muted lg:hover:bg-muted"
                             onClick={() => {
                               if (setCurrentMonth) {
                                 setCurrentMonth(addYears(currentMonth, 1));
@@ -672,14 +672,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5 shrink-0 rounded-md text-foreground hover:bg-muted/80 active:bg-muted"
+                      className="h-6 w-6 shrink-0 rounded-md text-foreground active:bg-muted lg:hover:bg-muted/80"
                       onClick={() => {
                         if (setCurrentMonth) {
                           setCurrentMonth(addMonths(currentMonth, 1));
                         }
                       }}
                     >
-                      <ChevronRight className="h-3.5 w-3.5" />
+                      <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 }
@@ -703,7 +703,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           className="shrink-0 border-b bg-background lg:hidden"
           aria-label="Navigasi pengaturan"
         >
-          <div className="flex gap-1.5 overflow-x-auto px-3 py-2">
+          <div className="flex gap-2 overflow-x-auto px-4 py-3 sm:px-6 sm:py-4 scrollbar-none">
             {sectionItems.map((item) => {
               const Icon = item.icon;
               const active = settingsSection === item.id;
@@ -716,13 +716,13 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   data-state={active ? "active" : "inactive"}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger shrink-0 flex items-center gap-1.5 px-3 py-2 min-h-10 rounded-xl border text-xs font-semibold transition-colors touch-manipulation select-none",
+                    "sipena-tab-trigger shrink-0 flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl border text-sm font-bold transition-all duration-200 touch-manipulation select-none",
                     active
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                      ? "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20 scale-[1.02]"
+                      : "border-border bg-background text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/50 lg:hover:text-foreground",
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span>{item.title}</span>
                 </button>
               );
@@ -735,7 +735,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
           {/* Desktop sidebar (hidden on mobile/tablet) */}
           <aside
-            className="hidden lg:flex lg:flex-col w-[15.5rem] shrink-0 border-r bg-muted/10 p-3 gap-1.5 overflow-y-auto"
+            className="hidden lg:flex lg:flex-col w-64 shrink-0 border-r bg-muted/10 p-4 gap-2 overflow-y-auto"
             data-tour="attendance-v2-settings-nav"
           >
             {sectionItems.map((item) => {
@@ -751,18 +751,18 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   aria-pressed={active}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger w-full flex items-start gap-2.5 min-h-[3.25rem] rounded-xl border p-3 text-left transition-colors touch-manipulation select-none",
+                    "sipena-tab-trigger w-full flex items-start gap-3 min-h-[44px] rounded-xl border p-3.5 text-left transition-all duration-200 touch-manipulation select-none",
                     active
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      ? "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20 scale-[1.02]"
+                      : "border-border bg-background text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/60 lg:hover:text-foreground",
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0 mt-0.5" />
+                  <Icon className="h-5 w-5 shrink-0 mt-0.5" />
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold leading-tight truncate">{item.title}</span>
+                    <span className="block text-sm font-bold leading-tight truncate">{item.title}</span>
                     <span className={cn(
-                      "block text-[10px] mt-0.5 truncate",
-                      active ? "text-primary-foreground/75" : "text-muted-foreground"
+                      "block text-[11px] mt-1 truncate",
+                      active ? "text-primary-foreground/80 font-medium" : "text-muted-foreground"
                     )}>
                       {item.detail}
                     </span>
@@ -772,7 +772,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             })}
           </aside>
 
-          <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 lg:p-5">
+          <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8">
             {settingsSection === "calendar" && (
               <section className="space-y-3" data-tour="attendance-v2-settings-calendar">
                 <SectionIntro
@@ -820,8 +820,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                             data-selected={active ? "true" : "false"}
                             onClick={() => handleWorkDayFormatChange(item.key)}
                             className={cn(
-                              "flex min-h-14 touch-manipulation items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors",
-                              active ? "border-primary bg-primary/10 text-primary" : "border-border bg-background hover:bg-muted/40",
+                              "flex min-h-[64px] touch-manipulation items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors",
+                              active ? "border-primary bg-primary/10 text-primary" : "border-border bg-background active:bg-muted/50 lg:hover:bg-muted/40",
                             )}
                           >
                             <span className="min-w-0">
