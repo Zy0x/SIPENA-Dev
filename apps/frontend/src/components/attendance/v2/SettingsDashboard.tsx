@@ -627,12 +627,12 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             />
           </div>
 
-          {/* Metrics: 2-col grid on mobile, 4-col grid on sm+ */}
-          <div className="grid grid-cols-2 gap-2 px-4 pb-4 sm:grid-cols-4 sm:gap-3 sm:px-6 sm:pb-5 lg:px-6 lg:pb-6">
-            <div className="min-w-0">
+          {/* Metrics: 2-col grid on mobile, 4-col grid on sm+, row of fixed-width cards on lg+ */}
+          <div className="grid grid-cols-2 gap-2 px-4 pb-4 sm:grid-cols-4 sm:gap-3 sm:px-6 sm:pb-5 lg:px-6 lg:pb-3 lg:flex lg:flex-row lg:justify-start lg:gap-3 lg:max-w-4xl">
+            <div className="min-w-0 lg:w-[180px]">
               <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
             </div>
-            <div className="shrink-0 min-w-[156px] sm:min-w-0">
+            <div className="shrink-0 min-w-[156px] sm:min-w-0 lg:min-w-0 lg:w-[180px]">
               <CompactMetric
                 label="Bulan"
                 value={
@@ -644,7 +644,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       className="h-6 w-6 shrink-0 rounded-md text-foreground active:bg-muted lg:hover:bg-muted/80"
                       onClick={() => {
                         if (setCurrentMonth) {
-                          setCurrentMonth(addMonths(currentMonth, -1));
+                           setCurrentMonth(addMonths(currentMonth, -1));
                         }
                       }}
                     >
@@ -735,10 +735,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 }
               />
             </div>
-            <div className="shrink-0 min-w-[108px] sm:min-w-0">
+            <div className="shrink-0 min-w-[108px] sm:min-w-0 lg:min-w-0 lg:w-[180px]">
               <CompactMetric label="Hari efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
             </div>
-            <div className="shrink-0 min-w-[108px] sm:min-w-0">
+            <div className="shrink-0 min-w-[108px] sm:min-w-0 lg:min-w-0 lg:w-[180px]">
               <CompactMetric
                 label="Status"
                 value={isLocked ? "Terkunci" : "Bisa diedit"}
@@ -841,6 +841,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 transition={{ duration: 0.15, ease: "easeOut" }}
                 className="absolute inset-0 overflow-y-auto overscroll-contain p-4 sm:p-5 lg:p-6"
               >
+                <div className="mx-auto max-w-4xl w-full">
                 {settingsSection === "calendar" && (
                   <section className="space-y-3" data-tour="attendance-v2-settings-calendar">
                 <SectionIntro
@@ -874,7 +875,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         impact="Jumlah hari efektif bulan ini akan berubah mengikuti format yang dipilih."
                       />
                     </div>
-                    <div className="grid gap-2">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {[
                         { key: "5days" as const, label: "5 hari", desc: "Senin sampai Jumat" },
                         { key: "6days" as const, label: "6 hari", desc: "Senin sampai Sabtu" },
@@ -1346,7 +1347,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                           impact="Pilihan denominator sangat memengaruhi persentase akhir di rekap/export."
                         />
                       </div>
-                      <div className="mt-3 grid gap-2">
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         {[
                           {
                             value: "effective_days" as const,
@@ -1588,7 +1589,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 <div className="flex flex-col gap-4">
                   <div className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4" data-tour="attendance-v2-settings-backup-summary">
                     <h4 className="text-sm font-semibold">Ringkasan Bulan Ini</h4>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
                       <CompactMetric label="Hari kalender" value={monthDays.length} />
                       <CompactMetric label="Hari efektif" value={effectiveDays} tone="green" />
                       <CompactMetric label="Libur kustom" value={customHolidayCount} tone="amber" />
@@ -1631,6 +1632,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 </div>
               </section>
             )}
+                </div>
               </motion.div>
             </AnimatePresence>
           </main>
