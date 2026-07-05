@@ -333,14 +333,18 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
         </div>
 
         {isLocked && (
-          <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 text-xs text-amber-800 dark:text-amber-400 font-medium animate-fade-in">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="flex items-center justify-center px-1.5 py-0.5 rounded-md bg-amber-500 text-white font-semibold text-[10px] uppercase tracking-wider select-none shrink-0 shadow-sm animate-pulse">
+          <div className="flex items-center justify-between gap-3 px-3 py-2 bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 text-xs text-amber-800 dark:text-amber-400 font-medium overflow-hidden animate-fade-in">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="flex items-center justify-center px-1.5 py-0.5 rounded-md bg-amber-500 text-white font-semibold text-[10px] uppercase tracking-wider select-none shrink-0 shadow-sm z-10 animate-pulse">
                 Terkunci
               </span>
-              <span className="truncate">Rekap presensi dikunci. Buka gembok di atas untuk mengedit data.</span>
+              <div className="flex-1 min-w-0 overflow-hidden relative h-5 flex items-center">
+                <span className="animate-sipena-lock-marquee absolute whitespace-nowrap pl-1">
+                  Rekap presensi dikunci. Buka gembok di atas untuk mengedit data.
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0 font-semibold select-none">
+            <div className="flex items-center gap-1 shrink-0 font-semibold select-none z-10 bg-[#fdf6e2] dark:bg-[#1a140b] pl-2 py-0.5">
               <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500" />
             </div>
           </div>
