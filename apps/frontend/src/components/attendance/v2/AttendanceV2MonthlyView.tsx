@@ -333,9 +333,16 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
         </div>
 
         {isLocked && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
-            <Lock className="w-3 h-3" />
-            <span>Rekap terkunci. Buka kunci untuk mengedit.</span>
+          <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-amber-500/10 dark:bg-amber-500/5 border-b border-amber-500/20 text-xs text-amber-800 dark:text-amber-400 font-medium animate-fade-in">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="flex items-center justify-center px-1.5 py-0.5 rounded-md bg-amber-500 text-white font-semibold text-[10px] uppercase tracking-wider select-none shrink-0 shadow-sm animate-pulse">
+                Terkunci
+              </span>
+              <span className="truncate">Rekap presensi dikunci. Buka gembok di atas untuk mengedit data.</span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0 font-semibold select-none">
+              <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500" />
+            </div>
           </div>
         )}
 
