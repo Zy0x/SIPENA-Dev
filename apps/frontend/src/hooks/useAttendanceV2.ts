@@ -1066,24 +1066,54 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         return locked;
       }
 
-      const { data: { session } } = await (supabase as any).auth.getSession();
-      const token = session?.access_token;
+      const monthStr = monthStart.substring(0, 7);
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/lock`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token || ""}`,
-        },
-        body: JSON.stringify({
-          classId,
-          month: monthStart.substring(0, 7),
-          isLocked: locked,
-        }),
-      });
+      try {
+        const { data: { session } } = await (supabase as any).auth.getSession();
+        const token = session?.access_token;
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/lock`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token || ""}`,
+          },
+          body: JSON.stringify({
+            classId,
+            month: monthStr,
+            isLocked: locked,
+          }),
+        });
+
+        if (response.ok) {
+          return locked;
+        } else {
+          console.warn(`V2 API Lock failed with status ${response.status}, falling back to direct Supabase upsert.`);
+        }
+      } catch (apiError) {
+        console.warn("V2 API Lock failed, falling back to direct Supabase upsert:", apiError);
+      }
+
+      // Fallback Direct Supabase Upsert
+      const { error } = await (supabase as any)
+        .from("attendance_v2_locks")
+        .upsert(
+          {
+            class_id: classId,
+            month: monthStr,
+            user_id: user.id,
+            is_locked: locked,
+            locked_at: locked ? new Date().toISOString() : null,
+            locked_by: locked ? user.id : null,
+          },
+          {
+            onConflict: "class_id,month",
+          }
+        );
+
+      if (error) {
+        console.error("Direct Supabase Upsert lock failed:", error);
+        throw error;
       }
 
       return locked;
