@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useRef } from "react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Users, Search, Check, MessageSquare } from "lucide-react";
+import { Users, Search, Check, MessageSquare, CheckSquare } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -160,6 +161,15 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
   statusConfig,
   saveIndicator,
 }) => {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredStudents.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 64,
+    overscan: 5,
+  });
+
   return (
     <div data-tour="attendance-table" className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden max-w-full">
       <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
@@ -188,10 +198,10 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                 size="sm" 
                 onClick={() => setShowBulkDialog(true)} 
                 disabled={isHolidayCombined(selectedDate)} 
-                className="text-xs h-8 px-2.5 gap-1 rounded-xl flex-shrink-0"
+                className="text-xs h-8 px-2.5 gap-1.5 rounded-xl flex-shrink-0"
               >
-                <Check className="w-3 h-3" />
-                <span className="hidden xs:inline sm:inline">Semua</span>
+                <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                <span className="hidden xs:inline sm:inline">Presensi Massal</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent className="text-xs sm:hidden">Presensi Massal</TooltipContent>
@@ -205,37 +215,62 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
         </div>
       )}
 
-      <ScrollArea className="h-[340px] sm:h-[420px] overscroll-auto">
-        <div className="divide-y divide-border/50">
-          {filteredStudents.map((student, index) => {
-            const status = getAttendance(student.id, selectedDate);
-            const note = getAttendanceNote(student.id, selectedDate);
-            const holidayActive = isHolidayCombined(selectedDate);
+      <div 
+        ref={parentRef}
+        className="h-[340px] sm:h-[420px] overflow-y-auto overscroll-contain relative bg-card"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        {filteredStudents.length > 0 ? (
+          <div
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+              const student = filteredStudents[virtualItem.index];
+              const status = getAttendance(student.id, selectedDate);
+              const note = getAttendanceNote(student.id, selectedDate);
+              const holidayActive = isHolidayCombined(selectedDate);
 
-            return (
-              <DailyAttendanceRow
-                key={student.id}
-                student={student}
-                index={index}
-                status={status}
-                note={note}
-                selectedDate={selectedDate}
-                holidayActive={holidayActive}
-                handleOpenNote={handleOpenNote}
-                handleSetAttendance={handleSetAttendance}
-                allStatuses={allStatuses}
-                statusConfig={statusConfig}
-              />
-            );
-          })}
-          {filteredStudents.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Users className="w-8 h-8 mb-2 opacity-40" />
-              <p className="text-xs">Tidak ada murid ditemukan</p>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+              return (
+                <div
+                  key={student.id}
+                  ref={rowVirtualizer.measureElement}
+                  data-index={virtualItem.index}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                  className="border-b border-border/40 last:border-0"
+                >
+                  <DailyAttendanceRow
+                    student={student}
+                    index={virtualItem.index}
+                    status={status}
+                    note={note}
+                    selectedDate={selectedDate}
+                    holidayActive={holidayActive}
+                    handleOpenNote={handleOpenNote}
+                    handleSetAttendance={handleSetAttendance}
+                    allStatuses={allStatuses}
+                    statusConfig={statusConfig}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Users className="w-8 h-8 mb-2 opacity-40" />
+            <p className="text-xs">Tidak ada murid ditemukan</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

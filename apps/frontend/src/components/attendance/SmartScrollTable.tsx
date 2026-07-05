@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, type ReactNode } from "react";
+import React, { useRef, useCallback, useEffect, useImperativeHandle, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface SmartScrollTableProps {
@@ -6,17 +6,14 @@ interface SmartScrollTableProps {
   className?: string;
 }
 
-/**
- * Unified scroll container for tables.
- * - Mouse wheel: prioritizes horizontal scroll while table has room, then releases to page.
- * - Touch: same logic via touch events.
- * - Uses capture phase + passive:false to intercept before Radix/browser listeners.
- */
-export function SmartScrollTable({ children, className }: SmartScrollTableProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const horizontalIntentRef = useRef(0);
+export const SmartScrollTable = React.forwardRef<HTMLDivElement, SmartScrollTableProps>(
+  ({ children, className }, ref) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const horizontalIntentRef = useRef(0);
 
-  useEffect(() => {
+    useImperativeHandle(ref, () => containerRef.current!);
+
+    useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
@@ -151,4 +148,4 @@ export function SmartScrollTable({ children, className }: SmartScrollTableProps)
       {children}
     </div>
   );
-}
+});

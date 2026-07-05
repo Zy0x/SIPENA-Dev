@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useRef } from "react";
 import { format, getDay } from "date-fns";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { id as idLocale } from "date-fns/locale";
 import { 
   BarChart3, Lock, Unlock, ChevronLeft, ChevronRight, 
@@ -37,7 +38,7 @@ interface MonthlyAttendanceRowProps {
   jumlahConfig: JumlahConfig;
 }
 
-const MonthlyAttendanceRow: React.FC<MonthlyAttendanceRowProps> = React.memo(({
+const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, MonthlyAttendanceRowProps>(({
   student,
   idx,
   isLocked,
@@ -53,7 +54,7 @@ const MonthlyAttendanceRow: React.FC<MonthlyAttendanceRowProps> = React.memo(({
   allStatuses,
   statusConfig,
   jumlahConfig,
-}) => {
+}, ref) => {
   const studentStats: Record<string, number> = { H: 0, I: 0, S: 0, A: 0, D: 0 };
   monthDays.forEach(day => {
     if (!isHolidayCombined(day)) {
@@ -63,8 +64,11 @@ const MonthlyAttendanceRow: React.FC<MonthlyAttendanceRowProps> = React.memo(({
   });
 
   return (
-    <tr className={cn(idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
-      <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-b border-r-border/80 border-b-border/30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
+    <tr ref={ref} className={cn(idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
+      <td 
+        style={{ willChange: "transform" }}
+        className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-b border-r-border/80 border-b-border/30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left"
+      >
         <div className="flex items-start gap-0.5 w-[120px] sm:w-[160px]">
           <span className="text-muted-foreground font-medium flex-shrink-0">{idx + 1}.</span>
           <span className="text-foreground break-words leading-tight">{student.name}</span>
@@ -81,7 +85,9 @@ const MonthlyAttendanceRow: React.FC<MonthlyAttendanceRowProps> = React.memo(({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className={cn("select-none w-6 h-6 sm:w-7 sm:h-7 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors",
+                  role="button"
+                  data-touch-scroll-click-target="true"
+                  className={cn("select-none w-7 h-7 sm:w-8 sm:h-8 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors",
                     !isLocked && !holidayActive && "cursor-pointer",
                     holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
                       : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
@@ -136,7 +142,7 @@ const MonthlyAttendanceRow: React.FC<MonthlyAttendanceRowProps> = React.memo(({
       </td>
     </tr>
   );
-});
+}));
 
 MonthlyAttendanceRow.displayName = "MonthlyAttendanceRow";
 
@@ -213,6 +219,20 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
   activeView,
   saveIndicator,
 }) => {
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredStudents.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 40,
+    overscan: 10,
+  });
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom = virtualItems.length > 0 ? totalSize - virtualItems[virtualItems.length - 1].end : 0;
+
   return (
     <>
       {/* Stats Cards */}
@@ -350,11 +370,14 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
           </div>
         )}
 
-        <SmartScrollTable data-tour="attendance-table" className="max-h-[380px] sm:max-h-[480px]">
+        <SmartScrollTable ref={tableContainerRef} data-tour="attendance-table" className="max-h-[380px] sm:max-h-[480px]">
           <table className="w-full text-center border-separate border-spacing-0 min-w-max select-none">
             <thead className="z-10 bg-card">
               <tr>
-                <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-b border-r-border/80 border-b-border shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]">
+                <th 
+                  style={{ willChange: "transform" }}
+                  className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-b border-r-border/80 border-b-border shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]"
+                >
                   <div className="w-[120px] sm:w-[160px] text-left truncate">No. Nama Murid</div>
                 </th>
                 {monthDays.map(day => {
@@ -402,26 +425,41 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
               </tr>
             </thead>
             <tbody>
-              {filteredStudents.map((student, idx) => (
-                <MonthlyAttendanceRow
-                  key={student.id}
-                  student={student}
-                  idx={idx}
-                  isLocked={isLocked}
-                  monthDays={monthDays}
-                  isHolidayCombined={isHolidayCombined}
-                  getAttendance={getAttendance}
-                  getAttendanceNote={getAttendanceNote}
-                  isNationalHoliday={isNationalHoliday}
-                  getHolidayDescriptionCombined={getHolidayDescriptionCombined}
-                  getHolidayDescription={getHolidayDescription}
-                  getNationalHolidayName={getNationalHolidayName}
-                  handleSetMonthlyAttendance={handleSetMonthlyAttendance}
-                  allStatuses={allStatuses}
-                  statusConfig={statusConfig}
-                  jumlahConfig={jumlahConfig}
-                />
-              ))}
+              {paddingTop > 0 && (
+                <tr>
+                  <td style={{ height: `${paddingTop}px` }} colSpan={monthDays.length + allStatuses.length + 2} />
+                </tr>
+              )}
+              {virtualItems.map((virtualItem) => {
+                const student = filteredStudents[virtualItem.index];
+                return (
+                  <MonthlyAttendanceRow
+                    key={student.id}
+                    ref={rowVirtualizer.measureElement}
+                    data-index={virtualItem.index}
+                    student={student}
+                    idx={virtualItem.index}
+                    isLocked={isLocked}
+                    monthDays={monthDays}
+                    isHolidayCombined={isHolidayCombined}
+                    getAttendance={getAttendance}
+                    getAttendanceNote={getAttendanceNote}
+                    isNationalHoliday={isNationalHoliday}
+                    getHolidayDescriptionCombined={getHolidayDescriptionCombined}
+                    getHolidayDescription={getHolidayDescription}
+                    getNationalHolidayName={getNationalHolidayName}
+                    handleSetMonthlyAttendance={handleSetMonthlyAttendance}
+                    allStatuses={allStatuses}
+                    statusConfig={statusConfig}
+                    jumlahConfig={jumlahConfig}
+                  />
+                );
+              })}
+              {paddingBottom > 0 && (
+                <tr>
+                  <td style={{ height: `${paddingBottom}px` }} colSpan={monthDays.length + allStatuses.length + 2} />
+                </tr>
+              )}
             </tbody>
             {/* Total Row */}
             <tfoot>

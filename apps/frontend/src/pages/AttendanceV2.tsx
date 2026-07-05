@@ -990,7 +990,7 @@ export default function AttendanceV2Page() {
     }
   }, [revokeDelegation, showSuccess, showWarning]);
 
-  const handleBulkAttendance = useCallback(async () => {
+  const handleBulkAttendance = useCallback(async (onlyEmpty: boolean = false) => {
     if (isHolidayCombined(selectedDate)) {
       showWarning("Hari Libur", `Tidak dapat input presensi: ${getHolidayDescriptionCombined(selectedDate)}`);
       setShowBulkDialog(false);
@@ -999,24 +999,39 @@ export default function AttendanceV2Page() {
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     
     const existingStudents: { name: string; status: string }[] = [];
+    const emptyStudentIds: string[] = [];
+    const allStudentIds: string[] = [];
+    
     for (const student of students) {
+      allStudentIds.push(student.id);
       const existing = getAttendance(student.id, selectedDate);
       if (existing) {
         existingStudents.push({ name: student.name, status: statusLabels[existing] || existing });
+      } else {
+        emptyStudentIds.push(student.id);
       }
     }
     
-    if (existingStudents.length > 0 && !showBulkConfirm) {
+    if (!onlyEmpty && existingStudents.length > 0 && !showBulkConfirm) {
       setExistingBulkStudents(existingStudents);
       setShowBulkConfirm(true);
       return;
     }
     
-    await bulkSetAttendance({ studentIds: students.map((s) => s.id), date: dateStr, status: bulkStatus! });
+    const targetIds = onlyEmpty ? emptyStudentIds : allStudentIds;
+    if (targetIds.length === 0) {
+      showWarning("Info", "Tidak ada murid tanpa presensi untuk diisi.");
+      setShowBulkDialog(false);
+      setShowBulkConfirm(false);
+      setExistingBulkStudents([]);
+      return;
+    }
+    
+    await bulkSetAttendance({ studentIds: targetIds, date: dateStr, status: bulkStatus! });
     setShowBulkDialog(false);
     setShowBulkConfirm(false);
     setExistingBulkStudents([]);
-    showSuccess("Berhasil", `Presensi ${statusLabels[bulkStatus!]} untuk semua siswa`);
+    showSuccess("Berhasil", `Presensi ${statusLabels[bulkStatus!]} diterapkan`);
   }, [selectedDate, students, bulkStatus, bulkSetAttendance, isHolidayCombined, getHolidayDescriptionCombined, getAttendance, showSuccess, showWarning, showBulkConfirm]);
 
   const handleBulkClear = useCallback(async () => {
@@ -1311,11 +1326,20 @@ export default function AttendanceV2Page() {
                   Apakah Anda yakin ingin menimpa data presensi yang sudah ada dengan status <strong>{statusLabels[bulkStatus!]}</strong>?
                 </p>
                 
-                <DialogFooter className="gap-2 sm:gap-0">
+                <DialogFooter className="gap-2 flex flex-col sm:flex-row sm:justify-end">
                   <Button variant="outline" onClick={() => { setShowBulkConfirm(false); setExistingBulkStudents([]); }} size="sm" className="text-xs rounded-xl">
                     Batal
                   </Button>
-                  <Button variant="destructive" onClick={handleBulkAttendance} disabled={isSaving} size="sm" className="text-xs rounded-xl">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleBulkAttendance(true)} 
+                    disabled={isSaving} 
+                    size="sm" 
+                    className="text-xs rounded-xl text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 dark:text-amber-400 dark:border-amber-900/50 dark:bg-amber-950/20"
+                  >
+                    Isi yang Kosong Saja ({students.length - existingBulkStudents.length})
+                  </Button>
+                  <Button variant="destructive" onClick={() => handleBulkAttendance(false)} disabled={isSaving} size="sm" className="text-xs rounded-xl">
                     {isSaving && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                     Timpa Semua ({students.length})
                   </Button>
