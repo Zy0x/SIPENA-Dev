@@ -30,6 +30,7 @@ import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
 import { TeamManagementPanel } from "@/components/admin/TeamManagementPanel";
 import { AuthLockoutResetRequestsManager } from "@/components/admin/AuthLockoutResetRequestsManager";
 import { FeatureAccessPanel } from "@/components/admin/FeatureAccessPanel";
+import { AttendanceMergePanel } from "@/components/admin/AttendanceMergePanel";
 import { useThemes, themes } from "@/hooks/useThemes";
 import {
   DropdownMenu,
@@ -61,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "team",         label: "Tim",                  icon: UserPlus,           group: "Pengguna" },
   { id: "deletion",     label: "Permintaan Hapus",     icon: AlertTriangle,      group: "Permintaan" },
   { id: "auth-reset",   label: "Auth Reset",           icon: TimerReset,         group: "Permintaan" },
+  { id: "merge-v2",     label: "Merge Data V2",        icon: Database,           group: "Data" },
   { id: "features",     label: "Feature Flags",        icon: SlidersHorizontal,  group: "Sistem" },
   { id: "credentials",  label: "Kredensial",           icon: Key,                group: "Sistem" },
 ];
@@ -840,6 +842,18 @@ const Admin = () => {
                       description="Backup, restore, dan kelola data per tabel"
                     />
                     <DatabaseManagementPanel adminPassword={getBackendPassword()} />
+                  </>
+                )}
+
+                {/* ── Merge V2 ── */}
+                {activeSection === "merge-v2" && (
+                  <>
+                    <SectionHeader
+                      icon={Database}
+                      title="Merge Data V2"
+                      description="Gabungkan data presensi eksperimen (V2) ke produksi (V1)"
+                    />
+                    <AttendanceMergePanel adminPassword={getBackendPassword} />
                   </>
                 )}
 

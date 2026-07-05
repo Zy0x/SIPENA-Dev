@@ -168,23 +168,7 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
         breadcrumbs={[{ label: "Presensi" }]}
         actions={
           <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-end">
-            {/* 0. Merge / Promote Button */}
-            {selectedClassId && selectedClassId !== "tour-dummy-class" && dbAvailable && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setShowPromoteConfirm(true)}
-                disabled={isPromoting}
-                className="h-9 px-3 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-md transition-all duration-200"
-              >
-                {isPromoting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                )}
-                <span>Merge ke V1</span>
-              </Button>
-            )}
+            {/* 0. (Merge to V1 dipindah ke Panel Admin) */}
 
             {/* 1. Import (excel/OCR) */}
             {selectedClassId && (

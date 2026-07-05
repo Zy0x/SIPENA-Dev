@@ -32,7 +32,6 @@ import { SettingsDashboard } from "@/components/attendance/v2/SettingsDashboard"
 import { HolidayAddDialog } from "@/components/attendance/v2/HolidayAddDialog";
 import { DayEventAddDialog } from "@/components/attendance/v2/DayEventAddDialog";
 import { DelegationAddDialog } from "@/components/attendance/v2/DelegationAddDialog";
-import { MergeV2toV1Dialog } from "@/components/attendance/v2/MergeV2toV1Dialog";
 import { SnapshotReasonDialog } from "@/components/attendance/v2/SnapshotReasonDialog";
 
 import { createDefaultReportDocumentStyle } from "@/lib/reportExportLayoutV2";
@@ -463,16 +462,6 @@ export default function AttendanceV2Page() {
 
     if (preTourActiveViewRef.current !== null) {
       setActiveView(preTourActiveViewRef.current);
-    }
-  };
-
-  const handlePromote = async () => {
-    try {
-      setShowPromoteConfirm(false);
-      await promoteV2ToV1();
-      showSuccess("Merge Berhasil", "Data hasil eksperimen V2 berhasil digabungkan ke produksi V1!");
-    } catch (err: any) {
-      showWarning("Merge Gagal", err.message || "Gagal menggabungkan data V2 ke V1.");
     }
   };
 
@@ -1601,16 +1590,6 @@ export default function AttendanceV2Page() {
             message: `${successCount} presensi disimpan; data lama tetap dipertahankan.`,
           };
         }}
-      />
-
-      {/* Promotion V2 to V1 Confirmation Dialog */}
-      <MergeV2toV1Dialog
-        open={showPromoteConfirm}
-        onOpenChange={setShowPromoteConfirm}
-        selectedClass={selectedClass}
-        currentMonth={currentMonth}
-        handlePromote={handlePromote}
-        isPromoting={isPromoting}
       />
 
       {/* Delegation Dialog */}

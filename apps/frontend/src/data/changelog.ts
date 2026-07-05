@@ -42,6 +42,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.152",
+    version: "2.4.152",
+    title: "Pemindahan Fitur Merge V2 ke V1 ke Panel Admin",
+    description: "Memindahkan kontrol integrasi data absensi (Merge V2 ke V1) secara eksklusif ke Panel Admin untuk keamanan dan pembersihan antarmuka guru.",
+    type: "security",
+    is_critical: false,
+    released_at: "2026-07-05",
+    details: [
+      "Menghapus tombol 'Merge ke V1' dan dialog konfirmasi dari halaman Presensi Guru (V2) untuk mencegah penimpaan data (overwrite) yang tidak disengaja.",
+      "Membuat panel kontrol baru 'Merge Data V2' di dalam menu Admin yang terproteksi dengan password backend.",
+      "Menyematkan Edge Function 'admin-database' baru (v2-pending-list & v2-promote) untuk mengotomatisasi penyortiran kelas yang memiliki draft di V2 menggunakan Service Role.",
+      "Menambahkan opsi filter penggabungan data 5 Hari Kerja atau 6 Hari Kerja, memberikan Admin kendali penuh terhadap hari Sabtu."
+    ]
+  },
+  {
     id: "v2.4.151",
     version: "2.4.151",
     title: "Rombak Total Layout Full-Screen Mobile Modal Pengaturan V2 & Spacing Longgar",
