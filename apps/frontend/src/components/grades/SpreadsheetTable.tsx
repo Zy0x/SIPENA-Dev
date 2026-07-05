@@ -2075,7 +2075,7 @@ export function SpreadsheetTable({
             variant={showFreezeMenu ? "default" : "outline"}
             size="sm"
             onClick={() => !formatLocked && setShowFreezeMenu(!showFreezeMenu)}
-            className={`gap-1.5 lg:gap-2 h-9 lg:h-10 px-2.5 lg:px-3 ${formatLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`sipena-freeze-btn gap-1.5 lg:gap-2 h-9 lg:h-10 px-2.5 lg:px-3 ${formatLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={formatLocked}
             style={{ minWidth: 40, touchAction: 'manipulation' }}
           >
@@ -2345,7 +2345,7 @@ export function SpreadsheetTable({
                 variant="outline"
                 size="sm"
                 onClick={onEnterFullscreen}
-                className="h-9 lg:h-10 gap-1.5 lg:gap-2 px-2.5 lg:px-3"
+                className="sipena-grade-fullscreen-btn h-9 lg:h-10 gap-1.5 lg:gap-2 px-2.5 lg:px-3"
                 style={{ touchAction: 'manipulation' }}
               >
                 <Maximize2 className="w-4 h-4" />
