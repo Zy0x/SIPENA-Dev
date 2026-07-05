@@ -14,9 +14,12 @@ import {
   FileSpreadsheet,
   Globe,
   Info,
+  Lock,
+  LockOpen,
   RotateCcw,
   Settings2,
   ShieldCheck,
+  Trash2,
   UserPlus,
   X,
   ChevronLeft,
@@ -96,10 +99,12 @@ function CompactMetric({
   label,
   value,
   tone = "default",
+  icon: Icon,
 }: {
   label: string;
   value: React.ReactNode;
   tone?: "default" | "green" | "amber" | "red" | "blue";
+  icon?: React.ElementType;
 }) {
   const toneClass = {
     default: "border-border bg-muted/25 text-foreground",
@@ -110,9 +115,12 @@ function CompactMetric({
   }[tone];
 
   return (
-    <div className={cn("min-w-0 rounded-xl border px-3 py-2", toneClass)}>
-      <p className="truncate text-[10px] font-semibold uppercase tracking-wide opacity-80">{label}</p>
-      <p className="mt-0.5 truncate text-sm font-bold">{value}</p>
+    <div className={cn("min-w-0 rounded-xl border px-3 py-2.5 transition-all", toneClass)}>
+      <p className="truncate text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
+      <div className="mt-1 flex items-center gap-1.5">
+        {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden="true" />}
+        <p className="truncate text-sm font-bold leading-tight">{value}</p>
+      </div>
     </div>
   );
 }
@@ -148,15 +156,17 @@ function SectionIntro({
   help?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border bg-muted/10 p-3 sm:p-4">
+    <div className="rounded-2xl border border-l-4 border-l-primary/40 bg-gradient-to-br from-primary/5 to-transparent p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 font-semibold text-primary">
-            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-            <h3 className="text-sm sm:text-base">{title}</h3>
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
+            </span>
+            <h3 className="text-sm font-bold text-foreground sm:text-base">{title}</h3>
             {help}
           </div>
-          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">{description}</p>
+          <p className="mt-1.5 max-w-3xl text-xs leading-relaxed text-muted-foreground">{description}</p>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
@@ -232,11 +242,13 @@ function InfoHelp({
   );
 }
 
-function EmptyState({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+function EmptyState({ icon: Icon, text, compact = false }: { icon: React.ElementType; text: string; compact?: boolean }) {
   return (
-    <div className="flex min-h-36 flex-col items-center justify-center gap-2 p-6 text-center">
-      <Icon className="h-8 w-8 text-muted-foreground/35" />
-      <p className="max-w-xs text-xs text-muted-foreground">{text}</p>
+    <div className={cn("flex flex-col items-center justify-center gap-3 p-6 text-center", compact ? "min-h-28" : "min-h-40")}>
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-dashed border-muted-foreground/20 bg-muted/30">
+        <Icon className="h-5 w-5 text-muted-foreground/50" aria-hidden="true" />
+      </div>
+      <p className="max-w-[18rem] text-xs leading-relaxed text-muted-foreground">{text}</p>
     </div>
   );
 }
@@ -693,6 +705,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 label="Status"
                 value={isLocked ? "Terkunci" : "Bisa diedit"}
                 tone={isLocked ? "amber" : "blue"}
+                icon={isLocked ? Lock : LockOpen}
               />
             </div>
           </div>
@@ -703,7 +716,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           className="shrink-0 border-b bg-background lg:hidden relative"
           aria-label="Navigasi pengaturan"
         >
-          <div className="flex gap-2 overflow-x-auto px-4 py-3 sm:px-6 sm:py-4 scrollbar-none pr-10">
+          <div className="flex gap-1.5 overflow-x-auto px-3 py-2 sm:px-5 sm:py-2.5 scrollbar-none" style={{ paddingRight: '3rem' }}>
             {sectionItems.map((item) => {
               const Icon = item.icon;
               const active = settingsSection === item.id;
@@ -716,20 +729,20 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   data-state={active ? "active" : "inactive"}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger shrink-0 flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl border text-sm font-bold transition-all duration-200 touch-manipulation select-none",
+                    "sipena-tab-trigger shrink-0 flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg text-[13px] font-semibold transition-all duration-200 touch-manipulation select-none",
                     active
-                      ? "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20 scale-[1.02]"
-                      : "border-border bg-background text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/50 lg:hover:text-foreground",
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/50 text-muted-foreground active:bg-muted active:text-foreground",
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span>{item.title}</span>
                 </button>
               );
             })}
           </div>
           {/* Fade overlay on the right edge */}
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-background via-background/80 to-transparent z-10" />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background via-background/70 to-transparent z-10" />
         </nav>
 
         {/* ──── Body: Desktop Sidebar + Scrollable Content ──── */}
@@ -737,7 +750,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
           {/* Desktop sidebar (hidden on mobile/tablet) */}
           <aside
-            className="hidden lg:flex lg:flex-col w-64 shrink-0 border-r bg-muted/10 p-4 gap-2 overflow-y-auto"
+            className="hidden lg:flex lg:flex-col w-60 shrink-0 border-r bg-muted/5 p-3 gap-1.5 overflow-y-auto"
             data-tour="attendance-v2-settings-nav"
           >
             {sectionItems.map((item) => {
@@ -753,18 +766,23 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   aria-pressed={active}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger w-full flex items-start gap-3 min-h-[44px] rounded-xl border p-3.5 text-left transition-all duration-200 touch-manipulation select-none",
+                    "sipena-tab-trigger w-full flex items-center gap-3 min-h-[52px] rounded-xl px-3.5 text-left transition-all duration-200 touch-manipulation select-none",
                     active
-                      ? "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20 scale-[1.02]"
-                      : "border-border bg-background text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/60 lg:hover:text-foreground",
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/60 lg:hover:text-foreground",
                   )}
                 >
-                  <Icon className="h-5 w-5 shrink-0 mt-0.5" />
+                  <span className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+                    active ? "bg-primary-foreground/15" : "bg-muted/80"
+                  )}>
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-bold leading-tight truncate">{item.title}</span>
+                    <span className="block text-[13px] font-semibold leading-tight truncate">{item.title}</span>
                     <span className={cn(
-                      "block text-[11px] mt-1 truncate",
-                      active ? "text-primary-foreground opacity-80 font-medium" : "text-muted-foreground"
+                      "block text-[11px] mt-0.5 truncate font-normal",
+                      active ? "text-primary-foreground/70" : "text-muted-foreground"
                     )}>
                       {item.detail}
                     </span>
@@ -862,7 +880,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         </div>
                         <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
                           {monthNationalHolidays.length === 0 ? (
-                            <EmptyState icon={Globe} text="Tidak ada libur nasional bulan ini." />
+                            <EmptyState icon={Globe} text="Tidak ada libur nasional bulan ini." compact />
                           ) : (
                             monthNationalHolidays.map((holiday) => {
                               const isOverridden = holidays.some(
@@ -870,16 +888,30 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                               );
 
                               return (
-                                <div key={holiday.date} className="flex items-center justify-between gap-2 rounded-xl border bg-background p-2">
+                                <div
+                                  key={holiday.date}
+                                  className={cn(
+                                    "flex items-center justify-between gap-2 rounded-xl border p-2 transition-colors",
+                                    isOverridden
+                                      ? "border-primary/30 bg-primary/5"
+                                      : "border-border bg-background"
+                                  )}
+                                >
                                   <div className="min-w-0">
                                     <p className="truncate text-xs font-semibold">{formatDateOnly(holiday.date)}</p>
                                     <p className="truncate text-[11px] text-muted-foreground">{holiday.name}</p>
+                                    {isOverridden && (
+                                      <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
+                                        <Check className="h-3 w-3" />
+                                        Jadwal masuk khusus
+                                      </span>
+                                    )}
                                   </div>
                                   <Button
                                     type="button"
                                     variant={isOverridden ? "default" : "outline"}
                                     size="sm"
-                                    className="min-h-[44px] shrink-0 rounded-xl px-4 text-xs font-semibold select-none touch-manipulation"
+                                    className="min-h-[44px] shrink-0 rounded-xl px-3 text-xs font-semibold select-none touch-manipulation"
                                     data-touch-scroll-click-target="true"
                                     onClick={() =>
                                       isOverridden
@@ -887,7 +919,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                         : toggleHoliday({ date: holiday.date, description: "Hari Kerja" })
                                     }
                                   >
-                                    {isOverridden ? "Pulihkan" : "Masuk"}
+                                    {isOverridden ? "Pulihkan" : "Jadikan Masuk"}
                                   </Button>
                                 </div>
                               );
@@ -918,18 +950,31 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                               const date = format(day, "yyyy-MM-dd");
                               const isOverridden = holidays.some((h) => h.date === date && h.description === "Hari Kerja");
                               return (
-                                <div key={date} className="flex items-center justify-between gap-2 rounded-xl border bg-background p-2">
+                                <div
+                                  key={date}
+                                  className={cn(
+                                    "flex items-center justify-between gap-2 rounded-xl border p-2 transition-colors",
+                                    isOverridden
+                                      ? "border-primary/30 bg-primary/5"
+                                      : "border-border bg-background"
+                                  )}
+                                >
                                   <div className="min-w-0">
                                     <p className="truncate text-xs font-semibold">{format(day, "EEEE, d MMM", { locale: idLocale })}</p>
-                                    <p className="truncate text-[11px] text-muted-foreground">
-                                      {isOverridden ? "Jadwal masuk khusus" : "Libur default"}
-                                    </p>
+                                    {isOverridden ? (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
+                                        <Check className="h-3 w-3" />
+                                        Jadwal masuk khusus
+                                      </span>
+                                    ) : (
+                                      <p className="truncate text-[11px] text-muted-foreground">Libur default</p>
+                                    )}
                                   </div>
                                   <Button
                                     type="button"
                                     variant={isOverridden ? "default" : "outline"}
                                     size="sm"
-                                    className="min-h-[44px] shrink-0 rounded-xl px-4 text-xs font-semibold select-none touch-manipulation"
+                                    className="min-h-[44px] shrink-0 rounded-xl px-3 text-xs font-semibold select-none touch-manipulation"
                                     data-touch-scroll-click-target="true"
                                     onClick={() =>
                                       isOverridden
@@ -937,7 +982,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                         : toggleHoliday({ date, description: "Hari Kerja" })
                                     }
                                   >
-                                    {isOverridden ? "Pulihkan" : "Masuk"}
+                                    {isOverridden ? "Pulihkan" : "Jadikan Masuk"}
                                   </Button>
                                 </div>
                               );
@@ -993,21 +1038,37 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <EmptyState icon={CalendarOff} text="Belum ada libur kustom." />
                       ) : (
                         holidays.map((holiday) => (
-                          <div key={`${holiday.date}-${holiday.class_id || "school"}`} className="flex items-start justify-between gap-3 p-3">
-                            <div className="min-w-0 flex-1 break-words">
+                          <div key={`${holiday.date}-${holiday.class_id || "school"}`} className="flex items-start justify-between gap-3 p-3 hover:bg-muted/30 transition-colors">
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold">{formatDateOnly(holiday.date)}</p>
-                              <p className="text-[11px] text-muted-foreground break-words whitespace-normal">{holiday.description}</p>
+                              <p
+                                className="mt-0.5 text-[11px] text-muted-foreground break-words whitespace-normal"
+                                style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
+                              >
+                                {holiday.description}
+                              </p>
                             </div>
-                            <div className="flex shrink-0 items-center gap-2 self-center">
-                              <Badge variant="outline" className="text-[10px] shrink-0">{holiday.class_id ? "Kelas" : "Sekolah"}</Badge>
+                            <div className="flex shrink-0 items-center gap-1.5 self-start pt-0.5">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[10px] shrink-0 font-medium",
+                                  holiday.class_id
+                                    ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-300"
+                                    : "border-border"
+                                )}
+                              >
+                                {holiday.class_id ? "Kelas" : "Sekolah"}
+                              </Badge>
                               <Button
                                 type="button"
                                 variant="ghost"
-                                size="icon"
-                                className="h-10 w-10 shrink-0 rounded-xl text-destructive"
+                                size="sm"
+                                className="h-9 shrink-0 rounded-xl px-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive active:bg-destructive/15"
                                 onClick={() => handleRemoveHoliday(holiday.date, holiday.class_id)}
                               >
-                                <X className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                <span className="ml-1 hidden sm:inline text-xs">Hapus</span>
                               </Button>
                             </div>
                           </div>
@@ -1041,22 +1102,26 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <EmptyState icon={Bookmark} text="Belum ada kegiatan khusus." />
                       ) : (
                         dayEvents.map((event) => (
-                          <div key={event.date} className="flex items-start justify-between gap-3 p-3">
-                            <div className="min-w-0 flex-1 break-words">
+                          <div key={event.date} className="flex items-start justify-between gap-3 p-3 hover:bg-muted/30 transition-colors">
+                            <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold">{formatDateOnly(event.date)}</p>
-                              <p className="text-[11px] text-muted-foreground break-words whitespace-normal">
+                              <p
+                                className="mt-0.5 text-[11px] text-muted-foreground break-words whitespace-normal"
+                                style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
+                              >
                                 {event.label}
-                                {event.description ? ` - ${event.description}` : ""}
+                                {event.description ? ` — ${event.description}` : ""}
                               </p>
                             </div>
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon"
-                              className="h-10 w-10 shrink-0 rounded-xl text-destructive self-center"
+                              size="sm"
+                              className="h-9 shrink-0 self-start rounded-xl px-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive active:bg-destructive/15"
                               onClick={() => handleRemoveDayEvent(event.date)}
                             >
-                              <X className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              <span className="ml-1 hidden sm:inline text-xs">Hapus</span>
                             </Button>
                           </div>
                         ))
@@ -1085,7 +1150,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     <CompactMetric label="Hari kalender" value={monthDays.length} />
                     <CompactMetric label="Efektif" value={effectiveDays} tone="green" />
                     <CompactMetric label="Tidak efektif" value={nonEffectiveDays.length} tone="amber" />
-                    <CompactMetric label="Terkunci" value={isLocked ? "Ya" : "Tidak"} tone={isLocked ? "red" : "blue"} />
+                    <CompactMetric label="Terkunci" value={isLocked ? "Ya" : "Tidak"} tone={isLocked ? "red" : "blue"} icon={isLocked ? Lock : LockOpen} />
                   </div>
                   <div className="max-h-64 overflow-y-auto divide-y">
                     {nonEffectiveDays.length === 0 ? (
@@ -1207,9 +1272,32 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                             tone: "red",
                           },
                         ].map((group) => (
-                          <div key={group.type} className="rounded-xl border bg-background p-3">
-                            <p className="text-sm font-semibold">{group.title}</p>
-                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          <div
+                            key={group.type}
+                            className={cn(
+                              "rounded-xl border p-3",
+                              group.tone === "green"
+                                ? "border-green-200 bg-green-50/50 dark:border-green-900/50 dark:bg-green-950/10"
+                                : "border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/10"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className={cn(
+                                "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                                group.tone === "green"
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                                  : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"
+                              )}>
+                                <Check className="h-3 w-3" aria-hidden="true" />
+                              </span>
+                              <p className={cn(
+                                "text-xs font-bold uppercase tracking-wide",
+                                group.tone === "green"
+                                  ? "text-green-700 dark:text-green-300"
+                                  : "text-red-700 dark:text-red-300"
+                              )}>{group.title}</p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-3">
                               {(["H", "S", "I", "A", "D"] as const).map((status) => {
                                 const selected = group.list.includes(status);
                                 return (
@@ -1220,13 +1308,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                     data-selected={selected ? "true" : "false"}
                                     onClick={() => handleToggleRecapStatus(group.type, status)}
                                     className={cn(
-                                      "min-h-11 touch-manipulation rounded-xl border px-2 text-xs font-semibold transition-colors",
-                                      selected && group.tone === "green" && "border-green-300 bg-green-100 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300",
-                                      selected && group.tone === "red" && "border-red-300 bg-red-100 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300",
-                                      !selected && "border-border bg-background text-muted-foreground hover:bg-muted/50",
+                                      "min-h-11 touch-manipulation rounded-lg border px-1.5 py-2 text-xs font-semibold transition-all flex flex-col items-center justify-center gap-0.5",
+                                      selected && group.tone === "green" && "border-green-300 bg-green-100 text-green-700 shadow-sm dark:border-green-800 dark:bg-green-900/30 dark:text-green-300",
+                                      selected && group.tone === "red" && "border-red-300 bg-red-100 text-red-700 shadow-sm dark:border-red-800 dark:bg-red-900/30 dark:text-red-300",
+                                      !selected && "border-border bg-background text-muted-foreground hover:bg-muted/50 active:bg-muted",
                                     )}
                                   >
-                                    {status} - {statusLabels[status]}
+                                    <span className="text-sm font-bold leading-none">{status}</span>
+                                    <span className="text-[9px] leading-none opacity-75">{statusLabels[status]}</span>
                                   </button>
                                 );
                               })}
@@ -1408,24 +1497,28 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           </main>
         </div>
 
-        <div className="shrink-0 border-t bg-background px-4 py-3 sm:px-5 sm:py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <p className="line-clamp-2 text-[11px] leading-normal text-muted-foreground">
-                <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
-                Perubahan ini hanya berlaku untuk jalur Presensi V2. V1 dan export V1 tetap tidak disentuh.
-              </p>
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 select-none">
-                <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50">
-                  <Check className="h-2.5 w-2.5 stroke-[3.5]" />
+        <div className="shrink-0 border-t bg-background">
+          <div className="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3.5">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              {/* Autosave indicator */}
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50">
+                  <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" aria-hidden="true" />
                 </span>
-                Perubahan disimpan otomatis
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 select-none">
+                  Perubahan disimpan otomatis
+                </span>
               </div>
+              {/* Shield note */}
+              <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70" aria-hidden="true" />
+                <span className="line-clamp-2">Perubahan hanya berlaku untuk Presensi V2. Data V1 tidak terpengaruh.</span>
+              </p>
             </div>
             <Button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="min-h-[44px] w-full rounded-xl px-5 text-sm font-semibold sm:w-auto sm:min-h-11"
+              className="min-h-[44px] w-full rounded-xl px-6 text-sm font-semibold sm:w-auto sm:min-h-11"
             >
               Selesai
             </Button>
