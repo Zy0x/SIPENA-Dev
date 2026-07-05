@@ -713,13 +713,13 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   type="button"
                   data-tour={`attendance-v2-settings-nav-${item.id}`}
                   aria-pressed={active}
-                  data-selected={active ? "true" : "false"}
+                  data-state={active ? "active" : "inactive"}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "shrink-0 flex items-center gap-1.5 px-3 py-2 min-h-10 rounded-xl border text-xs font-semibold transition-colors touch-manipulation select-none",
+                    "sipena-tab-trigger shrink-0 flex items-center gap-1.5 px-3 py-2 min-h-10 rounded-xl border text-xs font-semibold transition-colors touch-manipulation select-none",
                     active
                       ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground active:bg-muted",
+                      : "border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -747,14 +747,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   key={item.id}
                   type="button"
                   data-tour={`attendance-v2-settings-nav-${item.id}`}
-                  data-selected={active ? "true" : "false"}
+                  data-state={active ? "active" : "inactive"}
                   aria-pressed={active}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "w-full flex items-start gap-2.5 min-h-[3.25rem] rounded-xl border p-3 text-left transition-colors touch-manipulation select-none",
+                    "sipena-tab-trigger w-full flex items-start gap-2.5 min-h-[3.25rem] rounded-xl border p-3 text-left transition-colors touch-manipulation select-none",
                     active
                       ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground active:bg-muted/80",
+                      : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0 mt-0.5" />
