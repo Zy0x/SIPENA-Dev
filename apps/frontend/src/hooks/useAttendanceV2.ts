@@ -7,6 +7,16 @@ import { useMemo } from "react";
 import { useAttendanceRuntime } from "@/features/attendance/runtime/useAttendanceRuntime";
 import { providerConfig } from "@/config/provider.config";
 import type { AttendanceDatasetCanonical } from "@/features/attendance/canonical/canonical.types";
+
+const apiBaseUrl = (() => {
+  const base = providerConfig.apiBaseUrl;
+  const isApiLocal = base.includes("localhost") || base.includes("127.0.0.1");
+  const isLocationLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  if (isApiLocal && !isLocationLocal) {
+    return "https://disabled-local-api.invalid";
+  }
+  return base;
+})();
 import {
   createAttendancePersistOutcome,
   useQueuedAttendanceSave,
@@ -244,7 +254,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
 
       // Ambil format YYYY-MM untuk query parameter month
       const monthStr = monthStart.substring(0, 7);
-      const url = `${providerConfig.apiBaseUrl}/attendance/v2?classId=${classId}&month=${monthStr}`;
+      const url = `${apiBaseUrl}/attendance/v2?classId=${classId}&month=${monthStr}`;
 
       try {
         const res = await fetch(url, {
@@ -578,7 +588,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const token = session?.access_token;
 
       try {
-        const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/record`, {
+        const response = await fetch(`${apiBaseUrl}/attendance/v2/record`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -717,7 +727,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     const token = session?.access_token;
 
     try {
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/bulk`, {
+      const response = await fetch(`${apiBaseUrl}/attendance/v2/bulk`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -815,7 +825,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const token = session?.access_token;
 
       try {
-        const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/note`, {
+        const response = await fetch(`${apiBaseUrl}/attendance/v2/note`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -878,7 +888,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const token = session?.access_token;
 
       try {
-        const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/bulk`, {
+        const response = await fetch(`${apiBaseUrl}/attendance/v2/bulk`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -946,7 +956,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/holiday`, {
+      const response = await fetch(`${apiBaseUrl}/attendance/v2/holiday`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1027,7 +1037,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/day-event`, {
+      const response = await fetch(`${apiBaseUrl}/attendance/v2/day-event`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1104,7 +1114,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/day-event`, {
+      const response = await fetch(`${apiBaseUrl}/attendance/v2/day-event`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -1176,7 +1186,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       await Promise.all([
         ...holidaysToCopy.filter((h: any) => h.class_id === classId).map((h: any) => {
           const newDate = addMonths(new Date(h.date), 1);
-          return fetch(`${providerConfig.apiBaseUrl}/attendance/v2/holiday`, {
+          return fetch(`${apiBaseUrl}/attendance/v2/holiday`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token || ""}` },
             body: JSON.stringify({ date: format(newDate, "yyyy-MM-dd"), description: h.description, classId: h.class_id })
@@ -1184,7 +1194,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         }),
         ...eventsToCopy.map((e: any) => {
           const newDate = addMonths(new Date(e.date), 1);
-          return fetch(`${providerConfig.apiBaseUrl}/attendance/v2/day-event`, {
+          return fetch(`${apiBaseUrl}/attendance/v2/day-event`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token || ""}` },
             body: JSON.stringify({ date: format(newDate, "yyyy-MM-dd"), label: e.label, description: e.description, color: e.color, action: "upsert" })
@@ -1215,7 +1225,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       await Promise.all([
         ...targetClassIds.flatMap(targetId => 
           currentHolidays.map((h: any) => 
-            fetch(`${providerConfig.apiBaseUrl}/attendance/v2/holiday`, {
+            fetch(`${apiBaseUrl}/attendance/v2/holiday`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token || ""}` },
               body: JSON.stringify({ date: h.date, description: h.description, classId: targetId })
@@ -1224,7 +1234,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         ),
         ...targetClassIds.flatMap(targetId =>
           currentEvents.map((e: any) =>
-            fetch(`${providerConfig.apiBaseUrl}/attendance/v2/day-event`, {
+            fetch(`${apiBaseUrl}/attendance/v2/day-event`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token || ""}` },
               body: JSON.stringify({ date: e.date, label: e.label, description: e.description, color: e.color, action: "upsert", classId: targetId })
@@ -1251,7 +1261,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         const { data: { session } } = await (supabase as any).auth.getSession();
         const token = session?.access_token;
 
-        const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/lock`, {
+        const response = await fetch(`${apiBaseUrl}/attendance/v2/lock`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1345,7 +1355,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/promote`, {
+      const response = await fetch(`${apiBaseUrl}/attendance/v2/promote`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1497,7 +1507,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/snapshots`, {
+      const response = await fetch(`${apiBaseUrl}/attendance/v2/snapshots`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1530,7 +1540,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;
 
-      const response = await fetch(`${providerConfig.apiBaseUrl}/attendance/v2/restore`, {
+      const response = await fetch(`${apiBaseUrl}/attendance/v2/restore`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
