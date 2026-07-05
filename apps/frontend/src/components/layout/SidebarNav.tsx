@@ -222,7 +222,7 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
         {hasChildren && (
           <button onClick={(e) => onToggleMenu(item.href, e)}
             className={cn(
-              "flex items-center justify-center w-10 min-h-[44px] touch-manipulation transition-colors",
+              "sipena-sidebar-chevron-btn flex items-center justify-center w-10 min-h-[44px] touch-manipulation transition-colors",
               isActive
                 ? "text-primary-foreground hover:bg-white/10"
                 : "text-muted-foreground hover:bg-muted/40"

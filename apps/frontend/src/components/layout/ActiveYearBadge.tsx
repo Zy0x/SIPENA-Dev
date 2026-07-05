@@ -229,7 +229,7 @@ export function ActiveYearBadge({
             onPointerUp={() => handleButtonPress(false)}
             disabled={isSwitching}
             className={cn(
-              "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl",
+              "sipena-year-badge-btn w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl",
               "bg-primary/10 hover:bg-primary/20 active:bg-primary/25",
               "border border-primary/20 hover:border-primary/40",
               "text-left group transition-colors duration-200",
