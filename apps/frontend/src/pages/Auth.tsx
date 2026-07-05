@@ -783,10 +783,10 @@ const Auth = () => {
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={cn(
-                      "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 touch-manipulation min-h-[44px]",
+                      "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 min-h-[44px]",
                       activeTab === tab
                         ? "bg-primary text-white shadow-lg shadow-primary/30"
-                        : "text-white/50 hover:text-white/70"
+                        : "text-white/50 hover:text-white/70 touch-manipulation"
                     )}
                   >
                     {tab === "login" ? "Masuk" : "Daftar"}

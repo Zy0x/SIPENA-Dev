@@ -3575,9 +3575,10 @@ export default function Attendance() {
                 ]).map(({ key, label, icon: Icon }) => (
                   <button 
                     key={key} 
+                    data-state={activeView === key ? "active" : "inactive"}
                     onClick={() => setActiveView(key)}
                     className={cn(
-                      "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 touch-manipulation min-h-[44px]",
+                      "sipena-tab-trigger flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 touch-manipulation min-h-[44px]",
                       activeView === key 
                         ? "bg-primary text-primary-foreground shadow-md scale-[1.02] ring-2 ring-primary/20" 
                         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
