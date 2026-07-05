@@ -3719,7 +3719,7 @@ export default function Attendance() {
                       return (
                         <div key={student.id} className={cn(
                           "flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-2.5 transition-colors", 
-                          holidayActive ? "opacity-40" : "hover:bg-muted/30 active:bg-muted/50"
+                          holidayActive ? "opacity-40" : "active:bg-muted/50 lg:hover:bg-muted/30"
                         )}>
                           {/* Number + Name Container */}
                           <div className="flex items-center gap-2 w-full sm:w-auto min-w-0 flex-1">
@@ -3758,7 +3758,7 @@ export default function Attendance() {
                                   className={cn(
                                     "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation select-none",
                                     "w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col",
-                                    isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground hover:bg-muted active:bg-muted/80",
+                                    isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground active:bg-muted/80 lg:hover:bg-muted",
                                     holidayActive && "cursor-not-allowed opacity-40"
                                   )}
                                   aria-label={cfg.label}>
@@ -3773,7 +3773,7 @@ export default function Attendance() {
                                 <button onClick={() => handleOpenNote(student.id, student.name, selectedDate)}
                                   disabled={holidayActive}
                                   className={cn("flex w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-md sm:rounded-lg items-center justify-center flex-shrink-0 transition-colors touch-manipulation",
-                                    note ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground hover:bg-muted",
+                                    note ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground active:bg-muted/80 lg:hover:bg-muted",
                                     holidayActive && "opacity-40 cursor-not-allowed"
                                   )}>
                                   <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -3925,7 +3925,7 @@ export default function Attendance() {
                                         className={cn("w-6 h-6 sm:w-7 sm:h-7 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors",
                                           !isLocked && !holidayActive && "cursor-pointer",
                                           holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
-                                            : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
+                                            : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 active:bg-muted/40 lg:hover:bg-muted/40",
                                           isSunday && !st && "text-grade-warning/40"
                                         )}
                                         onClick={() => {
@@ -4115,7 +4115,7 @@ export default function Attendance() {
                     return (
                       <button key={s} onClick={() => setBulkStatus(s)}
                         className={cn("flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px]",
-                          bulkStatus === s ? cn(cfg.bgActive, "shadow-md") : "bg-muted/50 text-foreground hover:bg-muted"
+                          bulkStatus === s ? cn(cfg.bgActive, "shadow-md") : "bg-muted/50 text-foreground active:bg-muted/80 lg:hover:bg-muted"
                         )}>
                         <IconComp className="w-5 h-5 flex-shrink-0" />
                         <div><p className="text-sm font-bold">{s}</p><p className="text-[10px] opacity-70">{cfg.label}</p></div>
@@ -4129,7 +4129,7 @@ export default function Attendance() {
                       "flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px] col-span-2",
                       bulkStatus === null
                         ? "bg-muted-foreground text-background shadow-md"
-                        : "bg-muted/50 text-foreground hover:bg-muted border border-dashed border-border"
+                        : "bg-muted/50 text-foreground active:bg-muted/80 lg:hover:bg-muted border border-dashed border-border"
                     )}
                   >
                     <X className="w-5 h-5 flex-shrink-0" />

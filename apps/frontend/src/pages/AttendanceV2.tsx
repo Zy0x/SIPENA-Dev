@@ -1330,7 +1330,7 @@ export default function AttendanceV2Page() {
                     return (
                       <button key={s} onClick={() => setBulkStatus(s)}
                         className={cn("flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px]",
-                          bulkStatus === s ? cn(cfg.bgActive, "shadow-md") : "bg-muted/50 text-foreground hover:bg-muted"
+                          bulkStatus === s ? cn(cfg.bgActive, "shadow-md") : "bg-muted/50 text-foreground active:bg-muted/80 lg:hover:bg-muted"
                         )}>
                         <IconComp className="w-5 h-5 flex-shrink-0" />
                         <div><p className="text-sm font-bold">{s}</p><p className="text-[10px] opacity-70">{cfg.label}</p></div>
@@ -1343,7 +1343,7 @@ export default function AttendanceV2Page() {
                       "flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px] col-span-2",
                       bulkStatus === null
                         ? "bg-muted-foreground text-background shadow-md"
-                        : "bg-muted/50 text-foreground hover:bg-muted border border-dashed border-border"
+                        : "bg-muted/50 text-foreground active:bg-muted/80 lg:hover:bg-muted border border-dashed border-border"
                     )}
                   >
                     <X className="w-5 h-5 flex-shrink-0" />

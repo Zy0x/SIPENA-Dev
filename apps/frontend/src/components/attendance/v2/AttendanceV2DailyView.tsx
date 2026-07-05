@@ -106,7 +106,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                 key={student.id} 
                 className={cn(
                   "flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-4 sm:py-2.5 transition-colors", 
-                  holidayActive ? "opacity-40" : "hover:bg-muted/30 active:bg-muted/50"
+                  holidayActive ? "opacity-40" : "active:bg-muted/50 lg:hover:bg-muted/30"
                 )}
               >
                 {/* Number + Name Container */}
@@ -152,7 +152,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                         className={cn(
                           "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation select-none",
                           "w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col",
-                          isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground hover:bg-muted active:bg-muted/80",
+                          isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground active:bg-muted/80 lg:hover:bg-muted",
                           holidayActive && "cursor-not-allowed opacity-40"
                         )}
                         aria-label={cfg.label}
@@ -172,7 +172,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                         disabled={holidayActive}
                         className={cn(
                           "flex w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-md sm:rounded-lg items-center justify-center flex-shrink-0 transition-colors touch-manipulation",
-                          note ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground hover:bg-muted",
+                          note ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground active:bg-muted/80 lg:hover:bg-muted",
                           holidayActive && "opacity-40 cursor-not-allowed"
                         )}
                       >
