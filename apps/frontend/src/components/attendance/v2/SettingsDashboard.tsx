@@ -767,7 +767,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   data-state={active ? "active" : "inactive"}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger relative shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 min-h-[42px] rounded-t-xl border border-b-0 text-[13px] font-bold transition-all duration-200 touch-manipulation select-none overflow-hidden",
+                    "sipena-tab-trigger relative shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 min-h-[42px] rounded-tl-xl rounded-tr-[1.5rem] border border-b-0 text-[13px] font-bold transition-all duration-200 touch-manipulation select-none overflow-hidden",
                     active
                       ? "bg-background text-primary border-border shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.1)] z-10 before:absolute before:top-0 before:inset-x-0 before:h-[3px] before:bg-primary"
                       : "bg-muted/40 text-muted-foreground border-transparent hover:bg-muted/60 active:bg-muted hover:text-foreground",
@@ -804,7 +804,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   aria-pressed={active}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger relative w-full flex items-center gap-3 min-h-[52px] rounded-l-xl rounded-r-none px-4 text-left transition-all duration-200 touch-manipulation select-none border border-r-0 overflow-hidden",
+                    "sipena-tab-trigger relative w-full flex items-center gap-3 min-h-[52px] rounded-tl-xl rounded-bl-[1.5rem] rounded-r-none px-4 text-left transition-all duration-200 touch-manipulation select-none border border-r-0 overflow-hidden",
                     active
                       ? "bg-background text-primary border-border shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] z-10 before:absolute before:left-0 before:inset-y-0 before:w-[3px] before:bg-primary"
                       : "bg-transparent border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground",
