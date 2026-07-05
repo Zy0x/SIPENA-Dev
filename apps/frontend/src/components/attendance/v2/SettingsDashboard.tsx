@@ -116,10 +116,10 @@ function CompactMetric({
 
   return (
     <div className={cn("min-w-0 rounded-xl border px-3 py-2.5 transition-all", toneClass)}>
-      <p className="truncate text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
+      <p className="line-clamp-2 text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
       <div className="mt-1 flex items-center gap-1.5">
         {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden="true" />}
-        <p className="truncate text-sm font-bold leading-tight">{value}</p>
+        <p className="break-words text-sm font-bold leading-tight">{value}</p>
       </div>
     </div>
   );
@@ -779,9 +779,9 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-[13px] font-semibold leading-tight truncate">{item.title}</span>
+                    <span className="block text-[13px] font-semibold leading-tight">{item.title}</span>
                     <span className={cn(
-                      "block text-[11px] mt-0.5 truncate font-normal",
+                      "block text-[11px] mt-0.5 font-normal whitespace-normal break-words",
                       active ? "text-primary-foreground/70" : "text-muted-foreground"
                     )}>
                       {item.detail}
@@ -898,8 +898,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                   )}
                                 >
                                   <div className="min-w-0">
-                                    <p className="truncate text-xs font-semibold">{formatDateOnly(holiday.date)}</p>
-                                    <p className="truncate text-[11px] text-muted-foreground">{holiday.name}</p>
+                                    <p className="text-xs font-semibold break-words whitespace-normal">{formatDateOnly(holiday.date)}</p>
+                                    <p className="text-[11px] text-muted-foreground break-words whitespace-normal">{holiday.name}</p>
                                     {isOverridden && (
                                       <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
                                         <Check className="h-3 w-3" />
@@ -960,14 +960,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                   )}
                                 >
                                   <div className="min-w-0">
-                                    <p className="truncate text-xs font-semibold">{format(day, "EEEE, d MMM", { locale: idLocale })}</p>
+                                    <p className="text-xs font-semibold break-words whitespace-normal">{format(day, "EEEE, d MMM", { locale: idLocale })}</p>
                                     {isOverridden ? (
                                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
                                         <Check className="h-3 w-3" />
                                         Jadwal masuk khusus
                                       </span>
                                     ) : (
-                                      <p className="truncate text-[11px] text-muted-foreground">Libur default</p>
+                                      <p className="text-[11px] text-muted-foreground">Libur default</p>
                                     )}
                                   </div>
                                   <Button
@@ -1159,8 +1159,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       nonEffectiveDays.map((day) => (
                         <div key={day.toISOString()} className="flex items-center justify-between gap-2 p-3">
                           <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold">{format(day, "EEEE, d MMMM yyyy", { locale: idLocale })}</p>
-                            <p className="truncate text-[11px] text-muted-foreground">
+                            <p className="text-xs font-semibold break-words whitespace-normal">{format(day, "EEEE, d MMMM yyyy", { locale: idLocale })}</p>
+                            <p className="text-[11px] text-muted-foreground break-words whitespace-normal">
                               {getHolidayDescriptionCombined(day) || "Akhir pekan atau libur rutin"}
                             </p>
                           </div>
@@ -1396,7 +1396,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       delegations.map((delegation) => (
                         <div key={delegation.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">{delegation.grantee_label || delegation.grantee_user_id}</p>
+                            <p className="text-sm font-semibold break-words whitespace-normal">{delegation.grantee_label || delegation.grantee_user_id}</p>
                             <p className="text-xs text-muted-foreground">
                               {formatDateOnly(delegation.starts_at)} sampai {formatDateOnly(delegation.ends_at)}
                             </p>
@@ -1471,10 +1471,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         snapshots.map((snapshot) => (
                           <div key={snapshot.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold">
+                              <p className="text-sm font-semibold break-words whitespace-normal">
                                 {format(new Date(snapshot.created_at), "d MMM yyyy HH:mm", { locale: idLocale })}
                               </p>
-                              <p className="truncate text-xs text-muted-foreground">{snapshot.reason || "Backup rutin"}</p>
+                              <p className="text-xs text-muted-foreground break-words whitespace-normal">{snapshot.reason || "Backup rutin"}</p>
                             </div>
                             <Button
                               type="button"
