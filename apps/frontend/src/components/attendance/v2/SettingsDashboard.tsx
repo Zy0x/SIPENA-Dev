@@ -1142,12 +1142,12 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
                 <div className="flex flex-col gap-4">
                   <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-effective-holiday">
-                    <div className="flex items-center justify-between gap-3 border-b p-3 sm:p-4">
+                    <div className="flex flex-col items-start gap-3 border-b p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
                       <div className="min-w-0">
                         <h4 className="text-sm font-semibold">Libur Kustom</h4>
                         <p className="text-xs text-muted-foreground">Tanggal non-efektif di luar libur nasional.</p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                         {onBulkApplyClick && (
                           <Button
                             type="button"
@@ -1228,12 +1228,12 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   </div>
 
                   <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-effective-event">
-                    <div className="flex items-center justify-between gap-3 border-b p-3 sm:p-4">
+                    <div className="flex flex-col items-start gap-3 border-b p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
                       <div className="min-w-0">
                         <h4 className="text-sm font-semibold">Kegiatan Khusus</h4>
                         <p className="text-xs text-muted-foreground">Agenda non-KBM yang tetap perlu dicatat.</p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                         <InfoHelp
                           label="Kegiatan Khusus"
                           summary="Mencatat agenda yang perlu muncul di kalender presensi."
