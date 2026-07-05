@@ -535,7 +535,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       <DialogContent
         fullScreenMobile
         className={cn(
-          "flex flex-col gap-0 lg:overflow-hidden",
+          "flex flex-col gap-0 overflow-hidden",
           "lg:h-[min(92dvh,820px)] lg:max-h-[92dvh] lg:w-[calc(100vw-2rem)] lg:max-w-6xl",
         )}
         onPointerDownOutside={(e) => {
@@ -552,22 +552,23 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         }}
       >
         <DialogHeader
-          className="border-b bg-background p-4 pb-3 sm:p-6 sm:pb-4 lg:sticky lg:top-0 lg:z-20 lg:bg-background/95 lg:backdrop-blur"
+          className="shrink-0 border-b bg-background"
           data-tour="attendance-v2-settings-header"
         >
-          <div className="flex items-start justify-between gap-3 pr-10">
+          {/* Title + Tour Button */}
+          <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3 pr-14 sm:px-5 sm:pt-5 sm:pb-3 sm:pr-16">
             <div className="min-w-0">
-              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Settings2 className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
-                Pengaturan Presensi V2
+              <DialogTitle className="flex items-center gap-2 text-sm font-semibold sm:text-base">
+                <Settings2 className="h-4 w-4 text-primary shrink-0 sm:h-5 sm:w-5" />
+                <span className="truncate">Pengaturan Presensi V2</span>
               </DialogTitle>
-              <DialogDescription className="mt-1.5 line-clamp-2 text-xs sm:text-sm">
+              <DialogDescription className="mt-1 hidden text-xs leading-relaxed sm:block sm:text-sm">
                 Kelola kalender akademik, hari efektif, rekap, delegasi, audit, dan backup untuk kelas aktif.
               </DialogDescription>
             </div>
             <TourButton
               tourKey="attendance-v2-settings"
-              className="min-h-10 shrink-0 justify-center rounded-xl px-3 text-xs sm:min-h-11"
+              className="min-h-9 shrink-0 justify-center rounded-xl px-2.5 text-xs sm:min-h-10 sm:px-3"
               onBeforeStart={async () => {
                 onOpenChange(true);
                 setSettingsSection("calendar");
@@ -576,165 +577,202 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             />
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
-            <CompactMetric
-              label="Bulan"
-              value={
-                <div className="flex items-center justify-between gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 rounded-lg text-foreground hover:bg-muted/80"
-                    onClick={() => {
-                      if (setCurrentMonth) {
-                        setCurrentMonth(addMonths(currentMonth, -1));
-                      }
-                    }}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-xs sm:text-sm font-bold hover:bg-muted/80 text-foreground transition-colors cursor-pointer select-none"
-                      >
-                        <span className="truncate max-w-[5.25rem] sm:max-w-none">
-                          {format(currentMonth, "MMMM yyyy", { locale: idLocale })}
-                        </span>
-                        <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
-                      </button>
-                    </PopoverTrigger>
-                    <InlinePopoverContent className="w-56 p-2 rounded-xl" align="center">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 mb-1">
-                        Pilih Bulan
-                      </div>
-                      <div className="grid grid-cols-2 gap-1 max-h-64 overflow-y-auto">
-                        {monthOptions.map((month) => {
-                          const isSelected = month.getMonth() === currentMonth.getMonth() && month.getFullYear() === currentMonth.getFullYear();
-                          return (
-                            <button
-                              key={month.toISOString()}
-                              type="button"
-                              onClick={() => {
-                                if (setCurrentMonth) {
-                                  setCurrentMonth(month);
-                                }
-                              }}
-                              className={cn(
-                                "px-2 py-1.5 rounded-lg text-xs text-left font-medium transition-colors truncate",
-                                isSelected
-                                  ? "bg-primary text-primary-foreground font-semibold"
-                                  : "hover:bg-muted text-foreground"
-                              )}
-                            >
-                              {format(month, "MMMM", { locale: idLocale })}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="border-t mt-2 pt-1.5 flex items-center justify-between gap-1.5">
-                        <Button
+          {/* Metrics: horizontal scroll on mobile, 4-col grid on sm+ */}
+          <div className="flex gap-2 overflow-x-auto px-4 pb-4 sm:grid sm:grid-cols-4 sm:gap-3 sm:px-5 sm:pb-5">
+            <div className="shrink-0 min-w-[108px] sm:min-w-0">
+              <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
+            </div>
+            <div className="shrink-0 min-w-[156px] sm:min-w-0">
+              <CompactMetric
+                label="Bulan"
+                value={
+                  <div className="flex items-center justify-between gap-0.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 shrink-0 rounded-md text-foreground hover:bg-muted/80 active:bg-muted"
+                      onClick={() => {
+                        if (setCurrentMonth) {
+                          setCurrentMonth(addMonths(currentMonth, -1));
+                        }
+                      }}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
                           type="button"
-                          variant="ghost"
-                          className="h-7 flex-1 px-1.5 rounded-lg text-[10px] font-semibold hover:bg-muted"
-                          onClick={() => {
-                            if (setCurrentMonth) {
-                              setCurrentMonth(addYears(currentMonth, -1));
-                            }
-                          }}
+                          className="flex items-center gap-0.5 px-1 py-0.5 rounded-md text-[11px] font-bold hover:bg-muted/80 active:bg-muted text-foreground transition-colors cursor-pointer select-none"
                         >
-                          Tahun Lalu
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="h-7 flex-1 px-1.5 rounded-lg text-[10px] font-semibold hover:bg-muted"
-                          onClick={() => {
-                            if (setCurrentMonth) {
-                              setCurrentMonth(addYears(currentMonth, 1));
-                            }
-                          }}
-                        >
-                          Tahun Depan
-                        </Button>
-                      </div>
-                    </InlinePopoverContent>
-                  </Popover>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 rounded-lg text-foreground hover:bg-muted/80"
-                    onClick={() => {
-                      if (setCurrentMonth) {
-                        setCurrentMonth(addMonths(currentMonth, 1));
-                      }
-                    }}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              }
-            />
-            <CompactMetric label="Hari efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
-            <CompactMetric
-              label="Status"
-              value={isLocked ? "Terkunci" : "Bisa diedit"}
-              tone={isLocked ? "amber" : "blue"}
-            />
+                          <span className="truncate max-w-[4.25rem] sm:max-w-none">
+                            {format(currentMonth, "MMM yyyy", { locale: idLocale })}
+                          </span>
+                          <ChevronDown className="h-3 w-3 opacity-60 shrink-0" />
+                        </button>
+                      </PopoverTrigger>
+                      <InlinePopoverContent className="w-56 p-2 rounded-xl" align="center">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 mb-1">
+                          Pilih Bulan
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 max-h-64 overflow-y-auto">
+                          {monthOptions.map((month) => {
+                            const isSelected = month.getMonth() === currentMonth.getMonth() && month.getFullYear() === currentMonth.getFullYear();
+                            return (
+                              <button
+                                key={month.toISOString()}
+                                type="button"
+                                onClick={() => {
+                                  if (setCurrentMonth) {
+                                    setCurrentMonth(month);
+                                  }
+                                }}
+                                className={cn(
+                                  "px-2 py-1.5 rounded-lg text-xs text-left font-medium transition-colors truncate",
+                                  isSelected
+                                    ? "bg-primary text-primary-foreground font-semibold"
+                                    : "hover:bg-muted text-foreground"
+                                )}
+                              >
+                                {format(month, "MMMM", { locale: idLocale })}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="border-t mt-2 pt-1.5 flex items-center justify-between gap-1.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="h-7 flex-1 px-1.5 rounded-lg text-[10px] font-semibold hover:bg-muted"
+                            onClick={() => {
+                              if (setCurrentMonth) {
+                                setCurrentMonth(addYears(currentMonth, -1));
+                              }
+                            }}
+                          >
+                            Tahun Lalu
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="h-7 flex-1 px-1.5 rounded-lg text-[10px] font-semibold hover:bg-muted"
+                            onClick={() => {
+                              if (setCurrentMonth) {
+                                setCurrentMonth(addYears(currentMonth, 1));
+                              }
+                            }}
+                          >
+                            Tahun Depan
+                          </Button>
+                        </div>
+                      </InlinePopoverContent>
+                    </Popover>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 shrink-0 rounded-md text-foreground hover:bg-muted/80 active:bg-muted"
+                      onClick={() => {
+                        if (setCurrentMonth) {
+                          setCurrentMonth(addMonths(currentMonth, 1));
+                        }
+                      }}
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                }
+              />
+            </div>
+            <div className="shrink-0 min-w-[108px] sm:min-w-0">
+              <CompactMetric label="Hari efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
+            </div>
+            <div className="shrink-0 min-w-[108px] sm:min-w-0">
+              <CompactMetric
+                label="Status"
+                value={isLocked ? "Terkunci" : "Bisa diedit"}
+                tone={isLocked ? "amber" : "blue"}
+              />
+            </div>
           </div>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:grid-rows-none">
+        {/* ──── Mobile / Tablet: Horizontal Tab Strip (hidden on lg+) ──── */}
+        <nav
+          className="shrink-0 border-b bg-background lg:hidden"
+          aria-label="Navigasi pengaturan"
+        >
+          <div className="flex gap-1.5 overflow-x-auto px-3 py-2">
+            {sectionItems.map((item) => {
+              const Icon = item.icon;
+              const active = settingsSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  data-tour={`attendance-v2-settings-nav-${item.id}`}
+                  aria-pressed={active}
+                  data-selected={active ? "true" : "false"}
+                  onClick={() => setSettingsSection(item.id)}
+                  className={cn(
+                    "shrink-0 flex items-center gap-1.5 px-3 py-2 min-h-10 rounded-xl border text-xs font-semibold transition-colors touch-manipulation select-none",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground active:bg-muted",
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>{item.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* ──── Body: Desktop Sidebar + Scrollable Content ──── */}
+        <div className="min-h-0 flex-1 flex flex-col overflow-hidden lg:flex-row">
+
+          {/* Desktop sidebar (hidden on mobile/tablet) */}
           <aside
-            className="shrink-0 border-b bg-background p-4 sm:p-5 lg:static lg:border-b-0 lg:border-r lg:bg-muted/10 lg:p-3"
+            className="hidden lg:flex lg:flex-col w-[15.5rem] shrink-0 border-r bg-muted/10 p-3 gap-1.5 overflow-y-auto"
             data-tour="attendance-v2-settings-nav"
           >
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:block lg:space-y-2 lg:gap-0">
-              {sectionItems.map((item) => {
-                const Icon = item.icon;
-                const active = settingsSection === item.id;
+            {sectionItems.map((item) => {
+              const Icon = item.icon;
+              const active = settingsSection === item.id;
 
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    data-tour={`attendance-v2-settings-nav-${item.id}`}
-                    data-selected={active ? "true" : "false"}
-                    aria-pressed={active}
-                    onClick={() => setSettingsSection(item.id)}
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition-colors min-h-[4.75rem] touch-manipulation",
-                      "sm:min-h-[3.5rem] sm:flex-row sm:gap-2 sm:px-3 sm:py-1.5",
-                      "lg:w-full lg:min-h-[3.25rem] lg:flex-col lg:items-start lg:justify-start lg:gap-0 lg:p-3 lg:text-left",
-                      active
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                        : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                    )}
-                  >
-                    <span className="flex flex-col items-center gap-1 sm:flex-row sm:gap-2 lg:flex-row lg:gap-2.5">
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="text-[10px] font-bold leading-tight sm:text-xs lg:text-sm lg:font-semibold truncate">
-                        {item.title}
-                      </span>
-                    </span>
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  data-tour={`attendance-v2-settings-nav-${item.id}`}
+                  data-selected={active ? "true" : "false"}
+                  aria-pressed={active}
+                  onClick={() => setSettingsSection(item.id)}
+                  className={cn(
+                    "w-full flex items-start gap-2.5 min-h-[3.25rem] rounded-xl border p-3 text-left transition-colors touch-manipulation select-none",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground active:bg-muted/80",
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold leading-tight truncate">{item.title}</span>
                     <span className={cn(
-                      "hidden lg:block mt-0.5 truncate text-[10px]", 
-                      active ? "text-primary-foreground/80" : "text-muted-foreground"
+                      "block text-[10px] mt-0.5 truncate",
+                      active ? "text-primary-foreground/75" : "text-muted-foreground"
                     )}>
                       {item.detail}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
+                  </span>
+                </button>
+              );
+            })}
           </aside>
 
-          <main className="p-4 sm:p-6 lg:p-5 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">
+          <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 lg:p-5">
             {settingsSection === "calendar" && (
               <section className="space-y-3" data-tour="attendance-v2-settings-calendar">
                 <SectionIntro
@@ -1366,8 +1404,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           </main>
         </div>
 
-        <div className="shrink-0 border-t bg-background p-4 sm:p-6 lg:p-4 lg:sticky lg:bottom-0 lg:z-20 lg:bg-background/95 lg:backdrop-blur">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="shrink-0 border-t bg-background px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="line-clamp-2 text-[11px] leading-normal text-muted-foreground">
               <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5" />
               Perubahan ini hanya berlaku untuk jalur Presensi V2. V1 dan export V1 tetap tidak disentuh.
@@ -1375,7 +1413,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             <Button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="min-h-11 w-full rounded-xl px-6 text-sm font-semibold sm:w-auto"
+              className="min-h-10 w-full rounded-xl px-5 text-sm font-semibold sm:w-auto sm:min-h-11"
             >
               Selesai
             </Button>

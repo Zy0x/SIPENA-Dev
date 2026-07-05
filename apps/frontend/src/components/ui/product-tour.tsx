@@ -161,7 +161,12 @@ export function ProductTour({
     const findAndTrackElement = () => {
       if (!mountedRef.current || !isActive) return;
 
-      const target = document.querySelector(step.target);
+      // Find the first *visible* element matching selector (supports both mobile tab + desktop sidebar having same data-tour)
+      const allTargets = document.querySelectorAll(step.target);
+      const target = (Array.from(allTargets).find(el => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      }) ?? allTargets[0] ?? null) as Element | null;
 
       if (!target) {
         retryCount++;
