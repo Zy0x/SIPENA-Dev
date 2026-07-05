@@ -958,7 +958,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                             </DropdownMenu>
                           )}
                         </div>
-                        <div className="max-h-72 overflow-y-auto divide-y">
+                        <div className="divide-y">
                           {monthNationalHolidays.length === 0 ? (
                             <EmptyState icon={Globe} text="Tidak ada libur nasional bulan ini." compact />
                           ) : (
@@ -1057,7 +1057,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                        <div className="max-h-72 overflow-y-auto divide-y">
+                        <div className="divide-y">
                           {monthDays
                             .filter((day) => {
                               const dayOfWeek = getDay(day);
@@ -1173,7 +1173,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         </Button>
                       </div>
                     </div>
-                    <div className="max-h-72 overflow-y-auto divide-y">
+                    <div className="divide-y">
                       {holidays.length === 0 ? (
                         <EmptyState icon={CalendarOff} text="Belum ada libur kustom." />
                       ) : (
@@ -1234,7 +1234,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         </Button>
                       </div>
                     </div>
-                    <div className="max-h-72 overflow-y-auto divide-y">
+                    <div className="divide-y">
                       {dayEvents.length === 0 ? (
                         <EmptyState icon={Bookmark} text="Belum ada kegiatan khusus." />
                       ) : (
@@ -1288,7 +1288,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     <CompactMetric label="Tidak efektif" value={nonEffectiveDays.length} tone="amber" />
                     <CompactMetric label="Terkunci" value={isLocked ? "Ya" : "Tidak"} tone={isLocked ? "red" : "blue"} icon={isLocked ? Lock : LockOpen} />
                   </div>
-                  <div className="max-h-64 overflow-y-auto divide-y">
+                  <div className="divide-y">
                     {nonEffectiveDays.length === 0 ? (
                       <EmptyState icon={CheckCircle2} text="Tidak ada tanggal non-efektif pada bulan ini." />
                     ) : (
@@ -1525,7 +1525,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 />
 
                 <div className="rounded-2xl border bg-card shadow-sm" data-tour="attendance-v2-settings-delegation-list">
-                  <div className="max-h-[22rem] overflow-y-auto divide-y">
+                  <div className="divide-y">
                     {delegations.length === 0 ? (
                       <EmptyState icon={UserPlus} text="Belum ada delegasi untuk kelas ini." />
                     ) : (
@@ -1600,7 +1600,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       <h4 className="text-sm font-semibold">Daftar Cadangan</h4>
                       <p className="text-xs text-muted-foreground">Pilih cadangan yang ingin dipulihkan.</p>
                     </div>
-                    <div className="max-h-[20rem] overflow-y-auto divide-y">
+                    <div className="divide-y">
                       {snapshots.length === 0 ? (
                         <EmptyState icon={Camera} text="Belum ada cadangan tersimpan." />
                       ) : (
