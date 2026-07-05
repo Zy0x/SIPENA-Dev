@@ -244,7 +244,7 @@ export default function AttendanceV2Page() {
         <button
           type="button"
           onClick={retryFailedAttendanceSaves}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-3 text-[11px] font-semibold text-destructive touch-manipulation"
+          className="sipena-attendance-retry-btn inline-flex min-h-8 items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-3 text-[11px] font-semibold text-destructive touch-manipulation"
         >
           <AlertCircle className="h-3.5 w-3.5" />
           {failedAttendanceSaves} gagal, coba lagi
@@ -1329,7 +1329,7 @@ export default function AttendanceV2Page() {
                     const IconComp = cfg.icon;
                     return (
                       <button key={s} onClick={() => setBulkStatus(s)}
-                        className={cn("flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px]",
+                        className={cn("sipena-bulk-option-btn flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px]",
                           bulkStatus === s ? cn(cfg.bgActive, "shadow-md") : "bg-muted/50 text-foreground active:bg-muted/80 lg:hover:bg-muted"
                         )}>
                         <IconComp className="w-5 h-5 flex-shrink-0" />
@@ -1340,7 +1340,7 @@ export default function AttendanceV2Page() {
                   <button
                     onClick={() => setBulkStatus(null)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px] col-span-2",
+                      "sipena-bulk-option-btn flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px] col-span-2",
                       bulkStatus === null
                         ? "bg-muted-foreground text-background shadow-md"
                         : "bg-muted/50 text-foreground active:bg-muted/80 lg:hover:bg-muted border border-dashed border-border"
