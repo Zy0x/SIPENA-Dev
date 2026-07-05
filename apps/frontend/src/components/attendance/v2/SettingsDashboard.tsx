@@ -700,10 +700,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
         {/* ──── Mobile / Tablet: Horizontal Tab Strip (hidden on lg+) ──── */}
         <nav
-          className="shrink-0 border-b bg-background lg:hidden"
+          className="shrink-0 border-b bg-background lg:hidden relative"
           aria-label="Navigasi pengaturan"
         >
-          <div className="flex gap-2 overflow-x-auto px-4 py-3 sm:px-6 sm:py-4 scrollbar-none">
+          <div className="flex gap-2 overflow-x-auto px-4 py-3 sm:px-6 sm:py-4 scrollbar-none pr-10">
             {sectionItems.map((item) => {
               const Icon = item.icon;
               const active = settingsSection === item.id;
@@ -728,6 +728,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
               );
             })}
           </div>
+          {/* Fade overlay on the right edge */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-background via-background/80 to-transparent z-10" />
         </nav>
 
         {/* ──── Body: Desktop Sidebar + Scrollable Content ──── */}
@@ -778,7 +780,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 <SectionIntro
                   icon={CalendarDays}
                   title="Kalender Akademik"
-                  description="Atur format hari sekolah utama dan override hari libur tertentu tanpa membuka banyak panel."
+                  description="Atur format hari sekolah utama dan tandai hari masuk belajar khusus pada tanggal libur."
                   help={
                     <InfoHelp
                       label="Kalender Akademik"
@@ -840,16 +842,16 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       <div className="min-w-0">
                         <h4 className="flex items-center gap-2 text-sm font-semibold">
                           <Globe className="h-4 w-4 text-red-500" />
-                          Override Libur dan Akhir Pekan
+                          Ubah Jadi Hari Masuk KBM
                         </h4>
                         <p className="text-xs text-muted-foreground">Jadikan tanggal tertentu tetap masuk sekolah.</p>
                       </div>
                       <InfoHelp
-                        label="Override Libur dan Akhir Pekan"
+                        label="Ubah Jadi Hari Masuk KBM"
                         summary="Mengubah tanggal libur menjadi tanggal masuk khusus."
                         detail="Gunakan ini saat ada kegiatan belajar atau presensi tetap berjalan pada tanggal yang biasanya libur."
                         example="Sabtu biasanya libur pada mode 5 hari, tetapi bisa ditandai masuk untuk ujian sekolah."
-                        impact="Tanggal yang dioverride ikut masuk ke hari efektif dan rekap."
+                        impact="Tanggal belajar khusus ini akan ikut dihitung ke dalam hari efektif belajar dan rekapitulasi."
                       />
                     </div>
                     <div className="grid gap-0 md:grid-cols-2">
@@ -877,7 +879,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                     type="button"
                                     variant={isOverridden ? "default" : "outline"}
                                     size="sm"
-                                    className="min-h-10 shrink-0 rounded-xl px-2 text-[11px]"
+                                    className="min-h-[44px] shrink-0 rounded-xl px-4 text-xs font-semibold select-none touch-manipulation"
+                                    data-touch-scroll-click-target="true"
                                     onClick={() =>
                                       isOverridden
                                         ? toggleHoliday({ date: holiday.date })
@@ -926,7 +929,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                     type="button"
                                     variant={isOverridden ? "default" : "outline"}
                                     size="sm"
-                                    className="min-h-10 shrink-0 rounded-xl px-2 text-[11px]"
+                                    className="min-h-[44px] shrink-0 rounded-xl px-4 text-xs font-semibold select-none touch-manipulation"
+                                    data-touch-scroll-click-target="true"
                                     onClick={() =>
                                       isOverridden
                                         ? toggleHoliday({ date })
@@ -989,18 +993,18 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <EmptyState icon={CalendarOff} text="Belum ada libur kustom." />
                       ) : (
                         holidays.map((holiday) => (
-                          <div key={`${holiday.date}-${holiday.class_id || "school"}`} className="flex items-center justify-between gap-2 p-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-semibold">{formatDateOnly(holiday.date)}</p>
-                              <p className="truncate text-[11px] text-muted-foreground">{holiday.description}</p>
+                          <div key={`${holiday.date}-${holiday.class_id || "school"}`} className="flex items-start justify-between gap-3 p-3">
+                            <div className="min-w-0 flex-1 break-words">
+                              <p className="text-xs font-semibold">{formatDateOnly(holiday.date)}</p>
+                              <p className="text-[11px] text-muted-foreground break-words whitespace-normal">{holiday.description}</p>
                             </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <Badge variant="outline" className="text-[10px]">{holiday.class_id ? "Kelas" : "Sekolah"}</Badge>
+                            <div className="flex shrink-0 items-center gap-2 self-center">
+                              <Badge variant="outline" className="text-[10px] shrink-0">{holiday.class_id ? "Kelas" : "Sekolah"}</Badge>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-10 w-10 rounded-xl text-destructive"
+                                className="h-10 w-10 shrink-0 rounded-xl text-destructive"
                                 onClick={() => handleRemoveHoliday(holiday.date, holiday.class_id)}
                               >
                                 <X className="h-4 w-4" />
@@ -1037,10 +1041,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <EmptyState icon={Bookmark} text="Belum ada kegiatan khusus." />
                       ) : (
                         dayEvents.map((event) => (
-                          <div key={event.date} className="flex items-center justify-between gap-2 p-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-semibold">{formatDateOnly(event.date)}</p>
-                              <p className="truncate text-[11px] text-muted-foreground">
+                          <div key={event.date} className="flex items-start justify-between gap-3 p-3">
+                            <div className="min-w-0 flex-1 break-words">
+                              <p className="text-xs font-semibold">{formatDateOnly(event.date)}</p>
+                              <p className="text-[11px] text-muted-foreground break-words whitespace-normal">
                                 {event.label}
                                 {event.description ? ` - ${event.description}` : ""}
                               </p>
@@ -1049,7 +1053,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-10 w-10 shrink-0 rounded-xl text-destructive"
+                              className="h-10 w-10 shrink-0 rounded-xl text-destructive self-center"
                               onClick={() => handleRemoveDayEvent(event.date)}
                             >
                               <X className="h-4 w-4" />
@@ -1405,15 +1409,23 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         </div>
 
         <div className="shrink-0 border-t bg-background px-4 py-3 sm:px-5 sm:py-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="line-clamp-2 text-[11px] leading-normal text-muted-foreground">
-              <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5" />
-              Perubahan ini hanya berlaku untuk jalur Presensi V2. V1 dan export V1 tetap tidak disentuh.
-            </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <p className="line-clamp-2 text-[11px] leading-normal text-muted-foreground">
+                <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 text-primary" />
+                Perubahan ini hanya berlaku untuk jalur Presensi V2. V1 dan export V1 tetap tidak disentuh.
+              </p>
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 select-none">
+                <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50">
+                  <Check className="h-2.5 w-2.5 stroke-[3.5]" />
+                </span>
+                Perubahan disimpan otomatis
+              </div>
+            </div>
             <Button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="min-h-10 w-full rounded-xl px-5 text-sm font-semibold sm:w-auto sm:min-h-11"
+              className="min-h-[44px] w-full rounded-xl px-5 text-sm font-semibold sm:w-auto sm:min-h-11"
             >
               Selesai
             </Button>
