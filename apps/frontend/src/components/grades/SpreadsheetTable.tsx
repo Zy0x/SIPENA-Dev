@@ -550,7 +550,7 @@ export function SpreadsheetTable({
   }, []);
 
   const handleProtectionButtonClick = useCallback(() => {
-    if (formatLocked && scrollLockMode) {
+    if (formatLocked || scrollLockMode) {
       applyProtectionMode('off');
       return;
     }
