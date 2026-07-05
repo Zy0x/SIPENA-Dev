@@ -762,7 +762,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     <span className="block text-sm font-bold leading-tight truncate">{item.title}</span>
                     <span className={cn(
                       "block text-[11px] mt-1 truncate",
-                      active ? "text-primary-foreground/80 font-medium" : "text-muted-foreground"
+                      active ? "text-primary-foreground opacity-80 font-medium" : "text-muted-foreground"
                     )}>
                       {item.detail}
                     </span>
