@@ -3747,7 +3747,7 @@ export default function Attendance() {
                           </div>
 
                           {/* Status buttons + Note */}
-                          <div className="flex items-center gap-[2px] sm:gap-1.5 flex-shrink-0 ml-7 sm:ml-0">
+                          <div className="flex items-center gap-3 sm:gap-1.5 flex-shrink-0 ml-7 sm:ml-0">
                             {allStatuses.map((s) => {
                               const isSelected = status === s;
                               const cfg = statusConfig[s];
@@ -3757,7 +3757,7 @@ export default function Attendance() {
                                   disabled={holidayActive}
                                   className={cn(
                                     "flex items-center justify-center rounded-md sm:rounded-xl transition-all touch-manipulation select-none",
-                                    "w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col",
+                                    "relative w-8 h-8 sm:w-auto sm:h-auto sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col after:absolute after:inset-[-6px] sm:after:hidden",
                                     isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground active:bg-muted/80 lg:hover:bg-muted",
                                     holidayActive && "cursor-not-allowed opacity-40"
                                   )}
@@ -3772,7 +3772,7 @@ export default function Attendance() {
                               <TooltipTrigger asChild>
                                 <button onClick={() => handleOpenNote(student.id, student.name, selectedDate)}
                                   disabled={holidayActive}
-                                  className={cn("flex w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-md sm:rounded-lg items-center justify-center flex-shrink-0 transition-colors touch-manipulation",
+                                  className={cn("relative flex w-8 h-8 rounded-md sm:rounded-lg items-center justify-center flex-shrink-0 transition-colors touch-manipulation after:absolute after:inset-[-6px] sm:after:hidden",
                                     note ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground active:bg-muted/80 lg:hover:bg-muted",
                                     holidayActive && "opacity-40 cursor-not-allowed"
                                   )}>

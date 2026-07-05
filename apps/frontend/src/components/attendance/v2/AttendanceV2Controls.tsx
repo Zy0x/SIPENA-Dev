@@ -174,7 +174,7 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
             {selectedClassId && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 px-2.5 gap-1.5 text-xs font-semibold" data-tour="import-attendance">
+                  <Button variant="outline" size="sm" className="relative h-9 px-2.5 gap-1.5 text-xs font-semibold after:absolute after:inset-[-4px] sm:after:hidden" data-tour="import-attendance">
                     <Upload className="w-3.5 h-3.5" />
                     <span>Import</span>
                     <ChevronDown className="w-3 h-3 opacity-60" />
@@ -203,7 +203,7 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
                   title="Studio Ekspor Presensi"
                   description="Pilih format ekspor presensi dan kelola signature dari satu panel yang lebih mudah dipahami."
                   triggerLabel="Ekspor"
-                  triggerClassName="h-9 px-2.5 text-xs font-semibold"
+                  triggerClassName="relative h-9 px-2.5 text-xs font-semibold after:absolute after:inset-[-4px] sm:after:hidden"
                   open={attendanceStudioOpen}
                   onOpenChange={setAttendanceStudioOpen}
                   onTriggerClick={openAttendanceExportMonthDialog}
@@ -285,7 +285,7 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
           <div className="flex-1 min-w-0">
             <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Kelas</Label>
             <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-              <SelectTrigger className="h-7 border-0 px-0 py-0 shadow-none text-sm font-medium focus:ring-0">
+              <SelectTrigger className="relative h-7 border-0 px-0 py-0 shadow-none text-sm font-medium focus:ring-0 after:absolute after:inset-[-10px] sm:after:hidden">
                 <SelectValue placeholder="Pilih kelas..." />
               </SelectTrigger>
               <SelectContent isEmpty={classes.length === 0} emptyLabel="Tidak ada pilihan Kelas">
@@ -304,7 +304,7 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <PopoverTrigger asChild>
-                    <button className={cn("w-full text-left text-sm font-medium py-0.5 truncate", isHolidayCombined(selectedDate) && "text-grade-warning")}>
+                    <button className={cn("relative w-full text-left text-sm font-medium py-0.5 truncate after:absolute after:inset-[-10px] sm:after:hidden", isHolidayCombined(selectedDate) && "text-grade-warning")}>
                       {format(selectedDate, "EEEE, d MMMM yyyy", { locale: idLocale })}
                       {isHolidayCombined(selectedDate) && " (Libur)"}
                     </button>
@@ -389,7 +389,7 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 px-2.5 text-[10px] rounded-lg border-primary/20 hover:border-primary/45 transition-colors"
+              className="relative h-7 px-2.5 text-[10px] rounded-lg border-primary/20 hover:border-primary/45 transition-colors after:absolute after:inset-[-8px] sm:after:hidden"
               onClick={() => setShowSettingsSheet(true)}
             >
               <Settings2 className="w-3 h-3 mr-1" />
