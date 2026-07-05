@@ -787,9 +787,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         {/* ──── Body: Desktop Sidebar + Scrollable Content ──── */}
         <div className="min-h-0 flex-1 flex flex-col overflow-hidden lg:flex-row">
 
-          {/* Desktop sidebar (hidden on mobile/tablet) */}
           <aside
-            className="hidden lg:flex lg:flex-col w-60 shrink-0 border-r bg-muted/5 p-3 gap-1.5 overflow-y-auto"
+            className="hidden lg:flex lg:flex-col w-64 shrink-0 border-r bg-muted/10 py-4 pl-4 pr-0 gap-1 overflow-y-auto"
             data-tour="attendance-v2-settings-nav"
           >
             {sectionItems.map((item) => {
@@ -805,23 +804,24 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   aria-pressed={active}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger w-full flex items-center gap-3 min-h-[52px] rounded-xl px-3.5 text-left transition-all duration-200 touch-manipulation select-none",
+                    "sipena-tab-trigger relative w-full flex items-center gap-3 min-h-[52px] rounded-l-xl rounded-r-none px-4 text-left transition-all duration-200 touch-manipulation select-none border border-r-0 overflow-hidden",
                     active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/60 lg:hover:text-foreground",
+                      ? "bg-background text-primary border-border shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)] z-10 before:absolute before:left-0 before:inset-y-0 before:w-[3px] before:bg-primary"
+                      : "bg-transparent border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                   )}
+                  style={active ? { marginRight: "-1px", paddingRight: "calc(1rem + 1px)" } : { paddingRight: "1rem" }}
                 >
                   <span className={cn(
                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-                    active ? "bg-primary-foreground/15" : "bg-muted/80"
+                    active ? "bg-primary/10" : "bg-muted/60"
                   )}>
-                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    <Icon className={cn("h-4 w-4", active ? "text-primary" : "")} aria-hidden="true" />
                   </span>
                   <span className="min-w-0">
                     <span className="block text-[13px] font-semibold leading-tight">{item.title}</span>
                     <span className={cn(
                       "block text-[11px] mt-0.5 font-normal whitespace-normal break-words",
-                      active ? "text-primary-foreground/70" : "text-muted-foreground"
+                      active ? "text-muted-foreground" : "text-muted-foreground/70"
                     )}>
                       {item.detail}
                     </span>
