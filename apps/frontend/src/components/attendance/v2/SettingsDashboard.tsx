@@ -129,11 +129,11 @@ function CompactMetric({
   }[tone];
 
   return (
-    <div className={cn("min-w-0 rounded-xl px-3.5 py-3 transition-all", toneClass)}>
+    <div className={cn("flex min-w-0 flex-col items-center justify-center rounded-xl px-3.5 py-3 text-center transition-all", toneClass)}>
       <p className="line-clamp-2 text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
-      <div className="mt-1 flex items-center gap-1.5">
+      <div className="mt-1 flex items-center justify-center gap-1.5">
         {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden="true" />}
-        <p className="break-words text-sm font-bold leading-tight">{value}</p>
+        <div className="break-words text-sm font-bold leading-tight">{value}</div>
       </div>
     </div>
   );
