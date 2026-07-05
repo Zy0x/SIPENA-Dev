@@ -3511,10 +3511,10 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  button:not(.attendance-btn):not(.sipena-tab-trigger):hover,
-  [role="button"]:not(.attendance-btn):not(.sipena-tab-trigger):hover,
+  button:not(.attendance-btn):not([class*="sipena-"]):hover,
+  [role="button"]:not(.attendance-btn):not([class*="sipena-"]):hover,
   a:hover,
-  .touch-manipulation:not(.attendance-btn):not(.sipena-tab-trigger):hover {
+  .touch-manipulation:not(.attendance-btn):not([class*="sipena-"]):hover {
     background-color: inherit !important;
     color: inherit !important;
     border-color: inherit !important;
