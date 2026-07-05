@@ -751,10 +751,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
         {/* ──── Mobile / Tablet: Horizontal Tab Strip (hidden on lg+) ──── */}
         <nav
-          className="shrink-0 border-b bg-background lg:hidden relative"
+          className="shrink-0 border-b bg-muted/10 lg:hidden relative pt-2"
           aria-label="Navigasi pengaturan"
         >
-          <div className="flex gap-1.5 overflow-x-auto px-3 py-2 sm:px-5 sm:py-2.5 scrollbar-none" style={{ paddingRight: '3rem' }}>
+          <div className="flex gap-1 overflow-x-auto px-2 sm:px-4 scrollbar-none items-end" style={{ paddingRight: '3.5rem' }}>
             {sectionItems.map((item) => {
               const Icon = item.icon;
               const active = settingsSection === item.id;
@@ -767,20 +767,21 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   data-state={active ? "active" : "inactive"}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "sipena-tab-trigger shrink-0 flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg text-[13px] font-semibold transition-all duration-200 touch-manipulation select-none",
+                    "sipena-tab-trigger relative shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 min-h-[42px] rounded-t-xl border border-b-0 text-[13px] font-bold transition-all duration-200 touch-manipulation select-none overflow-hidden",
                     active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted/50 text-muted-foreground active:bg-muted active:text-foreground",
+                      ? "bg-background text-primary border-border shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.1)] z-10 before:absolute before:top-0 before:inset-x-0 before:h-[3px] before:bg-primary"
+                      : "bg-muted/40 text-muted-foreground border-transparent hover:bg-muted/60 active:bg-muted hover:text-foreground",
                   )}
+                  style={active ? { marginBottom: "-1px", paddingBottom: "calc(0.625rem + 1px)" } : {}}
                 >
-                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "opacity-70")} aria-hidden="true" />
                   <span>{item.title}</span>
                 </button>
               );
             })}
           </div>
           {/* Fade overlay on the right edge */}
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background via-background/70 to-transparent z-10" />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-14 bg-gradient-to-l from-background via-background/80 to-transparent z-20" />
         </nav>
 
         {/* ──── Body: Desktop Sidebar + Scrollable Content ──── */}
