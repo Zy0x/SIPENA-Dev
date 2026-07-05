@@ -94,7 +94,7 @@ export function JumlahCalculationConfig({ config, onConfigChange }: JumlahCalcul
           variant={isDefault ? "outline" : "default"}
           size="sm"
           className={cn(
-            "h-8 px-2.5 text-xs gap-1 rounded-xl",
+            "sipena-jumlah-config-btn h-8 px-2.5 text-xs gap-1 rounded-xl",
             !isDefault && "bg-primary text-primary-foreground"
           )}
         >

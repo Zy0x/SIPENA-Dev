@@ -313,7 +313,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant={isLocked ? "default" : "outline"} size="sm" className="h-8 px-2.5 text-xs gap-1 rounded-xl" onClick={handleToggleLock}>
+                  <Button variant={isLocked ? "default" : "outline"} size="sm" className="sipena-monthly-lock-btn h-8 px-2.5 text-xs gap-1 rounded-xl" onClick={handleToggleLock}>
                     {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                     <span className="hidden xs:inline sm:inline">{isLocked ? "Terkunci" : "Terbuka"}</span>
                   </Button>
