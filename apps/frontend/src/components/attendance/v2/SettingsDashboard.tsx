@@ -129,7 +129,7 @@ function CompactMetric({
   }[tone];
 
   return (
-    <div className={cn("flex min-w-0 flex-col items-center justify-center rounded-xl px-3.5 py-3 text-center transition-all", toneClass)}>
+    <div className={cn("flex min-w-0 flex-col items-center justify-center rounded-xl px-3 py-2 text-center transition-all", toneClass)}>
       <p className="line-clamp-2 text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
       <div className="mt-1 flex items-center justify-center gap-1.5">
         {Icon && <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden="true" />}
@@ -170,17 +170,17 @@ function SectionIntro({
   help?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-l-4 border-l-primary/40 bg-gradient-to-br from-primary/5 to-transparent p-3 sm:p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-xl border border-l-4 border-l-primary/40 bg-gradient-to-br from-primary/5 to-transparent p-3 sm:p-3.5">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
             </span>
-            <h3 className="text-sm font-bold text-foreground sm:text-base">{title}</h3>
+            <h3 className="text-sm font-bold text-foreground">{title}</h3>
             {help}
           </div>
-          <p className="mt-1.5 max-w-3xl text-xs leading-relaxed text-muted-foreground">{description}</p>
+          <p className="mt-1 text-xs text-muted-foreground leading-relaxed break-words">{description}</p>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
@@ -606,7 +606,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           data-tour="attendance-v2-settings-header"
         >
           {/* Title + Tour Button */}
-          <div className="flex items-center justify-between gap-3 px-4 pt-5 pb-4 pr-14 sm:px-6 sm:pt-6 sm:pb-4 sm:pr-16 lg:px-8 lg:pt-8">
+          <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3 pr-14 sm:px-6 sm:pt-5 sm:pb-3 sm:pr-16 lg:px-6 lg:pt-6">
             <div className="min-w-0">
               <DialogTitle className="flex items-center gap-2 text-base font-bold sm:text-lg">
                 <Settings2 className="h-5 w-5 text-primary shrink-0" />
@@ -628,7 +628,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           </div>
 
           {/* Metrics: 2-col grid on mobile, 4-col grid on sm+ */}
-          <div className="grid grid-cols-2 gap-3 px-4 pb-5 sm:grid-cols-4 sm:gap-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+          <div className="grid grid-cols-2 gap-2 px-4 pb-4 sm:grid-cols-4 sm:gap-3 sm:px-6 sm:pb-5 lg:px-6 lg:pb-6">
             <div className="min-w-0">
               <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
             </div>
@@ -839,7 +839,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className="absolute inset-0 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8"
+                className="absolute inset-0 overflow-y-auto overscroll-contain p-4 sm:p-5 lg:p-6"
               >
                 {settingsSection === "calendar" && (
                   <section className="space-y-3" data-tour="attendance-v2-settings-calendar">
