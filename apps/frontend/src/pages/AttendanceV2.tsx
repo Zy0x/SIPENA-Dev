@@ -29,6 +29,7 @@ import OCRImportDialog from "@/components/import/OCRImportDialog";
 import { normalizeAttendanceStatus, normalizeOcrDate } from "@/lib/ocrImport";
 
 import { SettingsDashboard } from "@/components/attendance/v2/SettingsDashboard";
+import { BulkApplySettingsDialog } from "@/components/attendance/v2/BulkApplySettingsDialog";
 import { HolidayAddDialog } from "@/components/attendance/v2/HolidayAddDialog";
 import { DayEventAddDialog } from "@/components/attendance/v2/DayEventAddDialog";
 import { DelegationAddDialog } from "@/components/attendance/v2/DelegationAddDialog";
@@ -156,6 +157,8 @@ export default function AttendanceV2Page() {
   const [tourDummyStudents, setTourDummyStudents] = useState<Student[]>([]);
 
   // Dialog & Modal states
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isBulkApplyOpen, setIsBulkApplyOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<AttendanceStatus>("H");
@@ -234,8 +237,9 @@ export default function AttendanceV2Page() {
     pendingAttendanceSaves, failedAttendanceSaves, retryFailedAttendanceSaves,
     isSaving, isLoading, promoteV2ToV1, isPromoting,
     recapProfile, snapshots, delegations,
-    updateRecapProfile, createSnapshot, restoreSnapshot, createDelegation, revokeDelegation,
-    isUpdatingRecapProfile, isCreatingSnapshot, isRestoringSnapshot, isCreatingDelegation, isRevokingDelegation,
+    updateRecapProfile, createSnapshot, restoreSnapshot, createDelegation, revokeDelegation, duplicateAgenda,
+    isUpdatingRecapProfile, isCreatingSnapshot, isRestoringSnapshot, isCreatingDelegation, isRevokingDelegation, isDuplicatingAgenda,
+    bulkApplyAgenda, isBulkApplyingAgenda
   } = useAttendanceV2(selectedClassId === "tour-dummy-class" ? "" : selectedClassId, currentMonth, workDayFormat);
 
   const renderAttendanceSaveIndicator = useCallback(() => {
@@ -1281,6 +1285,23 @@ export default function AttendanceV2Page() {
           </div>
         )}
 
+        {/* Bulk Apply Dialog */}
+        <BulkApplySettingsDialog
+          open={isBulkApplyOpen}
+          onOpenChange={setIsBulkApplyOpen}
+          classes={classes}
+          currentClassId={selectedClassId}
+          onApply={async (selectedClassIds) => {
+            try {
+              await bulkApplyAgenda(selectedClassIds);
+              showSuccess("Berhasil", "Agenda berhasil diterapkan ke kelas lain.");
+            } catch (error: any) {
+              showWarning("Gagal", error.message || "Gagal menerapkan agenda ke kelas lain.");
+            }
+          }}
+          isLoading={isBulkApplyingAgenda}
+        />
+
         {/* Bulk Attendance Dialog */}
         <Dialog open={showBulkDialog} onOpenChange={(open) => { setShowBulkDialog(open); if (!open) { setShowBulkConfirm(false); setExistingBulkStudents([]); } }}>
           <DialogContent className="sm:max-w-md mx-3 rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
@@ -1455,6 +1476,16 @@ export default function AttendanceV2Page() {
           onAddSnapshotClick={() => setShowSnapshotReasonDialog(true)}
           isHolidayCombined={isHolidayCombined}
           getHolidayDescriptionCombined={getHolidayDescriptionCombined}
+          handleDuplicateAgenda={async () => {
+            try {
+              await duplicateAgenda();
+              showSuccess("Berhasil", "Agenda dari bulan lalu berhasil diduplikat.");
+            } catch (error: any) {
+              showWarning("Gagal", error.message || "Gagal menduplikat agenda.");
+            }
+          }}
+          isDuplicatingAgenda={isDuplicatingAgenda}
+          onBulkApplyClick={() => setIsBulkApplyOpen(true)}
         />
 
         <HolidayAddDialog

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal as supabase, EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, startOfMonth, endOfMonth, getDay, eachDayOfInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, getDay, eachDayOfInterval, addMonths } from "date-fns";
 import { useMemo } from "react";
 import { useAttendanceRuntime } from "@/features/attendance/runtime/useAttendanceRuntime";
 import { providerConfig } from "@/config/provider.config";
@@ -966,7 +966,39 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       const json = await response.json();
       return json.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ date, description, classId: targetClassId }) => {
+      const resolvedClassId = targetClassId !== undefined ? targetClassId : classId;
+      await queryClient.cancelQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      
+      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(["attendance_v2_dataset", classId, monthStart]);
+      
+      if (previousDataset && dbAvailable) {
+        queryClient.setQueryData<AttendanceDatasetCanonical>(
+          ["attendance_v2_dataset", classId, monthStart],
+          (old) => {
+            if (!old) return old;
+            
+            // Check if holiday exists
+            const exists = old.holidays.some(h => h.date === date);
+            
+            return {
+              ...old,
+              holidays: exists 
+                ? old.holidays.filter(h => h.date !== date)
+                : [...old.holidays, { id: `temp-${Date.now()}`, date, description: description || "Hari Libur", isNational: false }]
+            };
+          }
+        );
+      }
+      
+      return { previousDataset };
+    },
+    onError: (err, newHoliday, context) => {
+      if (context?.previousDataset) {
+        queryClient.setQueryData(["attendance_v2_dataset", classId, monthStart], context.previousDataset);
+      }
+    },
+    onSettled: () => {
       if (dbAvailable) {
         queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
       }
@@ -1014,7 +1046,45 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
     },
-    onSuccess: () => {
+    onMutate: async (event) => {
+      await queryClient.cancelQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(["attendance_v2_dataset", classId, monthStart]);
+      
+      if (previousDataset && dbAvailable) {
+        queryClient.setQueryData<AttendanceDatasetCanonical>(
+          ["attendance_v2_dataset", classId, monthStart],
+          (old: any) => {
+            if (!old) return old;
+            const exists = old.dayEvents?.findIndex((e: any) => e.date === event.date) ?? -1;
+            const dayEvents = old.dayEvents ? [...old.dayEvents] : [];
+            
+            const newEvent = {
+              id: exists >= 0 ? dayEvents[exists].id : `temp-${Date.now()}`,
+              date: event.date,
+              label: event.label,
+              description: event.description || null,
+              color: event.color || "blue"
+            };
+
+            if (exists >= 0) {
+              dayEvents[exists] = newEvent;
+            } else {
+              dayEvents.push(newEvent);
+            }
+            
+            return { ...old, dayEvents };
+          }
+        );
+      }
+      
+      return { previousDataset };
+    },
+    onError: (err, newEvent, context) => {
+      if (context?.previousDataset) {
+        queryClient.setQueryData(["attendance_v2_dataset", classId, monthStart], context.previousDataset);
+      }
+    },
+    onSettled: () => {
       if (dbAvailable) {
         queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
       }
@@ -1049,11 +1119,120 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
     },
-    onSuccess: () => {
+    onMutate: async (date) => {
+      await queryClient.cancelQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(["attendance_v2_dataset", classId, monthStart]);
+      
+      if (previousDataset && dbAvailable) {
+        queryClient.setQueryData<AttendanceDatasetCanonical>(
+          ["attendance_v2_dataset", classId, monthStart],
+          (old: any) => {
+            if (!old) return old;
+            return {
+              ...old,
+              dayEvents: old.dayEvents ? old.dayEvents.filter((e: any) => e.date !== date) : []
+            };
+          }
+        );
+      }
+      return { previousDataset };
+    },
+    onError: (err, date, context) => {
+      if (context?.previousDataset) {
+        queryClient.setQueryData(["attendance_v2_dataset", classId, monthStart], context.previousDataset);
+      }
+    },
+    onSettled: () => {
       if (dbAvailable) {
         queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
       }
     },
+  });
+
+  const duplicateAgendaMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("User not authenticated");
+      if (!dbAvailable) throw new Error("Fitur ini membutuhkan koneksi database online");
+
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
+      
+      const prevMonth = addMonths(new Date(monthStart), -1);
+      const prevMonthStart = format(startOfMonth(prevMonth), "yyyy-MM-dd");
+      const prevMonthEnd = format(endOfMonth(prevMonth), "yyyy-MM-dd");
+
+      const [holidaysRes, dayEventsRes] = await Promise.all([
+        (supabase as any).from("attendance_v2_holidays").select("*").or(`class_id.eq.${classId},class_id.is.null`).gte("date", prevMonthStart).lte("date", prevMonthEnd),
+        (supabase as any).from("attendance_v2_day_events").select("*").eq("class_id", classId).gte("date", prevMonthStart).lte("date", prevMonthEnd)
+      ]);
+
+      const holidaysToCopy = holidaysRes.data || [];
+      const eventsToCopy = dayEventsRes.data || [];
+
+      if (holidaysToCopy.length === 0 && eventsToCopy.length === 0) {
+        throw new Error("Tidak ada agenda atau libur kustom di bulan sebelumnya");
+      }
+
+      await Promise.all([
+        ...holidaysToCopy.filter((h: any) => h.class_id === classId).map((h: any) => {
+          const newDate = addMonths(new Date(h.date), 1);
+          return fetch(`${providerConfig.apiBaseUrl}/attendance/v2/holiday`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token || ""}` },
+            body: JSON.stringify({ date: format(newDate, "yyyy-MM-dd"), description: h.description, classId: h.class_id })
+          });
+        }),
+        ...eventsToCopy.map((e: any) => {
+          const newDate = addMonths(new Date(e.date), 1);
+          return fetch(`${providerConfig.apiBaseUrl}/attendance/v2/day-event`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token || ""}` },
+            body: JSON.stringify({ date: format(newDate, "yyyy-MM-dd"), label: e.label, description: e.description, color: e.color, action: "upsert" })
+          });
+        })
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+    }
+  });
+
+  const bulkApplyAgendaMutation = useMutation({
+    mutationFn: async (targetClassIds: string[]) => {
+      if (!user) throw new Error("User not authenticated");
+      if (!dbAvailable) throw new Error("Fitur ini membutuhkan koneksi database online");
+
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
+
+      const currentHolidays = holidays.filter(h => h.description !== "Libur Nasional");
+      const currentEvents = dayEvents;
+
+      if (currentHolidays.length === 0 && currentEvents.length === 0) {
+        throw new Error("Tidak ada agenda atau libur kustom di kelas ini untuk diterapkan");
+      }
+
+      await Promise.all([
+        ...targetClassIds.flatMap(targetId => 
+          currentHolidays.map((h: any) => 
+            fetch(`${providerConfig.apiBaseUrl}/attendance/v2/holiday`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token || ""}` },
+              body: JSON.stringify({ date: h.date, description: h.description, classId: targetId })
+            })
+          )
+        ),
+        ...targetClassIds.flatMap(targetId =>
+          currentEvents.map((e: any) =>
+            fetch(`${providerConfig.apiBaseUrl}/attendance/v2/day-event`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token || ""}` },
+              body: JSON.stringify({ date: e.date, label: e.label, description: e.description, color: e.color, action: "upsert", classId: targetId })
+            })
+          )
+        )
+      ]);
+    }
   });
 
   // Toggle lock
@@ -1569,6 +1748,12 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     deleteDayEvent: async (date: string) => {
       await deleteDayEventMutation.mutateAsync(date);
     },
+    duplicateAgenda: async () => {
+      await duplicateAgendaMutation.mutateAsync();
+    },
+    bulkApplyAgenda: async (targetClassIds: string[]) => {
+      await bulkApplyAgendaMutation.mutateAsync(targetClassIds);
+    },
     toggleLock: async (locked: boolean) => {
       await toggleLockMutation.mutateAsync(locked);
     },
@@ -1594,6 +1779,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       await revokeDelegationMutation.mutateAsync(delegationId);
     },
     isUpdatingRecapProfile: upsertRecapProfileMutation.isPending,
+    isDuplicatingAgenda: duplicateAgendaMutation.isPending,
+    isBulkApplyingAgenda: bulkApplyAgendaMutation.isPending,
     isCreatingSnapshot: createSnapshotMutation.isPending,
     isRestoringSnapshot: restoreSnapshotMutation.isPending,
     isCreatingDelegation: createDelegationMutation.isPending,

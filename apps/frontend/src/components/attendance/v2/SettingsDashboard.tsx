@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { format, getDay, addMonths, addYears } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
@@ -25,6 +26,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Copy,
+  Share2,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -41,10 +44,18 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ProductTour, TourButton, type TourStep } from "@/components/ui/product-tour";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { DayEvent, Delegation, HolidayRecord, MonthSnapshot, RecapProfile } from "@/hooks/useAttendanceV2";
 import { cn } from "@/lib/utils";
 
 type SettingsSection = "calendar" | "effective" | "recap" | "audit" | "delegation" | "backup";
+
+const SECTIONS: SettingsSection[] = ["calendar", "effective", "recap", "audit", "delegation", "backup"];
 
 interface SettingsDashboardProps {
   open: boolean;
@@ -81,6 +92,9 @@ interface SettingsDashboardProps {
 
   isHolidayCombined: (date: Date) => boolean;
   getHolidayDescriptionCombined: (date: Date) => string | null;
+  handleDuplicateAgenda?: () => Promise<void>;
+  isDuplicatingAgenda?: boolean;
+  onBulkApplyClick?: () => void;
 }
 
 const delayForTour = () => new Promise((resolve) => window.setTimeout(resolve, 140));
@@ -286,8 +300,32 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   onAddSnapshotClick,
   isHolidayCombined,
   getHolidayDescriptionCombined,
+  handleDuplicateAgenda,
+  isDuplicatingAgenda,
+  onBulkApplyClick,
 }) => {
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("calendar");
+
+  const handleSectionChange = (section: SettingsSection) => {
+    setSettingsSection(section);
+  };
+
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
+
+  const handleBulkToggle = async (dates: string[], makeWorkingDay: boolean) => {
+    setIsBulkLoading(true);
+    try {
+      await Promise.all(
+        dates.map((date) =>
+          makeWorkingDay
+            ? toggleHoliday({ date, description: "Hari Kerja" })
+            : toggleHoliday({ date })
+        )
+      );
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
 
   const customHolidayCount = holidays.filter((h) => h.description !== "Hari Kerja").length;
   const nonEffectiveDays = monthDays.filter((day) => isHolidayCombined(day));
@@ -792,9 +830,31 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             })}
           </aside>
 
-          <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8">
-            {settingsSection === "calendar" && (
-              <section className="space-y-3" data-tour="attendance-v2-settings-calendar">
+          <main className="flex-1 min-h-0 relative overflow-hidden bg-background">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={settingsSection}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.1}
+                onDragEnd={(e, { offset }) => {
+                  const swipe = offset.x;
+                  if (swipe < -60) {
+                    const currentIndex = SECTIONS.indexOf(settingsSection);
+                    if (currentIndex < SECTIONS.length - 1) setSettingsSection(SECTIONS[currentIndex + 1]);
+                  } else if (swipe > 60) {
+                    const currentIndex = SECTIONS.indexOf(settingsSection);
+                    if (currentIndex > 0) setSettingsSection(SECTIONS[currentIndex - 1]);
+                  }
+                }}
+                className="absolute inset-0 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8"
+              >
+                {settingsSection === "calendar" && (
+                  <section className="space-y-3" data-tour="attendance-v2-settings-calendar">
                 <SectionIntro
                   icon={CalendarDays}
                   title="Kalender Akademik"
@@ -875,8 +935,41 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     <div className="grid gap-0 md:grid-cols-2">
                       <div className="border-b p-3 md:border-b-0 md:border-r sm:p-4">
                         <div className="mb-2 flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-muted-foreground">Libur nasional</p>
-                          <Badge variant="secondary">{monthNationalHolidays.length}</Badge>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-semibold text-muted-foreground">Libur nasional</p>
+                            <Badge variant="secondary">{monthNationalHolidays.length}</Badge>
+                          </div>
+                          {monthNationalHolidays.length > 0 && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={isBulkLoading}>
+                                  <Settings2 className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const datesToChange = monthNationalHolidays
+                                      .filter((h) => !holidays.some((override) => override.date === h.date && override.description === "Hari Kerja"))
+                                      .map((h) => h.date);
+                                    if (datesToChange.length > 0) handleBulkToggle(datesToChange, true);
+                                  }}
+                                >
+                                  Jadikan Semua Masuk
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const datesToChange = monthNationalHolidays
+                                      .filter((h) => holidays.some((override) => override.date === h.date && override.description === "Hari Kerja"))
+                                      .map((h) => h.date);
+                                    if (datesToChange.length > 0) handleBulkToggle(datesToChange, false);
+                                  }}
+                                >
+                                  Pulihkan Semua Libur
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                         <div className="max-h-72 overflow-y-auto divide-y">
                           {monthNationalHolidays.length === 0 ? (
@@ -928,15 +1021,54 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
                       <div className="p-3 sm:p-4">
                         <div className="mb-2 flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-muted-foreground">
-                            {workDayFormat === "6days" ? "Hari Minggu" : "Sabtu dan Minggu"}
-                          </p>
-                          <Badge variant="secondary">
-                            {monthDays.filter((day) => {
-                              const dayOfWeek = getDay(day);
-                              return workDayFormat === "6days" ? dayOfWeek === 0 : [0, 6].includes(dayOfWeek);
-                            }).length}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-semibold text-muted-foreground">
+                              {workDayFormat === "6days" ? "Hari Minggu" : "Sabtu dan Minggu"}
+                            </p>
+                            <Badge variant="secondary">
+                              {monthDays.filter((day) => {
+                                const dayOfWeek = getDay(day);
+                                return workDayFormat === "6days" ? dayOfWeek === 0 : [0, 6].includes(dayOfWeek);
+                              }).length}
+                            </Badge>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" disabled={isBulkLoading}>
+                                <Settings2 className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  const datesToChange = monthDays
+                                    .filter((day) => {
+                                      const dayOfWeek = getDay(day);
+                                      return workDayFormat === "6days" ? dayOfWeek === 0 : [0, 6].includes(dayOfWeek);
+                                    })
+                                    .map((d) => format(d, "yyyy-MM-dd"))
+                                    .filter((date) => !holidays.some((h) => h.date === date && h.description === "Hari Kerja"));
+                                  if (datesToChange.length > 0) handleBulkToggle(datesToChange, true);
+                                }}
+                              >
+                                Jadikan Semua Masuk
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  const datesToChange = monthDays
+                                    .filter((day) => {
+                                      const dayOfWeek = getDay(day);
+                                      return workDayFormat === "6days" ? dayOfWeek === 0 : [0, 6].includes(dayOfWeek);
+                                    })
+                                    .map((d) => format(d, "yyyy-MM-dd"))
+                                    .filter((date) => holidays.some((h) => h.date === date && h.description === "Hari Kerja"));
+                                  if (datesToChange.length > 0) handleBulkToggle(datesToChange, false);
+                                }}
+                              >
+                                Pulihkan Semua Libur
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                         <div className="max-h-72 overflow-y-auto divide-y">
                           {monthDays
@@ -1016,6 +1148,31 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <p className="text-xs text-muted-foreground">Tanggal non-efektif di luar libur nasional.</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
+                        {onBulkApplyClick && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="hidden sm:flex h-8 gap-1.5"
+                            onClick={onBulkApplyClick}
+                          >
+                            <Share2 className="h-4 w-4" />
+                            <span className="text-xs">Terapkan ke Kelas Lain</span>
+                          </Button>
+                        )}
+                        {handleDuplicateAgenda && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex h-8 gap-1.5"
+                            onClick={handleDuplicateAgenda}
+                            disabled={isDuplicatingAgenda}
+                          >
+                            <Copy className="h-4 w-4" />
+                            <span className="text-xs">Duplikat Bulan Lalu</span>
+                          </Button>
+                        )}
                         <InfoHelp
                           label="Libur Kustom"
                           summary="Menandai tanggal tertentu sebagai tidak efektif."
@@ -1486,6 +1643,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 </div>
               </section>
             )}
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
 
