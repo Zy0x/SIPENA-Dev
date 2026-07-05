@@ -3511,10 +3511,10 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  button:hover,
-  [role="button"]:hover,
+  button:not(.attendance-btn):hover,
+  [role="button"]:not(.attendance-btn):hover,
   a:hover,
-  .touch-manipulation:hover {
+  .touch-manipulation:not(.attendance-btn):hover {
     background-color: inherit !important;
     color: inherit !important;
     border-color: inherit !important;

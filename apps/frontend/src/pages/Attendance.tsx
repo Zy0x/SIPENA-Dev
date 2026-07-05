@@ -3756,7 +3756,7 @@ export default function Attendance() {
                                   onClick={() => handleSetAttendance(student.id, selectedDate, isSelected ? null : s)}
                                   disabled={holidayActive}
                                   className={cn(
-                                    "flex items-center justify-center touch-manipulation select-none",
+                                    "flex items-center justify-center touch-manipulation select-none attendance-btn",
                                     "w-9 h-9 rounded-lg sm:rounded-xl sm:w-auto sm:h-auto sm:min-w-[38px] sm:min-h-[40px] sm:px-1 sm:py-1 sm:flex-col",
                                     isSelected ? cn(cfg.bgActive, "shadow-sm") : "bg-muted/50 text-muted-foreground lg:hover:bg-muted/80",
                                     holidayActive && "cursor-not-allowed opacity-40"
@@ -3772,7 +3772,7 @@ export default function Attendance() {
                               <TooltipTrigger asChild>
                                 <button onClick={() => handleOpenNote(student.id, student.name, selectedDate)}
                                   disabled={holidayActive}
-                                  className={cn("flex w-9 h-9 rounded-lg sm:rounded-lg sm:w-auto sm:h-auto sm:min-w-[38px] sm:min-h-[40px] items-center justify-center touch-manipulation flex-shrink-0",
+                                  className={cn("flex w-9 h-9 rounded-lg sm:rounded-lg sm:w-auto sm:h-auto sm:min-w-[38px] sm:min-h-[40px] items-center justify-center touch-manipulation flex-shrink-0 attendance-btn",
                                     note ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground lg:hover:bg-muted/80",
                                     holidayActive && "opacity-40 cursor-not-allowed"
                                   )}>
