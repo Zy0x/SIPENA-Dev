@@ -130,7 +130,7 @@ export function SemesterToggle({
         onPointerLeave={() => handleHover(false)}
         disabled={disabled || isSwitching}
         className={cn(
-          "relative z-10 flex items-center justify-center rounded-lg font-semibold w-1/2 whitespace-nowrap",
+          "sipena-semester-btn relative z-10 flex items-center justify-center rounded-lg font-semibold w-1/2 whitespace-nowrap",
           "min-h-[36px] touch-manipulation transition-colors duration-150",
           sizes.button,
           isActive

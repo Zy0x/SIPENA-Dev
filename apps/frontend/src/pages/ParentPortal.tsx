@@ -357,7 +357,7 @@ export default function ParentPortal() {
                               : [...prev.subject_ids, subj.id]
                           }));
                         }}
-                        className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                        className={`sipena-subject-chip px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
                           isSelected 
                             ? "bg-primary text-primary-foreground border-primary" 
                             : "bg-muted/50 text-muted-foreground border-border hover:border-primary/40"
@@ -397,7 +397,7 @@ export default function ParentPortal() {
                               }
                             }));
                           }}
-                          className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                          className={`sipena-chapter-chip px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
                             isSelected 
                               ? "bg-primary text-primary-foreground border-primary" 
                               : "bg-muted/50 text-muted-foreground border-border hover:border-primary/40"
