@@ -838,19 +838,6 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.1}
-                onDragEnd={(e, { offset }) => {
-                  const swipe = offset.x;
-                  if (swipe < -60) {
-                    const currentIndex = SECTIONS.indexOf(settingsSection);
-                    if (currentIndex < SECTIONS.length - 1) setSettingsSection(SECTIONS[currentIndex + 1]);
-                  } else if (swipe > 60) {
-                    const currentIndex = SECTIONS.indexOf(settingsSection);
-                    if (currentIndex > 0) setSettingsSection(SECTIONS[currentIndex - 1]);
-                  }
-                }}
                 className="absolute inset-0 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:p-8"
               >
                 {settingsSection === "calendar" && (
