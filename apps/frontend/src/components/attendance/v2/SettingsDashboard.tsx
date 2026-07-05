@@ -787,11 +787,11 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         {/* ──── Body: Desktop Sidebar + Scrollable Content ──── */}
         <div className="min-h-0 flex-1 flex flex-col overflow-hidden lg:flex-row">
 
+          <div className="hidden lg:block absolute top-0 bottom-0 left-64 w-[1px] bg-border z-0" />
           <aside
-            className="hidden lg:flex lg:flex-col w-64 shrink-0 bg-muted/10 py-4 pl-4 pr-0 gap-1 overflow-y-auto relative"
+            className="hidden lg:flex lg:flex-col w-64 shrink-0 bg-muted/10 py-4 pl-4 pr-[2px] -mr-[2px] gap-1 overflow-y-auto relative z-10 scrollbar-none"
             data-tour="attendance-v2-settings-nav"
           >
-            <div className="absolute top-0 bottom-0 right-0 w-[1px] bg-border" />
             {sectionItems.map((item) => {
               const Icon = item.icon;
               const active = settingsSection === item.id;
