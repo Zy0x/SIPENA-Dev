@@ -5164,13 +5164,14 @@
 
 /* SIPENA lock warning marquee */
 @keyframes sipena-lock-marquee {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
+  0%, 20% { transform: translateX(0); }
+  50%, 70% { transform: translateX(-50%); }
+  90%, 100% { transform: translateX(0); }
 }
 .animate-sipena-lock-marquee {
   display: inline-block;
   white-space: nowrap;
-  animation: sipena-lock-marquee 12s linear infinite;
+  animation: sipena-lock-marquee 10s ease-in-out infinite;
 }
 
 /* Hide reCAPTCHA v2/v3 badge */
