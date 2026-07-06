@@ -235,35 +235,52 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
       </div>
 
       <div className="flex items-center gap-2 px-3 py-2 bg-muted/10 border-b border-border overflow-x-auto scrollbar-none">
-        <Button 
-          variant={statusFilter === "all" ? "default" : "outline"} 
-          size="sm" 
+        <button 
           onClick={() => setStatusFilter("all")} 
-          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap [-webkit-tap-highlight-color:transparent] select-none"
+          className={cn(
+            "h-7 text-[10px] rounded-full px-3 whitespace-nowrap transition-colors select-none outline-none focus:outline-none active:scale-[0.98]",
+            statusFilter === "all" 
+              ? "bg-primary text-primary-foreground shadow-sm" 
+              : "bg-background text-muted-foreground border border-input"
+          )}
+          style={{ WebkitTapHighlightColor: "transparent" }}
         >
           Semua Murid
-        </Button>
-        <Button 
-          variant={statusFilter === "missing" ? "default" : "outline"} 
-          size="sm" 
+        </button>
+        <button 
           onClick={() => setStatusFilter("missing")} 
-          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap relative [-webkit-tap-highlight-color:transparent] select-none"
+          className={cn(
+            "h-7 text-[10px] rounded-full px-3 whitespace-nowrap relative transition-colors select-none outline-none focus:outline-none active:scale-[0.98] flex items-center",
+            statusFilter === "missing" 
+              ? "bg-primary text-primary-foreground shadow-sm" 
+              : "bg-background text-muted-foreground border border-input"
+          )}
+          style={{ WebkitTapHighlightColor: "transparent" }}
         >
           Belum Absen
           {!isHolidayCombined(selectedDate) && filteredStudents.filter(s => !getAttendance(s.id, selectedDate)).length > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center bg-destructive text-destructive-foreground rounded-full w-4 h-4 text-[8px] font-bold">
+            <span className={cn(
+              "ml-1.5 inline-flex items-center justify-center rounded-full w-4 h-4 text-[8px] font-bold",
+              statusFilter === "missing" 
+                ? "bg-primary-foreground text-primary" 
+                : "bg-destructive text-destructive-foreground"
+            )}>
               {filteredStudents.filter(s => !getAttendance(s.id, selectedDate)).length}
             </span>
           )}
-        </Button>
-        <Button 
-          variant={statusFilter === "absent" ? "default" : "outline"} 
-          size="sm" 
+        </button>
+        <button 
           onClick={() => setStatusFilter("absent")} 
-          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap [-webkit-tap-highlight-color:transparent] select-none"
+          className={cn(
+            "h-7 text-[10px] rounded-full px-3 whitespace-nowrap transition-colors select-none outline-none focus:outline-none active:scale-[0.98]",
+            statusFilter === "absent" 
+              ? "bg-primary text-primary-foreground shadow-sm" 
+              : "bg-background text-muted-foreground border border-input"
+          )}
+          style={{ WebkitTapHighlightColor: "transparent" }}
         >
           Sakit/Izin/Alpha/Disp
-        </Button>
+        </button>
       </div>
 
       {isHolidayCombined(selectedDate) && (
