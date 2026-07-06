@@ -238,7 +238,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
         <button 
           onClick={() => setStatusFilter("all")} 
           className={cn(
-            "h-7 text-[10px] rounded-full px-3 whitespace-nowrap transition-colors select-none outline-none focus:outline-none active:scale-[0.98]",
+            "attendance-btn h-7 text-[10px] rounded-full px-3 whitespace-nowrap transition-colors select-none outline-none focus:outline-none active:scale-[0.98]",
             statusFilter === "all" 
               ? "bg-primary text-primary-foreground shadow-sm" 
               : "bg-background text-muted-foreground border border-input"
@@ -250,7 +250,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
         <button 
           onClick={() => setStatusFilter("missing")} 
           className={cn(
-            "h-7 text-[10px] rounded-full px-3 whitespace-nowrap relative transition-colors select-none outline-none focus:outline-none active:scale-[0.98] flex items-center",
+            "attendance-btn h-7 text-[10px] rounded-full px-3 whitespace-nowrap relative transition-colors select-none outline-none focus:outline-none active:scale-[0.98] flex items-center",
             statusFilter === "missing" 
               ? "bg-primary text-primary-foreground shadow-sm" 
               : "bg-background text-muted-foreground border border-input"
@@ -272,7 +272,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
         <button 
           onClick={() => setStatusFilter("absent")} 
           className={cn(
-            "h-7 text-[10px] rounded-full px-3 whitespace-nowrap transition-colors select-none outline-none focus:outline-none active:scale-[0.98]",
+            "attendance-btn h-7 text-[10px] rounded-full px-3 whitespace-nowrap transition-colors select-none outline-none focus:outline-none active:scale-[0.98]",
             statusFilter === "absent" 
               ? "bg-primary text-primary-foreground shadow-sm" 
               : "bg-background text-muted-foreground border border-input"
