@@ -485,31 +485,17 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             {/* Header */}
             <div className="px-5 pt-3 pb-2 shrink-0" data-tour="attendance-v2-settings-header">
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <DrawerTitle className="flex items-center gap-2 text-base font-extrabold sm:text-lg text-foreground">
+                <div className="min-w-0 flex-1">
+                  <DrawerTitle className="flex items-center gap-2 text-base font-extrabold text-foreground">
                     <Settings2 className="h-5 w-5 text-primary shrink-0" />
                     <span className="truncate">Pengaturan Presensi V2</span>
                   </DrawerTitle>
-                  <DrawerDescription className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    Kelola kalender, libur, rumus rekap, delegasi, dan backup kelas.
-                  </DrawerDescription>
                 </div>
                 <TourButton
                   {...tourButtonProps}
                   className="min-h-9 shrink-0 rounded-xl px-2.5 text-xs font-bold"
                 />
               </div>
-
-              {/* Mobile Metrics Expander */}
-              <MobileMetricsExpander
-                selectedClass={selectedClass}
-                currentMonth={currentMonth}
-                setCurrentMonth={setCurrentMonth}
-                effectiveDays={effectiveDays}
-                monthDays={monthDays}
-                isLocked={isLocked}
-                monthOptions={monthOptions}
-              />
             </div>
 
             {/* Tab Navigation Strip */}
@@ -544,8 +530,21 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             {/* Scrollable Content Pane */}
             <div
               ref={mobileScrollRef}
-              className="flex-1 min-h-0 relative overflow-y-auto overscroll-contain px-5 py-4 scrollbar-thin"
+              className="flex-1 min-h-0 relative overflow-y-auto overscroll-contain px-5 py-4 scrollbar-thin space-y-4"
             >
+              {/* Expose Month selector and static metrics at the top of scrollable content */}
+              <div className="shrink-0">
+                <MobileMetricsExpander
+                  selectedClass={selectedClass}
+                  currentMonth={currentMonth}
+                  setCurrentMonth={setCurrentMonth}
+                  effectiveDays={effectiveDays}
+                  monthDays={monthDays}
+                  isLocked={isLocked}
+                  monthOptions={monthOptions}
+                />
+              </div>
+
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={settingsSection}
