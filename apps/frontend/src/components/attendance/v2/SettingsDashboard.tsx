@@ -519,10 +519,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       aria-pressed={active}
                       onClick={() => setSettingsSection(item.id)}
                       className={cn(
-                        "relative shrink-0 flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] rounded-xl text-xs font-bold transition-all duration-200 touch-manipulation select-none border",
+                        "attendance-btn relative shrink-0 flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] rounded-xl text-xs font-bold transition-all duration-200 touch-manipulation select-none border",
                         active
-                          ? "bg-primary text-primary-foreground border-primary shadow-sm scale-95"
-                          : "bg-background text-muted-foreground border-border hover:bg-muted/40 active:bg-muted",
+                          ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20 scale-95"
+                          : "bg-muted/50 text-muted-foreground border-border/80 hover:bg-muted active:bg-muted/80",
                       )}
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -749,7 +749,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   aria-pressed={active}
                   onClick={() => setSettingsSection(item.id)}
                   className={cn(
-                    "relative w-full flex items-center gap-3 min-h-[52px] rounded-l-xl rounded-r-none px-4 text-left transition-all duration-200 touch-manipulation select-none border border-r-transparent overflow-hidden",
+                    "attendance-btn relative w-full flex items-center gap-3 min-h-[52px] rounded-l-xl rounded-r-none px-4 text-left transition-all duration-200 touch-manipulation select-none border border-r-transparent overflow-hidden",
                     active
                       ? "bg-background text-primary border-border shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.05)] z-20 translate-x-[1px] before:absolute before:left-0 before:inset-y-0 before:w-[3px] before:bg-primary"
                       : "bg-transparent border-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground",
