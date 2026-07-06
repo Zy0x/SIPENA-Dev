@@ -287,9 +287,9 @@ export const MobileMetricsExpander: React.FC<{
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3.5 py-3 text-left text-xs font-bold text-muted-foreground hover:bg-muted/30 min-h-[44px]"
+        className="w-full flex items-center justify-between gap-2 px-3.5 py-3 text-left text-xs font-bold text-muted-foreground hover:bg-muted/30 min-h-[44px]"
       >
-        <span className="flex items-center gap-1.5 text-foreground/80">
+        <span className="flex items-center gap-1.5 text-foreground/80 min-w-0 flex-1">
           <Info className="h-4 w-4 text-primary shrink-0" />
           <span className="truncate">Informasi Kelas: {selectedClass?.name || "Belum dipilih"}</span>
         </span>
