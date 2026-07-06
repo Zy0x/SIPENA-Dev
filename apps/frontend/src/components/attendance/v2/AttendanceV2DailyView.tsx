@@ -239,7 +239,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
           variant={statusFilter === "all" ? "default" : "outline"} 
           size="sm" 
           onClick={() => setStatusFilter("all")} 
-          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap"
+          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap [-webkit-tap-highlight-color:transparent] select-none"
         >
           Semua Murid
         </Button>
@@ -247,7 +247,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
           variant={statusFilter === "missing" ? "default" : "outline"} 
           size="sm" 
           onClick={() => setStatusFilter("missing")} 
-          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap relative"
+          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap relative [-webkit-tap-highlight-color:transparent] select-none"
         >
           Belum Absen
           {!isHolidayCombined(selectedDate) && filteredStudents.filter(s => !getAttendance(s.id, selectedDate)).length > 0 && (
@@ -260,7 +260,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
           variant={statusFilter === "absent" ? "default" : "outline"} 
           size="sm" 
           onClick={() => setStatusFilter("absent")} 
-          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap"
+          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap [-webkit-tap-highlight-color:transparent] select-none"
         >
           Sakit/Izin/Alpha/Disp
         </Button>
