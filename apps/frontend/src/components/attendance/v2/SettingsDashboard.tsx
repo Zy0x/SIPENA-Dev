@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, addMonths, addYears } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -159,6 +159,13 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 }) => {
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("calendar");
   const isMobile = useIsMobile();
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (mobileScrollRef.current) {
+      mobileScrollRef.current.scrollTop = 0;
+    }
+  }, [settingsSection]);
 
   const monthOptions = useMemo(() => {
     const options: Date[] = [];
@@ -535,7 +542,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             </nav>
 
             {/* Scrollable Content Pane */}
-            <div className="flex-1 min-h-0 relative overflow-y-auto overscroll-contain px-5 py-4 scrollbar-thin">
+            <div
+              ref={mobileScrollRef}
+              className="flex-1 min-h-0 relative overflow-y-auto overscroll-contain px-5 py-4 scrollbar-thin"
+            >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={settingsSection}
