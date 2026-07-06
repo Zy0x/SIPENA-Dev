@@ -19,7 +19,7 @@ import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import { cn } from "@/lib/utils";
 
 // UI Components & Dialogs
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogStackDepthContext } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductTour } from "@/components/ui/product-tour";
@@ -1285,23 +1285,6 @@ export default function AttendanceV2Page() {
           </div>
         )}
 
-        {/* Bulk Apply Dialog */}
-        <BulkApplySettingsDialog
-          open={isBulkApplyOpen}
-          onOpenChange={setIsBulkApplyOpen}
-          classes={classes}
-          currentClassId={selectedClassId}
-          onApply={async (selectedClassIds) => {
-            try {
-              await bulkApplyAgenda(selectedClassIds);
-              showSuccess("Berhasil", "Agenda berhasil diterapkan ke kelas lain.");
-            } catch (error: any) {
-              showWarning("Gagal", error.message || "Gagal menerapkan agenda ke kelas lain.");
-            }
-          }}
-          isLoading={isBulkApplyingAgenda}
-        />
-
         {/* Bulk Attendance Dialog */}
         <Dialog open={showBulkDialog} onOpenChange={(open) => { setShowBulkDialog(open); if (!open) { setShowBulkConfirm(false); setExistingBulkStudents([]); } }}>
           <DialogContent className="sm:max-w-md mx-3 rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
@@ -1488,34 +1471,53 @@ export default function AttendanceV2Page() {
           onBulkApplyClick={() => setIsBulkApplyOpen(true)}
         />
 
-        <HolidayAddDialog
-          open={showHolidayDialog}
-          onOpenChange={setShowHolidayDialog}
-          selectedHolidayDates={selectedHolidayDates}
-          setSelectedHolidayDates={setSelectedHolidayDates}
-          holidayDescription={holidayDescription}
-          setHolidayDescription={setHolidayDescription}
-          isHolidayGlobal={isHolidayGlobal}
-          setIsHolidayGlobal={setIsHolidayGlobal}
-          isHolidayCombined={isHolidayCombined}
-          getExistingHolidayForDate={getExistingHolidayForDate}
-          handleAddHoliday={handleAddHoliday}
-        />
+        <DialogStackDepthContext.Provider value={1}>
+          {/* Bulk Apply Dialog */}
+          <BulkApplySettingsDialog
+            open={isBulkApplyOpen}
+            onOpenChange={setIsBulkApplyOpen}
+            classes={classes}
+            currentClassId={selectedClassId}
+            onApply={async (selectedClassIds) => {
+              try {
+                await bulkApplyAgenda(selectedClassIds);
+                showSuccess("Berhasil", "Agenda berhasil diterapkan ke kelas lain.");
+              } catch (error: any) {
+                showWarning("Gagal", error.message || "Gagal menerapkan agenda ke kelas lain.");
+              }
+            }}
+            isLoading={isBulkApplyingAgenda}
+          />
 
-        <DayEventAddDialog
-          open={showDayEventDialog}
-          onOpenChange={setShowDayEventDialog}
-          selectedDayEventDates={selectedDayEventDates}
-          setSelectedDayEventDates={setSelectedDayEventDates}
-          dayEventLabel={dayEventLabel}
-          setDayEventLabel={setDayEventLabel}
-          dayEventDesc={dayEventDesc}
-          setDayEventDesc={setDayEventDesc}
-          getDayEvent={getDayEvent}
-          getExistingEventForDate={getExistingEventForDate}
-          isHolidayCombined={isHolidayCombined}
-          handleAddDayEvent={handleSaveDayEvent}
-        />
+          <HolidayAddDialog
+            open={showHolidayDialog}
+            onOpenChange={setShowHolidayDialog}
+            selectedHolidayDates={selectedHolidayDates}
+            setSelectedHolidayDates={setSelectedHolidayDates}
+            holidayDescription={holidayDescription}
+            setHolidayDescription={setHolidayDescription}
+            isHolidayGlobal={isHolidayGlobal}
+            setIsHolidayGlobal={setIsHolidayGlobal}
+            isHolidayCombined={isHolidayCombined}
+            getExistingHolidayForDate={getExistingHolidayForDate}
+            handleAddHoliday={handleAddHoliday}
+          />
+
+          <DayEventAddDialog
+            open={showDayEventDialog}
+            onOpenChange={setShowDayEventDialog}
+            selectedDayEventDates={selectedDayEventDates}
+            setSelectedDayEventDates={setSelectedDayEventDates}
+            dayEventLabel={dayEventLabel}
+            setDayEventLabel={setDayEventLabel}
+            dayEventDesc={dayEventDesc}
+            setDayEventDesc={setDayEventDesc}
+            getDayEvent={getDayEvent}
+            getExistingEventForDate={getExistingEventForDate}
+            isHolidayCombined={isHolidayCombined}
+            handleAddDayEvent={handleSaveDayEvent}
+          />
+        </DialogStackDepthContext.Provider>
 
         {/* Month Selector Popover */}
         <Dialog open={showExportMonthDialog} onOpenChange={setShowExportMonthDialog}>
@@ -1647,29 +1649,31 @@ export default function AttendanceV2Page() {
         }}
       />
 
-      {/* Delegation Dialog */}
-      <DelegationAddDialog
-        open={showDelegationDialog}
-        onOpenChange={setShowDelegationDialog}
-        delegationTargetEmail={delegationTargetEmail}
-        setDelegationTargetEmail={setDelegationTargetEmail}
-        delegationStartsAt={delegationStartsAt}
-        setDelegationStartsAt={setDelegationStartsAt}
-        delegationEndsAt={delegationEndsAt}
-        setDelegationEndsAt={setDelegationEndsAt}
-        handleCreateDelegationAction={handleCreateDelegationAction}
-        isCreatingDelegation={isCreatingDelegation}
-      />
+      <DialogStackDepthContext.Provider value={1}>
+        {/* Delegation Dialog */}
+        <DelegationAddDialog
+          open={showDelegationDialog}
+          onOpenChange={setShowDelegationDialog}
+          delegationTargetEmail={delegationTargetEmail}
+          setDelegationTargetEmail={setDelegationTargetEmail}
+          delegationStartsAt={delegationStartsAt}
+          setDelegationStartsAt={setDelegationStartsAt}
+          delegationEndsAt={delegationEndsAt}
+          setDelegationEndsAt={setDelegationEndsAt}
+          handleCreateDelegationAction={handleCreateDelegationAction}
+          isCreatingDelegation={isCreatingDelegation}
+        />
 
-      {/* Snapshot Reason Dialog */}
-      <SnapshotReasonDialog
-        open={showSnapshotReasonDialog}
-        onOpenChange={setShowSnapshotReasonDialog}
-        snapshotReason={snapshotReason}
-        setSnapshotReason={setSnapshotReason}
-        handleCreateSnapshotAction={handleCreateSnapshotAction}
-        isCreatingSnapshot={isCreatingSnapshot}
-      />
+        {/* Snapshot Reason Dialog */}
+        <SnapshotReasonDialog
+          open={showSnapshotReasonDialog}
+          onOpenChange={setShowSnapshotReasonDialog}
+          snapshotReason={snapshotReason}
+          setSnapshotReason={setSnapshotReason}
+          handleCreateSnapshotAction={handleCreateSnapshotAction}
+          isCreatingSnapshot={isCreatingSnapshot}
+        />
+      </DialogStackDepthContext.Provider>
 
       <ProductTour steps={attendanceTourSteps} tourKey="attendance" onComplete={cleanupAttendanceTour} />
     </>
