@@ -620,7 +620,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           </div>
 
           {/* Metrics Row */}
-          <div className="grid grid-cols-4 gap-3 px-6 pb-4 max-w-4xl">
+          <div className="grid grid-cols-3 gap-3 px-6 pb-4 max-w-3xl">
             <div className="min-w-0">
               <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
             </div>
@@ -729,14 +729,6 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             </div>
             <div className="shrink-0">
               <CompactMetric label="Hari Efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
-            </div>
-            <div className="shrink-0">
-              <CompactMetric
-                label="Status Data"
-                value={isLocked ? "Terkunci" : "Bisa diedit"}
-                tone={isLocked ? "amber" : "blue"}
-                icon={isLocked ? Lock : LockOpen}
-              />
             </div>
           </div>
         </DialogHeader>

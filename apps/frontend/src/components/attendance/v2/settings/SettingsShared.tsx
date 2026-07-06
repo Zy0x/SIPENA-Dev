@@ -310,7 +310,10 @@ export const MobileMetricsExpander: React.FC<{
               <div className="min-w-0">
                 <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
               </div>
-              <div className="min-w-[140px]">
+              <div className="min-w-0">
+                <CompactMetric label="Hari efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
+              </div>
+              <div className="col-span-2 min-w-[140px]">
                 <CompactMetric
                   label="Bulan"
                   value={
@@ -407,17 +410,6 @@ export const MobileMetricsExpander: React.FC<{
                       </Button>
                     </div>
                   }
-                />
-              </div>
-              <div className="min-w-0">
-                <CompactMetric label="Hari efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
-              </div>
-              <div className="min-w-0">
-                <CompactMetric
-                  label="Status"
-                  value={isLocked ? "Terkunci" : "Bisa diedit"}
-                  tone={isLocked ? "amber" : "blue"}
-                  icon={isLocked ? Lock : LockOpen}
                 />
               </div>
             </div>
