@@ -479,8 +479,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         <DrawerPortal>
           <DrawerOverlay className="fixed inset-0 z-[10080] bg-black/60 backdrop-blur-sm" />
           <DrawerContent className="fixed inset-x-0 bottom-0 z-[10090] mt-24 flex h-[90dvh] max-h-[90dvh] flex-col rounded-t-3xl border bg-background overflow-hidden outline-none">
-            {/* Drag Handle */}
-            <div className="mx-auto mt-3 h-1.5 w-16 rounded-full bg-muted-foreground/30 shrink-0" />
+
 
             {/* Header */}
             <div className="px-5 pt-3 pb-2 shrink-0" data-tour="attendance-v2-settings-header">
