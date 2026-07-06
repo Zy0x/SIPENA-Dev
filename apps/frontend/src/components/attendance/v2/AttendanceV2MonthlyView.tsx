@@ -4,7 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { id as idLocale } from "date-fns/locale";
 import { 
   BarChart3, Lock, Unlock, ChevronLeft, ChevronRight, 
-  CalendarOff, MessageSquare, CalendarDays, Bookmark, Sun, Edit2, Eye 
+  CalendarOff, MessageSquare, CalendarDays, Bookmark, Sun 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -36,7 +36,6 @@ interface MonthlyAttendanceRowProps {
   allStatuses: ("H" | "I" | "S" | "A" | "D")[];
   statusConfig: any;
   jumlahConfig: JumlahConfig;
-  isEditMode: boolean;
 }
 
 const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, MonthlyAttendanceRowProps>(({
@@ -55,7 +54,6 @@ const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, Mo
   allStatuses,
   statusConfig,
   jumlahConfig,
-  isEditMode,
 }, ref) => {
   const studentStats: Record<string, number> = { H: 0, I: 0, S: 0, A: 0, D: 0 };
   monthDays.forEach(day => {
@@ -84,88 +82,52 @@ const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, Mo
         const isSunday = dayNum === 0;
         return (
           <td key={day.toISOString()} className={cn("p-0.5 text-center relative border-b border-b-border/30", holidayActive && "bg-grade-warning/5")}>
-            {isEditMode && !isLocked && !holidayActive ? (
-              // EDIT MODE CELL (NO POPOVER, FAST CLICK)
-              <div
-                role="button"
-                data-touch-scroll-click-target="true"
-                className={cn("select-none w-7 h-7 sm:w-8 sm:h-8 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors cursor-pointer",
-                  "ring-1 ring-primary/40 shadow-sm active:scale-90", // highlight editable cell and add haptic visual
-                  st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
-                  isSunday && !st && "text-grade-warning/40"
-                )}
-                onClick={(e) => {
-                  e.preventDefault();
-                  const cycle: (("H" | "I" | "S" | "A" | "D") | null)[] = ["H", "I", "S", "A", "D", null];
-                  const currIdx = cycle.indexOf(st as any);
-                  const nextStatus = cycle[(currIdx + 1) % cycle.length];
-                  handleSetMonthlyAttendance(student.id, day, nextStatus);
-                }}
-              >
-                {st || "-"}
-              </div>
-            ) : (
-              // READ MODE / HOLIDAY CELL (WITH POPOVER)
-              <Popover>
-                <PopoverTrigger asChild>
-                  <div
-                    role="button"
-                    data-touch-scroll-click-target="true"
-                    className={cn("select-none w-7 h-7 sm:w-8 sm:h-8 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors cursor-pointer",
-                      holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
-                        : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
-                      isSunday && !st && "text-grade-warning/40",
-                      !isEditMode && "active:scale-95"
-                    )}
-                  >
-                    {holidayActive ? "L" : st || "-"}
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent side="top" className="text-[10px] p-2.5 rounded-xl w-auto min-w-[140px] max-w-[200px] z-[100]">
-                  <p className="font-bold text-foreground mb-1">{format(day, "EEEE, d MMM yyyy", { locale: idLocale })}</p>
-                  
-                  {holidayActive && (
-                    <div className="mb-1.5">
-                      <p className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                        <CalendarOff className="w-3 h-3" /> {isNationalHoliday(day) ? "Libur Nasional" : "Hari Libur"}
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                        {getHolidayDescription(day) || getNationalHolidayName(day) || (isSunday ? "Hari Minggu" : "Libur")}
-                      </p>
-                    </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  role="button"
+                  data-touch-scroll-click-target="true"
+                  className={cn("select-none w-7 h-7 sm:w-8 sm:h-8 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors",
+                    !isLocked && !holidayActive && "cursor-pointer",
+                    holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
+                      : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
+                    isSunday && !st && "text-grade-warning/40"
                   )}
-
-                  {!holidayActive && (
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-muted-foreground">Status:</span>
-                      {st ? (
-                         <span className={cn("font-bold text-[11px]", statusConfig[st]?.color)}>{statusConfig[st]?.label}</span>
-                      ) : (
-                         <span className="font-medium text-muted-foreground text-[11px]">Belum absen</span>
-                      )}
-                    </div>
-                  )}
-
-                  {note && (
-                    <div className="mt-1.5 pt-1.5 border-t border-border/50">
-                      <p className="font-semibold text-primary flex items-center gap-1"><MessageSquare className="w-3 h-3"/> Catatan:</p>
-                      <p className="text-muted-foreground mt-0.5 whitespace-pre-wrap leading-relaxed">{note}</p>
-                    </div>
-                  )}
-                  
-                  {isLocked && !holidayActive && (
-                    <p className="text-amber-600 dark:text-amber-500 mt-1.5 pt-1.5 border-t border-border/50 flex items-center gap-1 font-medium">
-                      <Lock className="w-3 h-3" /> Data terkunci
-                    </p>
-                  )}
-                </PopoverContent>
-              </Popover>
-            )}
-
+                  onClick={() => {
+                    if (!holidayActive) {
+                      const cycle: (("H" | "I" | "S" | "A" | "D") | null)[] = ["H", "I", "S", "A", "D", null];
+                      const currIdx = cycle.indexOf(st as any);
+                      const nextStatus = cycle[(currIdx + 1) % cycle.length];
+                      handleSetMonthlyAttendance(student.id, day, nextStatus);
+                    }
+                  }}
+                >
+                  {holidayActive ? "L" : st || "-"}
+                </div>
+              </TooltipTrigger>
+              {holidayActive && (
+                <TooltipContent side="top" className="text-[10px] p-2 rounded-xl">
+                  <p className="font-bold text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1.5">
+                    <CalendarOff className="w-3 h-3" /> {isNationalHoliday(day) ? "Libur Nasional" : "Hari Libur"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {getHolidayDescription(day) || getNationalHolidayName(day) || (isSunday ? "Hari Minggu" : "Libur")}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
             {note && (
-              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary flex items-center justify-center pointer-events-none shadow-sm">
-                <MessageSquare className="w-1.5 h-1.5 text-primary-foreground" />
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary flex items-center justify-center cursor-pointer">
+                    <MessageSquare className="w-1.5 h-1.5 text-primary-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[10px] max-w-[200px]">
+                  <p className="font-semibold text-foreground">{student.name}</p>
+                  <p className="text-muted-foreground">{note}</p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </td>
         );
@@ -258,7 +220,6 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
   saveIndicator,
 }) => {
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const [isEditMode, setIsEditMode] = React.useState(false);
 
   const rowVirtualizer = useVirtualizer({
     count: filteredStudents.length,
@@ -371,24 +332,8 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
 
           {/* Right section: Navigation & Action Buttons */}
           <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t border-border/30 pt-2 sm:border-t-0 sm:pt-0">
-            {/* Action buttons (Edit, Lock & Config) */}
+            {/* Action buttons (Lock & Config) */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant={isEditMode ? "default" : "outline"} 
-                    size="sm" 
-                    className={cn("h-8 px-2.5 text-xs gap-1 rounded-xl transition-all", isEditMode && "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20")} 
-                    onClick={() => setIsEditMode(!isEditMode)}
-                    disabled={isLocked}
-                  >
-                    {isEditMode ? <Edit2 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    <span className="hidden xs:inline sm:inline">{isEditMode ? "Mode Edit" : "Mode Baca"}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="text-xs sm:hidden">{isEditMode ? "Mode Edit Aktif (Ketuk untuk ubah)" : "Mode Baca Aktif (Aman dari ketukan)"}</TooltipContent>
-              </Tooltip>
-
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant={isLocked ? "default" : "outline"} size="sm" className="sipena-monthly-lock-btn h-8 px-2.5 text-xs gap-1 rounded-xl" onClick={handleToggleLock}>
@@ -510,7 +455,6 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                     allStatuses={allStatuses}
                     statusConfig={statusConfig}
                     jumlahConfig={jumlahConfig}
-                    isEditMode={isEditMode}
                   />
                 );
               })}
