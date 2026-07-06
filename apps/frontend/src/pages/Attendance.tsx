@@ -3853,7 +3853,10 @@ export default function Attendance() {
                       <thead className="z-10 bg-card">
                         <tr>
                           <th className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-b border-r-border/80 border-b-border shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]">
-                            <div className="w-[120px] sm:w-[160px] text-left truncate">No. Nama Murid</div>
+                            <div className="flex items-center w-[120px] sm:w-[160px] text-left">
+                              <span className="w-5 sm:w-6 shrink-0 pr-1 sm:pr-1.5 text-right text-muted-foreground">No.</span>
+                              <span className="truncate flex-1">Nama Murid</span>
+                            </div>
                           </th>
                         {monthDays.map(day => {
                           const dayNum = getDay(day);
@@ -3911,9 +3914,9 @@ export default function Attendance() {
                         return (
                           <tr key={student.id} className={cn(idx % 2 === 0 ? "bg-muted/5" : "bg-card")}>
                             <td className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-b border-r-border/80 border-b-border/30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left">
-                              <div className="flex items-start gap-0.5 w-[120px] sm:w-[160px]">
-                                <span className="text-muted-foreground font-medium flex-shrink-0">{idx + 1}.</span>
-                                <span className="text-foreground break-words leading-tight">{student.name}</span>
+                              <div className="flex items-start w-[120px] sm:w-[160px]">
+                                <span className="text-muted-foreground font-medium w-5 sm:w-6 shrink-0 pr-1 sm:pr-1.5 text-right">{idx + 1}.</span>
+                                <span className="text-foreground break-words leading-tight flex-1">{student.name}</span>
                               </div>
                             </td>
                             {monthDays.map(day => {
