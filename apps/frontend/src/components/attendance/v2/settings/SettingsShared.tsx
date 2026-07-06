@@ -154,7 +154,6 @@ export function InfoHelp({
             "transition-all hover:bg-primary/10 active:bg-primary/15 data-[state=open]:bg-primary/10",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
           )}
-          onClick={(event) => event.stopPropagation()}
         >
           <Info className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
