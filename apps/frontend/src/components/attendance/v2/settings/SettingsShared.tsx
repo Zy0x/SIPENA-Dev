@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -158,34 +158,36 @@ export function InfoHelp({
           <Info className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={8}
-        className={cn(
-          "z-[10170] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border-primary/15 p-4 shadow-2xl bg-background",
-          "data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out"
-        )}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm font-bold text-foreground">{label}</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</p>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+          align="end"
+          sideOffset={8}
+          className={cn(
+            "sipena-scroll-chain-page z-[10170] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-primary/15 bg-background p-4 text-popover-foreground shadow-2xl outline-none scrollbar-thin",
+            "data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out"
+          )}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-bold text-foreground">{label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</p>
+            </div>
+            {example ? (
+              <div className="rounded-xl border bg-muted/40 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contoh Kasus</p>
+                <p className="mt-1 text-xs leading-relaxed text-foreground">{example}</p>
+              </div>
+            ) : null}
+            {impact ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+                <p className="text-[10px] font-bold uppercase tracking-wider">Dampak Perubahan</p>
+                <p className="mt-1 text-xs leading-relaxed">{impact}</p>
+              </div>
+            ) : null}
           </div>
-          {example ? (
-            <div className="rounded-xl border bg-muted/40 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contoh Kasus</p>
-              <p className="mt-1 text-xs leading-relaxed text-foreground">{example}</p>
-            </div>
-          ) : null}
-          {impact ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-              <p className="text-[10px] font-bold uppercase tracking-wider">Dampak Perubahan</p>
-              <p className="mt-1 text-xs leading-relaxed">{impact}</p>
-            </div>
-          ) : null}
-        </div>
-      </PopoverContent>
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
     </Popover>
   );
 }

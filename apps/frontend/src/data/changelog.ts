@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.153",
+    version: "2.4.153",
+    title: "Optimasi Animasi Transisi Fade In/Out Popover Informasi (InfoHelp) Pengaturan Presensi V2",
+    description: "Mengganti komponen PopoverContent dengan PopoverPrimitive.Content kustom untuk mengatasi konflik kelas animasi Tailwind, sehingga animasi fade-in dan fade-out berjalan mulus dan profesional.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-07",
+    details: [
+      "Mengganti dependensi wrapper PopoverContent bawaan dengan implementasi portal PopoverPrimitive.Portal dan PopoverPrimitive.Content kustom pada komponen InfoHelp di SettingsShared.tsx.",
+      "Mengeliminasi konflik kelas animasi (animate-in/animate-out vs animate-fade-in/animate-fade-out) dengan mendefinisikan utility kelas animasi transisi secara eksklusif.",
+      "Memastikan popover informasi memiliki transisi memudar (fade-in/fade-out) dan bergeser (slide translateY) yang stabil pada semua viewport perangkat mobile dan desktop."
+    ]
+  },
+  {
     id: "v2.4.152",
     version: "2.4.152",
     title: "Pemindahan Fitur Merge V2 ke V1 ke Panel Admin",
