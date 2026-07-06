@@ -281,141 +281,99 @@ export const MobileMetricsExpander: React.FC<{
   isLocked,
   monthOptions,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className="mt-2.5 rounded-2xl border bg-muted/20 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 px-3.5 py-3 text-left text-xs font-bold text-muted-foreground hover:bg-muted/30 min-h-[44px]"
-      >
-        <span className="flex items-center gap-1.5 text-foreground/80 min-w-0 flex-1">
-          <Info className="h-4 w-4 text-primary shrink-0" />
-          <span className="truncate">Informasi Kelas: {selectedClass?.name || "Belum dipilih"}</span>
-        </span>
-        <span className="flex items-center gap-1 shrink-0">
-          <span>{isOpen ? "Sembunyikan" : "Lihat Detail"}</span>
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} />
-        </span>
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: "auto" }}
-            exit={{ height: 0 }}
-            className="overflow-hidden border-t bg-background/50"
-          >
-            <div className="grid grid-cols-2 gap-2 p-3">
-              <div className="min-w-0">
-                <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
-              </div>
-              <div className="min-w-0">
-                <CompactMetric label="Hari efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
-              </div>
-              <div className="col-span-2 min-w-[140px]">
-                <CompactMetric
-                  label="Bulan"
-                  value={
-                    <div className="flex items-center justify-between gap-0.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 rounded-lg text-foreground active:bg-muted"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (setCurrentMonth) setCurrentMonth(addMonths(currentMonth, -1));
-                        }}
-                      >
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                      </Button>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-0.5 px-1 py-0.5 rounded-lg text-[10px] font-bold active:bg-muted text-foreground transition-colors cursor-pointer select-none min-h-[28px]"
-                          >
-                            <span className="truncate max-w-[4rem]">
-                              {format(currentMonth, "MMM yyyy", { locale: idLocale })}
-                            </span>
-                            <ChevronDown className="h-2.5 w-2.5 opacity-60 shrink-0" />
-                          </button>
-                        </PopoverTrigger>
-                        <InlinePopoverContent className="w-52 p-1.5 rounded-2xl z-[10500]" align="center">
-                          <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 mb-1">
-                            Pilih Bulan
-                          </div>
-                          <div className="grid grid-cols-2 gap-1 max-h-56 overflow-y-auto">
-                            {monthOptions.map((month) => {
-                              const isSelected = month.getMonth() === currentMonth.getMonth() && month.getFullYear() === currentMonth.getFullYear();
-                              return (
-                                <button
-                                  key={month.toISOString()}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (setCurrentMonth) setCurrentMonth(month);
-                                  }}
-                                  className={cn(
-                                    "px-1.5 py-1.5 rounded-lg text-[11px] text-left font-semibold transition-colors truncate active:scale-95 touch-manipulation min-h-[32px]",
-                                    isSelected
-                                      ? "bg-primary text-primary-foreground font-bold shadow-sm"
-                                      : "active:bg-muted text-foreground"
-                                  )}
-                                >
-                                  {format(month, "MMMM", { locale: idLocale })}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <div className="border-t mt-1.5 pt-1.5 flex items-center justify-between gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="h-8 flex-1 px-1 rounded-xl text-[10px] font-bold active:bg-muted"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (setCurrentMonth) setCurrentMonth(addYears(currentMonth, -1));
-                              }}
-                            >
-                              Tahun Lalu
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="h-8 flex-1 px-1 rounded-xl text-[10px] font-bold active:bg-muted"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (setCurrentMonth) setCurrentMonth(addYears(currentMonth, 1));
-                              }}
-                            >
-                              Tahun Depan
-                            </Button>
-                          </div>
-                        </InlinePopoverContent>
-                      </Popover>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 rounded-lg text-foreground active:bg-muted"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (setCurrentMonth) setCurrentMonth(addMonths(currentMonth, 1));
-                        }}
-                      >
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  }
-                />
-              </div>
+    <div className="mt-3 space-y-2">
+      {/* Month Selector (Always visible on mobile) */}
+      <div className="flex items-center justify-between gap-1 rounded-2xl border bg-muted/40 p-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 shrink-0 rounded-xl text-foreground active:bg-muted"
+          onClick={() => {
+            if (setCurrentMonth) setCurrentMonth(addMonths(currentMonth, -1));
+          }}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold active:bg-muted text-foreground transition-colors cursor-pointer select-none min-h-[40px]"
+            >
+              <span>Periode: {format(currentMonth, "MMMM yyyy", { locale: idLocale })}</span>
+              <ChevronDown className="h-4 w-4 opacity-75 shrink-0 text-primary" />
+            </button>
+          </PopoverTrigger>
+          <InlinePopoverContent className="w-52 p-1.5 rounded-2xl z-[10500]" align="center">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 mb-1">
+              Pilih Bulan
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div className="grid grid-cols-2 gap-1 max-h-56 overflow-y-auto">
+              {monthOptions.map((month) => {
+                const isSelected = month.getMonth() === currentMonth.getMonth() && month.getFullYear() === currentMonth.getFullYear();
+                return (
+                  <button
+                    key={month.toISOString()}
+                    type="button"
+                    onClick={() => {
+                      if (setCurrentMonth) setCurrentMonth(month);
+                    }}
+                    className={cn(
+                      "px-1.5 py-1.5 rounded-lg text-[11px] text-left font-semibold transition-colors truncate active:scale-95 touch-manipulation min-h-[32px]",
+                      isSelected
+                        ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                        : "active:bg-muted text-foreground"
+                    )}
+                  >
+                    {format(month, "MMMM", { locale: idLocale })}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="border-t mt-1.5 pt-1.5 flex items-center justify-between gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 flex-1 px-1 rounded-xl text-[10px] font-bold active:bg-muted"
+                onClick={() => {
+                  if (setCurrentMonth) setCurrentMonth(addYears(currentMonth, -1));
+                }}
+              >
+                Tahun Lalu
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 flex-1 px-1 rounded-xl text-[10px] font-bold active:bg-muted"
+                onClick={() => {
+                  if (setCurrentMonth) setCurrentMonth(addYears(currentMonth, 1));
+                }}
+              >
+                Tahun Depan
+              </Button>
+            </div>
+          </InlinePopoverContent>
+        </Popover>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 shrink-0 rounded-xl text-foreground active:bg-muted"
+          onClick={() => {
+            if (setCurrentMonth) setCurrentMonth(addMonths(currentMonth, 1));
+          }}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Class & Effective metrics (Always visible, side-by-side) */}
+      <div className="grid grid-cols-2 gap-2">
+        <CompactMetric label="Kelas" value={selectedClass?.name || "Belum dipilih"} />
+        <CompactMetric label="Hari efektif" value={`${effectiveDays}/${monthDays.length} hari`} tone="green" />
+      </div>
     </div>
   );
 };
