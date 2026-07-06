@@ -1,0 +1,180 @@
+import React from "react";
+import {
+  Check,
+  FileSpreadsheet,
+  Info,
+} from "lucide-react";
+
+import type { RecapProfile } from "@/hooks/useAttendanceV2";
+import { cn } from "@/lib/utils";
+
+import {
+  SectionIntro,
+  InfoHelp,
+  EmptyState,
+  statusLabels,
+} from "./SettingsShared";
+
+export interface RecapSectionProps {
+  recapProfile: RecapProfile | null;
+  handleUpdateRecapProfile: (data: Partial<RecapProfile>) => void;
+  handleToggleRecapStatus: (type: "present" | "absence", status: "H" | "S" | "I" | "A" | "D") => void;
+  effectiveDays: number;
+}
+
+export const RecapSection: React.FC<RecapSectionProps> = ({
+  recapProfile,
+  handleUpdateRecapProfile,
+  handleToggleRecapStatus,
+  effectiveDays,
+}) => {
+  return (
+    <div className="space-y-4" data-tour="attendance-v2-settings-recap">
+      <SectionIntro
+        icon={FileSpreadsheet}
+        title="Aturan Rekapitulasi Presensi"
+        description="Sesuaikan kebijakan pembagi persentase kehadiran murid dan petakan status (Sakit, Izin, Alfa, Dispen) agar terhitung sebagai Hadir atau Absen."
+        help={
+          <InfoHelp
+            label="Profil Rekap"
+            summary="Mengatur cara sistem mengkalkulasi rekapitulasi kehadiran."
+            detail="Aturan rekap tidak mengubah database presensi mentah, hanya menentukan cara pengolahan angka saat rekap bulanan atau export laporan."
+            example="Sekolah dapat memilih apakah Dispensasi dihitung sebagai Hadir (Masuk) atau Absen (Tidak Masuk)."
+            impact="Merubah pemetaan status langsung memengaruhi statistik persentase kehadiran di rapor murid."
+          />
+        }
+      />
+
+      {!recapProfile ? (
+        <EmptyState icon={Info} text="Aturan rekap belum tersedia." />
+      ) : (
+        <div className="grid gap-4">
+          {/* Denominator Card */}
+          <div className="rounded-2xl border bg-card p-4 shadow-sm" data-tour="attendance-v2-settings-recap-denominator">
+            <div className="mb-3">
+              <h4 className="text-sm font-bold text-foreground">Dasar Pembagi Kehadiran (Denominator)</h4>
+              <p className="text-xs text-muted-foreground">Tentukan dasar pembagian matematika untuk menghitung persentase kehadiran.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                {
+                  value: "effective_days" as const,
+                  label: "Bagi Hari Efektif Sekolah",
+                  desc: `Dibagi berdasarkan total ${effectiveDays} hari sekolah aktif dalam kalender. Digunakan untuk pelaporan rapor bulanan resmi.`,
+                },
+                {
+                  value: "filled_days" as const,
+                  label: "Bagi Hari Terisi Presensi",
+                  desc: "Dibagi berdasarkan jumlah tanggal yang sudah Anda isi absensinya saja. Ideal untuk memantau progress di tengah bulan.",
+                },
+              ].map((item) => {
+                const active = recapProfile.denominator_policy === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => handleUpdateRecapProfile({ denominator_policy: item.value })}
+                    className={cn(
+                      "flex min-h-[84px] touch-manipulation items-center justify-between rounded-2xl border-2 p-4 text-left transition-all",
+                      active
+                        ? "border-primary bg-primary/5 text-primary shadow-sm"
+                        : "border-muted bg-background hover:bg-muted/40 active:bg-muted/60"
+                    )}
+                  >
+                    <div className="pr-2">
+                      <span className="block text-sm font-bold leading-tight">{item.label}</span>
+                      <span className="block text-xs mt-1 text-muted-foreground leading-normal">{item.desc}</span>
+                    </div>
+                    <div className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                      active ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30"
+                    )}>
+                      {active && <Check className="h-3 w-3 stroke-[3]" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Status Mapping Card */}
+          <div className="rounded-2xl border bg-card p-4 shadow-sm" data-tour="attendance-v2-settings-recap-mapping">
+            <div className="mb-3">
+              <h4 className="text-sm font-bold text-foreground">Pemetaan Kelompok Status Kehadiran</h4>
+              <p className="text-xs text-muted-foreground">Petakan masing-masing status KBM murid agar masuk dalam kategori hadir fisik atau tidak hadir.</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {[
+                {
+                  type: "present" as const,
+                  title: "Dihitung Hadir Fisik (Masuk)",
+                  desc: "Status murid yang dianggap hadir sekolah secara fisik dan menambah nilai persentase masuk.",
+                  list: recapProfile.present_statuses,
+                  tone: "green",
+                },
+                {
+                  type: "absence" as const,
+                  title: "Dihitung Tidak Hadir (Absen)",
+                  desc: "Status murid yang dihitung sebagai ketidakhadiran (absen) di rekap nilai.",
+                  list: recapProfile.absence_statuses,
+                  tone: "red",
+                },
+              ].map((group) => (
+                <div
+                  key={group.type}
+                  className={cn(
+                    "rounded-2xl border p-4 transition-all shadow-sm",
+                    group.tone === "green"
+                      ? "border-green-200 bg-green-50/20 dark:border-green-950/40 dark:bg-green-950/5"
+                      : "border-red-200 bg-red-50/20 dark:border-red-950/40 dark:bg-red-950/5"
+                  )}
+                >
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                        group.tone === "green"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300"
+                          : "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300"
+                      )}>
+                        <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                      </span>
+                      <span className={cn(
+                        "text-xs font-bold uppercase tracking-wider",
+                        group.tone === "green" ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
+                      )}>{group.title}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{group.desc}</p>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2 mt-3">
+                    {(["H", "S", "I", "A", "D"] as const).map((status) => {
+                      const selected = group.list.includes(status);
+                      return (
+                        <button
+                          key={`${group.type}-${status}`}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => handleToggleRecapStatus(group.type, status)}
+                          className={cn(
+                            "min-h-[48px] rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-0.5 touch-manipulation",
+                            selected && group.tone === "green" && "border-green-500 bg-green-500 text-white font-bold shadow-md dark:border-green-600 dark:bg-green-600",
+                            selected && group.tone === "red" && "border-red-500 bg-red-500 text-white font-bold shadow-md dark:border-red-600 dark:bg-red-600",
+                            !selected && "border-muted bg-background text-muted-foreground hover:bg-muted/40 active:bg-muted/60"
+                          )}
+                        >
+                          <span className="text-sm font-extrabold leading-none">{status}</span>
+                          <span className="text-[9px] leading-none opacity-80">{statusLabels[status]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
