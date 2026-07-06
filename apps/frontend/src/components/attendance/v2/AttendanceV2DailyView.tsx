@@ -60,6 +60,14 @@ const DailyAttendanceRow: React.FC<DailyAttendanceRowProps> = React.memo(({
             <p className="text-[12px] sm:text-sm font-semibold sm:font-medium text-foreground leading-snug break-words">
               {student.name}
             </p>
+            {!status && !holidayActive && (
+              <Badge 
+                variant="outline" 
+                className="text-[9px] px-1.5 py-0 h-4 flex-shrink-0 bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50 rounded-full font-medium"
+              >
+                Belum Absen
+              </Badge>
+            )}
             {note && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -173,12 +181,18 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
   return (
     <div data-tour="attendance-table" className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden max-w-full">
       <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
+        <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto flex-wrap">
           <Users className="w-4 h-4 text-primary flex-shrink-0" />
-          <span className="text-sm font-semibold truncate flex-1 sm:flex-none">{selectedClass?.name}</span>
+          <span className="text-sm font-semibold truncate max-w-[120px] sm:max-w-none">{selectedClass?.name}</span>
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
             {format(selectedDate, "d MMM", { locale: idLocale })}
           </Badge>
+          
+          {!isHolidayCombined(selectedDate) && filteredStudents.filter(s => !getAttendance(s.id, selectedDate)).length > 0 && (
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex-shrink-0 animate-pulse">
+              {filteredStudents.filter(s => !getAttendance(s.id, selectedDate)).length} Belum Absen
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
           {saveIndicator && <div className="flex-shrink-0">{saveIndicator}</div>}
