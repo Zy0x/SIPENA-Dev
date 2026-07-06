@@ -161,34 +161,33 @@ export function InfoHelp({
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="z-[10170] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border-primary/15 p-0 shadow-2xl bg-background overflow-hidden"
+        className={cn(
+          "z-[10170] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border-primary/15 p-4 shadow-2xl bg-background",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+          "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
+          "data-[state=open]:duration-200 data-[state=closed]:duration-150"
+        )}
         onClick={(event) => event.stopPropagation()}
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          className="p-4"
-        >
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-bold text-foreground">{label}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</p>
-            </div>
-            {example ? (
-              <div className="rounded-xl border bg-muted/40 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contoh Kasus</p>
-                <p className="mt-1 text-xs leading-relaxed text-foreground">{example}</p>
-              </div>
-            ) : null}
-            {impact ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-                <p className="text-[10px] font-bold uppercase tracking-wider">Dampak Perubahan</p>
-                <p className="mt-1 text-xs leading-relaxed">{impact}</p>
-              </div>
-            ) : null}
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-bold text-foreground">{label}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</p>
           </div>
-        </motion.div>
+          {example ? (
+            <div className="rounded-xl border bg-muted/40 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contoh Kasus</p>
+              <p className="mt-1 text-xs leading-relaxed text-foreground">{example}</p>
+            </div>
+          ) : null}
+          {impact ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+              <p className="text-[10px] font-bold uppercase tracking-wider">Dampak Perubahan</p>
+              <p className="mt-1 text-xs leading-relaxed">{impact}</p>
+            </div>
+          ) : null}
+        </div>
       </PopoverContent>
     </Popover>
   );
