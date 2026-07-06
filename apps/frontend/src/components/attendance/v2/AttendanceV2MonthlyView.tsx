@@ -375,11 +375,11 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
 
         <SmartScrollTable ref={tableContainerRef} data-tour="attendance-table" className="max-h-[380px] sm:max-h-[480px]">
           <table className="w-full text-center border-separate border-spacing-0 min-w-max select-none">
-            <thead className="z-10 bg-card">
+            <thead className="z-10 bg-slate-50 dark:bg-slate-900">
               <tr>
                 <th 
                   style={{ willChange: "transform" }}
-                  className="sticky left-0 top-0 z-30 bg-card px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-b border-r-border/80 border-b-border shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]"
+                  className="sticky left-0 top-0 z-30 bg-slate-50 dark:bg-slate-900 px-2 py-1.5 text-[10px] sm:text-xs font-semibold text-left text-foreground border-r-2 border-b border-r-border/80 border-b-border shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px]"
                 >
                   <div className="w-[120px] sm:w-[160px] text-left truncate">No. Nama Murid</div>
                 </th>
@@ -391,8 +391,8 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                   const holCustom = holidays.some(h => h.date === format(day, "yyyy-MM-dd"));
                   const isNatHol = isNationalHoliday(day);
                   return (
-                    <th key={day.toISOString()} className={cn("sticky top-0 z-20 px-0.5 py-1 min-w-[28px] sm:min-w-[32px] border-l border-b border-l-border/30 border-b-border bg-card",
-                      isSun && "bg-grade-warning/5",
+                    <th key={day.toISOString()} className={cn("sticky top-0 z-20 px-0.5 py-1 min-w-[28px] sm:min-w-[32px] border-l border-b border-l-border/30 border-b-border bg-slate-50 dark:bg-slate-900",
+                      isSun && "bg-grade-warning/10 dark:bg-grade-warning/20",
                       holCustom && "bg-red-50 dark:bg-red-900/10",
                       isNatHol && !holCustom && "bg-red-50/50 dark:bg-red-950/10",
                       ev && "bg-primary/5"
@@ -420,9 +420,9 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                   );
                 })}
                 {allStatuses.map(s => (
-                  <th key={s} className={cn("sticky top-0 z-20 px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[28px] sm:min-w-[32px] border-l border-b border-l-border/50 border-b-border bg-card", statusConfig[s]?.color)}>{s}</th>
+                  <th key={s} className={cn("sticky top-0 z-20 px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-bold min-w-[28px] sm:min-w-[32px] border-l border-b border-l-border/50 border-b-border bg-slate-50 dark:bg-slate-900", statusConfig[s]?.color)}>{s}</th>
                 ))}
-                <th className="sticky top-0 z-20 px-1 py-1 text-center text-[8px] sm:text-[9px] font-bold min-w-[32px] sm:min-w-[36px] border-l-2 border-b border-l-border border-b-border bg-muted/95 text-foreground">
+                <th className="sticky top-0 z-20 px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-bold min-w-[32px] sm:min-w-[36px] border-l-2 border-b border-l-border border-b-border bg-muted/95 text-foreground">
                   Jml
                 </th>
               </tr>

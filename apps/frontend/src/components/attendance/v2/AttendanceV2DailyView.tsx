@@ -322,9 +322,17 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Users className="w-8 h-8 mb-2 opacity-40" />
-            <p className="text-xs">Tidak ada murid ditemukan</p>
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 mb-4 flex flex-col items-center justify-center group opacity-80">
+              <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl group-hover:bg-primary/20 transition-colors duration-500"></div>
+              <svg className="w-10 h-10 sm:w-12 sm:h-12 text-primary/60 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                <path d="M19 8v6m-3-3h6" opacity="0.4" />
+              </svg>
+            </div>
+            <p className="text-xs sm:text-sm font-medium">Tidak ada murid ditemukan</p>
           </div>
         )}
       </div>
