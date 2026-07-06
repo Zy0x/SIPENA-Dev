@@ -593,7 +593,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       <DialogContent
         fullScreenMobile={false}
         className={cn(
-          "flex flex-col gap-0 overflow-hidden",
+          "flex flex-col gap-0 overflow-hidden p-0 sm:p-0",
           "lg:h-[min(92dvh,820px)] lg:max-h-[92dvh] lg:w-[calc(100vw-2rem)] lg:max-w-6xl rounded-2xl",
         )}
         onPointerDownOutside={preventTourClose}
@@ -744,7 +744,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         {/* Sidebar + Main Content Layout */}
         <div className="min-h-0 flex-1 flex flex-row overflow-hidden">
           <aside
-            className="w-64 shrink-0 bg-muted/5 py-4 pl-4 pr-[2px] -mr-[2px] border-r flex flex-col gap-1 overflow-y-auto scrollbar-none"
+            className="w-64 shrink-0 bg-muted/5 py-4 pl-6 pr-[2px] -mr-[2px] border-r flex flex-col gap-1 overflow-y-auto scrollbar-none"
             data-tour="attendance-v2-settings-nav"
           >
             {SECTION_ITEMS.map((item) => {
