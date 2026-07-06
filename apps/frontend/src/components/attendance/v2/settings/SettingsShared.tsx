@@ -152,13 +152,13 @@ export function InfoHelp({
               aria-label={`Informasi ${label}`}
               data-tour={dataTour}
               className={cn(
-                "inline-flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary",
-                "transition-all hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                "active:bg-primary/15 data-[state=open]:bg-primary/10",
+                "inline-flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary",
+                "transition-all hover:bg-primary/10 active:bg-primary/15 data-[state=open]:bg-primary/10",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
               )}
               onClick={(event) => event.stopPropagation()}
             >
-              <Info className="h-4.5 w-4.5" aria-hidden="true" />
+              <Info className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
