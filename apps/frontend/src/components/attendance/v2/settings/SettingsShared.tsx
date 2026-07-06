@@ -163,10 +163,7 @@ export function InfoHelp({
         sideOffset={8}
         className={cn(
           "z-[10170] w-[min(21rem,calc(100vw-2rem))] rounded-2xl border-primary/15 p-4 shadow-2xl bg-background",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out",
-          "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
-          "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
-          "data-[state=open]:duration-200 data-[state=closed]:duration-150"
+          "data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out"
         )}
         onClick={(event) => event.stopPropagation()}
       >
