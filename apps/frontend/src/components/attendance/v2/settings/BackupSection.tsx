@@ -89,9 +89,14 @@ export const BackupSection: React.FC<BackupSectionProps> = ({
 
         {/* Backups List */}
         <div className="rounded-2xl border bg-card p-4 shadow-sm" data-tour="attendance-v2-settings-backup-list">
-          <div className="mb-3 border-b pb-2">
-            <h4 className="text-sm font-bold text-foreground">Titik Pencadangan Tersimpan</h4>
-            <p className="text-xs text-muted-foreground">Pilih riwayat titik aman yang ingin dipulihkan ke database.</p>
+          <div className="mb-3 border-b pb-2 flex justify-between items-end">
+            <div>
+              <h4 className="text-sm font-bold text-foreground">Titik Pencadangan Tersimpan</h4>
+              <p className="text-xs text-muted-foreground">Pilih riwayat titik aman yang ingin dipulihkan ke database.</p>
+            </div>
+            <div className="text-xs font-medium text-muted-foreground">
+              Kuota: <span className={snapshots.length >= 5 ? "text-destructive" : "text-foreground"}>{snapshots.length}</span>/5
+            </div>
           </div>
 
           {isCreatingSnapshot && (

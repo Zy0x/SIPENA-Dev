@@ -7,6 +7,7 @@ export type QueuedAttendancePatch = {
   date: string;
   status: "H" | "I" | "S" | "A" | "D" | null;
   note?: string | null;
+  updated_at?: string;
 };
 
 export type AttendancePersistOutcome<TResult> = {
@@ -28,7 +29,7 @@ type UseQueuedAttendanceSaveOptions<TPatch extends QueuedAttendancePatch, TResul
   applyOptimistic: (patch: TPatch) => void;
   reconcileSuccess?: (patch: TPatch, result: TResult | null) => void;
   rollback: (patch: TPatch, previousSnapshot: unknown) => void;
-  persist: (entries: Array<{ key: string; patch: TPatch; sequence: number }>) => Promise<AttendancePersistOutcome<TResult>>;
+  persist: (entries: Array<{ key: string; patch: TPatch; sequence: number; previousSnapshot: unknown }>) => Promise<AttendancePersistOutcome<TResult>>;
   onDrain?: () => void;
 };
 
@@ -99,6 +100,7 @@ export function useQueuedAttendanceSave<TPatch extends QueuedAttendancePatch, TR
             key: entry.key,
             patch: entry.patch,
             sequence: entry.sequence,
+            previousSnapshot: entry.previousSnapshot,
           }))
         );
       } catch (error) {

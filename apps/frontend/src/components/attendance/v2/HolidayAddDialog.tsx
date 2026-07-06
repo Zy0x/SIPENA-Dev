@@ -40,12 +40,32 @@ export const HolidayAddDialog: React.FC<HolidayAddDialogProps> = ({
   getExistingHolidayForDate,
   handleAddHoliday,
 }) => {
+  const [showOverrideWarning, setShowOverrideWarning] = React.useState(false);
+
   const handleToggleHolidayDate = (date: Date) => {
     setSelectedHolidayDates((prev) =>
       prev.some((d) => isSameDay(d, date))
         ? prev.filter((d) => !isSameDay(d, date))
         : [...prev, date]
     );
+  };
+
+  const handleAttemptAddHoliday = () => {
+    const hasOverride = selectedHolidayDates.some((d) => {
+      const existing = getExistingHolidayForDate(d);
+      return existing?.description === "Hari Kerja";
+    });
+
+    if (hasOverride && holidayDescription !== "Hari Kerja") {
+      setShowOverrideWarning(true);
+    } else {
+      handleAddHoliday();
+    }
+  };
+
+  const handleConfirmOverride = () => {
+    setShowOverrideWarning(false);
+    handleAddHoliday();
   };
 
   return (
@@ -213,7 +233,7 @@ export const HolidayAddDialog: React.FC<HolidayAddDialogProps> = ({
           </Button>
           <Button
             type="button"
-            onClick={handleAddHoliday}
+            onClick={handleAttemptAddHoliday}
             disabled={selectedHolidayDates.length === 0}
             size="sm"
             className="text-xs rounded-xl"
@@ -223,6 +243,29 @@ export const HolidayAddDialog: React.FC<HolidayAddDialogProps> = ({
           </Button>
         </div>
       </DialogContent>
+
+      <Dialog open={showOverrideWarning} onOpenChange={setShowOverrideWarning}>
+        <DialogContent className="max-w-md rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-500" />
+              Peringatan Presedensi Tanggal
+            </DialogTitle>
+            <DialogDescription className="text-sm mt-2">
+              Beberapa tanggal yang Anda pilih saat ini sudah diatur sebagai <strong>Masuk Khusus</strong> (Override).
+              Apakah Anda yakin ingin menghapus override tersebut dan menjadikannya Libur?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" size="sm" onClick={() => setShowOverrideWarning(false)} className="rounded-xl">
+              Batal
+            </Button>
+            <Button variant="default" size="sm" onClick={handleConfirmOverride} className="rounded-xl bg-amber-500 hover:bg-amber-600">
+              Ya, Jadikan Libur
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

@@ -596,7 +596,12 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
           const isSaturday = workDayFormat === "5days" && dayNum === 6;
           const dateStr = format(day, "yyyy-MM-dd");
           const customHoliday = yearlyData.holidays.find(hol => hol.date === dateStr);
-          return !isSunday && !isSaturday && !customHoliday;
+          
+          if (customHoliday) {
+            return customHoliday.description === "Hari Kerja";
+          }
+          
+          return !isSunday && !isSaturday;
         }).length;
 
         const dataRows: (string | number)[][] = [];

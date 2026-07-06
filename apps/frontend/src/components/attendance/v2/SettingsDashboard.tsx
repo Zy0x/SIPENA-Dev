@@ -409,7 +409,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           />
         );
       case "audit":
-        return <AuditSection isLocked={isLocked} />;
+        return <AuditSection isLocked={isLocked} classId={selectedClass} />;
       case "delegation":
         return (
           <DelegationSection

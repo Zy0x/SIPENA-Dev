@@ -309,6 +309,9 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
               <Sun className="w-3 h-3 text-grade-warning" />
               <span>= Hari libur kustom</span>
             </div>
+            <div className="flex items-center gap-1 font-medium text-primary bg-primary/10 px-2.5 py-0.5 rounded-full ml-auto">
+              <span>💡 Tip: Ketuk baris tabel berulang untuk mengubah status</span>
+            </div>
           </div>
         </div>
       </div>

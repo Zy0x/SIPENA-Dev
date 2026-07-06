@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { Users, Search, Check, MessageSquare, CheckSquare } from "lucide-react";
@@ -170,9 +170,20 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
   saveIndicator,
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "missing" | "absent">("all");
+
+  const localFilteredStudents = useMemo(() => {
+    if (statusFilter === "all") return filteredStudents;
+    return filteredStudents.filter((student) => {
+      const status = getAttendance(student.id, selectedDate);
+      if (statusFilter === "missing") return !status;
+      if (statusFilter === "absent") return status === "S" || status === "I" || status === "A" || status === "D";
+      return true;
+    });
+  }, [filteredStudents, statusFilter, getAttendance, selectedDate]);
 
   const rowVirtualizer = useVirtualizer({
-    count: filteredStudents.length,
+    count: localFilteredStudents.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 64,
     overscan: 5,
@@ -223,6 +234,38 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
         </div>
       </div>
 
+      <div className="flex items-center gap-2 px-3 py-2 bg-muted/10 border-b border-border overflow-x-auto scrollbar-none">
+        <Button 
+          variant={statusFilter === "all" ? "default" : "outline"} 
+          size="sm" 
+          onClick={() => setStatusFilter("all")} 
+          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap"
+        >
+          Semua Murid
+        </Button>
+        <Button 
+          variant={statusFilter === "missing" ? "default" : "outline"} 
+          size="sm" 
+          onClick={() => setStatusFilter("missing")} 
+          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap relative"
+        >
+          Belum Absen
+          {!isHolidayCombined(selectedDate) && filteredStudents.filter(s => !getAttendance(s.id, selectedDate)).length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center bg-destructive text-destructive-foreground rounded-full w-4 h-4 text-[8px] font-bold">
+              {filteredStudents.filter(s => !getAttendance(s.id, selectedDate)).length}
+            </span>
+          )}
+        </Button>
+        <Button 
+          variant={statusFilter === "absent" ? "default" : "outline"} 
+          size="sm" 
+          onClick={() => setStatusFilter("absent")} 
+          className="h-7 text-[10px] rounded-full px-3 whitespace-nowrap"
+        >
+          Sakit/Izin/Alpha/Disp
+        </Button>
+      </div>
+
       {isHolidayCombined(selectedDate) && (
         <div className="flex items-center gap-2 px-3 py-2 bg-grade-warning/5 border-b border-grade-warning/10 text-xs">
           <span className="text-grade-warning font-medium">{getHolidayDescriptionCombined(selectedDate)}</span>
@@ -234,7 +277,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
         className="h-[340px] sm:h-[420px] overflow-y-auto overscroll-contain relative bg-card"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        {filteredStudents.length > 0 ? (
+        {localFilteredStudents.length > 0 ? (
           <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
@@ -243,7 +286,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
             }}
           >
             {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-              const student = filteredStudents[virtualItem.index];
+              const student = localFilteredStudents[virtualItem.index];
               const status = getAttendance(student.id, selectedDate);
               const note = getAttendanceNote(student.id, selectedDate);
               const holidayActive = isHolidayCombined(selectedDate);

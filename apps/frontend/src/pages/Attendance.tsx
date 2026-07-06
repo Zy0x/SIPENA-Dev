@@ -1593,11 +1593,16 @@ export default function Attendance() {
       let grandJml = 0;
       const monthEffDays = days.filter(day => {
         const dayNum = getDay(day);
-        const isSunday = dayNum === 0;
-        const isSaturday = workDayFormat === "5days" && dayNum === 6;
         const dateStr = format(day, "yyyy-MM-dd");
         const customHoliday = yearlyData.holidays.find(hol => hol.date === dateStr);
-        return !isSunday && !isSaturday && !customHoliday;
+        
+        if (customHoliday) {
+          return customHoliday.description === "Hari Kerja";
+        }
+        
+        const isSunday = dayNum === 0;
+        const isSaturday = workDayFormat === "5days" && dayNum === 6;
+        return !isSunday && !isSaturday;
       }).length;
 
       students.forEach((student, idx) => {
