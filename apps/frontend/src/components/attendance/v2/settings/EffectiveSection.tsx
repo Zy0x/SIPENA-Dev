@@ -91,7 +91,7 @@ export const EffectiveSection: React.FC<EffectiveSectionProps> = ({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="hidden sm:flex h-9 min-h-[36px] rounded-xl text-xs font-bold gap-1"
+                  className="flex h-9 min-h-[36px] rounded-xl text-xs font-bold gap-1"
                   onClick={onBulkApplyClick}
                 >
                   <Share2 className="h-3.5 w-3.5" />
