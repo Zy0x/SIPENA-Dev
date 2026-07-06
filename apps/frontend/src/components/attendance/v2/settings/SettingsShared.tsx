@@ -232,9 +232,9 @@ export const CollapsibleCard: React.FC<{
               <Icon className="h-5 w-5" />
             </div>
           )}
-          <div className="min-w-0">
-            <h4 className="text-sm font-bold text-foreground truncate leading-snug">{title}</h4>
-            {subtitle && <p className="text-xs text-muted-foreground truncate leading-normal mt-0.5">{subtitle}</p>}
+          <div className="min-w-0 flex-1">
+            <h4 className="text-sm font-bold text-foreground leading-snug">{title}</h4>
+            {subtitle && <p className="text-xs text-muted-foreground leading-normal mt-0.5">{subtitle}</p>}
           </div>
         </div>
         <motion.span
