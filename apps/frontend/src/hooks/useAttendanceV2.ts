@@ -97,6 +97,7 @@ type AttendanceMutationParams = {
   date: string;
   status: AttendanceStatusValue | null;
   note?: string | null;
+  updatedAt?: string | null;
 };
 type QueuedAttendanceMutationParams = AttendanceMutationParams & { classId: string };
 
@@ -707,7 +708,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   }, [attendanceDatasetQueryKey, dbAvailable, queryClient]);
 
   const persistQueuedAttendancePatches = useCallback(async (
-    entries: Array<{ key: string; patch: QueuedAttendanceMutationParams; sequence: number }>
+    entries: Array<{ key: string; patch: QueuedAttendanceMutationParams; sequence: number; previousSnapshot?: any }>
   ) => {
     const outcome = createAttendancePersistOutcome<string | null>();
     if (!user) {
@@ -726,38 +727,6 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     const { data: { session } } = await (supabase as any).auth.getSession();
     const token = session?.access_token;
 
-    try {
-      const response = await fetch(`${apiBaseUrl}/attendance/v2/bulk`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token || ""}`,
-        },
-        body: JSON.stringify({
-          patches: entries.map(({ patch }) => ({
-            classId: patch.classId,
-            studentId: patch.studentId,
-            date: patch.date,
-            status: patch.status,
-            note: patch.note !== undefined ? patch.note : null,
-          })),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Bulk presensi V2 gagal (${response.status})`);
-      }
-
-      const json = await response.json();
-      const results = Array.isArray(json?.data) ? json.data : [];
-      entries.forEach((entry, index) => {
-        outcome.successes.set(entry.key, getPersistedRecordId(results[index]));
-      });
-      return outcome;
-    } catch (apiError) {
-      console.warn("V2 API queued bulk save failed, falling back to direct Supabase RPCs:", apiError);
-    }
-
     let cursor = 0;
     const workerCount = Math.min(4, entries.length);
     const runWorker = async () => {
@@ -765,16 +734,24 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         const entry = entries[cursor];
         cursor += 1;
         try {
-          const { data, error } = await (supabase as any).rpc("upsert_attendance_record", {
+          const snapshot = entry.previousSnapshot;
+          const expectedUpdatedAt = snapshot && 'updatedAt' in snapshot ? snapshot.updatedAt : (snapshot && 'updated_at' in snapshot ? snapshot.updated_at : null);
+          
+          const { data, error } = await (supabase as any).rpc("upsert_attendance_v2_optimistic", {
             p_user_id: user.id,
             p_class_id: entry.patch.classId,
             p_student_id: entry.patch.studentId,
             p_date: entry.patch.date,
             p_status: entry.patch.status,
             p_note: entry.patch.note !== undefined ? entry.patch.note : null,
+            p_expected_updated_at: expectedUpdatedAt,
             p_source: "manual",
           });
+          
           if (error) throw error;
+          
+          // Reconcile the new updated_at if we want to, but getPersistedRecordId will return it?
+          // getPersistedRecordId is likely for string | null IDs. We just return null or the string.
           outcome.successes.set(entry.key, getPersistedRecordId(data));
         } catch (error) {
           outcome.failures.set(entry.key, error);
@@ -1503,6 +1480,26 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const createSnapshotMutation = useMutation({
     mutationFn: async (reason: string | null) => {
       if (!user || !classId || !dbAvailable) throw new Error("Connection or parameter missing");
+
+      // Auto-purge: Keep maximum 5 snapshots per month per class
+      if (snapshots && snapshots.length >= 5) {
+        // Since snapshots are ordered by created_at descending (newest first),
+        // we slice the ones that exceed our limit. We want to delete anything from index 4 onwards
+        // because we are about to add 1, meaning we only want to keep the newest 4 to leave room for the new 1.
+        const snapshotsToDelete = snapshots.slice(4);
+        const idsToDelete = snapshotsToDelete.map(s => s.id);
+        
+        if (idsToDelete.length > 0) {
+          const { error: purgeError } = await (supabase as any)
+            .from("attendance_v2_snapshots")
+            .delete()
+            .in("id", idsToDelete);
+            
+          if (purgeError) {
+            console.error("Failed to auto-purge snapshots:", purgeError);
+          }
+        }
+      }
 
       const { data: { session } } = await (supabase as any).auth.getSession();
       const token = session?.access_token;

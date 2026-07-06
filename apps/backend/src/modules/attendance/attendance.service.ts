@@ -502,17 +502,33 @@ export class AttendanceService {
       const parsedMonth = parse(snapshot.month, "yyyy-MM", new Date());
       const monthEnd = format(endOfMonth(parsedMonth), "yyyy-MM-dd");
 
-      const { error: deleteError } = await client
-        .from("attendance_v2_records")
-        .delete()
-        .eq("user_id", userId)
-        .eq("class_id", snapshot.class_id)
-        .gte("date", monthStart)
-        .lte("date", monthEnd);
-      if (deleteError) throw deleteError;
+      // Fetch current active students for this class to prevent FK errors and only restore for them
+      const { data: activeStudents, error: studentsError } = await client
+        .from("students")
+        .select("id")
+        .eq("class_id", snapshot.class_id);
+      if (studentsError) throw studentsError;
 
-      if (records.length > 0) {
-        const payload = records.map((record: any) => ({
+      const activeStudentIds = activeStudents?.map((s: any) => s.id) || [];
+
+      // Only delete records for currently active students
+      if (activeStudentIds.length > 0) {
+        const { error: deleteError } = await client
+          .from("attendance_v2_records")
+          .delete()
+          .eq("user_id", userId)
+          .eq("class_id", snapshot.class_id)
+          .gte("date", monthStart)
+          .lte("date", monthEnd)
+          .in("student_id", activeStudentIds);
+        if (deleteError) throw deleteError;
+      }
+
+      // Filter snapshot records to only include active students
+      const validRecords = records.filter((r: any) => activeStudentIds.includes(r.studentId));
+
+      if (validRecords.length > 0) {
+        const payload = validRecords.map((record: any) => ({
           user_id: userId,
           class_id: snapshot.class_id,
           student_id: record.studentId,
