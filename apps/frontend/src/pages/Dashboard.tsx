@@ -180,7 +180,7 @@ export default function Dashboard() {
           <div className="min-w-0">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground flex items-center gap-1.5 sm:gap-2">
               <span className="truncate">Halo, {user?.user_metadata?.full_name?.split(' ')[0] || "Guru"}!</span>
-              <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0 rotate-[15deg] inline-block -mt-1">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 shrink-0 -rotate-[15deg] inline-block -mt-1">
                 <HandWaveIcon />
               </div>
             </h1>
