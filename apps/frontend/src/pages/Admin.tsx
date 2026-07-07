@@ -430,7 +430,7 @@ const Admin = () => {
         `}
       >
         {/* Sidebar header */}
-        <div className={`flex items-center h-16 px-4 border-b border-border shrink-0 ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
+        <div className={`sipena-sidebar-header-elevated flex items-center h-16 px-4 border-b border-border shrink-0 ${sidebarCollapsed ? "justify-center" : "justify-between"}`}>
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
               <SipenaLogo size="sm" />
@@ -528,7 +528,7 @@ const Admin = () => {
               className="fixed top-0 left-0 h-full w-72 z-50 bg-card border-r border-border flex flex-col lg:hidden"
             >
               {/* Mobile sidebar header */}
-              <div className="flex items-center justify-between h-16 px-4 border-b border-border">
+              <div className="sipena-sidebar-header-elevated flex items-center justify-between h-16 px-4 border-b border-border">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                     <Shield className="w-4 h-4 text-red-400" />
@@ -601,7 +601,7 @@ const Admin = () => {
       {/* ── Main Content Area ── */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`}>
         {/* ── Top Header Bar ── */}
-        <header className="sticky top-0 z-30 h-16 border-b border-border bg-background/95 backdrop-blur-xl flex items-center px-4 gap-4 shrink-0">
+        <header className="sipena-app-header-elevated sticky top-0 z-30 h-16 border-b border-border bg-background/95 backdrop-blur-xl flex items-center px-4 gap-4 shrink-0">
           {/* Mobile hamburger */}
           <button
             type="button"

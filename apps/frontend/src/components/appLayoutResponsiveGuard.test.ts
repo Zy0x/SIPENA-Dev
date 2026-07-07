@@ -26,12 +26,18 @@ describe("app layout responsive sidebar guard", () => {
     expect(appLayoutSource).toContain("setIsDesktopSidebar(window.innerWidth >= 1024)");
     expect(appLayoutSource).toContain('window.visualViewport?.addEventListener("resize", syncSidebarMode)');
     expect(appLayoutSource).toContain("sipena-app-sidebar");
+    expect(appLayoutSource).toContain("sipena-app-header-elevated");
+    expect(appLayoutSource).toContain("sipena-sidebar-header-elevated");
     expect(appLayoutSource).toContain('data-sidebar-collapsed={effectiveSidebarCollapsed ? "true" : "false"}');
     expect(appLayoutSource).toContain('data-sidebar-state={sidebarOpen ? "open" : "closed"}');
     expect(appLayoutSource).toContain('{effectiveSidebarCollapsed ? (');
     expect(asideClassBlock).not.toContain('"w-[260px]"');
 
     expect(globalStyles).toContain(".sipena-app-sidebar");
+    expect(globalStyles).toContain(".sipena-app-header-elevated");
+    expect(globalStyles).toContain(".sipena-sidebar-header-elevated");
+    expect(globalStyles).toContain(".dark .sipena-app-header-elevated");
+    expect(globalStyles).toContain(".dark .sipena-sidebar-header-elevated");
     expect(globalStyles).toContain("width: min(18rem, calc(100vw - 3rem))");
     expect(globalStyles).toContain("height: min(100dvh, var(--sipena-visual-viewport-height, 100dvh))");
     expect(globalStyles).toContain('@media (min-width: 640px) and (max-width: 1023px)');
@@ -42,5 +48,14 @@ describe("app layout responsive sidebar guard", () => {
 
     expect(standard).toContain("State collapsed desktop tidak boleh diterapkan ke mobile/tablet");
     expect(standard).toContain("Drawer navigasi harus memakai tinggi dynamic viewport");
+  });
+
+  it("keeps admin shell headers visually separated without removing blur", () => {
+    const adminSource = readSource("apps/frontend/src/pages/Admin.tsx");
+
+    expect(adminSource).toContain("sipena-app-header-elevated sticky top-0 z-30 h-16");
+    expect(adminSource).toContain("sipena-sidebar-header-elevated flex items-center h-16");
+    expect(adminSource).toContain("sipena-sidebar-header-elevated flex items-center justify-between h-16");
+    expect(adminSource).toContain("backdrop-blur-xl");
   });
 });

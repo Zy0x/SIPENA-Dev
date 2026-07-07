@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.157",
+    version: "2.4.157",
+    title: "Elevasi Header Web dan Sidebar",
+    description: "Memperjelas pembeda visual header utama dan header sidebar agar terasa sebagai area navigasi yang tetap timbul saat konten digulir.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-08",
+    details: [
+      "Menambahkan elevasi shadow dan hairline separator halus pada header aplikasi utama.",
+      "Menerapkan pembeda visual pada header sidebar desktop dan drawer mobile tanpa menghapus efek blur.",
+      "Menyelaraskan header Admin dengan shell aplikasi utama agar konsisten di light dan dark mode."
+    ]
+  },
+  {
     id: "v2.4.156",
     version: "2.4.156",
     title: "Perbaikan Tombol Ekspor Presensi V2",
