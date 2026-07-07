@@ -859,12 +859,12 @@ export function YearSwitchDialog({
                               className={cn(
                                 "flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs font-semibold transition-all duration-200",
                                 semesterConfig.activeSemester === 1 
-                                  ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" 
+                                  ? "bg-primary text-primary-foreground shadow-sm" 
                                   : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                               )}
                               onClick={() => setSemesterConfig(prev => ({ ...prev, activeSemester: 1 }))}
                             >
-                              {semesterConfig.activeSemester === 1 && <Check className="w-3.5 h-3.5 text-primary" />}
+                              {semesterConfig.activeSemester === 1 && <Check className="w-3.5 h-3.5" />}
                               <span>Semester 1</span>
                             </button>
                           )}
@@ -873,12 +873,12 @@ export function YearSwitchDialog({
                               className={cn(
                                 "flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs font-semibold transition-all duration-200",
                                 semesterConfig.activeSemester === 2 
-                                  ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" 
+                                  ? "bg-primary text-primary-foreground shadow-sm" 
                                   : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                               )}
                               onClick={() => setSemesterConfig(prev => ({ ...prev, activeSemester: 2 }))}
                             >
-                              {semesterConfig.activeSemester === 2 && <Check className="w-3.5 h-3.5 text-primary" />}
+                              {semesterConfig.activeSemester === 2 && <Check className="w-3.5 h-3.5" />}
                               <span>Semester 2</span>
                             </button>
                           )}
