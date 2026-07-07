@@ -5,7 +5,7 @@ import { id as idLocale } from "date-fns/locale";
 import gsap from "gsap";
 import { 
   Loader2, MessageSquare, AlertCircle, X, CalendarDays, CheckCircle2,
-  Users, UserCheck, BarChart3, ChevronLeft, ChevronRight, Bookmark 
+  Users, UserCheck, BarChart3, ChevronLeft, ChevronRight, Bookmark, Plus 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -1216,9 +1216,31 @@ export default function AttendanceV2Page() {
         />
 
         {/* Empty States */}
-        {!selectedClassId && (
-          <div data-tour={classes.length === 0 ? "attendance-no-classes" : undefined} className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-[20px] bg-muted/60 flex items-center justify-center mb-4">
+        {!selectedClassId && classes.length === 0 && (
+          <div data-tour="attendance-no-classes" className="flex items-start gap-3 rounded-2xl border border-grade-warning/30 bg-grade-warning/10 p-4 shadow-sm relative overflow-hidden group animate-fade-in-up mt-8">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-grade-warning/20 rounded-full blur-3xl -mr-10 -mt-10 animate-pulse"></div>
+            <div className="relative z-10 flex items-center justify-center h-8 w-8 rounded-full bg-grade-warning/20 shrink-0 mt-0.5">
+               <AlertCircle className="h-5 w-5 text-grade-warning animate-pulse" />
+            </div>
+            <div className="text-sm relative z-10 flex-1">
+              <p className="font-semibold text-grade-warning">Belum Ada Kelas</p>
+              <p className="mt-1 text-muted-foreground leading-relaxed">
+                Buat kelas terlebih dahulu sebelum dapat mencatat kehadiran murid.
+              </p>
+              <Button 
+                onClick={() => navigate("/classes")} 
+                className="mt-3 h-9 rounded-xl text-xs font-medium gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group-hover:scale-[1.02]"
+              >
+                <Plus className="h-4 w-4" />
+                Buat Kelas Sekarang
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!selectedClassId && classes.length > 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in-up">
+            <div className="w-16 h-16 rounded-[20px] bg-muted/60 flex items-center justify-center mb-4 transition-transform hover:scale-105">
               <CalendarDays className="w-8 h-8 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground">Pilih Kelas</p>
@@ -1227,17 +1249,24 @@ export default function AttendanceV2Page() {
         )}
 
         {selectedClassId && students.length === 0 && (
-          <div data-tour="attendance-empty-cta" className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-[20px] bg-primary/10 flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-primary" />
+          <div data-tour="attendance-empty-cta" className="flex items-start gap-3 rounded-2xl border border-grade-warning/30 bg-grade-warning/10 p-4 shadow-sm relative overflow-hidden group animate-fade-in-up mt-8">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-grade-warning/20 rounded-full blur-3xl -mr-10 -mt-10 animate-pulse"></div>
+            <div className="relative z-10 flex items-center justify-center h-8 w-8 rounded-full bg-grade-warning/20 shrink-0 mt-0.5">
+               <AlertCircle className="h-5 w-5 text-grade-warning animate-pulse" />
             </div>
-            <h3 className="mb-1 text-base font-semibold text-foreground">Belum Ada Murid</h3>
-            <p className="mb-4 max-w-xs text-center text-xs text-muted-foreground">
-              Kelas ini belum memiliki data murid. Silakan tambahkan murid terlebih dahulu.
-            </p>
-            <Button variant="outline" onClick={() => navigate("/classes")} className="h-9 rounded-xl text-xs gap-1.5">
-              Kelola Murid
-            </Button>
+            <div className="text-sm relative z-10 flex-1">
+              <p className="font-semibold text-grade-warning">Belum Ada Murid</p>
+              <p className="mt-1 text-muted-foreground leading-relaxed">
+                Kelas ini belum memiliki data murid. Silakan tambahkan murid terlebih dahulu.
+              </p>
+              <Button 
+                onClick={() => navigate("/classes")} 
+                className="mt-3 h-9 rounded-xl text-xs font-medium gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group-hover:scale-[1.02]"
+              >
+                <Plus className="h-4 w-4" />
+                Kelola Murid Sekarang
+              </Button>
+            </div>
           </div>
         )}
 
