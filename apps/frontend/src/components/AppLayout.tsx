@@ -501,8 +501,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
        >
          {/* Logo section */}
          <div className={cn(
-           "border-b border-border/50 flex items-center shrink-0 relative bg-card/80",
-           effectiveSidebarCollapsed ? "p-3 justify-center h-16" : "px-4 py-3 gap-3 h-16"
+           "border-b border-border flex items-center shrink-0 relative bg-card/80",
+           effectiveSidebarCollapsed ? "p-3 justify-center h-14" : "px-4 py-2 gap-3 h-14"
          )}>
             <div
               className={cn(
