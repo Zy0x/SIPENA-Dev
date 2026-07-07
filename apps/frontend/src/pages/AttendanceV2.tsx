@@ -17,6 +17,8 @@ import { useEnhancedToast } from "@/contexts/ToastContext";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAttendanceRealtime } from "@/hooks/useAttendanceRealtime";
 
 // UI Components & Dialogs
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogStackDepthContext } from "@/components/ui/dialog";
@@ -45,6 +47,7 @@ import { useAttendanceV2Export } from "@/hooks/useAttendanceV2Export";
 import { AttendanceV2Controls } from "@/components/attendance/v2/AttendanceV2Controls";
 import { AttendanceV2DailyView } from "@/components/attendance/v2/AttendanceV2DailyView";
 import { AttendanceV2MonthlyView } from "@/components/attendance/v2/AttendanceV2MonthlyView";
+import { AuditTrailTimeline } from "@/components/attendance/v2/AuditTrailTimeline";
 
 type AttendanceStatus = AttendanceStatusValue | null;
 
@@ -132,9 +135,26 @@ const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Jul
 
 export default function AttendanceV2Page() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const prefersReducedMotion = useReducedMotion();
   const { success: showSuccess, warning: showWarning } = useEnhancedToast();
   const { runWithLoader, overlay: exportOverlay } = useExportLoader();
+
+  const [selectedClassId, setSelectedClassId] = useState<string>("");
+
+  useAttendanceRealtime(selectedClassId, user?.id, useCallback(() => {
+    const now = Date.now();
+    if (now - lastNotificationRef.current > 5000) {
+      showWarning(
+        "Modifikasi Terdeteksi",
+        "Data presensi kelas ini baru saja diubah dari perangkat/akun lain. Memperbarui data...",
+        5000
+      );
+      lastNotificationRef.current = now;
+      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", selectedClassId] });
+    }
+  }, [selectedClassId, showWarning, queryClient]));
 
   const containerRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
@@ -145,7 +165,6 @@ export default function AttendanceV2Page() {
 
   // Global Page states
   const { classes } = useClasses();
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()));
   const [activeView, setActiveView] = useState<"daily" | "monthly">("daily");
@@ -1066,7 +1085,7 @@ export default function AttendanceV2Page() {
     if (selectedClassId) {
       const { supabaseExternal } = await import("@/core/repositories/supabase-compat.repository");
       const deleteQuery = (supabaseExternal as unknown as SupabaseDeleteClient)
-        .from("attendance_records")
+        .from("attendance_v2_records")
         .delete()
         .eq("class_id", selectedClassId)
         .eq("date", dateStr);
@@ -1447,7 +1466,17 @@ export default function AttendanceV2Page() {
               maxLength={500}
             />
             <p className="text-[10px] text-muted-foreground text-right">{noteText.length}/500</p>
-            <DialogFooter className="gap-2 sm:gap-0">
+            {noteTarget && selectedClassId && (
+              <div className="mt-2 pt-4 border-t border-slate-100">
+                <h4 className="text-xs font-medium text-slate-700 mb-2">Jejak Aktivitas</h4>
+                <AuditTrailTimeline
+                  classId={selectedClassId}
+                  studentId={noteTarget.studentId}
+                  dateStr={format(noteTarget.date, "yyyy-MM-dd")}
+                />
+              </div>
+            )}
+            <DialogFooter className="gap-2 sm:gap-0 mt-4">
               <Button variant="outline" onClick={() => setShowNoteDialog(false)} size="sm" className="text-xs rounded-xl">Batal</Button>
               <Button onClick={handleSaveNote} disabled={isSaving} size="sm" className="text-xs rounded-xl">Simpan Catatan</Button>
             </DialogFooter>

@@ -31,6 +31,7 @@ type UseQueuedAttendanceSaveOptions<TPatch extends QueuedAttendancePatch, TResul
   rollback: (patch: TPatch, previousSnapshot: unknown) => void;
   persist: (entries: Array<{ key: string; patch: TPatch; sequence: number; previousSnapshot: unknown }>) => Promise<AttendancePersistOutcome<TResult>>;
   onDrain?: () => void;
+  storageKey?: string;
 };
 
 const DEFAULT_DEBOUNCE_MS = 300;
@@ -65,6 +66,21 @@ export function useQueuedAttendanceSave<TPatch extends QueuedAttendancePatch, TR
 
   const bump = useCallback(() => {
     if (!mountedRef.current) return;
+    
+    if (optionsRef.current.storageKey) {
+      try {
+        const stateToSave = {
+          queued: Array.from(queuedRef.current.values()),
+          failed: Array.from(failedRef.current.values()),
+          sequence: sequenceRef.current,
+          latestSequence: Array.from(latestSequenceRef.current.entries())
+        };
+        localStorage.setItem(optionsRef.current.storageKey, JSON.stringify(stateToSave));
+      } catch(e) {
+        console.warn("Failed to persist attendance queue to local storage", e);
+      }
+    }
+
     setVersion((current) => current + 1);
   }, []);
 
@@ -191,21 +207,74 @@ export function useQueuedAttendanceSave<TPatch extends QueuedAttendancePatch, TR
     scheduleFlush(0);
   }, [bump, scheduleFlush]);
 
+  // Restore from local storage on mount
+  useEffect(() => {
+    if (optionsRef.current.storageKey) {
+      try {
+        const stored = localStorage.getItem(optionsRef.current.storageKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          let restoredCount = 0;
+          if (parsed.queued) {
+            parsed.queued.forEach((entry: any) => {
+              queuedRef.current.set(entry.key, entry);
+              optionsRef.current.applyOptimistic(entry.patch);
+              restoredCount++;
+            });
+          }
+          if (parsed.failed) {
+            parsed.failed.forEach((entry: any) => {
+              failedRef.current.set(entry.key, entry);
+              optionsRef.current.applyOptimistic(entry.patch);
+              restoredCount++;
+            });
+          }
+          if (parsed.sequence) {
+            sequenceRef.current = Math.max(sequenceRef.current, parsed.sequence);
+          }
+          if (parsed.latestSequence) {
+            parsed.latestSequence.forEach(([k, v]: any) => latestSequenceRef.current.set(k, v));
+          }
+          if (restoredCount > 0) {
+            bump();
+            scheduleFlush(1000);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to restore queued save state", e);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
         void flushNow();
       }
     };
+    const handleOnline = () => {
+      void flushNow();
+    };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
     return () => {
       mountedRef.current = false;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
       clearFlushTimer();
       void flushNow();
     };
   }, [clearFlushTimer, flushNow]);
+
+  const getQueuedPatches = useCallback(() => {
+    return [
+      ...Array.from(queuedRef.current.values()).map(e => e.patch),
+      ...Array.from(failedRef.current.values()).map(e => e.patch),
+      ...Array.from(savingRef.current.values()).map(e => e.patch)
+    ];
+  }, []);
 
   return useMemo(() => {
     const pendingSaveCount = queuedRef.current.size + savingRef.current.size;
@@ -234,8 +303,9 @@ export function useQueuedAttendanceSave<TPatch extends QueuedAttendancePatch, TR
       flushNow,
       retryFailed,
       getSaveState,
+      getQueuedPatches,
       pendingSaveCount,
       failedSaveCount,
     };
-  }, [enqueue, flushNow, retryFailed, version]);
+  }, [enqueue, flushNow, retryFailed, getQueuedPatches, version]);
 }
