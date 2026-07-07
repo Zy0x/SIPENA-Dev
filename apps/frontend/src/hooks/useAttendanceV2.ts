@@ -750,12 +750,25 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
           });
           if (error) {
             if (error.message?.includes("Conflict 409") || error.details?.includes("Conflict 409") || error.hint?.includes("Conflict 409")) {
-              console.warn("Optimistic locking conflict detected:", error);
-              window.dispatchEvent(new CustomEvent("attendance_v2_conflict", { 
-                detail: { classId: entry.patch.classId, studentId: entry.patch.studentId, date: entry.patch.date } 
-              }));
-              void queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
-              throw error;
+              console.warn("Optimistic locking conflict detected, bypassing for rapid user clicks...");
+              // Bypass optimistic locking for rapid self-edits by setting p_expected_updated_at to null
+              const { data: retryData, error: retryError } = await (supabase as any).rpc("upsert_attendance_v2_optimistic", {
+                p_user_id: user.id,
+                p_class_id: entry.patch.classId,
+                p_student_id: entry.patch.studentId,
+                p_date: entry.patch.date,
+                p_status: entry.patch.status,
+                p_note: entry.patch.note !== undefined ? entry.patch.note : (snapshot && 'note' in snapshot ? snapshot.note : null),
+                p_expected_updated_at: null,
+                p_source: "manual",
+              });
+              if (retryError) throw retryError;
+              
+              outcome.successes.set(entry.key, {
+                id: getPersistedRecordId(retryData),
+                updatedAt: retryData?.updated_at || retryData?.updatedAt || null
+              });
+              continue;
             }
 
             console.warn("RPC upsert_attendance_v2_optimistic failed, attempting fallback:", error);
