@@ -51,6 +51,7 @@
    );
  };
 
+ const DashboardIcon = createGifIcon("Dashboard.gif");
  const KelasIcon = createGifIcon("Kelas.gif");
  const MataPelajaranIcon = createGifIcon("Mata_Pelajaran.gif");
  const InputNilaiIcon = createGifIcon("Input_Nilai.gif");
@@ -69,7 +70,7 @@
    children?: NavItem[];
  }
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, featureKey: FEATURE_KEYS.dashboard },
+  { href: "/dashboard", label: "Dashboard", icon: DashboardIcon, featureKey: FEATURE_KEYS.dashboard },
   { href: "/classes", label: "Kelas & Murid", icon: KelasIcon, featureKey: FEATURE_KEYS.classes },
   { href: "/subjects", label: "Mata Pelajaran", icon: MataPelajaranIcon, featureKey: FEATURE_KEYS.subjects },
   { href: "/grades", label: "Input Nilai", icon: InputNilaiIcon, featureKey: FEATURE_KEYS.grades },
