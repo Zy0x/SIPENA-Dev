@@ -1,3 +1,4 @@
+import { TentangIcon } from "@/components/ui/animated-icons";
 import { useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
@@ -120,7 +121,7 @@ function AnimatedVerifiedBadge() {
       {/* Rotating ring */}
       <div ref={badgeRef} className="absolute inset-[-2px] rounded-full border border-primary/30 border-dashed" />
       {/* Check icon */}
-      <BadgeCheck ref={checkRef} className="w-5 h-5 text-primary relative z-10" />
+      <BadgeCheck ref={checkRef} className="w-5 h-5  relative z-10" />
     </div>
   );
 }
@@ -262,7 +263,7 @@ export default function About() {
         <Card ref={el => { if (el) sectionRefs.current[0] = el; }} className="overflow-hidden">
           <CardHeader className="pb-2 sm:pb-4">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5  flex-shrink-0" />
               <span className="truncate">Apa itu SIPENA?</span>
             </CardTitle>
           </CardHeader>
@@ -309,7 +310,7 @@ export default function About() {
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5  flex-shrink-0" />
                   <span className="truncate">Tim Pengembang</span>
                 </CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs mt-0.5">
@@ -395,7 +396,7 @@ export default function About() {
                                       href={link.platform === "email" ? `mailto:${link.url}` : link.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/50 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors text-[10px] sm:text-xs"
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/50 hover:bg-primary/10 text-muted-foreground hover: transition-colors text-[10px] sm:text-xs"
                                       title={labelMap[link.platform] || link.platform}
                                       onClick={(e) => e.stopPropagation()}
                                     >
@@ -459,7 +460,7 @@ export default function About() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 sm:w-56">
                 <DropdownMenuItem onClick={() => handleContactSupport("telegram")} className="cursor-pointer text-xs sm:text-sm">
-                  <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 text-primary" />
+                  <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2 " />
                   <span>Telegram</span>
                   <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 ml-auto text-muted-foreground" />
                 </DropdownMenuItem>

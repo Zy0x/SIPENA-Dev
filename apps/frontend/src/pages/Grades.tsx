@@ -1,3 +1,4 @@
+import { InputNilaiIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -2125,7 +2126,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             })}
             className="gap-2 min-h-[44px]"
           >
-            <FileSpreadsheet className="w-4 h-4" />
+            <InputNilaiIcon  className="w-4 h-4" / />
             Import Nilai
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -2143,7 +2144,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             disabled={!canDownloadGradeTemplate || isDownloadingOfficialTemplate}
             className="gap-2 min-h-[44px]"
           >
-            {isDownloadingOfficialTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+            {isDownloadingOfficialTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <InputNilaiIcon  className="w-4 h-4" / />}
             Download Template Resmi
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => runAfterGradeManageMenuCloses(() => setShowOCRGrades(true))} className="gap-2 min-h-[44px]">
@@ -2297,7 +2298,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     <>
       <div className="app-page app-page-wide sipena-grade-page overflow-x-clip">
         <PageHeader
-          icon={<FileSpreadsheet className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />}
+          icon={<InputNilaiIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " / />}
           title={isGuestMode ? "Input Nilai Guru Tamu" : "Input Nilai"}
           subtitle={
             isGuestMode
@@ -2374,7 +2375,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-fade-in-up delay-100">
             <div data-tour="class-select" className="rounded-2xl bg-card border border-border p-3 sm:p-3.5 flex flex-col gap-1.5">
               <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground px-3 pt-0.5 select-none">
-                <School className="w-3.5 h-3.5 text-primary" />
+                <School className="w-3.5 h-3.5 " />
                 Kelas
               </Label>
               <Select
@@ -2403,7 +2404,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                     </SelectItem>
                   ))}
                   <SelectSeparator />
-                  <SelectItem value={CREATE_CLASS_VALUE} className="min-h-11 font-medium text-primary">
+                  <SelectItem value={CREATE_CLASS_VALUE} className="min-h-11 font-medium ">
                     <span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Tambah Kelas Baru</span>
                   </SelectItem>
                 </SelectContent>
@@ -2412,7 +2413,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
             <div data-tour="subject-select" className="rounded-2xl bg-card border border-border p-3 sm:p-3.5 flex flex-col gap-1.5">
               <Label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground px-3 pt-0.5 select-none">
-                <BookOpen className="w-3.5 h-3.5 text-primary" />
+                <BookOpen className="w-3.5 h-3.5 " />
                 Mata Pelajaran
               </Label>
               <Select
@@ -2438,7 +2439,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                       {subject.name} (KKM: {subject.kkm})
                     </SelectItem>
                   ))}
-                  <SelectItem value="__add_new__" className="text-primary font-medium border-t mt-1 pt-2">
+                  <SelectItem value="__add_new__" className=" font-medium border-t mt-1 pt-2">
                     <div className="flex items-center gap-2">
                       <Plus className="w-4 h-4" />
                       Tambah Mapel Baru
@@ -2486,7 +2487,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                 <span className="hidden sm:inline">Struktur</span> BAB
               </TabsTrigger>
               <TabsTrigger value="input" className="sipena-grade-mode-tab gap-2" data-tour="input-tab">
-                <FileSpreadsheet className="w-4 h-4" />
+                <InputNilaiIcon  className="w-4 h-4" / />
                 Input Nilai
               </TabsTrigger>
             </TabsList>
@@ -2581,7 +2582,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
 
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <Loader2 className="w-8 h-8 animate-spin " />
           </div>
         )}
       </div>

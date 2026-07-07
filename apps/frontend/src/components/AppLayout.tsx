@@ -40,26 +40,18 @@
    <img src={morpheIconPure} alt="Morphe" className={cn("rounded", className)} />
  );
 
- // Helper for animated GIF icons
- const createGifIcon = (filename: string) => {
-   return ({ className }: { className?: string }) => (
-     <img 
-       src={`/icons/${filename}`} 
-       alt={filename.replace(".gif", "").replace("_", " ")} 
-       className={cn("rounded w-full h-full object-contain mix-blend-multiply dark:invert dark:mix-blend-screen scale-[1.35]", className)} 
-     />
-   );
- };
+ import {
+   DashboardIcon,
+   KelasIcon,
+   MataPelajaranIcon,
+   InputNilaiIcon,
+   PresensiIcon,
+   LaporanIcon,
+   PengaturanIcon,
+   PanduanIcon,
+   TentangIcon
+ } from "@/components/ui/animated-icons";
 
- const DashboardIcon = createGifIcon("Dashboard.gif");
- const KelasIcon = createGifIcon("Kelas.gif");
- const MataPelajaranIcon = createGifIcon("Mata_Pelajaran.gif");
- const InputNilaiIcon = createGifIcon("Input_Nilai.gif");
- const PresensiIcon = createGifIcon("Presensi.gif");
- const LaporanIcon = createGifIcon("Laporan.gif");
- const PengaturanIcon = createGifIcon("Pengaturan.gif");
- const PanduanIcon = createGifIcon("Panduan.gif");
- const TentangIcon = createGifIcon("Tentang.gif");
 
  interface NavItem {
    href: string;

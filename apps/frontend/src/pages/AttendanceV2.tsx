@@ -1,3 +1,4 @@
+import { PresensiIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from "date-fns";
@@ -302,7 +303,7 @@ export default function AttendanceV2Page() {
     if (pendingAttendanceSaves > 0) {
       return (
         <Badge variant="secondary" className="min-h-8 gap-1.5 rounded-full px-3 text-[11px] font-semibold">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin " />
           Menyimpan {pendingAttendanceSaves} perubahan
         </Badge>
       );
@@ -1241,7 +1242,7 @@ export default function AttendanceV2Page() {
         {!selectedClassId && classes.length > 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in-up">
             <div className="w-16 h-16 rounded-[20px] bg-muted/60 flex items-center justify-center mb-4 transition-transform hover:scale-105">
-              <CalendarDays className="w-8 h-8 text-muted-foreground" />
+              <PresensiIcon  className="w-8 h-8 text-muted-foreground" / />
             </div>
             <p className="text-sm font-medium text-foreground">Pilih Kelas</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs">Pilih kelas di atas untuk mulai mencatat kehadiran murid.</p>
@@ -1286,7 +1287,7 @@ export default function AttendanceV2Page() {
                     className={cn(
                       "sipena-tab-trigger flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 touch-manipulation min-h-[44px]",
                       activeView === key 
-                        ? "bg-primary text-primary-foreground shadow-md scale-[1.02] ring-2 ring-primary/20" 
+                        ? "bg-primary -foreground shadow-md scale-[1.02] ring-2 ring-primary/20" 
                         : "text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/50 lg:hover:text-foreground"
                     )}
                   >
@@ -1509,7 +1510,7 @@ export default function AttendanceV2Page() {
           <DialogContent className="sm:max-w-sm mx-3 rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-sm sm:text-base flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-primary" /> Catatan Presensi
+                <MessageSquare className="w-4 h-4 " /> Catatan Presensi
               </DialogTitle>
               <DialogDescription className="text-xs">
                 {noteTarget && `${noteTarget.studentName} — ${format(noteTarget.date, "d MMMM yyyy", { locale: idLocale })}`}
@@ -1633,7 +1634,7 @@ export default function AttendanceV2Page() {
           <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg rounded-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
-                <CalendarDays className="h-4 w-4 text-primary" />
+                <PresensiIcon  className="h-4 w-4 " / />
                 Pilih Bulan Ekspor
               </DialogTitle>
               <DialogDescription>

@@ -1,0 +1,22 @@
+import { cn } from "@/lib/utils";
+import React from "react";
+
+export const createGifIcon = (filename: string) => {
+  return ({ className }: { className?: string }) => (
+    <img 
+      src={`/icons/${filename}`} 
+      alt={filename.replace(".gif", "").replace("_", " ")} 
+      className={cn("rounded w-full h-full object-contain mix-blend-multiply dark:invert dark:mix-blend-screen scale-[1.35]", className)} 
+    />
+  );
+};
+
+export const DashboardIcon = createGifIcon("Dashboard.gif");
+export const KelasIcon = createGifIcon("Kelas.gif");
+export const MataPelajaranIcon = createGifIcon("Mata_Pelajaran.gif");
+export const InputNilaiIcon = createGifIcon("Input_Nilai.gif");
+export const PresensiIcon = createGifIcon("Presensi.gif");
+export const LaporanIcon = createGifIcon("Laporan.gif");
+export const PengaturanIcon = createGifIcon("Pengaturan.gif");
+export const PanduanIcon = createGifIcon("Panduan.gif");
+export const TentangIcon = createGifIcon("Tentang.gif");

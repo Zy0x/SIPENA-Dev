@@ -1,3 +1,4 @@
+import { DashboardIcon } from "@/components/ui/animated-icons";
 import { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -85,7 +86,7 @@ export default function Dashboard() {
         label: "Kelas",
         value: classes.length.toString(),
         icon: Users,
-        color: "text-primary",
+        color: "",
         bgColor: "bg-primary/10",
       },
       {
@@ -211,7 +212,7 @@ export default function Dashboard() {
           <Card className="border-primary/50 bg-primary/5 animate-fade-in-up">
             <CardContent className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 " />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground text-xs sm:text-sm">Buat Kelas</h3>
@@ -287,7 +288,7 @@ export default function Dashboard() {
                         <action.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground text-xs sm:text-sm group-hover:text-primary transition-colors truncate">
+                        <h3 className="font-semibold text-foreground text-xs sm:text-sm group-hover: transition-colors truncate">
                           {action.label}
                         </h3>
                         <p className="text-[10px] sm:text-xs text-muted-foreground truncate hidden sm:block">{action.description}</p>
@@ -316,7 +317,7 @@ export default function Dashboard() {
                   <CardContent className="p-2 sm:p-3">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                        <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 " />
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-medium text-foreground text-xs sm:text-sm truncate">{cls.name}</h3>
@@ -345,7 +346,7 @@ export default function Dashboard() {
             <CardHeader className="pb-2 p-3 sm:p-4 border-b border-border/50">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5 text-primary" />
+                  <Clock className="w-3.5 h-3.5 " />
                   Aktivitas Terakhir
                 </CardTitle>
                 {!activityLoading && activityLogs.length > 0 && (
@@ -406,7 +407,7 @@ export default function Dashboard() {
                     return (
                         <div key={log.id} className="flex items-start gap-2 p-1.5 sm:p-2 rounded-lg hover:bg-muted/50 transition-colors">
                          <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                           log.actor_type === "guest" ? "bg-accent/20 text-accent" : "bg-primary/10 text-primary"
+                           log.actor_type === "guest" ? "bg-accent/20 text-accent" : "bg-primary/10 "
                          }`}>
                            <ActionIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                          </div>

@@ -1,3 +1,4 @@
+import { PengaturanIcon } from "@/components/ui/animated-icons";
 import { useState, useCallback } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -289,7 +290,7 @@ export default function Settings() {
         <div className="animate-fade-in flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-[12px] bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Palette className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />
+              <Palette className="w-[18px] h-[18px] sm:w-5 sm:h-5 " />
             </div>
             <div className="min-w-0">
               <h1 className="text-base sm:text-lg font-bold text-foreground truncate">
@@ -323,7 +324,7 @@ export default function Settings() {
           <CardContent className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <User className="w-5 h-5 text-primary" />
+                <User className="w-5 h-5 " />
               </div>
               <div>
                 <h3 className="font-medium text-sm">Profil Saya</h3>
@@ -332,7 +333,7 @@ export default function Settings() {
                 </p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover: group-hover:translate-x-1 transition-all" />
           </CardContent>
         </Card>
 
@@ -359,7 +360,7 @@ export default function Settings() {
           <CardContent className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <FileSpreadsheet className="w-5 h-5 text-primary" />
+                <FileSpreadsheet className="w-5 h-5 " />
               </div>
               <div>
                 <h3 className="font-medium text-sm">Import Batch Data</h3>
@@ -368,13 +369,13 @@ export default function Settings() {
                 </p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover: group-hover:translate-x-1 transition-all" />
           </CardContent>
         </Card>
         <Card className="animate-fade-in-up delay-75 border-dashed border-primary/30 bg-primary/5">
           <CardContent className="flex items-center gap-3 p-4">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Calendar className="w-5 h-5 text-primary" />
+              <Calendar className="w-5 h-5 " />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">Tahun Ajaran & Semester</p>
@@ -415,7 +416,7 @@ export default function Settings() {
 
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Table2 className="w-4 h-4 text-primary" />
+                <Table2 className="w-4 h-4 " />
                 <div>
                   <p className="font-medium text-foreground text-sm">Warna Tabel Nilai</p>
                   <p className="text-xs text-muted-foreground">
@@ -449,7 +450,7 @@ export default function Settings() {
                         </div>
                         {isSelected && (
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary">
-                            <Check className="h-3 w-3 text-primary-foreground" />
+                            <Check className="h-3 w-3 -foreground" />
                           </span>
                         )}
                         {!scheme.selectable && (
@@ -475,7 +476,7 @@ export default function Settings() {
                 <AccordionTrigger className="py-0 hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-2">
                     <div className="flex items-center gap-2">
-                      <Palette className="w-4 h-4 text-primary" />
+                      <Palette className="w-4 h-4 " />
                       <div className="text-left">
                         <p className="font-medium text-foreground text-sm">Palet Tema SIPENA</p>
                         <p className="text-xs text-muted-foreground font-normal">
@@ -543,7 +544,7 @@ export default function Settings() {
                           {/* Selected Indicator */}
                           {currentTheme === themeId && (
                             <div className="absolute top-1 right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
-                              <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                              <Check className="w-2.5 h-2.5 -foreground" />
                             </div>
                           )}
                         </button>

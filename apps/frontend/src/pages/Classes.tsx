@@ -1,3 +1,4 @@
+import { KelasIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -215,7 +216,7 @@ export default function Classes() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-[12px] bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <School className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />
+              <KelasIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " / />
             </div>
             <div className="min-w-0">
               <h1 className="text-base sm:text-lg font-bold text-foreground">
@@ -279,7 +280,7 @@ export default function Classes() {
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <Loader2 className="w-8 h-8 animate-spin " />
           </div>
         )}
 
@@ -288,7 +289,7 @@ export default function Classes() {
           <div className="rounded-2xl bg-card border border-border/60 overflow-hidden">
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-16 h-16 rounded-[20px] bg-primary/10 flex items-center justify-center mb-4">
-                <School className="w-8 h-8 text-primary" />
+                <KelasIcon  className="w-8 h-8 " / />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
                 Belum Ada Kelas

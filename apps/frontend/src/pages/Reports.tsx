@@ -1,3 +1,4 @@
+import { LaporanIcon } from "@/components/ui/animated-icons";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -79,7 +80,7 @@ const REPORTS: ReportEntry[] = [
     href: "/reports/grades",
     accentClass: "from-primary to-primary/70",
     accentBg: "bg-primary/8",
-    iconColorClass: "text-primary",
+    iconColorClass: "",
     capabilities: [
       { icon: BookOpen, label: "Nilai per BAB & Tugas" },
       { icon: FileText, label: "STS & SAS" },
@@ -206,7 +207,7 @@ function ReportCard({
                 <Icon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                <h2 className="text-sm font-bold text-foreground group-hover: transition-colors">
                   {report.title}
                 </h2>
                 {report.badge && (
@@ -219,7 +220,7 @@ function ReportCard({
             <ArrowRight
               className={cn(
                 "w-4 h-4 text-muted-foreground/50 shrink-0 mt-0.5",
-                "group-hover:text-primary group-hover:translate-x-1 transition-all duration-200"
+                "group-hover: group-hover:translate-x-1 transition-all duration-200"
               )}
             />
           </div>
@@ -288,7 +289,7 @@ export default function Reports() {
       label: "Kelas aktif",
       value: classes.length,
       icon: GraduationCap,
-      iconClass: "text-primary",
+      iconClass: "",
       bgClass: "bg-primary/10",
       isLoading: classesLoading,
     },
@@ -341,7 +342,7 @@ export default function Reports() {
       <div className="app-page app-page-readable">
         {/* ── Page Header ───────────────────────────────────────────────── */}
         <PageHeader
-          icon={<BarChart3 className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />}
+          icon={<LaporanIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " / />}
           title="Laporan"
           subtitle={contextLine}
           breadcrumbs={[{ label: "Laporan" }]}

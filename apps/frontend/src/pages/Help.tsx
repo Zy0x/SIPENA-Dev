@@ -1,3 +1,4 @@
+import { PanduanIcon } from "@/components/ui/animated-icons";
 import { useNavigate } from "react-router-dom";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -366,7 +367,7 @@ export default function Help() {
             </p>
           </div>
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg flex-shrink-0">
-            <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <PanduanIcon  className="w-5 h-5 sm:w-6 sm:h-6 text-white" / />
           </div>
         </div>
 
@@ -395,7 +396,7 @@ export default function Help() {
                   className="h-auto py-3 sm:py-4 flex flex-col gap-1.5 sm:gap-2 text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground focus-visible:text-foreground text-xs sm:text-sm"
                   onClick={() => navigate(item.link)}
                 >
-                  <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] sm:text-sm font-bold">
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary -foreground flex items-center justify-center text-[10px] sm:text-sm font-bold">
                     {item.step}
                   </span>
                   <span className="font-medium truncate">{item.text}</span>
@@ -410,7 +411,7 @@ export default function Help() {
         <Card className="animate-fade-in-up delay-150 border border-border shadow-sm">
           <CardHeader className="pb-2 sm:pb-3">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <Keyboard className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <Keyboard className="w-4 h-4 sm:w-5 sm:h-5 " />
               Shortcut Cepat
             </CardTitle>
           </CardHeader>
@@ -452,7 +453,7 @@ export default function Help() {
                   <AccordionTrigger className="hover:no-underline group py-3 sm:py-4">
                     <div className="flex items-center gap-2 sm:gap-3 text-left min-w-0">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors flex-shrink-0">
-                        <guide.icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                        <guide.icon className="w-4 h-4 sm:w-5 sm:h-5 " />
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-foreground text-xs sm:text-sm truncate">{guide.title}</p>
@@ -473,7 +474,7 @@ export default function Help() {
                               <span className="text-[10px] sm:text-xs text-muted-foreground pl-4">{step.trim()}</span>
                             ) : (
                               <>
-                                <span className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary text-[10px] sm:text-xs font-medium flex items-center justify-center mt-0.5">
+                                <span className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10  text-[10px] sm:text-xs font-medium flex items-center justify-center mt-0.5">
                                   {index + 1}
                                 </span>
                                 <span className="text-[10px] sm:text-xs text-muted-foreground">{step}</span>

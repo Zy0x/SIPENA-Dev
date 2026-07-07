@@ -1,3 +1,4 @@
+import { PresensiIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -254,9 +255,9 @@ const statusConfig: Record<string, { color: string; bg: string; bgActive: string
     )
   },
   I: {
-    color: "text-primary",
+    color: "",
     bg: "bg-primary/10",
-    bgActive: "bg-primary text-primary-foreground",
+    bgActive: "bg-primary -foreground",
     label: "Izin",
     icon: (props: any) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" {...props}>
@@ -467,7 +468,7 @@ export default function Attendance() {
     if (pendingAttendanceSaves > 0) {
       return (
         <Badge variant="secondary" className="min-h-8 gap-1.5 rounded-full px-3 text-[11px] font-semibold">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin " />
           Menyimpan {pendingAttendanceSaves} perubahan
         </Badge>
       );
@@ -3286,7 +3287,7 @@ export default function Attendance() {
       <div ref={containerRef} className="app-page">
 
         <PageHeader
-          icon={<CalendarDays className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-primary" />}
+          icon={<PresensiIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " / />}
           title="Presensi"
           subtitle="Kelola kehadiran murid"
           breadcrumbs={[{ label: "Presensi" }]}
@@ -3403,7 +3404,7 @@ export default function Attendance() {
           selectedClassId ? "sm:grid sm:grid-cols-3" : "sm:grid sm:grid-cols-2"
         )}>
           <div data-tour="class-select" className="flex items-center gap-3 p-3 sm:p-3.5">
-            <School className="w-4 h-4 text-primary flex-shrink-0" />
+            <School className="w-4 h-4  flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Kelas</Label>
               <Select value={selectedClassId} onValueChange={setSelectedClassId}>
@@ -3419,7 +3420,7 @@ export default function Attendance() {
             </div>
           </div>
           <div data-tour="date-select" className="flex items-center gap-3 p-3 sm:p-3.5">
-            <CalendarIcon className="w-4 h-4 text-primary flex-shrink-0" />
+            <CalendarIcon className="w-4 h-4  flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Tanggal</Label>
               <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
@@ -3488,7 +3489,7 @@ export default function Attendance() {
                         <span className="text-[10px] text-muted-foreground">Libur Nasional</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-md bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">{new Date().getDate()}</div>
+                        <div className="w-6 h-6 rounded-md bg-primary -foreground text-[9px] font-bold flex items-center justify-center">{new Date().getDate()}</div>
                         <span className="text-[10px] text-muted-foreground">Tanggal Terpilih</span>
                       </div>
                     </div>
@@ -3500,7 +3501,7 @@ export default function Attendance() {
           {selectedClassId && (
             <div data-tour="calendar-settings" className="flex items-center justify-between p-3 sm:p-3.5 bg-muted/5">
               <div className="flex items-center gap-3 min-w-0">
-                <Settings2 className="w-4 h-4 text-primary flex-shrink-0" />
+                <Settings2 className="w-4 h-4  flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Pengaturan Kalender</Label>
                   <p className="text-xs font-medium text-foreground truncate">
@@ -3535,9 +3536,9 @@ export default function Attendance() {
         {/* Day Event Banner */}
         {getDayEvent(selectedDate) && (
          <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-primary/5 border border-primary/20">
-            <Bookmark className="w-4 h-4 text-primary flex-shrink-0" />
+            <Bookmark className="w-4 h-4  flex-shrink-0" />
             <p className="text-xs">
-              <span className="font-semibold text-primary">{getDayEvent(selectedDate)!.label}</span>
+              <span className="font-semibold ">{getDayEvent(selectedDate)!.label}</span>
               {getDayEvent(selectedDate)!.description && <span className="text-muted-foreground ml-1.5">— {getDayEvent(selectedDate)!.description}</span>}
             </p>
           </div>
@@ -3547,7 +3548,7 @@ export default function Attendance() {
         {!selectedClassId && (
           <div data-tour={classes.length === 0 ? "attendance-no-classes" : undefined} className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-[20px] bg-muted/60 flex items-center justify-center mb-4">
-              <CalendarDays className="w-8 h-8 text-muted-foreground" />
+              <PresensiIcon  className="w-8 h-8 text-muted-foreground" / />
             </div>
             <p className="text-sm font-medium text-foreground">Pilih Kelas</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs">Pilih kelas di atas untuk mulai mencatat kehadiran murid.</p>
@@ -3557,7 +3558,7 @@ export default function Attendance() {
         {selectedClassId && students.length === 0 && (
           <div data-tour="attendance-empty-cta" className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-[20px] bg-primary/10 flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-primary" />
+              <Users className="w-8 h-8 " />
             </div>
             <h3 className="mb-1 text-base font-semibold text-foreground">Belum Ada Murid</h3>
             <p className="mb-4 max-w-xs text-center text-xs text-muted-foreground">
@@ -3585,7 +3586,7 @@ export default function Attendance() {
                     className={cn(
                       "sipena-tab-trigger flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 touch-manipulation min-h-[44px]",
                       activeView === key 
-                        ? "bg-primary text-primary-foreground shadow-md scale-[1.02] ring-2 ring-primary/20" 
+                        ? "bg-primary -foreground shadow-md scale-[1.02] ring-2 ring-primary/20" 
                         : "text-muted-foreground active:bg-muted/60 lg:hover:bg-muted/50 lg:hover:text-foreground"
                     )}
                   >
@@ -3643,9 +3644,9 @@ export default function Attendance() {
 
                   {/* Hari Efektif - prominent */}
                   <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-primary/10 border-2 border-primary/30 shadow-sm">
-                    <CalendarDays className="w-5 h-5 text-primary flex-shrink-0" />
+                    <PresensiIcon  className="w-5 h-5  flex-shrink-0" / />
                     <div>
-                      <span className="text-sm sm:text-base font-extrabold text-primary">{effectiveDays} Hari Efektif</span>
+                      <span className="text-sm sm:text-base font-extrabold ">{effectiveDays} Hari Efektif</span>
                       <span className="text-[10px] sm:text-xs text-muted-foreground ml-2">
                         {format(currentMonth, "MMMM yyyy", { locale: idLocale })} • {workDayFormat === "5days" ? "Sen–Jum" : "Sen–Sab"}
                       </span>
@@ -3664,11 +3665,11 @@ export default function Attendance() {
 
                   <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/50 text-[10px] text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <MessageSquare className="w-3 h-3 text-primary" />
+                      <MessageSquare className="w-3 h-3 " />
                       <span>= Catatan siswa</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Bookmark className="w-3 h-3 text-primary" />
+                      <Bookmark className="w-3 h-3 " />
                       <span>= Kegiatan khusus</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -3684,7 +3685,7 @@ export default function Attendance() {
                 <div data-tour="attendance-table" className="rounded-2xl bg-card border border-border shadow-sm overflow-hidden max-w-full">
                 <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5 border-b border-border">
                   <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto">
-                    <Users className="w-4 h-4 text-primary flex-shrink-0" />
+                    <Users className="w-4 h-4  flex-shrink-0" />
                     <span className="text-sm font-semibold truncate flex-1 sm:flex-none">{selectedClass?.name}</span>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">{format(selectedDate, "d MMM", { locale: idLocale })}</Badge>
                   </div>
@@ -3741,7 +3742,7 @@ export default function Attendance() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <button onClick={() => handleOpenNote(student.id, student.name, selectedDate)} className="flex-shrink-0 touch-manipulation">
-                                        <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
+                                        <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3 " />
                                       </button>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className="max-w-[200px] text-xs">{note}</TooltipContent>
@@ -3778,7 +3779,7 @@ export default function Attendance() {
                                 <button onClick={() => handleOpenNote(student.id, student.name, selectedDate)}
                                   disabled={holidayActive}
                                   className={cn("flex w-9 h-9 rounded-lg sm:rounded-lg sm:w-auto sm:h-auto sm:min-w-[38px] sm:min-h-[40px] items-center justify-center touch-manipulation flex-shrink-0 attendance-btn",
-                                    note ? "bg-primary/10 text-primary" : "bg-muted/50 text-muted-foreground lg:hover:bg-muted/80",
+                                    note ? "bg-primary/10 " : "bg-muted/50 text-muted-foreground lg:hover:bg-muted/80",
                                     holidayActive && "opacity-40 cursor-not-allowed"
                                   )}>
                                   <MessageSquare className="w-3.5 h-3.5 sm:w-3.5 sm:h-3.5" />
@@ -3811,7 +3812,7 @@ export default function Attendance() {
                     {/* Left section: Title & Save Indicator */}
                     <div className="flex items-center justify-between sm:justify-start gap-2">
                       <div className="flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-primary flex-shrink-0" />
+                        <BarChart3 className="w-4 h-4  flex-shrink-0" />
                         <span className="text-sm font-semibold text-foreground whitespace-nowrap">Rekap Bulanan</span>
                       </div>
                     </div>
@@ -3884,7 +3885,7 @@ export default function Attendance() {
                                 </PopoverTrigger>
                                 <PopoverContent side="bottom" className="text-[10px] max-w-[220px] p-2.5">
                                   <p className="font-semibold text-foreground">{format(day, "EEEE, d MMMM", { locale: idLocale })}</p>
-                                  {ev && <p className="text-primary mt-1">📌 {ev.label}{ev.description ? `: ${ev.description}` : ""}</p>}
+                                  {ev && <p className=" mt-1">📌 {ev.label}{ev.description ? `: ${ev.description}` : ""}</p>}
                                   {holCustom && <p className="text-red-500 mt-1">🔴 {getHolidayDescriptionCombined(day)}</p>}
                                   {isNatHol && <p className="text-red-400 mt-1">🇮🇩 {getNationalHolidayName(day)}</p>}
                                   {!ev && !holCustom && !isNatHol && !isSun && <p className="text-muted-foreground mt-1">Hari kerja biasa</p>}
@@ -3963,7 +3964,7 @@ export default function Attendance() {
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary flex items-center justify-center cursor-pointer">
-                                          <MessageSquare className="w-1.5 h-1.5 text-primary-foreground" />
+                                          <MessageSquare className="w-1.5 h-1.5 -foreground" />
                                         </div>
                                       </TooltipTrigger>
                                       <TooltipContent side="top" className="text-[10px] max-w-[200px]">
@@ -4180,7 +4181,7 @@ export default function Attendance() {
           <DialogContent className="sm:max-w-sm mx-3 rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-sm sm:text-base flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-primary" /> Catatan Presensi
+                <MessageSquare className="w-4 h-4 " /> Catatan Presensi
               </DialogTitle>
               <DialogDescription className="text-xs">
                 {noteTarget && `${noteTarget.studentName} — ${format(noteTarget.date, "d MMMM yyyy", { locale: idLocale })}`}
@@ -4206,7 +4207,7 @@ export default function Attendance() {
             {/* Header — fixed */}
             <DialogHeader className="px-4 pt-4 pb-3 flex-shrink-0 border-b border-border">
               <DialogTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Download className="w-4 h-4 text-primary flex-shrink-0" />
+                <Download className="w-4 h-4  flex-shrink-0" />
                 Ekspor Presensi
               </DialogTitle>
               <DialogDescription className="text-xs">
@@ -4265,7 +4266,7 @@ export default function Attendance() {
                 className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border hover:bg-muted/50 active:bg-muted/70 transition-colors text-left touch-manipulation min-h-[60px]"
               >
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <ImageIcon className="w-5 h-5 text-primary" />
+                  <ImageIcon className="w-5 h-5 " />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground">PNG HD</p>
@@ -4281,12 +4282,12 @@ export default function Attendance() {
                 className="w-full flex items-center gap-3 p-3 rounded-2xl border border-primary/30 hover:bg-primary/5 active:bg-primary/10 transition-colors text-left touch-manipulation min-h-[60px]"
               >
                 <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <ImageIcon className="w-5 h-5 text-primary" />
+                  <ImageIcon className="w-5 h-5 " />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground flex items-center gap-1.5 flex-wrap">
                     PNG 4K Ultra HD
-                    <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold flex-shrink-0">
+                    <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/10  font-bold flex-shrink-0">
                       BEST
                     </span>
                   </p>
@@ -4331,7 +4332,7 @@ export default function Attendance() {
             {/* Header — fixed, tidak ikut scroll */}
             <DialogHeader className="px-4 pt-4 pb-3 flex-shrink-0 border-b border-border">
               <DialogTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Settings2 className="w-4 h-4 text-primary flex-shrink-0" />
+                <Settings2 className="w-4 h-4  flex-shrink-0" />
                 Pengaturan Presensi
               </DialogTitle>
               <DialogDescription className="text-[10px] sm:text-xs text-muted-foreground">
@@ -4364,7 +4365,7 @@ export default function Attendance() {
                         <p className="font-medium text-xs text-foreground">{label}</p>
                         <p className="text-[10px] text-muted-foreground">{desc}</p>
                       </div>
-                      {workDayFormat === key && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
+                      {workDayFormat === key && <Check className="w-4 h-4  flex-shrink-0" />}
                     </button>
                   ))}
                 </div>
@@ -4465,13 +4466,13 @@ export default function Attendance() {
                               </p>
                               <p className="text-[10px] text-muted-foreground truncate">
                                 🇮🇩 {nh.name}
-                                {isOverridden && <span className="ml-1 text-primary font-medium">(Diubah jadi hari kerja)</span>}
+                                {isOverridden && <span className="ml-1  font-medium">(Diubah jadi hari kerja)</span>}
                               </p>
                             </div>
                             <Button
                               variant={isOverridden ? "default" : "outline"}
                               size="sm"
-                              className={cn("h-7 px-2 text-[9px] gap-1 rounded-lg flex-shrink-0", isOverridden && "bg-primary text-primary-foreground")}
+                              className={cn("h-7 px-2 text-[9px] gap-1 rounded-lg flex-shrink-0", isOverridden && "bg-primary -foreground")}
                               onClick={async () => {
                                 if (isOverridden) {
                                   // Restore: remove the "Hari Kerja" override
@@ -4554,7 +4555,7 @@ export default function Attendance() {
                             <Button
                               variant={isOverridden ? "default" : "outline"}
                               size="sm"
-                              className={cn("h-7 px-2.5 text-[9px] gap-1 rounded-lg flex-shrink-0", isOverridden && "bg-primary text-primary-foreground")}
+                              className={cn("h-7 px-2.5 text-[9px] gap-1 rounded-lg flex-shrink-0", isOverridden && "bg-primary -foreground")}
                               onClick={async () => {
                                 if (isOverridden) {
                                   // Remove override
@@ -4857,7 +4858,7 @@ export default function Attendance() {
             {/* Header — fixed */}
             <DialogHeader className="px-4 pt-4 pb-3 flex-shrink-0 border-b border-border">
               <DialogTitle className="text-sm sm:text-base flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-primary flex-shrink-0" />
+                <Bookmark className="w-4 h-4  flex-shrink-0" />
                 Tambah Kegiatan Khusus
               </DialogTitle>
               <DialogDescription className="text-xs">
@@ -4875,7 +4876,7 @@ export default function Attendance() {
                 </Label>
                 <div className="border border-primary/30 dark:border-primary/40 rounded-xl overflow-hidden bg-primary/5 dark:bg-primary/10">
                   <div className="px-3 py-1.5 bg-primary/10 dark:bg-primary/20 border-b border-primary/20 dark:border-primary/30">
-                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wide flex items-center gap-1">
+                    <p className="text-[9px] font-semibold  uppercase tracking-wide flex items-center gap-1">
                       <Bookmark className="w-3 h-3" /> Kalender Kegiatan
                     </p>
                   </div>
@@ -4897,7 +4898,7 @@ export default function Attendance() {
                           row: "flex w-full mt-2",
                           cell: "flex-1 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-primary/15 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                           day: "h-8 w-full sm:h-9 p-0 font-normal aria-selected:opacity-100 text-xs sm:text-sm",
-                          day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90",
+                          day_selected: "bg-primary -foreground hover:bg-primary/90 focus:bg-primary/90",
                         }}
                         modifiers={{
                           dayEvent: (date) => !!getDayEvent(date),
@@ -4940,7 +4941,7 @@ export default function Attendance() {
                               </TooltipTrigger>
                               {existing && (
                                 <TooltipContent className="text-[10px]">
-                                  <p className="font-semibold text-primary">ℹ Sudah ada kegiatan:</p>
+                                  <p className="font-semibold ">ℹ Sudah ada kegiatan:</p>
                                   <p>{existing.label}{existing.description ? ` — ${existing.description}` : ""}</p>
                                   <p className="text-muted-foreground mt-0.5">Akan ditimpa dengan kegiatan baru.</p>
                                 </TooltipContent>
@@ -5015,7 +5016,7 @@ export default function Attendance() {
           <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg rounded-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
-                <CalendarDays className="h-4 w-4 text-primary" />
+                <PresensiIcon  className="h-4 w-4 " / />
                 Pilih Bulan Ekspor
               </DialogTitle>
               <DialogDescription>

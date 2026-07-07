@@ -1,3 +1,4 @@
+import { MataPelajaranIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -299,7 +300,7 @@ export default function Subjects() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] bg-primary/10">
-              <BookOpen className="h-5 w-5 text-primary" />
+              <MataPelajaranIcon  className="h-5 w-5 " / />
             </div>
             <div className="min-w-0">
               <h1 className="truncate text-base font-bold text-foreground sm:text-lg">
@@ -359,7 +360,7 @@ export default function Subjects() {
             <div className="grid gap-3 lg:grid-cols-[minmax(22rem,36rem)_minmax(20rem,1fr)] lg:items-end">
               <div className="min-w-0" data-tour="class-select">
                 <Label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <School className="h-4 w-4 text-primary" />
+                  <School className="h-4 w-4 " />
                   Kelas
                 </Label>
                 <Select value={selectedClassId} onValueChange={handleClassChange}>
@@ -373,7 +374,7 @@ export default function Subjects() {
                       </SelectItem>
                     ))}
                     <SelectSeparator />
-                    <SelectItem value={CREATE_CLASS_VALUE} className="min-h-11 font-medium text-primary">
+                    <SelectItem value={CREATE_CLASS_VALUE} className="min-h-11 font-medium ">
                       <span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Tambah Kelas Baru</span>
                     </SelectItem>
                   </SelectContent>
@@ -448,7 +449,7 @@ export default function Subjects() {
 
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin " />
           </div>
         )}
 
@@ -466,7 +467,7 @@ export default function Subjects() {
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
             <div data-tour="subjects-empty-cta" className="flex flex-col items-center justify-center px-4 py-16">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-[20px] bg-primary/10">
-                <BookOpen className="h-8 w-8 text-primary" />
+                <MataPelajaranIcon  className="h-8 w-8 " / />
               </div>
               <h3 className="mb-1 text-base font-semibold text-foreground">
                 Belum Ada Mata Pelajaran
@@ -485,7 +486,7 @@ export default function Subjects() {
 
         {!isLoading && filteredSubjects.length > 0 && (
           <div className="flex items-center gap-2 px-1 text-[10px] text-muted-foreground sm:text-xs">
-            <BookOpen className="h-3 w-3 flex-shrink-0" />
+            <MataPelajaranIcon  className="h-3 w-3 flex-shrink-0" / />
             <span>Pilih Input Nilai untuk mengisi nilai, atau gunakan tombol Edit/Bagikan pada setiap mapel.</span>
           </div>
         )}
