@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Calendar, ChevronDown, Check, Plus, Loader2 } from "lucide-react";
+import { Calendar, ChevronDown, Check, Plus, Loader2, ChevronRight } from "lucide-react";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import {
   DropdownMenu,
@@ -137,15 +137,24 @@ export function ActiveYearBadge({
   // No active year
   if (!activeYear) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        className={cn("gap-2", className)}
+      <button
         onClick={() => setShowSwitchDialog(true)}
+        className={cn(
+          "sipena-year-btn group relative flex w-full items-center gap-3 rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-3 text-left transition-all duration-300 hover:border-primary/50 hover:bg-primary/10 hover:shadow-sm active:scale-[0.98]",
+          className
+        )}
       >
-        <Calendar className="h-4 w-4" />
-        <span>Pilih Tahun Ajaran</span>
-      </Button>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+          <Calendar className="h-5 w-5" />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-bold text-primary">Pilih Tahun Ajaran</span>
+          <span className="text-[10px] font-medium text-primary/60">Ketuk untuk mengatur jadwal</span>
+        </div>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 opacity-0 transition-all duration-300 group-hover:opacity-100">
+          <ChevronRight className="h-3.5 w-3.5 text-primary" />
+        </div>
+      </button>
     );
   }
 
