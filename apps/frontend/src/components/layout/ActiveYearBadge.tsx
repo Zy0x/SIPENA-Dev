@@ -137,24 +137,33 @@ export function ActiveYearBadge({
   // No active year
   if (!activeYear) {
     return (
-      <button
-        onClick={() => setShowSwitchDialog(true)}
-        className={cn(
-          "sipena-year-btn group relative flex w-full items-center gap-2.5 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-2 text-left transition-all duration-300 hover:border-primary/60 hover:bg-primary/10 hover:shadow-sm active:scale-[0.98]",
-          className
-        )}
-      >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/25">
-          <Calendar className="h-4 w-4 animate-pulse" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-xs font-bold leading-tight text-primary">Pilih Tahun Ajaran</span>
-          <span className="text-[10px] font-medium leading-tight text-primary/70">Wajib diatur untuk memulai</span>
-        </div>
-        <div className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary transition-all duration-300 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground">
-          <ChevronRight className="h-3.5 w-3.5" />
-        </div>
-      </button>
+      <>
+        <button
+          onClick={() => setShowSwitchDialog(true)}
+          className={cn(
+            "sipena-year-btn group relative flex w-full items-center gap-2.5 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-2 text-left transition-all duration-300 hover:border-primary/60 hover:bg-primary/10 hover:shadow-sm active:scale-[0.98]",
+            className
+          )}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/25">
+            <Calendar className="h-4 w-4 animate-pulse" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-bold leading-tight text-primary">Pilih Tahun Ajaran</span>
+            <span className="text-[10px] font-medium leading-tight text-primary/70">Wajib diatur untuk memulai</span>
+          </div>
+          <div className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary transition-all duration-300 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground">
+            <ChevronRight className="h-3.5 w-3.5" />
+          </div>
+        </button>
+
+        <YearSwitchDialog
+          open={showSwitchDialog}
+          onOpenChange={setShowSwitchDialog}
+          targetYearId={targetYearId}
+          onComplete={() => setTargetYearId(null)}
+        />
+      </>
     );
   }
 
