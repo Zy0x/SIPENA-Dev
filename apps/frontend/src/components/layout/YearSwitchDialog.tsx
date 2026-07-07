@@ -543,7 +543,7 @@ export function YearSwitchDialog({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 shrink-0 touch-manipulation"
+                                    className="sipena-year-btn h-8 w-8 shrink-0 touch-manipulation"
                                   >
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
@@ -693,7 +693,7 @@ export function YearSwitchDialog({
                   <Button
                     variant="outline"
                     onClick={() => onOpenChange(false)}
-                    className="w-full sm:w-auto min-h-[44px] touch-manipulation"
+                    className="sipena-year-btn w-full sm:w-auto min-h-[44px] touch-manipulation"
                   >
                     Tutup
                   </Button>
@@ -703,7 +703,7 @@ export function YearSwitchDialog({
                       setSemesterConfig({ sem1: true, sem2: true, activeSemester: 1 });
                       setMode("create");
                     }}
-                    className="w-full sm:w-auto gap-2 min-h-[44px] touch-manipulation"
+                    className="sipena-year-btn w-full sm:w-auto gap-2 min-h-[44px] touch-manipulation"
                   >
                     <Plus className="h-4 w-4" />
                     Buat Tahun Ajaran Baru
@@ -763,7 +763,7 @@ export function YearSwitchDialog({
                             variant="outline"
                             size="sm"
                             className={cn(
-                              "min-h-[44px] sm:min-h-8 rounded-full px-4 text-xs font-medium transition-all duration-300 touch-manipulation",
+                              "sipena-year-btn min-h-[44px] sm:min-h-8 rounded-full px-4 text-xs font-medium transition-all duration-300 touch-manipulation",
                               newYearName === suggestion
                                 ? "border-primary bg-primary text-primary-foreground shadow-sm scale-[1.02]"
                                 : "border-border bg-background hover:bg-muted hover:border-muted-foreground/30"
@@ -790,7 +790,7 @@ export function YearSwitchDialog({
                     <div className="grid grid-cols-2 gap-3">
                       <div
                         className={cn(
-                          "relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 overflow-hidden group touch-manipulation",
+                          "sipena-year-btn relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 overflow-hidden group touch-manipulation",
                           semesterConfig.sem1
                             ? "border-primary bg-primary/5 shadow-sm"
                             : "border-border bg-background hover:border-primary/40 hover:bg-muted/30"
@@ -820,7 +820,7 @@ export function YearSwitchDialog({
 
                       <div
                         className={cn(
-                          "relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 overflow-hidden group touch-manipulation",
+                          "sipena-year-btn relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 overflow-hidden group touch-manipulation",
                           semesterConfig.sem2
                             ? "border-primary bg-primary/5 shadow-sm"
                             : "border-border bg-background hover:border-primary/40 hover:bg-muted/30"
@@ -857,7 +857,7 @@ export function YearSwitchDialog({
                           {semesterConfig.sem1 && (
                             <button
                               className={cn(
-                                "flex items-center gap-1.5 min-h-[44px] sm:min-h-8 px-4 rounded-lg text-xs font-semibold transition-all duration-200 touch-manipulation",
+                                "sipena-year-btn flex items-center gap-1.5 min-h-[44px] sm:min-h-8 px-4 rounded-lg text-xs font-semibold transition-all duration-200 touch-manipulation",
                                 semesterConfig.activeSemester === 1 
                                   ? "bg-primary text-primary-foreground shadow-sm" 
                                   : "text-muted-foreground hover:text-foreground hover:bg-background/50"
@@ -871,7 +871,7 @@ export function YearSwitchDialog({
                           {semesterConfig.sem2 && (
                             <button
                               className={cn(
-                                "flex items-center gap-1.5 min-h-[44px] sm:min-h-8 px-4 rounded-lg text-xs font-semibold transition-all duration-200 touch-manipulation",
+                                "sipena-year-btn flex items-center gap-1.5 min-h-[44px] sm:min-h-8 px-4 rounded-lg text-xs font-semibold transition-all duration-200 touch-manipulation",
                                 semesterConfig.activeSemester === 2 
                                   ? "bg-primary text-primary-foreground shadow-sm" 
                                   : "text-muted-foreground hover:text-foreground hover:bg-background/50"
@@ -901,14 +901,14 @@ export function YearSwitchDialog({
                     variant="outline"
                     onClick={() => setMode("list")}
                     disabled={isCreating}
-                    className="rounded-xl min-h-[44px] px-5 transition-colors hover:bg-muted text-sm touch-manipulation"
+                    className="sipena-year-btn rounded-xl min-h-[44px] px-5 transition-colors hover:bg-muted text-sm touch-manipulation"
                   >
                     Kembali
                   </Button>
                   <Button
                     onClick={handleCreateYear}
                     disabled={isCreating || !newYearName.trim() || (!semesterConfig.sem1 && !semesterConfig.sem2)}
-                    className="rounded-xl min-h-[44px] px-6 gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group text-sm touch-manipulation"
+                    className="sipena-year-btn rounded-xl min-h-[44px] px-6 gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group text-sm touch-manipulation"
                   >
                     {isCreating ? (
                       <>
