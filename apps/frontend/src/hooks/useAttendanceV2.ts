@@ -936,7 +936,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         date,
         status,
         note: null,
-        source: "bulk_manual"
+        source: "manual"
       }));
 
       const { data, error } = await (supabase as any).rpc("bulk_upsert_attendance_v2", {

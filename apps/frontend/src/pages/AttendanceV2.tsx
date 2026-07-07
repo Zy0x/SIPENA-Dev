@@ -1074,11 +1074,17 @@ export default function AttendanceV2Page() {
       return;
     }
     
-    await bulkSetAttendance({ studentIds: targetIds, date: dateStr, status: bulkStatus! });
-    setShowBulkDialog(false);
-    setShowBulkConfirm(false);
-    setExistingBulkStudents([]);
-    showSuccess("Berhasil", `Presensi ${statusLabels[bulkStatus!]} diterapkan`);
+    try {
+      await bulkSetAttendance({ studentIds: targetIds, date: dateStr, status: bulkStatus! });
+      setShowBulkDialog(false);
+      setShowBulkConfirm(false);
+      setExistingBulkStudents([]);
+      showSuccess("Berhasil", `Presensi ${statusLabels[bulkStatus!]} diterapkan`);
+    } catch (error: any) {
+      console.error("Failed to apply bulk attendance:", error);
+      showWarning("Gagal", `Gagal menerapkan presensi massal: ${error.message || "Kesalahan pada server"}`);
+      // Do not close dialog so user can retry or cancel
+    }
   }, [selectedDate, students, bulkStatus, bulkSetAttendance, isHolidayCombined, getHolidayDescriptionCombined, getAttendance, showSuccess, showWarning, showBulkConfirm]);
 
   const handleBulkClear = useCallback(async () => {

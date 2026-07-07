@@ -30,7 +30,7 @@ BEGIN
     v_date := (v_record->>'date')::date;
     v_status := v_record->>'status';
     v_note := v_record->>'note';
-    v_source := COALESCE(v_record->>'source', 'bulk_manual');
+    v_source := COALESCE(v_record->>'source', 'manual');
     
     -- Ambil p_expected_updated_at jika diberikan, format timestamp with time zone
     IF v_record->>'expected_updated_at' IS NOT NULL THEN
