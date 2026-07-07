@@ -51,13 +51,18 @@ export function CollapsedNavItem({ item, isActive, onNavigate, onMobileClose }: 
           className="relative block touch-manipulation"
         >
           <div className={cn(
-            "flex items-center justify-center w-11 h-11 mx-auto rounded-[13px] transition-colors relative",
+            "flex items-center justify-center w-11 h-11 mx-auto rounded-[12px] transition-all relative group",
             "min-w-[44px] min-h-[44px]",
             isActive
-              ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/15"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
           )}>
-            <item.icon className="w-[20px] h-[20px]" aria-hidden="true" />
+            <div className={cn(
+              "flex items-center justify-center rounded-[8px] transition-all",
+              isActive ? "w-[26px] h-[26px] bg-background shadow-sm ring-1 ring-primary/10" : "w-full h-full"
+            )}>
+              <item.icon className="w-[18px] h-[18px]" aria-hidden="true" />
+            </div>
           </div>
           {item.isBeta && (
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-status-connecting rounded-full" />
@@ -181,10 +186,10 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
     <div className="relative">
       {/* Unified row container – single rounded box for both link + chevron */}
       <div className={cn(
-        "flex items-center rounded-[13px] transition-colors overflow-hidden",
+        "flex items-center rounded-[12px] transition-all overflow-hidden",
         "min-h-[44px]",
         isActive
-          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+          ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/15"
           : "text-foreground/75 hover:bg-muted/50 hover:text-foreground"
       )}>
         <Link to={item.href} data-sidebar-nav-item="true"
@@ -199,8 +204,8 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
             <div className={cn(
               "w-[30px] h-[30px] rounded-[8px] flex items-center justify-center flex-shrink-0 transition-colors",
               isActive
-                ? "bg-white/20"
-                : "bg-muted/60"
+                ? "bg-background shadow-sm ring-1 ring-primary/10"
+                : "bg-muted/60 group-hover:bg-muted/80"
             )}>
               <item.icon className="w-[16px] h-[16px]" aria-hidden="true" />
             </div>
@@ -208,7 +213,7 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
             {item.isBeta && (
               <Badge variant="outline" className={cn(
                 "text-[9px] px-1.5 py-0 gap-0.5 shrink-0",
-                isActive ? "border-white/40 text-white" : "border-status-connecting/50 text-status-connecting"
+                isActive ? "border-primary/30 text-primary bg-primary/5" : "border-status-connecting/50 text-status-connecting"
               )}>
                 <Sparkles className="w-2 h-2" />Beta
               </Badge>
@@ -224,7 +229,7 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
             className={cn(
               "sipena-sidebar-chevron-btn flex items-center justify-center w-10 min-h-[44px] touch-manipulation transition-colors",
               isActive
-                ? "text-primary-foreground hover:bg-white/10"
+                ? "text-primary hover:bg-primary/20"
                 : "text-muted-foreground hover:bg-muted/40"
             )}
             aria-label={isExpanded ? "Tutup submenu" : "Buka submenu"}
