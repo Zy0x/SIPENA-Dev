@@ -25,3 +25,4 @@ export const LaporanNilaiIcon = createGifIcon("Laporan_Nilai.gif");
 export const PortalOrangtuaIcon = createGifIcon("Portal_Orangtua.gif");
 export const ProfilSayaIcon = createGifIcon("Profil_Saya.gif");
 export const RankingMuridIcon = createGifIcon("Ranking_Murid.gif");
+export const HandWaveIcon = createGifIcon("Hand_Wave.gif");

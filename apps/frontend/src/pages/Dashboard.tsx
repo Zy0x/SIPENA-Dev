@@ -1,4 +1,4 @@
-import { DashboardIcon } from "@/components/ui/animated-icons";
+import { DashboardIcon, HandWaveIcon } from "@/components/ui/animated-icons";
 import { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -178,8 +178,11 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="animate-fade-in flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground truncate">
-              Halo, {user?.user_metadata?.full_name?.split(' ')[0] || "Guru"}! 👋
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground flex items-center gap-1.5 sm:gap-2">
+              <span className="truncate">Halo, {user?.user_metadata?.full_name?.split(' ')[0] || "Guru"}!</span>
+              <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 shrink-0 rotate-[15deg] inline-block -mt-1">
+                <HandWaveIcon />
+              </div>
             </h1>
             {activeYear && activeSemester && (
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
