@@ -501,7 +501,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
        >
          {/* Logo section */}
          <div className={cn(
-           "border-b border-border flex items-center shrink-0 relative bg-card/80",
+           "border-b border-border flex items-center shrink-0 relative bg-muted/30",
            effectiveSidebarCollapsed ? "p-3 justify-center h-14" : "px-4 py-2 gap-3 h-14"
          )}>
             <div
@@ -707,7 +707,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
        {/* Main content wrapper */}
        <div className="flex-1 flex flex-col min-w-0">
          {/* Mobile header */}
-          <header className="lg:hidden sticky top-0 z-30 bg-card/95 backdrop-blur-xl border-b border-border shadow-sm safe-area-inset">
+          <header className="lg:hidden sticky top-0 z-30 bg-muted/30 backdrop-blur-xl border-b border-border shadow-sm safe-area-inset">
             <div className="flex items-center justify-between px-3 sm:px-4 h-14">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <Tooltip delayDuration={300}>
@@ -765,7 +765,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
          </header>
  
          {/* Desktop header */}
-         <header className="hidden lg:flex sticky top-0 z-30 bg-card/95 backdrop-blur-xl border-b border-border shadow-sm items-center justify-between px-6 h-14">
+         <header className="hidden lg:flex sticky top-0 z-30 bg-muted/30 backdrop-blur-xl border-b border-border shadow-sm items-center justify-between px-6 h-14">
             <HeaderYearDisplay variant="desktop" />
            
            <div className="flex items-center gap-2">
