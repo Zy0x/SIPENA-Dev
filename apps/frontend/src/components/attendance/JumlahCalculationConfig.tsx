@@ -21,7 +21,7 @@ export interface JumlahConfig {
 const STORAGE_KEY = "sipena_jumlah_config";
 
 const ALL_STATUSES = ["H", "S", "I", "A", "D"];
-const DEFAULT_STATUSES = ["S", "I", "A", "D"]; // Default: non-hadir
+export const DEFAULT_STATUSES = ["S", "I", "A", "D"]; // Default: non-hadir
 
 const STATUS_LABELS: Record<string, string> = {
   H: "Hadir",

@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { DayEvent, Delegation, HolidayRecord, MonthSnapshot, RecapProfile } from "@/hooks/useAttendanceV2";
+import type { JumlahConfig } from "@/components/attendance/JumlahCalculationConfig";
 import { cn } from "@/lib/utils";
 
 import {
@@ -79,6 +80,8 @@ interface SettingsDashboardProps {
   recapProfile: RecapProfile | null;
   handleUpdateRecapProfile: (data: Partial<RecapProfile>) => void;
   handleToggleRecapStatus: (type: "present" | "absence", status: "H" | "S" | "I" | "A" | "D") => void;
+  jumlahConfig?: JumlahConfig;
+  setJumlahConfig?: (cfg: JumlahConfig) => void;
   delegations: Delegation[];
   handleRevokeDelegationAction: (id: string) => Promise<void>;
   isRevokingDelegation: boolean;
@@ -144,6 +147,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   recapProfile,
   handleUpdateRecapProfile,
   handleToggleRecapStatus,
+  jumlahConfig,
+  setJumlahConfig,
   delegations,
   handleRevokeDelegationAction,
   isRevokingDelegation,
@@ -460,6 +465,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             setShowNISNDaily={setShowNISNDaily}
             showNISNMonthly={showNISNMonthly}
             setShowNISNMonthly={setShowNISNMonthly}
+            jumlahConfig={jumlahConfig}
+            setJumlahConfig={setJumlahConfig}
           />
         );
       case "audit":

@@ -1355,6 +1355,7 @@ export default function AttendanceV2Page() {
                   activeView={activeView}
                   saveIndicator={renderAttendanceSaveIndicator()}
                   showNISNMonthly={showNISNMonthly}
+                  onOpenSettings={() => setShowSettingsSheet(true)}
                 />
               )}
             </div>
@@ -1549,6 +1550,8 @@ export default function AttendanceV2Page() {
           setShowNISNDaily={setShowNISNDaily}
           showNISNMonthly={showNISNMonthly}
           setShowNISNMonthly={setShowNISNMonthly}
+          jumlahConfig={jumlahConfig}
+          setJumlahConfig={setJumlahConfig}
         />
 
         <DialogStackDepthContext.Provider value={1}>

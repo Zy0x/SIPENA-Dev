@@ -4,13 +4,13 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { id as idLocale } from "date-fns/locale";
 import { 
   BarChart3, Lock, Unlock, ChevronLeft, ChevronRight, 
-  CalendarOff, MessageSquare, CalendarDays, Bookmark, Sun 
+  CalendarOff, MessageSquare, CalendarDays, Bookmark, Sun, Settings2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { NationalHolidaySync } from "@/components/attendance/NationalHolidaySync";
-import { JumlahCalculationConfig, calculateJumlah, type JumlahConfig } from "@/components/attendance/JumlahCalculationConfig";
+import { calculateJumlah, type JumlahConfig, DEFAULT_STATUSES } from "@/components/attendance/JumlahCalculationConfig";
 import { PercentageRow } from "@/components/attendance/PercentageRow";
 import { SmartScrollTable } from "@/components/attendance/SmartScrollTable";
 import { cn } from "@/lib/utils";
@@ -192,6 +192,7 @@ interface AttendanceV2MonthlyViewProps {
   activeView: "daily" | "monthly";
   saveIndicator?: React.ReactNode;
   showNISNMonthly?: boolean;
+  onOpenSettings?: () => void;
 }
 
 const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -231,6 +232,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
   activeView,
   saveIndicator,
   showNISNMonthly,
+  onOpenSettings,
 }) => {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -356,7 +358,40 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                 </TooltipTrigger>
                 <TooltipContent className="text-xs sm:hidden">{isLocked ? "Kunci Aktif" : "Kunci Nonaktif"}</TooltipContent>
               </Tooltip>
-              <JumlahCalculationConfig config={jumlahConfig} onConfigChange={setJumlahConfig} />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={
+                      jumlahConfig.mode === "default" ||
+                      (jumlahConfig.selectedStatuses.length === DEFAULT_STATUSES.length &&
+                        DEFAULT_STATUSES.every((s) => jumlahConfig.selectedStatuses.includes(s)))
+                        ? "outline"
+                        : "default"
+                    }
+                    size="sm"
+                    className={cn(
+                      "sipena-jumlah-config-btn h-8 px-2.5 text-xs gap-1 rounded-xl",
+                      (jumlahConfig.mode !== "default" &&
+                        !(
+                          jumlahConfig.selectedStatuses.length === DEFAULT_STATUSES.length &&
+                          DEFAULT_STATUSES.every((s) => jumlahConfig.selectedStatuses.includes(s))
+                        )) &&
+                        "bg-primary text-primary-foreground"
+                    )}
+                    onClick={() => onOpenSettings?.()}
+                  >
+                    <Settings2 className="w-3 h-3" />
+                    <span className="hidden sm:inline">Jumlah</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs max-w-[200px] p-2">
+                  <p className="font-semibold mb-1">Logika Kolom Jumlah</p>
+                  <p className="text-muted-foreground text-[10px]">
+                    Menghitung: {jumlahConfig.mode === "default" ? DEFAULT_STATUSES.join(", ") : (jumlahConfig.selectedStatuses.join(", ") || "Tidak ada")}. 
+                    Klik untuk mengubah di Pengaturan.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </div>
 
             {/* Month Navigation */}

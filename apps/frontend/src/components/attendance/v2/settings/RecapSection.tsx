@@ -7,7 +7,28 @@ import {
 import { Switch } from "@/components/ui/switch";
 
 import type { RecapProfile } from "@/hooks/useAttendanceV2";
+import { type JumlahConfig, DEFAULT_STATUSES, saveJumlahConfig } from "@/components/attendance/JumlahCalculationConfig";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const ALL_STATUSES = ["H", "S", "I", "A", "D"];
+const STATUS_LABELS: Record<string, string> = {
+  H: "Hadir",
+  S: "Sakit",
+  I: "Izin",
+  A: "Alpha",
+  D: "Dispensasi",
+};
+const STATUS_COLORS: Record<string, string> = {
+  H: "bg-grade-pass/20 text-grade-pass border-grade-pass/30",
+  S: "bg-grade-warning/20 text-grade-warning border-grade-warning/30",
+  I: "bg-primary/20 text-primary border-primary/30",
+  A: "bg-grade-fail/20 text-grade-fail border-grade-fail/30",
+  D: "bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30",
+};
 
 import {
   SectionIntro,
@@ -25,6 +46,8 @@ export interface RecapSectionProps {
   setShowNISNDaily?: (value: boolean) => void;
   showNISNMonthly?: boolean;
   setShowNISNMonthly?: (value: boolean) => void;
+  jumlahConfig?: JumlahConfig;
+  setJumlahConfig?: (cfg: JumlahConfig) => void;
 }
 
 export const RecapSection: React.FC<RecapSectionProps> = ({
@@ -36,6 +59,8 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
   setShowNISNDaily,
   showNISNMonthly,
   setShowNISNMonthly,
+  jumlahConfig,
+  setJumlahConfig,
 }) => {
   return (
     <div className="space-y-4" data-tour="attendance-v2-settings-recap">
@@ -106,6 +131,86 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
               })}
             </div>
           </div>
+
+          {/* Logika Kolom Jumlah Card */}
+          {jumlahConfig && setJumlahConfig && (
+            <div className="rounded-2xl border bg-card p-4 shadow-sm" data-tour="attendance-v2-settings-recap-jumlah">
+              <div className="mb-3 flex items-start justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">Logika Kolom Jumlah</h4>
+                  <p className="text-xs text-muted-foreground">Pilih status apa saja yang akan dihitung dan dijumlahkan pada kolom "Jumlah" di Tabel Rekap Bulanan.</p>
+                </div>
+                {(jumlahConfig.mode !== "default" &&
+                  !(jumlahConfig.selectedStatuses.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every(s => jumlahConfig.selectedStatuses.includes(s)))) && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-[10px] gap-1 shrink-0" 
+                    onClick={() => {
+                      const defaultConfig: JumlahConfig = { mode: "default", selectedStatuses: DEFAULT_STATUSES };
+                      setJumlahConfig(defaultConfig);
+                      saveJumlahConfig(defaultConfig);
+                    }}
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Reset
+                  </Button>
+                )}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {ALL_STATUSES.map((status) => {
+                  const isChecked = jumlahConfig.mode === "default"
+                    ? DEFAULT_STATUSES.includes(status)
+                    : jumlahConfig.selectedStatuses.includes(status);
+                  
+                  return (
+                    <label key={status} className={cn(
+                      "flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition-all touch-manipulation",
+                      isChecked ? "border-primary bg-primary/5" : "border-muted bg-background hover:bg-muted/40"
+                    )}>
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          const newStatuses = checked
+                            ? [...jumlahConfig.selectedStatuses, status]
+                            : jumlahConfig.selectedStatuses.filter((s) => s !== status);
+                          
+                          const newConfig: JumlahConfig = {
+                            mode: "custom",
+                            selectedStatuses: newStatuses,
+                          };
+                          setJumlahConfig(newConfig);
+                          saveJumlahConfig(newConfig);
+                        }}
+                        className="data-[state=checked]:bg-primary shrink-0"
+                      />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge
+                          variant="outline"
+                          className={cn("text-[10px] px-2 py-0.5 border shrink-0", STATUS_COLORS[status])}
+                        >
+                          {status}
+                        </Badge>
+                        <span className="text-sm font-semibold text-foreground truncate">
+                          {STATUS_LABELS[status]}
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                <p className="text-[11px] text-muted-foreground">
+                  Status Terpilih: {" "}
+                  {jumlahConfig.mode === "default" || (jumlahConfig.selectedStatuses.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every(s => jumlahConfig.selectedStatuses.includes(s))) ? (
+                    <strong className="text-foreground">{DEFAULT_STATUSES.join(" + ")} (Default)</strong>
+                  ) : (
+                    <strong className="text-primary">{jumlahConfig.selectedStatuses.join(" + ") || "Tidak ada"}</strong>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Status Mapping Card */}
           <div className="rounded-2xl border bg-card p-4 shadow-sm" data-tour="attendance-v2-settings-recap-mapping">
