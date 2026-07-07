@@ -31,6 +31,16 @@ export function CollapsedNavItem({ item, isActive, onNavigate, onMobileClose }: 
   const handleEnter = useCallback(() => {
     if (itemRef.current && !prefersReducedMotion) {
       gsap.to(itemRef.current, { scale: 1.06, duration: dur, ease: "power2.out" });
+      
+      // Animate SVG paths inside the icon (Draw effect)
+      const iconParts = itemRef.current.querySelectorAll("svg > *");
+      if (iconParts.length > 0) {
+        gsap.killTweensOf(iconParts);
+        gsap.fromTo(iconParts,
+          { strokeDasharray: 100, strokeDashoffset: 100, opacity: 0 },
+          { strokeDashoffset: 0, opacity: 1, duration: 0.6, stagger: 0.04, ease: "power2.out", clearProps: "all", overwrite: "auto" }
+        );
+      }
     }
   }, [prefersReducedMotion, dur]);
 
@@ -171,6 +181,16 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
   const handleEnter = useCallback(() => {
     if (rowRef.current && !isActive && !prefersReducedMotion) {
       gsap.to(rowRef.current, { x: 2, duration: dur, ease: "power2.out" });
+      
+      // Animate SVG paths inside the icon (Draw effect)
+      const iconParts = rowRef.current.querySelectorAll("svg > *");
+      if (iconParts.length > 0) {
+        gsap.killTweensOf(iconParts);
+        gsap.fromTo(iconParts,
+          { strokeDasharray: 100, strokeDashoffset: 100, opacity: 0 },
+          { strokeDashoffset: 0, opacity: 1, duration: 0.6, stagger: 0.04, ease: "power2.out", clearProps: "all", overwrite: "auto" }
+        );
+      }
     }
   }, [isActive, prefersReducedMotion, dur]);
 
@@ -179,7 +199,20 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
   }, [isActive, dur]);
 
   const handleChildHover = useCallback((el: HTMLLIElement | null, enter: boolean) => {
-    if (el && !prefersReducedMotion) gsap.to(el, { x: enter ? 3 : 0, duration: dur * 0.7, ease: "power2.out" });
+    if (el && !prefersReducedMotion) {
+      gsap.to(el, { x: enter ? 3 : 0, duration: dur * 0.7, ease: "power2.out" });
+      
+      if (enter) {
+        const iconParts = el.querySelectorAll("svg > *");
+        if (iconParts.length > 0) {
+          gsap.killTweensOf(iconParts);
+          gsap.fromTo(iconParts,
+            { strokeDasharray: 100, strokeDashoffset: 100, opacity: 0 },
+            { strokeDashoffset: 0, opacity: 1, duration: 0.6, stagger: 0.04, ease: "power2.out", clearProps: "all", overwrite: "auto" }
+          );
+        }
+      }
+    }
   }, [prefersReducedMotion, dur]);
 
   return (
