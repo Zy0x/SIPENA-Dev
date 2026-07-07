@@ -45,6 +45,7 @@ import { useAttendanceV2Export } from "@/hooks/useAttendanceV2Export";
 import { AttendanceV2Controls } from "@/components/attendance/v2/AttendanceV2Controls";
 import { AttendanceV2DailyView } from "@/components/attendance/v2/AttendanceV2DailyView";
 import { AttendanceV2MonthlyView } from "@/components/attendance/v2/AttendanceV2MonthlyView";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 type AttendanceStatus = AttendanceStatusValue | null;
 
@@ -143,6 +144,9 @@ export default function AttendanceV2Page() {
   const preTourClassIdRef = useRef<string | null>(null);
   const preTourActiveViewRef = useRef<"daily" | "monthly" | null>(null);
 
+  const { isOnline } = useNetworkStatus();
+  const isOffline = !isOnline;
+
   // Global Page states
   const { classes } = useClasses();
   const [selectedClassId, setSelectedClassId] = useState<string>("");
@@ -188,6 +192,18 @@ export default function AttendanceV2Page() {
   useEffect(() => {
     localStorage.setItem("sipena_show_nisn_monthly", JSON.stringify(showNISNMonthly));
   }, [showNISNMonthly]);
+
+  useEffect(() => {
+    const handleConflict = (e: Event) => {
+      // e.detail has classId, studentId, date if needed
+      showWarning(
+        "Data Diubah Pengguna Lain",
+        "Sistem membatalkan perubahan Anda karena data telah diubah oleh guru lain beberapa saat yang lalu. Data terbaru telah dimuat ulang."
+      );
+    };
+    window.addEventListener("attendance_v2_conflict", handleConflict);
+    return () => window.removeEventListener("attendance_v2_conflict", handleConflict);
+  }, [showWarning]);
 
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
   const [selectedHolidayDates, setSelectedHolidayDates] = useState<Date[]>([]);
@@ -261,6 +277,15 @@ export default function AttendanceV2Page() {
   } = useAttendanceV2(selectedClassId === "tour-dummy-class" ? "" : selectedClassId, currentMonth, workDayFormat);
 
   const renderAttendanceSaveIndicator = useCallback(() => {
+    if (isOffline) {
+      return (
+        <Badge variant="outline" className="min-h-8 gap-1.5 rounded-full px-3 text-[11px] font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50">
+          <AlertCircle className="h-3.5 w-3.5" />
+          Offline{pendingAttendanceSaves > 0 ? ` - ${pendingAttendanceSaves} tertunda` : ""}
+        </Badge>
+      );
+    }
+
     if (failedAttendanceSaves > 0) {
       return (
         <button
@@ -1105,6 +1130,21 @@ export default function AttendanceV2Page() {
   return (
     <>
       <div ref={containerRef} className="app-page">
+        {isOffline && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900/50 px-4 py-3 sm:px-6">
+            <div className="flex items-center gap-3 w-full max-w-[1400px] mx-auto">
+              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex flex-shrink-0 items-center justify-center">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex flex-col">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Mode Offline Aktif</p>
+                <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                  Perubahan akan disimpan otomatis saat koneksi kembali. Presensi massal dinonaktifkan.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <AttendanceV2Controls
           selectedClassId={selectedClassId}
           setSelectedClassId={setSelectedClassId}
@@ -1270,6 +1310,7 @@ export default function AttendanceV2Page() {
                         renderAttendanceSaveIndicator()
                       )
                     }
+                    isOffline={isOffline}
                   />
                 </>
               ) : (

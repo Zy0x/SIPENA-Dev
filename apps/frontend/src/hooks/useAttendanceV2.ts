@@ -747,8 +747,16 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
             p_expected_updated_at: expectedUpdatedAt,
             p_source: "manual",
           });
-          
           if (error) {
+            if (error.message?.includes("Conflict 409") || error.details?.includes("Conflict 409") || error.hint?.includes("Conflict 409")) {
+              console.warn("Optimistic locking conflict detected:", error);
+              window.dispatchEvent(new CustomEvent("attendance_v2_conflict", { 
+                detail: { classId: entry.patch.classId, studentId: entry.patch.studentId, date: entry.patch.date } 
+              }));
+              void queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
+              throw error;
+            }
+
             console.warn("RPC upsert_attendance_v2_optimistic failed, attempting fallback:", error);
             if (!entry.patch.status || entry.patch.status === ("-" as any)) {
               const { error: delError } = await (supabase as any)
@@ -921,21 +929,28 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       }
 
       // Fallback Direct Supabase RPC
-      const results = [];
-      for (const studentId of studentIds) {
-        const { data, error } = await (supabase as any).rpc("upsert_attendance_record", {
-          p_user_id: user.id,
-          p_class_id: classId,
-          p_student_id: studentId,
-          p_date: date,
-          p_status: status,
-          p_note: null,
-          p_source: "manual",
-        });
-        if (error) throw error;
-        results.push(data);
+      const payload = studentIds.map(studentId => ({
+        user_id: user.id,
+        class_id: classId,
+        student_id: studentId,
+        date,
+        status,
+        note: null,
+        source: "bulk_manual"
+      }));
+
+      const { data, error } = await (supabase as any).rpc("bulk_upsert_attendance_v2", {
+        p_records: payload,
+      });
+
+      if (error) {
+        if (error.message?.includes("Conflict 409") || error.details?.includes("Conflict 409") || error.hint?.includes("Conflict 409")) {
+          console.warn("Optimistic locking conflict detected in bulk action:", error);
+          window.dispatchEvent(new CustomEvent("attendance_v2_conflict"));
+        }
+        throw error;
       }
-      return results;
+      return data;
     },
     onSuccess: () => {
       if (dbAvailable) {

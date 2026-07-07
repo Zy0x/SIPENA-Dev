@@ -159,6 +159,7 @@ interface AttendanceV2DailyViewProps {
   statusConfig: any;
   saveIndicator?: React.ReactNode;
   showNISNDaily?: boolean;
+  isOffline?: boolean;
 }
 
 export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
@@ -178,6 +179,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
   statusConfig,
   saveIndicator,
   showNISNDaily,
+  isOffline,
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "missing" | "absent">("all");
@@ -232,7 +234,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                 variant="outline" 
                 size="sm" 
                 onClick={() => setShowBulkDialog(true)} 
-                disabled={isHolidayCombined(selectedDate)} 
+                disabled={isHolidayCombined(selectedDate) || isOffline} 
                 className="text-xs h-8 px-2.5 gap-1.5 rounded-xl flex-shrink-0"
               >
                 <CheckSquare className="w-3.5 h-3.5 text-primary" />
