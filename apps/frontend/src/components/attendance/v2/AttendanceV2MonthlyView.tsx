@@ -101,7 +101,7 @@ const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, Mo
                   className={cn("select-none w-7 h-7 sm:w-8 sm:h-8 mx-auto flex items-center justify-center text-[9px] sm:text-[10px] font-bold rounded-md transition-colors",
                     !isLocked && !holidayActive && "cursor-pointer",
                     holidayActive ? "bg-grade-warning/10 text-grade-warning/60"
-                      : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 hover:bg-muted/40",
+                      : st ? statusConfig[st]?.bgActive || "bg-muted/20" : "bg-muted/20 text-muted-foreground/50 active:bg-muted/40 lg:hover:bg-muted/40",
                     isSunday && !st && "text-grade-warning/40"
                   )}
                   onClick={() => {
