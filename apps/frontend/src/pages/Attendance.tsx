@@ -4047,7 +4047,7 @@ export default function Attendance() {
                         getAttendance={getAttendance}
                         isHoliday={isHolidayCombined}
                         statusConfig={statusConfig}
-                        jumlahConfig={jumlahConfig}
+                        recapProfile={null}
                       />
                     </tfoot>
                   </table>

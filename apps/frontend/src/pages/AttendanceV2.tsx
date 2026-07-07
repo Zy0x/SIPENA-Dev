@@ -38,7 +38,7 @@ import { SnapshotReasonDialog } from "@/components/attendance/v2/SnapshotReasonD
 import { createDefaultReportDocumentStyle } from "@/lib/reportExportLayoutV2";
 import { useSignatureSettings } from "@/hooks/useSignatureSettings";
 import { useIndonesianHolidays } from "@/hooks/useIndonesianHolidays";
-import { getJumlahConfig, type JumlahConfig } from "@/components/attendance/JumlahCalculationConfig";
+
 
 // Hooks & Sub-components V2
 import { useAttendanceV2Export } from "@/hooks/useAttendanceV2Export";
@@ -557,8 +557,6 @@ export default function AttendanceV2Page() {
     [getMonthNationalHolidays, currentMonth]
   );
 
-  const [jumlahConfig, setJumlahConfig] = useState<JumlahConfig>(getJumlahConfig);
-
   const isHolidayCombined = useCallback(
     (date: Date): boolean => {
       const dateStr = format(date, "yyyy-MM-dd");
@@ -606,11 +604,7 @@ export default function AttendanceV2Page() {
   }, [monthDays, isHolidayCombined]);
 
   const attendancePreviewData = useMemo(() => {
-    const jumlahStatuses = new Set<string>(
-      jumlahConfig.mode === "default"
-        ? ["S", "I", "A", "D"]
-        : jumlahConfig.selectedStatuses
-    );
+    const jumlahStatuses = new Set<string>(recapProfile?.counted_statuses || ["S", "I", "A", "D"]);
 
     const rows = filteredStudents.map((student, index) => {
       const totals = { H: 0, S: 0, I: 0, A: 0, D: 0, total: 0 };
@@ -714,7 +708,7 @@ export default function AttendanceV2Page() {
       holidays: monthHolidayPreview,
       events: monthEventsPreview,
     };
-  }, [filteredStudents, monthDays, isHolidayCombined, getExistingEventForDate, getAttendance, getAttendanceNote, dayEvents, holidays, monthNationalHolidays, currentMonth, selectedClass?.name, workDayFormat, effectiveDays, jumlahConfig]);
+  }, [filteredStudents, monthDays, isHolidayCombined, getExistingEventForDate, getAttendance, getAttendanceNote, dayEvents, holidays, monthNationalHolidays, currentMonth, selectedClass?.name, workDayFormat, effectiveDays, recapProfile?.counted_statuses]);
 
   const attendancePrintDataset = useMemo(() => {
     const customHolidayDateSet = new Set<string>();
@@ -1323,8 +1317,7 @@ export default function AttendanceV2Page() {
                 <AttendanceV2MonthlyView
                   isLocked={isLocked}
                   handleToggleLock={handleToggleLock}
-                  jumlahConfig={jumlahConfig}
-                  setJumlahConfig={setJumlahConfig}
+                  recapProfile={recapProfile}
                   handlePrevMonth={handlePrevMonth}
                   currentMonth={currentMonth}
                   handleNextMonth={handleNextMonth}
@@ -1550,8 +1543,6 @@ export default function AttendanceV2Page() {
           setShowNISNDaily={setShowNISNDaily}
           showNISNMonthly={showNISNMonthly}
           setShowNISNMonthly={setShowNISNMonthly}
-          jumlahConfig={jumlahConfig}
-          setJumlahConfig={setJumlahConfig}
         />
 
         <DialogStackDepthContext.Provider value={1}>

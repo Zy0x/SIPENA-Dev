@@ -6,8 +6,7 @@ import {
 } from "@/components/ui/popover";
 import { AlertCircle, Info, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { calculateJumlah, type JumlahConfig } from "./JumlahCalculationConfig";
-
+import type { RecapProfile } from "@/hooks/useAttendanceV2";
 interface PercentageRowProps {
   allStatuses: string[];
   filteredStudents: { id: string }[];
@@ -16,7 +15,7 @@ interface PercentageRowProps {
   getAttendance: (studentId: string, date: Date) => string | null;
   isHoliday: (date: Date) => boolean;
   statusConfig: Record<string, { color: string }>;
-  jumlahConfig: JumlahConfig;
+  recapProfile: RecapProfile | null;
 }
 
 export function PercentageRow({
@@ -27,9 +26,9 @@ export function PercentageRow({
   getAttendance,
   isHoliday,
   statusConfig,
-  jumlahConfig,
+  recapProfile,
 }: PercentageRowProps) {
-  const { percentages, isComplete, unfilledDays, totalPercentage } = useMemo(() => {
+  const { percentages, isComplete, unfilledDays, totalPercentage, denominator, totalTarget } = useMemo(() => {
     const totals: Record<string, number> = { H: 0, S: 0, I: 0, A: 0, D: 0 };
     let totalUnfilled = 0;
     const studentCount = filteredStudents.length;
@@ -48,26 +47,32 @@ export function PercentageRow({
     });
 
     const pcts: Record<string, number> = {};
+    const totalTarget = studentCount * effectiveDays;
+    const denominator = recapProfile?.denominator_policy === "filled_days" 
+      ? Math.max(0, totalTarget - totalUnfilled) 
+      : totalTarget;
+
     allStatuses.forEach((s) => {
-      if (studentCount > 0 && effectiveDays > 0) {
-        pcts[s] = (totals[s] * 100) / (studentCount * effectiveDays);
+      if (denominator > 0) {
+        pcts[s] = (totals[s] * 100) / denominator;
       } else {
         pcts[s] = 0;
       }
     });
 
-    const totalStatusCount = calculateJumlah(totals, jumlahConfig);
-    const totalPct = (studentCount > 0 && effectiveDays > 0)
-      ? (totalStatusCount * 100) / (studentCount * effectiveDays)
-      : 0;
+    const presentStatuses = recapProfile?.present_statuses || ["H"];
+    const totalPresentCount = presentStatuses.reduce((sum, s) => sum + (totals[s] || 0), 0);
+    const totalPct = denominator > 0 ? (totalPresentCount * 100) / denominator : 0;
 
     return {
       percentages: pcts,
       isComplete: totalUnfilled === 0,
       unfilledDays: totalUnfilled,
       totalPercentage: totalPct,
+      denominator,
+      totalTarget,
     };
-  }, [allStatuses, filteredStudents, monthDays, effectiveDays, getAttendance, isHoliday, jumlahConfig]);
+  }, [allStatuses, filteredStudents, monthDays, effectiveDays, getAttendance, isHoliday, recapProfile]);
 
   return (
     <tr className="border-t border-dashed border-border bg-card">
@@ -92,14 +97,17 @@ export function PercentageRow({
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Formula Dasar</p>
                   <div className="bg-muted/40 p-2 rounded-md border border-border/50 text-[11px] font-medium text-foreground flex items-center justify-center text-center leading-relaxed">
-                    (Total Status / Jml Siswa) × (100 / Hari Efektif)
+                    (Total Status / Pembagi) × 100
                   </div>
                 </div>
                 
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Kalkulasi Saat Ini</p>
-                  <div className="bg-muted/40 p-2 rounded-md border border-border/50 text-[11px] font-mono text-foreground flex items-center justify-center text-center">
-                    (Total Status × 100) / ({filteredStudents.length} × {effectiveDays})
+                  <div className="bg-muted/40 p-2 rounded-md border border-border/50 text-[11px] font-mono text-foreground flex flex-col items-center justify-center text-center">
+                    <span>(Total Status × 100) / {denominator}</span>
+                    <span className="text-[9px] text-muted-foreground mt-1">
+                      Pembagi: {recapProfile?.denominator_policy === "filled_days" ? `Hari Terisi (${denominator})` : `Hari Efektif (${totalTarget})`}
+                    </span>
                   </div>
                 </div>
 
@@ -174,8 +182,11 @@ export function PercentageRow({
         </td>
       ))}
       {/* Total percentage */}
-      <td className="px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-extrabold border-l-2 border-b border-l-border border-b-border/30 text-foreground bg-muted">
+      <td className="px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-extrabold border-l-2 border-b border-l-border border-b-border/30 text-grade-pass bg-grade-pass/10 relative group">
         {totalPercentage > 0 ? `${totalPercentage.toFixed(1)}%` : "0%"}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center bg-grade-pass/90 text-[7px] text-grade-pass-foreground rounded-sm transition-opacity">
+          Hadir
+        </div>
       </td>
     </tr>
   );

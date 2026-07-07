@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { NationalHolidaySync } from "@/components/attendance/NationalHolidaySync";
-import { calculateJumlah, type JumlahConfig, DEFAULT_STATUSES } from "@/components/attendance/JumlahCalculationConfig";
+import { DEFAULT_STATUSES } from "@/components/attendance/JumlahCalculationConfig";
+import type { RecapProfile } from "@/hooks/useAttendanceV2";
 import { PercentageRow } from "@/components/attendance/PercentageRow";
 import { SmartScrollTable } from "@/components/attendance/SmartScrollTable";
 import { cn } from "@/lib/utils";
@@ -36,7 +37,7 @@ interface MonthlyAttendanceRowProps {
   handleSetMonthlyAttendance: (studentId: string, date: Date, status: "H" | "I" | "S" | "A" | "D" | null) => void;
   allStatuses: ("H" | "I" | "S" | "A" | "D")[];
   statusConfig: any;
-  jumlahConfig: JumlahConfig;
+  recapProfile: RecapProfile | null;
   showNISNMonthly?: boolean;
 }
 
@@ -55,7 +56,7 @@ const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, Mo
   handleSetMonthlyAttendance,
   allStatuses,
   statusConfig,
-  jumlahConfig,
+  recapProfile,
   showNISNMonthly,
 }, ref) => {
   const studentStats: Record<string, number> = { H: 0, I: 0, S: 0, A: 0, D: 0 };
@@ -149,7 +150,7 @@ const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, Mo
         </td>
       ))}
       <td className="px-1 py-0.5 text-center text-[9px] sm:text-[10px] font-bold border-l-2 border-b border-l-border border-b-border/30 bg-muted/20 text-foreground">
-        {calculateJumlah(studentStats, jumlahConfig)}
+        {(recapProfile?.counted_statuses || DEFAULT_STATUSES).reduce((sum, s) => sum + (studentStats[s] || 0), 0)}
       </td>
     </tr>
   );
@@ -160,8 +161,7 @@ MonthlyAttendanceRow.displayName = "MonthlyAttendanceRow";
 interface AttendanceV2MonthlyViewProps {
   isLocked: boolean;
   handleToggleLock: () => void;
-  jumlahConfig: JumlahConfig;
-  setJumlahConfig: (cfg: JumlahConfig) => void;
+  recapProfile: RecapProfile | null;
   handlePrevMonth: () => void;
   currentMonth: Date;
   handleNextMonth: () => void;
@@ -200,8 +200,7 @@ const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = ({
   isLocked,
   handleToggleLock,
-  jumlahConfig,
-  setJumlahConfig,
+  recapProfile,
   handlePrevMonth,
   currentMonth,
   handleNextMonth,
@@ -361,23 +360,9 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={
-                      jumlahConfig.mode === "default" ||
-                      (jumlahConfig.selectedStatuses.length === DEFAULT_STATUSES.length &&
-                        DEFAULT_STATUSES.every((s) => jumlahConfig.selectedStatuses.includes(s)))
-                        ? "outline"
-                        : "default"
-                    }
+                    variant="outline"
                     size="sm"
-                    className={cn(
-                      "sipena-jumlah-config-btn h-8 px-2.5 text-xs gap-1 rounded-xl",
-                      (jumlahConfig.mode !== "default" &&
-                        !(
-                          jumlahConfig.selectedStatuses.length === DEFAULT_STATUSES.length &&
-                          DEFAULT_STATUSES.every((s) => jumlahConfig.selectedStatuses.includes(s))
-                        )) &&
-                        "bg-primary text-primary-foreground"
-                    )}
+                    className="sipena-jumlah-config-btn h-8 px-2.5 text-xs gap-1 rounded-xl"
                     onClick={() => onOpenSettings?.()}
                   >
                     <Settings2 className="w-3 h-3" />
@@ -387,7 +372,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                 <TooltipContent className="text-xs max-w-[200px] p-2">
                   <p className="font-semibold mb-1">Logika Kolom Jumlah</p>
                   <p className="text-muted-foreground text-[10px]">
-                    Menghitung: {jumlahConfig.mode === "default" ? DEFAULT_STATUSES.join(", ") : (jumlahConfig.selectedStatuses.join(", ") || "Tidak ada")}. 
+                    Menghitung: {recapProfile?.counted_statuses?.join(", ") || DEFAULT_STATUSES.join(", ")}. 
                     Klik untuk mengubah di Pengaturan.
                   </p>
                 </TooltipContent>
@@ -475,6 +460,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                 ))}
                 <th className="sticky top-0 z-20 px-1 py-1.5 text-center text-[8px] sm:text-[9px] font-bold min-w-[32px] sm:min-w-[36px] border-l-2 border-b border-l-border border-b-border bg-muted/95 text-foreground">
                   Jml
+                  <div className="text-[6px] font-normal text-muted-foreground mt-0.5 opacity-80 leading-tight">({recapProfile?.counted_statuses?.join(",") || DEFAULT_STATUSES.join(",")})</div>
                 </th>
               </tr>
             </thead>
@@ -505,7 +491,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                     handleSetMonthlyAttendance={handleSetMonthlyAttendance}
                     allStatuses={allStatuses}
                     statusConfig={statusConfig}
-                    jumlahConfig={jumlahConfig}
+                    recapProfile={recapProfile}
                     showNISNMonthly={showNISNMonthly}
                   />
                 );
@@ -551,7 +537,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                         }
                       }
                     });
-                    grandJumlah += calculateJumlah(studentStats, jumlahConfig);
+                    grandJumlah += (recapProfile?.counted_statuses || DEFAULT_STATUSES).reduce((sum, s) => sum + (studentStats[s] || 0), 0);
                   });
                   return (
                     <>
@@ -576,7 +562,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                 getAttendance={getAttendance}
                 isHoliday={isHolidayCombined}
                 statusConfig={statusConfig}
-                jumlahConfig={jumlahConfig}
+                recapProfile={recapProfile}
               />
             </tfoot>
           </table>

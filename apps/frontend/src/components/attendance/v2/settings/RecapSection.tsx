@@ -7,7 +7,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 
 import type { RecapProfile } from "@/hooks/useAttendanceV2";
-import { type JumlahConfig, DEFAULT_STATUSES, saveJumlahConfig } from "@/components/attendance/JumlahCalculationConfig";
+import { DEFAULT_STATUSES } from "@/components/attendance/JumlahCalculationConfig";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -46,8 +46,6 @@ export interface RecapSectionProps {
   setShowNISNDaily?: (value: boolean) => void;
   showNISNMonthly?: boolean;
   setShowNISNMonthly?: (value: boolean) => void;
-  jumlahConfig?: JumlahConfig;
-  setJumlahConfig?: (cfg: JumlahConfig) => void;
 }
 
 export const RecapSection: React.FC<RecapSectionProps> = ({
@@ -59,8 +57,6 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
   setShowNISNDaily,
   showNISNMonthly,
   setShowNISNMonthly,
-  jumlahConfig,
-  setJumlahConfig,
 }) => {
   return (
     <div className="space-y-4" data-tour="attendance-v2-settings-recap">
@@ -133,35 +129,30 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
           </div>
 
           {/* Logika Kolom Jumlah Card */}
-          {jumlahConfig && setJumlahConfig && (
+          {recapProfile && (
             <div className="rounded-2xl border bg-card p-4 shadow-sm" data-tour="attendance-v2-settings-recap-jumlah">
               <div className="mb-3 flex items-start justify-between gap-4">
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Logika Kolom Jumlah</h4>
                   <p className="text-xs text-muted-foreground">Pilih status apa saja yang akan dihitung dan dijumlahkan pada kolom "Jumlah" di Tabel Rekap Bulanan.</p>
                 </div>
-                {(jumlahConfig.mode !== "default" &&
-                  !(jumlahConfig.selectedStatuses.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every(s => jumlahConfig.selectedStatuses.includes(s)))) && (
+                {(!(recapProfile.counted_statuses?.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every(s => recapProfile.counted_statuses?.includes(s as any)))) && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     className="h-7 px-2 text-[10px] gap-1 shrink-0" 
                     onClick={() => {
-                      const defaultConfig: JumlahConfig = { mode: "default", selectedStatuses: DEFAULT_STATUSES };
-                      setJumlahConfig(defaultConfig);
-                      saveJumlahConfig(defaultConfig);
+                      handleUpdateRecapProfile({ counted_statuses: DEFAULT_STATUSES as ("H"|"I"|"S"|"A"|"D")[] });
                     }}
                   >
                     <RotateCcw className="w-3 h-3" />
-                    Reset
+                    <span className="hidden sm:inline">Reset Default</span>
                   </Button>
                 )}
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {ALL_STATUSES.map((status) => {
-                  const isChecked = jumlahConfig.mode === "default"
-                    ? DEFAULT_STATUSES.includes(status)
-                    : jumlahConfig.selectedStatuses.includes(status);
+                  const isChecked = (recapProfile.counted_statuses || DEFAULT_STATUSES).includes(status);
                   
                   return (
                     <label key={status} className={cn(
@@ -171,29 +162,21 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
                       <Checkbox
                         checked={isChecked}
                         onCheckedChange={(checked) => {
+                          const currentStatuses = recapProfile.counted_statuses || (DEFAULT_STATUSES as ("H"|"I"|"S"|"A"|"D")[]);
                           const newStatuses = checked
-                            ? [...jumlahConfig.selectedStatuses, status]
-                            : jumlahConfig.selectedStatuses.filter((s) => s !== status);
+                            ? [...currentStatuses, status as ("H"|"I"|"S"|"A"|"D")]
+                            : currentStatuses.filter((s) => s !== status);
                           
-                          const newConfig: JumlahConfig = {
-                            mode: "custom",
-                            selectedStatuses: newStatuses,
-                          };
-                          setJumlahConfig(newConfig);
-                          saveJumlahConfig(newConfig);
+                          handleUpdateRecapProfile({ counted_statuses: newStatuses });
                         }}
-                        className="data-[state=checked]:bg-primary shrink-0"
                       />
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Badge
-                          variant="outline"
-                          className={cn("text-[10px] px-2 py-0.5 border shrink-0", STATUS_COLORS[status])}
-                        >
-                          {status}
-                        </Badge>
-                        <span className="text-sm font-semibold text-foreground truncate">
-                          {STATUS_LABELS[status]}
-                        </span>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold">{STATUS_LABELS[status]}</span>
+                          <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-sm border", STATUS_COLORS[status])}>
+                            {status}
+                          </span>
+                        </div>
                       </div>
                     </label>
                   );
@@ -202,10 +185,10 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
               <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
                 <p className="text-[11px] text-muted-foreground">
                   Status Terpilih: {" "}
-                  {jumlahConfig.mode === "default" || (jumlahConfig.selectedStatuses.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every(s => jumlahConfig.selectedStatuses.includes(s))) ? (
+                  {(recapProfile.counted_statuses?.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every(s => recapProfile.counted_statuses?.includes(s as any))) || !recapProfile.counted_statuses ? (
                     <strong className="text-foreground">{DEFAULT_STATUSES.join(" + ")} (Default)</strong>
                   ) : (
-                    <strong className="text-primary">{jumlahConfig.selectedStatuses.join(" + ") || "Tidak ada"}</strong>
+                    <strong className="text-primary">{recapProfile.counted_statuses.join(" + ") || "Tidak ada"}</strong>
                   )}
                 </p>
               </div>
