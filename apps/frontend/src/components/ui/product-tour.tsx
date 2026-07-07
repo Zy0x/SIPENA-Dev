@@ -226,13 +226,40 @@ export function ProductTour({
         return;
       }
 
-      // Scroll into view
-      target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      // Safe scroll to prevent fixed containers (like Vaul Drawer) from shifting
+      const safeScrollIntoView = (el: Element) => {
+        const getScrollParent = (node: HTMLElement | null): HTMLElement | null => {
+          if (!node || node === document.body) return null;
+          if (node.scrollHeight > node.clientHeight) {
+            const style = window.getComputedStyle(node);
+            if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+              return node;
+            }
+          }
+          return getScrollParent(node.parentElement);
+        };
+
+        const scrollParent = getScrollParent(el as HTMLElement);
+        if (scrollParent) {
+          const parentRect = scrollParent.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const isOutside = elRect.top < parentRect.top || elRect.bottom > parentRect.bottom;
+          
+          if (isOutside) {
+            const relativeTop = elRect.top - parentRect.top;
+            const targetScrollTop = scrollParent.scrollTop + relativeTop - (parentRect.height / 2) + (elRect.height / 2);
+            scrollParent.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+          }
+        } else {
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      };
+
+      safeScrollIntoView(target);
 
       // Start tracking position
       const updatePosition = () => {
         if (!mountedRef.current || !activeRef.current || runId !== tourRunIdRef.current) return;
-
         const rect = target.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
           setTargetRect(rect);
