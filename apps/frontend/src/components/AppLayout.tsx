@@ -40,14 +40,25 @@
    <img src={morpheIconPure} alt="Morphe" className={cn("rounded", className)} />
  );
 
- // Custom Mata Pelajaran icon using GIF
- const MataPelajaranIcon = ({ className }: { className?: string }) => (
-   <img 
-     src="/icons/Mata_Pelajaran.gif" 
-     alt="Mata Pelajaran" 
-     className={cn("rounded w-full h-full object-contain mix-blend-multiply dark:invert dark:mix-blend-screen", className)} 
-   />
- );
+ // Helper for animated GIF icons
+ const createGifIcon = (filename: string) => {
+   return ({ className }: { className?: string }) => (
+     <img 
+       src={`/icons/${filename}`} 
+       alt={filename.replace(".gif", "").replace("_", " ")} 
+       className={cn("rounded w-full h-full object-contain mix-blend-multiply dark:invert dark:mix-blend-screen scale-[1.35]", className)} 
+     />
+   );
+ };
+
+ const KelasIcon = createGifIcon("Kelas.gif");
+ const MataPelajaranIcon = createGifIcon("Mata_Pelajaran.gif");
+ const InputNilaiIcon = createGifIcon("Input_Nilai.gif");
+ const PresensiIcon = createGifIcon("Presensi.gif");
+ const LaporanIcon = createGifIcon("Laporan.gif");
+ const PengaturanIcon = createGifIcon("Pengaturan.gif");
+ const PanduanIcon = createGifIcon("Panduan.gif");
+ const TentangIcon = createGifIcon("Tentang.gif");
 
  interface NavItem {
    href: string;
@@ -59,15 +70,15 @@
  }
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, featureKey: FEATURE_KEYS.dashboard },
-  { href: "/classes", label: "Kelas & Murid", icon: School, featureKey: FEATURE_KEYS.classes },
+  { href: "/classes", label: "Kelas & Murid", icon: KelasIcon, featureKey: FEATURE_KEYS.classes },
   { href: "/subjects", label: "Mata Pelajaran", icon: MataPelajaranIcon, featureKey: FEATURE_KEYS.subjects },
-  { href: "/grades", label: "Input Nilai", icon: FileSpreadsheet, featureKey: FEATURE_KEYS.grades },
-  { href: "/attendance", label: "Presensi", icon: CalendarDays, isBeta: true, featureKey: FEATURE_KEYS.attendance },
-  { href: "/attendance-v2", label: "Presensi V2", icon: CalendarDays, isBeta: true, featureKey: FEATURE_KEYS.attendanceV2 },
+  { href: "/grades", label: "Input Nilai", icon: InputNilaiIcon, featureKey: FEATURE_KEYS.grades },
+  { href: "/attendance", label: "Presensi", icon: PresensiIcon, isBeta: true, featureKey: FEATURE_KEYS.attendance },
+  { href: "/attendance-v2", label: "Presensi V2", icon: PresensiIcon, isBeta: true, featureKey: FEATURE_KEYS.attendanceV2 },
   { 
     href: "/reports", 
     label: "Laporan", 
-    icon: BarChart3,
+    icon: LaporanIcon,
     featureKey: FEATURE_KEYS.reports,
     children: [
       { href: "/reports/grades", label: "Laporan Nilai", icon: FileSpreadsheet, featureKey: FEATURE_KEYS.gradeReports },
@@ -78,15 +89,15 @@ const navItems: NavItem[] = [
   { 
     href: "/settings", 
     label: "Pengaturan", 
-    icon: Settings,
+    icon: PengaturanIcon,
     featureKey: FEATURE_KEYS.settings,
     children: [
       { href: "/settings/profile", label: "Profil Saya", icon: Users },
       { href: "/settings/profile#security-section", label: "Keamanan Akun", icon: Shield },
     ]
   },
-  { href: "/help", label: "Panduan", icon: HelpCircle, featureKey: FEATURE_KEYS.help },
-  { href: "/about", label: "Tentang", icon: Info, featureKey: FEATURE_KEYS.about },
+  { href: "/help", label: "Panduan", icon: PanduanIcon, featureKey: FEATURE_KEYS.help },
+  { href: "/about", label: "Tentang", icon: TentangIcon, featureKey: FEATURE_KEYS.about },
   { href: "/morphe", label: "Morphe AI", icon: MorpheIcon, isBeta: true, featureKey: FEATURE_KEYS.morphe },
 ];
 
