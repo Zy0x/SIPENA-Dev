@@ -743,16 +743,47 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
             p_student_id: entry.patch.studentId,
             p_date: entry.patch.date,
             p_status: entry.patch.status,
-            p_note: entry.patch.note !== undefined ? entry.patch.note : null,
+            p_note: entry.patch.note !== undefined ? entry.patch.note : (snapshot && 'note' in snapshot ? snapshot.note : null),
             p_expected_updated_at: expectedUpdatedAt,
             p_source: "manual",
           });
           
-          if (error) throw error;
-          
-          // Reconcile the new updated_at if we want to, but getPersistedRecordId will return it?
-          // getPersistedRecordId is likely for string | null IDs. We just return null or the string.
-          outcome.successes.set(entry.key, getPersistedRecordId(data));
+          if (error) {
+            console.warn("RPC upsert_attendance_v2_optimistic failed, attempting fallback:", error);
+            if (!entry.patch.status || entry.patch.status === ("-" as any)) {
+              const { error: delError } = await (supabase as any)
+                .from("attendance_v2_records")
+                .delete()
+                .eq("class_id", entry.patch.classId)
+                .eq("student_id", entry.patch.studentId)
+                .eq("date", entry.patch.date);
+              if (delError) throw delError;
+              outcome.successes.set(entry.key, null);
+            } else {
+              const fallbackData: any = {
+                user_id: user.id,
+                class_id: entry.patch.classId,
+                student_id: entry.patch.studentId,
+                date: entry.patch.date,
+                status: entry.patch.status,
+                source: "manual",
+              };
+              if (entry.patch.note !== undefined) {
+                fallbackData.note = entry.patch.note;
+              } else if (snapshot && 'note' in snapshot) {
+                fallbackData.note = snapshot.note;
+              }
+              const { data: fbData, error: fbError } = await (supabase as any)
+                .from("attendance_v2_records")
+                .upsert(fallbackData, { onConflict: 'user_id, class_id, student_id, date' })
+                .select("updated_at")
+                .single();
+              if (fbError) throw fbError;
+              outcome.successes.set(entry.key, fbData?.updated_at || null);
+            }
+          } else {
+            outcome.successes.set(entry.key, getPersistedRecordId(data));
+          }
         } catch (error) {
           outcome.failures.set(entry.key, error);
         }
