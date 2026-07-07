@@ -342,7 +342,7 @@ export default function Reports() {
       <div className="app-page app-page-readable">
         {/* ── Page Header ───────────────────────────────────────────────── */}
         <PageHeader
-          icon={<LaporanIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " / />}
+          icon={<LaporanIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " />}
           title="Laporan"
           subtitle={contextLine}
           breadcrumbs={[{ label: "Laporan" }]}

@@ -2126,7 +2126,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             })}
             className="gap-2 min-h-[44px]"
           >
-            <InputNilaiIcon  className="w-4 h-4" / />
+            <InputNilaiIcon  className="w-4 h-4" />
             Import Nilai
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -2144,7 +2144,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
             disabled={!canDownloadGradeTemplate || isDownloadingOfficialTemplate}
             className="gap-2 min-h-[44px]"
           >
-            {isDownloadingOfficialTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <InputNilaiIcon  className="w-4 h-4" / />}
+            {isDownloadingOfficialTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <InputNilaiIcon  className="w-4 h-4" />}
             Download Template Resmi
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => runAfterGradeManageMenuCloses(() => setShowOCRGrades(true))} className="gap-2 min-h-[44px]">
@@ -2298,7 +2298,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     <>
       <div className="app-page app-page-wide sipena-grade-page overflow-x-clip">
         <PageHeader
-          icon={<InputNilaiIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " / />}
+          icon={<InputNilaiIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " />}
           title={isGuestMode ? "Input Nilai Guru Tamu" : "Input Nilai"}
           subtitle={
             isGuestMode
@@ -2487,7 +2487,7 @@ export default function Grades({ mode = "owner" }: GradesProps) {
                 <span className="hidden sm:inline">Struktur</span> BAB
               </TabsTrigger>
               <TabsTrigger value="input" className="sipena-grade-mode-tab gap-2" data-tour="input-tab">
-                <InputNilaiIcon  className="w-4 h-4" / />
+                <InputNilaiIcon  className="w-4 h-4" />
                 Input Nilai
               </TabsTrigger>
             </TabsList>

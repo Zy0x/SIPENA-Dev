@@ -1242,7 +1242,7 @@ export default function AttendanceV2Page() {
         {!selectedClassId && classes.length > 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in-up">
             <div className="w-16 h-16 rounded-[20px] bg-muted/60 flex items-center justify-center mb-4 transition-transform hover:scale-105">
-              <PresensiIcon  className="w-8 h-8 text-muted-foreground" / />
+              <PresensiIcon  className="w-8 h-8 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground">Pilih Kelas</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs">Pilih kelas di atas untuk mulai mencatat kehadiran murid.</p>
@@ -1634,7 +1634,7 @@ export default function AttendanceV2Page() {
           <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg rounded-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
-                <PresensiIcon  className="h-4 w-4 " / />
+                <PresensiIcon  className="h-4 w-4 " />
                 Pilih Bulan Ekspor
               </DialogTitle>
               <DialogDescription>

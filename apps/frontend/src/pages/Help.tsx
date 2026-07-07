@@ -367,7 +367,7 @@ export default function Help() {
             </p>
           </div>
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg flex-shrink-0">
-            <PanduanIcon  className="w-5 h-5 sm:w-6 sm:h-6 text-white" / />
+            <PanduanIcon  className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
         </div>
 

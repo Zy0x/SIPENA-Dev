@@ -3287,7 +3287,7 @@ export default function Attendance() {
       <div ref={containerRef} className="app-page">
 
         <PageHeader
-          icon={<PresensiIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " / />}
+          icon={<PresensiIcon  className="w-[18px] h-[18px] sm:w-5 sm:h-5 " />}
           title="Presensi"
           subtitle="Kelola kehadiran murid"
           breadcrumbs={[{ label: "Presensi" }]}
@@ -3548,7 +3548,7 @@ export default function Attendance() {
         {!selectedClassId && (
           <div data-tour={classes.length === 0 ? "attendance-no-classes" : undefined} className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-[20px] bg-muted/60 flex items-center justify-center mb-4">
-              <PresensiIcon  className="w-8 h-8 text-muted-foreground" / />
+              <PresensiIcon  className="w-8 h-8 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground">Pilih Kelas</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-xs">Pilih kelas di atas untuk mulai mencatat kehadiran murid.</p>
@@ -3644,7 +3644,7 @@ export default function Attendance() {
 
                   {/* Hari Efektif - prominent */}
                   <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-primary/10 border-2 border-primary/30 shadow-sm">
-                    <PresensiIcon  className="w-5 h-5  flex-shrink-0" / />
+                    <PresensiIcon  className="w-5 h-5  flex-shrink-0" />
                     <div>
                       <span className="text-sm sm:text-base font-extrabold ">{effectiveDays} Hari Efektif</span>
                       <span className="text-[10px] sm:text-xs text-muted-foreground ml-2">
@@ -5016,7 +5016,7 @@ export default function Attendance() {
           <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg rounded-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
-                <PresensiIcon  className="h-4 w-4 " / />
+                <PresensiIcon  className="h-4 w-4 " />
                 Pilih Bulan Ekspor
               </DialogTitle>
               <DialogDescription>

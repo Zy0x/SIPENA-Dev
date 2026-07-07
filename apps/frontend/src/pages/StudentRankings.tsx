@@ -529,7 +529,7 @@ export default function StudentRankings() {
               </Button>
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-[10px] bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center shrink-0">
-                  <RankingMuridIcon  className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-amber-500" / />
+                  <RankingMuridIcon  className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-amber-500" />
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-base sm:text-lg font-bold text-foreground leading-tight">Ranking Siswa</h1>
@@ -635,7 +635,7 @@ export default function StudentRankings() {
                       <div className="min-w-0 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <div className="flex items-center gap-1.5">
-                            <RankingMuridIcon  className="h-4 w-4 text-amber-500" / />
+                            <RankingMuridIcon  className="h-4 w-4 text-amber-500" />
                             <span className="text-sm font-bold text-foreground">Ranking Keseluruhan</span>
                           </div>
                           <Badge variant="outline" className="rounded-full text-[11px]">
@@ -742,7 +742,7 @@ export default function StudentRankings() {
                             <>
                               <Crown className="w-5 h-5 text-amber-400" />
                               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 flex items-center justify-center shadow-lg shadow-amber-400/30">
-                                <RankingMuridIcon  className="w-6 h-6 text-white" / />
+                                <RankingMuridIcon  className="w-6 h-6 text-white" />
                               </div>
                               <p className="text-[11px] font-bold text-foreground text-center leading-tight px-1 line-clamp-2 break-words w-full">
                                 {podiumEntries[1].student.name}

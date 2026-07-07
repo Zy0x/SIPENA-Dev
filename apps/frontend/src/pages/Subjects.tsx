@@ -300,7 +300,7 @@ export default function Subjects() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] bg-primary/10">
-              <MataPelajaranIcon  className="h-5 w-5 " / />
+              <MataPelajaranIcon  className="h-5 w-5 " />
             </div>
             <div className="min-w-0">
               <h1 className="truncate text-base font-bold text-foreground sm:text-lg">
@@ -467,7 +467,7 @@ export default function Subjects() {
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
             <div data-tour="subjects-empty-cta" className="flex flex-col items-center justify-center px-4 py-16">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-[20px] bg-primary/10">
-                <MataPelajaranIcon  className="h-8 w-8 " / />
+                <MataPelajaranIcon  className="h-8 w-8 " />
               </div>
               <h3 className="mb-1 text-base font-semibold text-foreground">
                 Belum Ada Mata Pelajaran
@@ -486,7 +486,7 @@ export default function Subjects() {
 
         {!isLoading && filteredSubjects.length > 0 && (
           <div className="flex items-center gap-2 px-1 text-[10px] text-muted-foreground sm:text-xs">
-            <MataPelajaranIcon  className="h-3 w-3 flex-shrink-0" / />
+            <MataPelajaranIcon  className="h-3 w-3 flex-shrink-0" />
             <span>Pilih Input Nilai untuk mengisi nilai, atau gunakan tombol Edit/Bagikan pada setiap mapel.</span>
           </div>
         )}
