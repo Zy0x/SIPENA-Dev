@@ -80,22 +80,40 @@ export function PercentageRow({
                 <Percent className="w-3.5 h-3.5 text-primary cursor-pointer" />
               </button>
             </PopoverTrigger>
-            <PopoverContent side="right" className="max-w-[280px] text-xs p-3">
-              <p className="font-semibold text-primary flex items-center gap-1.5">
-                <Percent className="w-3.5 h-3.5" /> Rumus Persentase
-              </p>
-              <p className="text-muted-foreground mt-1.5 leading-relaxed">
-                Persentase = (Total Status / Jumlah Siswa) × (100 / Hari Efektif)
-              </p>
-              <p className="text-muted-foreground mt-1">
-                = (Total Status × 100) / ({filteredStudents.length} siswa × {effectiveDays} hari)
-              </p>
-              <div className="mt-2 pt-2 border-t border-border space-y-1">
-                {allStatuses.map(s => (
-                  <p key={s} className="text-muted-foreground">
-                    <span className={cn("font-bold", statusConfig[s]?.color)}>{s}</span>: {percentages[s]?.toFixed(1) || "0"}%
-                  </p>
-                ))}
+            <PopoverContent side="right" className="w-[300px] text-xs p-0 overflow-hidden shadow-xl border-border/50">
+              <div className="bg-gradient-to-r from-primary/10 to-transparent px-3 py-2.5 border-b border-border flex items-center gap-2">
+                <div className="bg-primary p-1 rounded-md shadow-sm">
+                  <Percent className="w-3.5 h-3.5 text-primary-foreground" />
+                </div>
+                <span className="font-bold text-foreground">Rumus Persentase</span>
+              </div>
+              
+              <div className="p-3 space-y-3">
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Formula Dasar</p>
+                  <div className="bg-muted/40 p-2 rounded-md border border-border/50 text-[11px] font-medium text-foreground flex items-center justify-center text-center leading-relaxed">
+                    (Total Status / Jml Siswa) × (100 / Hari Efektif)
+                  </div>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Kalkulasi Saat Ini</p>
+                  <div className="bg-muted/40 p-2 rounded-md border border-border/50 text-[11px] font-mono text-foreground flex items-center justify-center text-center">
+                    (Total Status × 100) / ({filteredStudents.length} × {effectiveDays})
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border space-y-2">
+                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Hasil per Status</p>
+                   <div className="grid grid-cols-2 gap-1.5">
+                     {allStatuses.map(s => (
+                       <div key={s} className="flex items-center justify-between bg-muted/20 border border-border/50 rounded-md px-2 py-1.5">
+                         <span className={cn("font-extrabold text-[11px]", statusConfig[s]?.color)}>{s}</span>
+                         <span className="font-mono text-[11px] font-medium text-foreground">{percentages[s]?.toFixed(1) || "0"}%</span>
+                       </div>
+                     ))}
+                   </div>
+                </div>
               </div>
             </PopoverContent>
           </Popover>
