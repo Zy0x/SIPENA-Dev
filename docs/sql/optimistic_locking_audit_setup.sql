@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS public.attendance_v2_audit_logs (
     student_id uuid NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
     record_id uuid REFERENCES public.attendance_v2_records(id) ON DELETE SET NULL,
     action text NOT NULL, -- 'inserted', 'updated', 'deleted', 'restored_snapshot'
-    previous_state jsonb,
-    new_state jsonb,
+    before_data jsonb,
+    after_data jsonb,
     created_at timestamp with time zone DEFAULT now(),
     delegated_from uuid REFERENCES auth.users(id) ON DELETE SET NULL
 );
