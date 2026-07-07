@@ -333,15 +333,22 @@ export default function Subjects() {
         </div>
 
         {!classesLoading && classes.length === 0 && (
-          <div data-tour="subjects-no-classes" className="flex items-start gap-2.5 rounded-2xl border border-grade-warning/20 bg-grade-warning/5 p-3">
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-grade-warning" />
-            <div className="text-xs">
-              <p className="font-medium text-grade-warning">Belum Ada Kelas</p>
-              <p className="mt-0.5 text-muted-foreground">
-                Buat kelas terlebih dahulu untuk menambahkan mata pelajaran.
+          <div data-tour="subjects-no-classes" className="flex items-start gap-3 rounded-2xl border border-grade-warning/30 bg-grade-warning/10 p-4 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-grade-warning/20 rounded-full blur-3xl -mr-10 -mt-10 animate-pulse"></div>
+            <div className="relative z-10 flex items-center justify-center h-8 w-8 rounded-full bg-grade-warning/20 shrink-0 mt-0.5">
+               <AlertCircle className="h-5 w-5 text-grade-warning animate-pulse" />
+            </div>
+            <div className="text-sm relative z-10 flex-1">
+              <p className="font-semibold text-grade-warning">Belum Ada Kelas</p>
+              <p className="mt-1 text-muted-foreground leading-relaxed">
+                Buat kelas terlebih dahulu untuk dapat menambahkan dan mengelola mata pelajaran.
               </p>
-              <Button variant="outline" size="sm" onClick={() => navigate("/classes")} className="mt-2 h-8 rounded-xl text-xs">
-                Buat Kelas
+              <Button 
+                onClick={() => navigate("/classes")} 
+                className="mt-3 h-9 rounded-xl text-xs font-medium gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group-hover:scale-[1.02]"
+              >
+                <Plus className="h-4 w-4" />
+                Buat Kelas Sekarang
               </Button>
             </div>
           </div>
