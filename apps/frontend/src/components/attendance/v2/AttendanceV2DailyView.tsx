@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 interface Student {
   id: string;
   name: string;
+  nisn: string;
 }
 
 interface DailyAttendanceRowProps {
@@ -26,6 +27,7 @@ interface DailyAttendanceRowProps {
   handleSetAttendance: (studentId: string, date: Date, status: string | null) => void;
   allStatuses: string[];
   statusConfig: any;
+  showNISNDaily?: boolean;
 }
 
 const DailyAttendanceRow: React.FC<DailyAttendanceRowProps> = React.memo(({
@@ -39,6 +41,7 @@ const DailyAttendanceRow: React.FC<DailyAttendanceRowProps> = React.memo(({
   handleSetAttendance,
   allStatuses,
   statusConfig,
+  showNISNDaily,
 }) => {
   return (
     <div 
@@ -56,30 +59,35 @@ const DailyAttendanceRow: React.FC<DailyAttendanceRowProps> = React.memo(({
 
         {/* Name */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="text-[12px] sm:text-sm font-semibold sm:font-medium text-foreground leading-snug break-words">
-              {student.name}
-            </p>
-            {!status && !holidayActive && (
-              <Badge 
-                variant="outline" 
-                className="text-[9px] px-1.5 py-0 h-4 flex-shrink-0 bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50 rounded-full font-medium"
-              >
-                Belum Absen
-              </Badge>
-            )}
-            {note && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button 
-                    onClick={() => handleOpenNote(student.id, student.name, selectedDate)} 
-                    className="flex-shrink-0 touch-manipulation"
-                  >
-                    <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[200px] text-xs">{note}</TooltipContent>
-              </Tooltip>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <p className="text-[12px] sm:text-sm font-semibold sm:font-medium text-foreground leading-snug break-words">
+                {student.name}
+              </p>
+              {!status && !holidayActive && (
+                <Badge 
+                  variant="outline" 
+                  className="text-[9px] px-1.5 py-0 h-4 flex-shrink-0 bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50 rounded-full font-medium"
+                >
+                  Belum Absen
+                </Badge>
+              )}
+              {note && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button 
+                      onClick={() => handleOpenNote(student.id, student.name, selectedDate)} 
+                      className="flex-shrink-0 touch-manipulation"
+                    >
+                      <MessageSquare className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[200px] text-xs">{note}</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+            {showNISNDaily && student.nisn && (
+              <p className="hidden sm:block text-[10px] text-muted-foreground font-medium">NISN: {student.nisn}</p>
             )}
           </div>
         </div>
@@ -150,6 +158,7 @@ interface AttendanceV2DailyViewProps {
   allStatuses: string[];
   statusConfig: any;
   saveIndicator?: React.ReactNode;
+  showNISNDaily?: boolean;
 }
 
 export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
@@ -168,6 +177,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
   allStatuses,
   statusConfig,
   saveIndicator,
+  showNISNDaily,
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "missing" | "absent">("all");
@@ -333,6 +343,7 @@ export const AttendanceV2DailyView: React.FC<AttendanceV2DailyViewProps> = ({
                     handleSetAttendance={handleSetAttendance}
                     allStatuses={allStatuses}
                     statusConfig={statusConfig}
+                    showNISNDaily={showNISNDaily}
                   />
                 </div>
               );

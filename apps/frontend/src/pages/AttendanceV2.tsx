@@ -171,6 +171,24 @@ export default function AttendanceV2Page() {
 
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
 
+  const [showNISNDaily, setShowNISNDaily] = useState(() => {
+    const saved = localStorage.getItem("sipena_show_nisn_daily");
+    return saved ? JSON.parse(saved) : true;
+  });
+
+  const [showNISNMonthly, setShowNISNMonthly] = useState(() => {
+    const saved = localStorage.getItem("sipena_show_nisn_monthly");
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sipena_show_nisn_daily", JSON.stringify(showNISNDaily));
+  }, [showNISNDaily]);
+
+  useEffect(() => {
+    localStorage.setItem("sipena_show_nisn_monthly", JSON.stringify(showNISNMonthly));
+  }, [showNISNMonthly]);
+
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
   const [selectedHolidayDates, setSelectedHolidayDates] = useState<Date[]>([]);
   const [holidayDescription, setHolidayDescription] = useState("");
@@ -1241,7 +1259,17 @@ export default function AttendanceV2Page() {
                     handleSetAttendance={handleSetAttendance}
                     allStatuses={allStatuses}
                     statusConfig={statusConfig}
-                    saveIndicator={renderAttendanceSaveIndicator()}
+                    showNISNDaily={showNISNDaily}
+                    saveIndicator={
+                      isSaving ? (
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-lg">
+                          <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                          <span className="text-[10px] font-medium text-muted-foreground">Menyimpan...</span>
+                        </div>
+                      ) : (
+                        renderAttendanceSaveIndicator()
+                      )
+                    }
                   />
                 </>
               ) : (
@@ -1279,6 +1307,7 @@ export default function AttendanceV2Page() {
                   monthlyStats={monthlyStats}
                   activeView={activeView}
                   saveIndicator={renderAttendanceSaveIndicator()}
+                  showNISNMonthly={showNISNMonthly}
                 />
               )}
             </div>
@@ -1469,6 +1498,10 @@ export default function AttendanceV2Page() {
           }}
           isDuplicatingAgenda={isDuplicatingAgenda}
           onBulkApplyClick={() => setIsBulkApplyOpen(true)}
+          showNISNDaily={showNISNDaily}
+          setShowNISNDaily={setShowNISNDaily}
+          showNISNMonthly={showNISNMonthly}
+          setShowNISNMonthly={setShowNISNMonthly}
         />
 
         <DialogStackDepthContext.Provider value={1}>

@@ -4,6 +4,7 @@ import {
   FileSpreadsheet,
   Info,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 import type { RecapProfile } from "@/hooks/useAttendanceV2";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,10 @@ export interface RecapSectionProps {
   handleUpdateRecapProfile: (data: Partial<RecapProfile>) => void;
   handleToggleRecapStatus: (type: "present" | "absence", status: "H" | "S" | "I" | "A" | "D") => void;
   effectiveDays: number;
+  showNISNDaily?: boolean;
+  setShowNISNDaily?: (value: boolean) => void;
+  showNISNMonthly?: boolean;
+  setShowNISNMonthly?: (value: boolean) => void;
 }
 
 export const RecapSection: React.FC<RecapSectionProps> = ({
@@ -27,6 +32,10 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
   handleUpdateRecapProfile,
   handleToggleRecapStatus,
   effectiveDays,
+  showNISNDaily,
+  setShowNISNDaily,
+  showNISNMonthly,
+  setShowNISNMonthly,
 }) => {
   return (
     <div className="space-y-4" data-tour="attendance-v2-settings-recap">
@@ -173,6 +182,38 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
               ))}
             </div>
           </div>
+          
+          {/* Tampilan NISN */}
+          {setShowNISNDaily && setShowNISNMonthly && (
+            <div className="rounded-2xl border bg-card p-4 shadow-sm" data-tour="attendance-v2-settings-recap-nisn">
+              <div className="mb-3">
+                <h4 className="text-sm font-bold text-foreground">Tampilan NISN (Desktop)</h4>
+                <p className="text-xs text-muted-foreground">Tampilkan NISN sebagai sub-teks nama murid pada perangkat desktop.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex min-h-[84px] items-center justify-between rounded-2xl border border-muted bg-background p-4 shadow-sm">
+                  <div className="pr-2">
+                    <span className="block text-sm font-bold leading-tight">Tabel Harian</span>
+                    <span className="block text-xs mt-1 text-muted-foreground leading-normal">Tampilkan di mode presensi harian</span>
+                  </div>
+                  <Switch
+                    checked={showNISNDaily}
+                    onCheckedChange={setShowNISNDaily}
+                  />
+                </div>
+                <div className="flex min-h-[84px] items-center justify-between rounded-2xl border border-muted bg-background p-4 shadow-sm">
+                  <div className="pr-2">
+                    <span className="block text-sm font-bold leading-tight">Tabel Bulanan</span>
+                    <span className="block text-xs mt-1 text-muted-foreground leading-normal">Tampilkan di mode rekap bulanan</span>
+                  </div>
+                  <Switch
+                    checked={showNISNMonthly}
+                    onCheckedChange={setShowNISNMonthly}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

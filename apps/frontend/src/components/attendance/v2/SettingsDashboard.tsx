@@ -97,6 +97,10 @@ interface SettingsDashboardProps {
   handleDuplicateAgenda?: () => Promise<void>;
   isDuplicatingAgenda?: boolean;
   onBulkApplyClick?: () => void;
+  showNISNDaily?: boolean;
+  setShowNISNDaily?: (value: boolean) => void;
+  showNISNMonthly?: boolean;
+  setShowNISNMonthly?: (value: boolean) => void;
 }
 
 // ── Section Navigation Items ─────────────────────────────────────────
@@ -156,6 +160,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   handleDuplicateAgenda,
   isDuplicatingAgenda,
   onBulkApplyClick,
+  showNISNDaily,
+  setShowNISNDaily,
+  showNISNMonthly,
+  setShowNISNMonthly,
 }) => {
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("calendar");
   const isMobile = useIsMobile();
@@ -406,6 +414,10 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             handleUpdateRecapProfile={handleUpdateRecapProfile}
             handleToggleRecapStatus={handleToggleRecapStatus}
             effectiveDays={effectiveDays}
+            showNISNDaily={showNISNDaily}
+            setShowNISNDaily={setShowNISNDaily}
+            showNISNMonthly={showNISNMonthly}
+            setShowNISNMonthly={setShowNISNMonthly}
           />
         );
       case "audit":

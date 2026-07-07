@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 interface Student {
   id: string;
   name: string;
+  nisn: string;
 }
 
 interface MonthlyAttendanceRowProps {
@@ -36,6 +37,7 @@ interface MonthlyAttendanceRowProps {
   allStatuses: ("H" | "I" | "S" | "A" | "D")[];
   statusConfig: any;
   jumlahConfig: JumlahConfig;
+  showNISNMonthly?: boolean;
 }
 
 const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, MonthlyAttendanceRowProps>(({
@@ -54,6 +56,7 @@ const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, Mo
   allStatuses,
   statusConfig,
   jumlahConfig,
+  showNISNMonthly,
 }, ref) => {
   const studentStats: Record<string, number> = { H: 0, I: 0, S: 0, A: 0, D: 0 };
   monthDays.forEach(day => {
@@ -69,9 +72,17 @@ const MonthlyAttendanceRow = React.memo(React.forwardRef<HTMLTableRowElement, Mo
         style={{ willChange: "transform" }}
         className="sticky left-0 z-10 bg-card px-2 py-1 text-[10px] sm:text-xs border-r-2 border-b border-r-border/80 border-b-border/30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.15)] min-w-[120px] sm:min-w-[160px] max-w-[160px] sm:max-w-[200px] text-left"
       >
-        <div className="flex items-start w-[120px] sm:w-[160px]">
-          <span className="text-muted-foreground font-medium w-5 sm:w-6 shrink-0 pr-1 sm:pr-1.5 text-right">{idx + 1}.</span>
-          <span className="text-foreground break-words leading-tight flex-1">{student.name}</span>
+        <div className="flex flex-col w-[120px] sm:w-[160px]">
+          <div className="flex items-start">
+            <span className="text-muted-foreground font-medium w-5 sm:w-6 shrink-0 pr-1 sm:pr-1.5 text-right">{idx + 1}.</span>
+            <span className="text-foreground break-words leading-tight flex-1">{student.name}</span>
+          </div>
+          {showNISNMonthly && student.nisn && (
+            <div className="flex items-start">
+              <span className="w-5 sm:w-6 shrink-0 pr-1 sm:pr-1.5"></span>
+              <span className="hidden sm:block text-[9px] text-muted-foreground/80 font-medium leading-none mt-0.5">{student.nisn}</span>
+            </div>
+          )}
         </div>
       </td>
       {monthDays.map(day => {
@@ -180,6 +191,7 @@ interface AttendanceV2MonthlyViewProps {
   monthlyStats: Record<string, number>;
   activeView: "daily" | "monthly";
   saveIndicator?: React.ReactNode;
+  showNISNMonthly?: boolean;
 }
 
 const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -218,6 +230,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
   monthlyStats,
   activeView,
   saveIndicator,
+  showNISNMonthly,
 }) => {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -458,6 +471,7 @@ export const AttendanceV2MonthlyView: React.FC<AttendanceV2MonthlyViewProps> = (
                     allStatuses={allStatuses}
                     statusConfig={statusConfig}
                     jumlahConfig={jumlahConfig}
+                    showNISNMonthly={showNISNMonthly}
                   />
                 );
               })}
