@@ -3522,24 +3522,24 @@
     transform: none !important;
   }
 
-  [data-button-variant="default"]:hover,
-  [data-button-variant="default"]:active,
-  [data-button-variant="default"]:focus-visible {
+  [data-button-variant="default"]:not([class*="sipena-"]):hover,
+  [data-button-variant="default"]:not([class*="sipena-"]):active,
+  [data-button-variant="default"]:not([class*="sipena-"]):focus-visible {
     background-color: hsl(var(--primary)) !important;
     border-color: hsl(var(--primary)) !important;
     color: hsl(var(--primary-foreground)) !important;
   }
 
-  [data-button-variant="destructive"]:hover,
-  [data-button-variant="destructive"]:active,
-  [data-button-variant="destructive"]:focus-visible {
+  [data-button-variant="destructive"]:not([class*="sipena-"]):hover,
+  [data-button-variant="destructive"]:not([class*="sipena-"]):active,
+  [data-button-variant="destructive"]:not([class*="sipena-"]):focus-visible {
     background-color: hsl(var(--destructive)) !important;
     color: hsl(var(--destructive-foreground)) !important;
   }
 
-  [data-button-variant="outline"]:hover,
-  [data-button-variant="outline"]:active,
-  [data-button-variant="outline"]:focus-visible {
+  [data-button-variant="outline"]:not([class*="sipena-"]):hover,
+  [data-button-variant="outline"]:not([class*="sipena-"]):active,
+  [data-button-variant="outline"]:not([class*="sipena-"]):focus-visible {
     background-color: hsl(var(--background)) !important;
     border-color: hsl(var(--border)) !important;
     color: hsl(var(--foreground)) !important;

@@ -1436,7 +1436,7 @@ export default function AttendanceV2Page() {
                 </p>
                 
                 <DialogFooter className="gap-2 flex flex-col sm:flex-row sm:justify-end">
-                  <Button variant="outline" onClick={() => { setShowBulkConfirm(false); setExistingBulkStudents([]); }} size="sm" className="text-xs rounded-xl">
+                  <Button variant="outline" onClick={() => { setShowBulkConfirm(false); setExistingBulkStudents([]); }} size="sm" className="sipena-btn text-xs rounded-xl">
                     Batal
                   </Button>
                   <Button 
@@ -1444,11 +1444,11 @@ export default function AttendanceV2Page() {
                     onClick={() => handleBulkAttendance(true)} 
                     disabled={isSaving} 
                     size="sm" 
-                    className="text-xs rounded-xl text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 dark:text-amber-400 dark:border-amber-900/50 dark:bg-amber-950/20"
+                    className="sipena-btn text-xs rounded-xl text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 dark:text-amber-400 dark:border-amber-900/50 dark:bg-amber-950/20"
                   >
                     Isi yang Kosong Saja ({students.length - existingBulkStudents.length})
                   </Button>
-                  <Button variant="destructive" onClick={() => handleBulkAttendance(false)} disabled={isSaving} size="sm" className="text-xs rounded-xl">
+                  <Button variant="destructive" onClick={() => handleBulkAttendance(false)} disabled={isSaving} size="sm" className="sipena-btn text-xs rounded-xl">
                     {isSaving && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                     Timpa Semua ({students.length})
                   </Button>
@@ -1487,12 +1487,12 @@ export default function AttendanceV2Page() {
                   </button>
                 </div>
                 <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" onClick={() => setShowBulkDialog(false)} size="sm" className="text-xs rounded-xl">Batal</Button>
+                  <Button variant="outline" onClick={() => setShowBulkDialog(false)} size="sm" className="sipena-btn text-xs rounded-xl">Batal</Button>
                   <Button
                     onClick={bulkStatus === null ? handleBulkClear : () => handleBulkAttendance(false)}
                     disabled={isSaving}
                     size="sm"
-                    className="text-xs rounded-xl"
+                    className="sipena-btn text-xs rounded-xl"
                     variant={bulkStatus === null ? "destructive" : "default"}
                   >
                     {isSaving && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
@@ -1524,8 +1524,8 @@ export default function AttendanceV2Page() {
             />
             <p className="text-[10px] text-muted-foreground text-right">{noteText.length}/500</p>
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setShowNoteDialog(false)} size="sm" className="text-xs rounded-xl">Batal</Button>
-              <Button onClick={handleSaveNote} disabled={isSaving} size="sm" className="text-xs rounded-xl">Simpan Catatan</Button>
+              <Button variant="outline" onClick={() => setShowNoteDialog(false)} size="sm" className="sipena-btn text-xs rounded-xl">Batal</Button>
+              <Button onClick={handleSaveNote} disabled={isSaving} size="sm" className="sipena-btn text-xs rounded-xl">Simpan Catatan</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
