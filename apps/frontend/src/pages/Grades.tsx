@@ -2349,15 +2349,25 @@ export default function Grades({ mode = "owner" }: GradesProps) {
         )}
 
         {hasNoClasses && (
-          <Alert className="animate-fade-in-up">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>Buat kelas dan tambahkan murid terlebih dahulu.</span>
-              <Button variant="outline" size="sm" onClick={() => navigate("/classes")}>
-                Buat Kelas <ArrowRight className="w-4 h-4 ml-1" />
+          <div className="flex items-start gap-3 rounded-2xl border border-grade-warning/30 bg-grade-warning/10 p-4 shadow-sm relative overflow-hidden group animate-fade-in-up">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-grade-warning/20 rounded-full blur-3xl -mr-10 -mt-10 animate-pulse"></div>
+            <div className="relative z-10 flex items-center justify-center h-8 w-8 rounded-full bg-grade-warning/20 shrink-0 mt-0.5">
+               <AlertCircle className="h-5 w-5 text-grade-warning animate-pulse" />
+            </div>
+            <div className="text-sm relative z-10 flex-1">
+              <p className="font-semibold text-grade-warning">Belum Ada Kelas</p>
+              <p className="mt-1 text-muted-foreground leading-relaxed">
+                Buat kelas dan tambahkan murid terlebih dahulu sebelum dapat menginput nilai.
+              </p>
+              <Button 
+                onClick={() => navigate("/classes")} 
+                className="mt-3 h-9 rounded-xl text-xs font-medium gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group-hover:scale-[1.02]"
+              >
+                <Plus className="h-4 w-4" />
+                Buat Kelas Sekarang
               </Button>
-            </AlertDescription>
-          </Alert>
+            </div>
+          </div>
         )}
 
         {!isGuestMode && !hasNoClasses && (
