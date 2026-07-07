@@ -289,6 +289,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         },
       },
       {
+        target: "[data-tour='attendance-v2-settings-recap-nisn']",
+        title: "Tampilan NISN di Tabel",
+        description: "Bagian ini mengatur apakah NISN ditampilkan sebagai sub-teks nama murid pada tabel harian dan rekap bulanan versi desktop. Jika disembunyikan, data tetap tersimpan, tetap terindeks, dan tetap bisa dicari.",
+        prepare: async () => {
+          setSettingsSection("recap");
+          await delayForTour();
+        },
+      },
+      {
         target: "[data-tour='attendance-v2-settings-nav-audit']",
         title: "Menu Catatan Riwayat Perubahan",
         description: "Tombol menu ini digunakan untuk membuka halaman peninjauan riwayat perubahan presensi kelas.",

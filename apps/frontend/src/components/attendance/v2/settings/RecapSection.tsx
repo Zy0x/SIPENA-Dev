@@ -188,7 +188,9 @@ export const RecapSection: React.FC<RecapSectionProps> = ({
             <div className="rounded-2xl border bg-card p-4 shadow-sm" data-tour="attendance-v2-settings-recap-nisn">
               <div className="mb-3">
                 <h4 className="text-sm font-bold text-foreground">Tampilan NISN (Desktop)</h4>
-                <p className="text-xs text-muted-foreground">Tampilkan NISN sebagai sub-teks nama murid pada perangkat desktop.</p>
+                <p className="text-xs text-muted-foreground">
+                  Tampilkan NISN sebagai sub-teks nama murid pada perangkat desktop. Data tetap terindeks dan bisa dicari meski tampilan NISN disembunyikan.
+                </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex min-h-[84px] items-center justify-between rounded-2xl border border-muted bg-background p-4 shadow-sm">
