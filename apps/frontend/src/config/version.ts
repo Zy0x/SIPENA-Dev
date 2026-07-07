@@ -1,8 +1,10 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.152";
-export const VERSION_DATE = "2026-07-05";
+export const APP_VERSION = "2.4.154";
+export const VERSION_DATE = "2026-07-07";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.154": "Tour Guide Pengaturan Presensi V2 kini membersihkan overlay dan mengembalikan section/scroll modal saat panduan ditutup atau dilewati.",
+  "2.4.153": "Optimasi animasi popover informasi Pengaturan Presensi V2 agar fade-in/fade-out berjalan stabil.",
   "2.4.152": "Pemindahan fitur 'Merge ke V1' dari antarmuka Guru ke Panel Admin dengan penyortiran otomatis menggunakan Edge Function admin-database.",
   "2.4.125": "Peningkatan keamanan rute halaman Admin: dilindungi oleh ProtectedRoute (wajib login Supabase) dan AdminRouteGuard (wajib role admin di database), sehingga tidak dapat diakses sembarang pengguna hanya dari URL.",
   "2.4.124": "Pemisahan rute halaman Presensi: rute /attendance dikunci menggunakan Engine V1, dan ditambahkan rute baru /attendance-v2 yang dikunci menggunakan Engine V2 secara paralel.",

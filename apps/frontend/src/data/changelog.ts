@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.154",
+    version: "2.4.154",
+    title: "Perbaikan Cleanup Tour Guide Pengaturan Presensi V2",
+    description: "Memperbaiki kondisi saat Panduan Pengaturan Presensi V2 ditutup atau dilewati di tengah jalan agar modal kembali ke section dan posisi scroll awal tanpa sisa overlay.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-07-07",
+    details: [
+      "Menambahkan lifecycle exit pada ProductTour untuk membedakan selesai, dilewati, ditutup, dan dibatalkan.",
+      "Mencegah callback target tour yang terlambat tetap berjalan setelah panduan dihentikan.",
+      "Mengembalikan section dan posisi scroll modal Pengaturan Presensi V2 setelah panduan selesai, ditutup, atau dilewati."
+    ]
+  },
+  {
     id: "v2.4.153",
     version: "2.4.153",
     title: "Optimasi Animasi Transisi Fade In/Out Popover Informasi (InfoHelp) Pengaturan Presensi V2",

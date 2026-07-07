@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, addMonths, addYears } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -168,12 +168,45 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("calendar");
   const isMobile = useIsMobile();
   const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const desktopScrollRef = useRef<HTMLDivElement>(null);
+  const tourRestoreRef = useRef<{
+    section: SettingsSection;
+    mobileScrollTop: number;
+    desktopScrollTop: number;
+  } | null>(null);
 
   useEffect(() => {
     if (mobileScrollRef.current) {
       mobileScrollRef.current.scrollTop = 0;
     }
   }, [settingsSection]);
+
+  const captureSettingsTourState = useCallback(() => {
+    tourRestoreRef.current = {
+      section: settingsSection,
+      mobileScrollTop: mobileScrollRef.current?.scrollTop ?? 0,
+      desktopScrollTop: desktopScrollRef.current?.scrollTop ?? 0,
+    };
+  }, [settingsSection]);
+
+  const restoreSettingsTourState = useCallback(() => {
+    const restoreState = tourRestoreRef.current;
+    if (!restoreState) return;
+
+    tourRestoreRef.current = null;
+    setSettingsSection(restoreState.section);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (mobileScrollRef.current) {
+          mobileScrollRef.current.scrollTop = restoreState.mobileScrollTop;
+        }
+        if (desktopScrollRef.current) {
+          desktopScrollRef.current.scrollTop = restoreState.desktopScrollTop;
+        }
+      });
+    });
+  }, []);
 
   const monthOptions = useMemo(() => {
     const options: Date[] = [];
@@ -464,6 +497,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   const tourButtonProps = {
     tourKey: "attendance-v2-settings" as const,
     onBeforeStart: async () => {
+      captureSettingsTourState();
       onOpenChange(true);
       setSettingsSection("calendar");
       await delayForTour();
@@ -599,6 +633,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
             tourKey="attendance-v2-settings"
             requireOnboarding={false}
             zIndexBase={10120}
+            onExit={restoreSettingsTourState}
           />
         </DrawerPortal>
       </Drawer>
@@ -796,6 +831,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           <main className="flex-1 min-h-0 relative overflow-hidden bg-background">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
+                ref={desktopScrollRef}
                 key={settingsSection}
                 initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -838,6 +874,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           tourKey="attendance-v2-settings"
           requireOnboarding={false}
           zIndexBase={10120}
+          onExit={restoreSettingsTourState}
         />
       </DialogPortal>
     </Dialog>

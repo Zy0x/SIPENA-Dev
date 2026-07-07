@@ -15,6 +15,7 @@ interface ProductTourProps {
   steps: TourStep[];
   tourKey: string;
   onComplete?: () => void;
+  onExit?: (reason: TourExitReason) => void;
   // If true, tour will only auto-start if user hasn't completed onboarding
   requireOnboarding?: boolean;
   // Passed from parent to indicate if user needs onboarding
@@ -24,6 +25,7 @@ interface ProductTourProps {
 }
 
 type TooltipPosition = "top" | "bottom" | "left" | "right";
+export type TourExitReason = "completed" | "skipped" | "closed" | "cancelled";
 
 // Simple event bus for tour triggers
 const tourListeners = new Map<string, () => void>();
@@ -37,6 +39,7 @@ export function ProductTour({
   steps,
   tourKey,
   onComplete,
+  onExit,
   requireOnboarding = true,
   shouldAutoStart,
   zIndexBase,
@@ -51,15 +54,53 @@ export function ProductTour({
   const rafRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
   const initRef = useRef(false);
+  const activeRef = useRef(false);
+  const tourRunIdRef = useRef(0);
+  const onCompleteRef = useRef(onComplete);
+  const onExitRef = useRef(onExit);
 
   const step = steps[currentStep];
+
+  useEffect(() => {
+    activeRef.current = isActive;
+  }, [isActive]);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    onExitRef.current = onExit;
+  }, [onComplete, onExit]);
+
+  const cancelTracking = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
+
+  const startTour = useCallback(() => {
+    tourRunIdRef.current += 1;
+    setCurrentStep(0);
+    setTargetRect(null);
+    setIsActive(true);
+  }, []);
+
+  const finishTour = useCallback((reason: TourExitReason) => {
+    tourRunIdRef.current += 1;
+    cancelTracking();
+    localStorage.setItem(`tour_completed_${tourKey}`, "true");
+    activeRef.current = false;
+    setIsActive(false);
+    setTargetRect(null);
+    setCurrentStep(0);
+    onCompleteRef.current?.();
+    onExitRef.current?.(reason);
+  }, [cancelTracking, tourKey]);
 
   // Register listener for manual trigger
   useEffect(() => {
     const handleTrigger = () => {
       if (mountedRef.current) {
-        setCurrentStep(0);
-        setIsActive(true);
+        startTour();
       }
     };
 
@@ -68,7 +109,7 @@ export function ProductTour({
     return () => {
       tourListeners.delete(tourKey);
     };
-  }, [tourKey]);
+  }, [startTour, tourKey]);
 
   // Auto-start only once for new users who haven't completed onboarding
   useEffect(() => {
@@ -87,24 +128,25 @@ export function ProductTour({
     if (shouldStart && steps.length > 0) {
       const timer = setTimeout(() => {
         if (mountedRef.current) {
-          setIsActive(true);
+          startTour();
         }
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [tourKey, steps.length, requireOnboarding, shouldAutoStart]);
+  }, [tourKey, steps.length, requireOnboarding, shouldAutoStart, startTour]);
 
   // Cleanup on unmount
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
+      tourRunIdRef.current += 1;
+      cancelTracking();
+      if (activeRef.current) {
+        onExitRef.current?.("cancelled");
       }
     };
-  }, []);
+  }, [cancelTracking]);
 
   // Calculate optimal tooltip position
   const getOptimalPosition = useCallback((rect: DOMRect, tooltipWidth: number, tooltipHeight: number) => {
@@ -157,9 +199,10 @@ export function ProductTour({
     let retryCount = 0;
     const maxRetries = 15;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const runId = tourRunIdRef.current;
 
     const findAndTrackElement = () => {
-      if (!mountedRef.current || !isActive) return;
+      if (!mountedRef.current || !activeRef.current || runId !== tourRunIdRef.current) return;
 
       // Find the first *visible* element matching selector (supports both mobile tab + desktop sidebar having same data-tour)
       const allTargets = document.querySelectorAll(step.target);
@@ -177,7 +220,7 @@ export function ProductTour({
           if (currentStep < steps.length - 1) {
             setCurrentStep(prev => prev + 1);
           } else {
-            handleComplete();
+            finishTour("completed");
           }
         }
         return;
@@ -188,7 +231,7 @@ export function ProductTour({
 
       // Start tracking position
       const updatePosition = () => {
-        if (!mountedRef.current || !isActive) return;
+        if (!mountedRef.current || !activeRef.current || runId !== tourRunIdRef.current) return;
 
         const rect = target.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
@@ -206,7 +249,7 @@ export function ProductTour({
 
       // Small delay to let scroll complete
       setTimeout(() => {
-        if (mountedRef.current && isActive) {
+        if (mountedRef.current && activeRef.current && runId === tourRunIdRef.current) {
           rafRef.current = requestAnimationFrame(updatePosition);
         }
       }, 100);
@@ -214,7 +257,7 @@ export function ProductTour({
 
     const prepareAndTrackElement = async () => {
       await step.prepare?.();
-      if (cancelled || !mountedRef.current || !isActive) return;
+      if (cancelled || !mountedRef.current || !activeRef.current || runId !== tourRunIdRef.current) return;
       findAndTrackElement();
     };
 
@@ -228,47 +271,35 @@ export function ProductTour({
         rafRef.current = null;
       }
     };
-  }, [isActive, step, currentStep, steps.length, getOptimalPosition]);
+  }, [isActive, step, currentStep, steps.length, getOptimalPosition, finishTour]);
 
   const handleNext = useCallback(() => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
+    cancelTracking();
+    setTargetRect(null);
     
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
-      handleComplete();
+      finishTour("completed");
     }
-  }, [currentStep, steps.length]);
+  }, [cancelTracking, currentStep, finishTour, steps.length]);
 
   const handlePrev = useCallback(() => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
+    cancelTracking();
+    setTargetRect(null);
     
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
     }
-  }, [currentStep]);
-
-  const handleComplete = useCallback(() => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    localStorage.setItem(`tour_completed_${tourKey}`, "true");
-    setIsActive(false);
-    setTargetRect(null);
-    setCurrentStep(0);
-    onComplete?.();
-  }, [tourKey, onComplete]);
+  }, [cancelTracking, currentStep]);
 
   const handleSkip = useCallback(() => {
-    handleComplete();
-  }, [handleComplete]);
+    finishTour("skipped");
+  }, [finishTour]);
+
+  const handleClose = useCallback(() => {
+    finishTour("closed");
+  }, [finishTour]);
 
   // Don't render if not active
   if (!isActive || !step || steps.length === 0) {
@@ -310,7 +341,7 @@ export function ProductTour({
         data-sipena-tour="true"
         className="fixed inset-0 pointer-events-auto"
         style={{ zIndex: tourZIndexBase + 1 }}
-        onClick={handleSkip}
+        onClick={handleClose}
       />
 
       {/* Highlight border */}
@@ -357,7 +388,7 @@ export function ProductTour({
               {currentStep + 1} / {steps.length}
             </span>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" onClick={handleSkip}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" onClick={handleClose}>
             <X className="w-4 h-4" />
           </Button>
         </div>
