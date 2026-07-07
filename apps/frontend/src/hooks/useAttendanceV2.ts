@@ -142,7 +142,8 @@ const applyAttendanceDatasetPatch = (
   dataset: AttendanceDatasetCanonical | null | undefined,
   classId: string,
   patch: AttendanceMutationParams,
-  persistedId?: string | null
+  persistedId?: string | null,
+  persistedUpdatedAt?: string | null
 ): AttendanceDatasetCanonical | null | undefined => {
   if (!dataset) return dataset;
 
@@ -165,7 +166,7 @@ const applyAttendanceDatasetPatch = (
     status: patch.status,
     note: patch.note !== undefined ? patch.note : existing?.note ?? null,
     createdAt: existing?.createdAt ?? nowIso,
-    updatedAt: nowIso,
+    updatedAt: persistedUpdatedAt ?? existing?.updatedAt ?? nowIso,
   };
 
   const nextRecords = [...dataset.records];
@@ -710,7 +711,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const persistQueuedAttendancePatches = useCallback(async (
     entries: Array<{ key: string; patch: QueuedAttendanceMutationParams; sequence: number; previousSnapshot?: any }>
   ) => {
-    const outcome = createAttendancePersistOutcome<string | null>();
+    const outcome = createAttendancePersistOutcome<any>();
     if (!user) {
       entries.forEach((entry) => outcome.failures.set(entry.key, new Error("User or class not set")));
       return outcome;
@@ -790,7 +791,10 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
               outcome.successes.set(entry.key, fbData?.updated_at || null);
             }
           } else {
-            outcome.successes.set(entry.key, getPersistedRecordId(data));
+            outcome.successes.set(entry.key, {
+              id: getPersistedRecordId(data),
+              updatedAt: data?.updated_at || data?.updatedAt || null
+            });
           }
         } catch (error) {
           outcome.failures.set(entry.key, error);
@@ -802,17 +806,17 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     return outcome;
   }, [addOfflineMutation, dbAvailable, user]);
 
-  const attendanceSaveQueue = useQueuedAttendanceSave<QueuedAttendanceMutationParams, string | null>({
+  const attendanceSaveQueue = useQueuedAttendanceSave<QueuedAttendanceMutationParams, any>({
     debounceMs: 300,
     buildKey: (patch) => `${patch.classId}:${patch.studentId}:${patch.date}`,
     getSnapshot: getAttendanceCellSnapshot,
     applyOptimistic: applyOptimisticAttendancePatch,
     rollback: rollbackAttendancePatch,
     persist: persistQueuedAttendancePatches,
-    reconcileSuccess: (patch, persistedId) => {
+    reconcileSuccess: (patch, persistedData) => {
       if (!dbAvailable || patch.classId !== classId) return;
       queryClient.setQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey, (current) =>
-        applyAttendanceDatasetPatch(current, patch.classId, patch, persistedId) as AttendanceDatasetCanonical | null
+        applyAttendanceDatasetPatch(current, patch.classId, patch, persistedData?.id, persistedData?.updatedAt) as AttendanceDatasetCanonical | null
       );
     },
     onDrain: scheduleAttendanceRefresh,
