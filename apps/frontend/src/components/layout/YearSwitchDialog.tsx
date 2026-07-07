@@ -164,39 +164,66 @@ export function YearSwitchDialog({
   // Generate suggested year name based on existing years and current date
   const generateSuggestedName = () => {
     const currentYear = new Date().getFullYear();
-    const month = new Date().getMonth();
-    const baseStartYear = month >= 6 ? currentYear : currentYear - 1;
-    
     const existingYearNames = academicYears.map(y => y.name);
     
-    for (let offset = 0; offset <= 5; offset++) {
-      const candidateStartYear = baseStartYear + offset;
-      const candidateName = `${candidateStartYear}/${candidateStartYear + 1}`;
-      if (!existingYearNames.includes(candidateName)) {
-        return candidateName;
+    // Cerdas: prioritaskan tahun ini
+    const candidateName = `${currentYear}/${currentYear + 1}`;
+    if (!existingYearNames.includes(candidateName)) {
+      return candidateName;
+    }
+    
+    // Fallback: 1 tahun ke depan, lalu 1 tahun ke belakang
+    const forwardName = `${currentYear + 1}/${currentYear + 2}`;
+    if (!existingYearNames.includes(forwardName)) {
+      return forwardName;
+    }
+    
+    const backwardName = `${currentYear - 1}/${currentYear}`;
+    if (!existingYearNames.includes(backwardName)) {
+      return backwardName;
+    }
+    
+    // Jika semua sudah ada, cari tahun berikutnya
+    for (let offset = 2; offset <= 5; offset++) {
+      const name = `${currentYear + offset}/${currentYear + offset + 1}`;
+      if (!existingYearNames.includes(name)) {
+        return name;
       }
     }
     
-    return `${baseStartYear}/${baseStartYear + 1}`;
+    return `${currentYear + 1}/${currentYear + 2}`;
   };
 
   // Get list of suggested years
   const getSuggestedYears = () => {
     const currentYear = new Date().getFullYear();
-    const month = new Date().getMonth();
-    const baseStartYear = month >= 6 ? currentYear : currentYear - 1;
     const existingYearNames = academicYears.map(y => y.name);
     
-    const suggestions: string[] = [];
-    for (let offset = -1; offset <= 3; offset++) {
-      const candidateStartYear = baseStartYear + offset;
-      const candidateName = `${candidateStartYear}/${candidateStartYear + 1}`;
-      if (!existingYearNames.includes(candidateName)) {
-        suggestions.push(candidateName);
+    // Saran cerdas: 1 tahun kebelakang, tahun saat ini, 1 tahun kedepan
+    const baseSuggestions = [
+      `${currentYear - 1}/${currentYear}`,
+      `${currentYear}/${currentYear + 1}`,
+      `${currentYear + 1}/${currentYear + 2}`
+    ];
+    
+    const suggestions = baseSuggestions.filter(name => !existingYearNames.includes(name));
+    
+    // Tambahkan opsi ke depan jika base suggestions sudah banyak digunakan (agar minimal ada 3 saran jika memungkinkan)
+    let offset = 2;
+    while (suggestions.length < 3 && offset <= 5) {
+      const nextName = `${currentYear + offset}/${currentYear + offset + 1}`;
+      if (!existingYearNames.includes(nextName)) {
+        suggestions.push(nextName);
       }
-      if (suggestions.length >= 3) break;
+      offset++;
     }
-    return suggestions;
+    
+    // Sort agar urutannya selalu logis (dari tahun terkecil ke terbesar)
+    return suggestions.sort((a, b) => {
+      const yearA = parseInt(a.split('/')[0]);
+      const yearB = parseInt(b.split('/')[0]);
+      return yearA - yearB;
+    });
   };
 
   // =====================================================================
