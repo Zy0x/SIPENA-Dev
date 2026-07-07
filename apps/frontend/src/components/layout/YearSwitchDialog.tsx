@@ -760,13 +760,13 @@ export function YearSwitchDialog({
                           <Button
                             key={suggestion}
                             type="button"
-                            variant="outline"
+                            variant={newYearName === suggestion ? "default" : "outline"}
                             size="sm"
                             className={cn(
                               "sipena-year-btn min-h-[44px] sm:min-h-8 rounded-full px-4 text-xs font-medium transition-all duration-300 touch-manipulation",
                               newYearName === suggestion
-                                ? "border-primary bg-primary text-primary-foreground shadow-sm scale-[1.02]"
-                                : "border-border bg-background hover:bg-muted hover:border-muted-foreground/30"
+                                ? "shadow-sm scale-[1.02]"
+                                : "hover:bg-muted hover:border-muted-foreground/30"
                             )}
                             onClick={() => setNewYearName(suggestion)}
                             disabled={isCreating}
