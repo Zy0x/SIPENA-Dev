@@ -42,7 +42,11 @@
 
  // Custom Mata Pelajaran icon using GIF
  const MataPelajaranIcon = ({ className }: { className?: string }) => (
-   <img src="/icons/Mata_Pelajaran.gif" alt="Mata Pelajaran" className={cn("rounded w-full h-full object-contain", className)} />
+   <img 
+     src="/icons/Mata_Pelajaran.gif" 
+     alt="Mata Pelajaran" 
+     className={cn("rounded w-full h-full object-contain mix-blend-multiply dark:invert dark:mix-blend-screen", className)} 
+   />
  );
 
  interface NavItem {
