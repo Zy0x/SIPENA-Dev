@@ -1,3 +1,4 @@
+import { RankingMuridIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useEffect, useCallback } from "react";
 
 import { PaginationControls } from "@/components/rankings/PaginationControls";
@@ -528,7 +529,7 @@ export default function StudentRankings() {
               </Button>
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-[10px] bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center shrink-0">
-                  <Trophy className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-amber-500" />
+                  <RankingMuridIcon  className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-amber-500" / />
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-base sm:text-lg font-bold text-foreground leading-tight">Ranking Siswa</h1>
@@ -634,7 +635,7 @@ export default function StudentRankings() {
                       <div className="min-w-0 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <div className="flex items-center gap-1.5">
-                            <Trophy className="h-4 w-4 text-amber-500" />
+                            <RankingMuridIcon  className="h-4 w-4 text-amber-500" / />
                             <span className="text-sm font-bold text-foreground">Ranking Keseluruhan</span>
                           </div>
                           <Badge variant="outline" className="rounded-full text-[11px]">
@@ -741,7 +742,7 @@ export default function StudentRankings() {
                             <>
                               <Crown className="w-5 h-5 text-amber-400" />
                               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 flex items-center justify-center shadow-lg shadow-amber-400/30">
-                                <Trophy className="w-6 h-6 text-white" />
+                                <RankingMuridIcon  className="w-6 h-6 text-white" / />
                               </div>
                               <p className="text-[11px] font-bold text-foreground text-center leading-tight px-1 line-clamp-2 break-words w-full">
                                 {podiumEntries[1].student.name}
@@ -843,7 +844,7 @@ export default function StudentRankings() {
                             className={cn(
                               "sipena-ranking-subject-button flex-shrink-0 inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-[12px] font-medium whitespace-nowrap touch-manipulation transition-colors",
                               isSubjectActive
-                                ? "bg-primary border-primary text-primary-foreground shadow-sm"
+                                ? "bg-primary border-primary -foreground shadow-sm"
                                 : "bg-background border-border text-foreground hover:border-primary/50",
                             )}
                           >
@@ -851,7 +852,7 @@ export default function StudentRankings() {
                             <span>{subject.name}</span>
                             <span className={cn(
                               "text-[10px] opacity-75",
-                              isSubjectActive ? "text-primary-foreground" : "text-muted-foreground"
+                              isSubjectActive ? "-foreground" : "text-muted-foreground"
                             )}>
                               {subject.kkm}
                             </span>
@@ -875,7 +876,7 @@ export default function StudentRankings() {
                             className={cn(
                               "sipena-ranking-subject-button h-auto min-h-[44px] justify-between gap-3 whitespace-normal break-words px-3 py-2 text-left touch-manipulation",
                               isSubjectActive
-                                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                                ? "border-primary bg-primary -foreground shadow-sm"
                                 : "border-border bg-background text-foreground hover:border-primary/40",
                             )}
                           >
@@ -883,7 +884,7 @@ export default function StudentRankings() {
                             <span className={cn(
                               "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
                               isSubjectActive
-                                ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+                                ? "border-primary-foreground/30 bg-primary-foreground/15 -foreground"
                                 : "border-border bg-muted text-muted-foreground",
                             )}>
                               {isSubjectActive && <Check className="h-3 w-3" />}
@@ -902,7 +903,7 @@ export default function StudentRankings() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-primary" />
+                          <TrendingUp className="w-4 h-4 " />
                           Daftar Ranking Lengkap
                         </CardTitle>
                         <CardDescription className="text-[10px] sm:text-xs mt-0.5">

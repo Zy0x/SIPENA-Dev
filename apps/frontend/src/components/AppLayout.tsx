@@ -49,7 +49,12 @@
    LaporanIcon,
    PengaturanIcon,
    PanduanIcon,
-   TentangIcon
+   TentangIcon,
+   KeamananAkunIcon,
+   LaporanNilaiIcon,
+   PortalOrangtuaIcon,
+   ProfilSayaIcon,
+   RankingMuridIcon
  } from "@/components/ui/animated-icons";
 
 
@@ -74,9 +79,9 @@ const navItems: NavItem[] = [
     icon: LaporanIcon,
     featureKey: FEATURE_KEYS.reports,
     children: [
-      { href: "/reports/grades", label: "Laporan Nilai", icon: FileSpreadsheet, featureKey: FEATURE_KEYS.gradeReports },
-      { href: "/reports/rankings", label: "Ranking Murid", icon: Trophy, featureKey: FEATURE_KEYS.rankings },
-      { href: "/reports/portal", label: "Portal Orang Tua", icon: UserCheck, featureKey: FEATURE_KEYS.parentPortal },
+      { href: "/reports/grades", label: "Laporan Nilai", icon: LaporanNilaiIcon, featureKey: FEATURE_KEYS.gradeReports },
+      { href: "/reports/rankings", label: "Ranking Murid", icon: RankingMuridIcon, featureKey: FEATURE_KEYS.rankings },
+      { href: "/reports/portal", label: "Portal Orang Tua", icon: PortalOrangtuaIcon, featureKey: FEATURE_KEYS.parentPortal },
     ]
   },
   { 
@@ -85,8 +90,8 @@ const navItems: NavItem[] = [
     icon: PengaturanIcon,
     featureKey: FEATURE_KEYS.settings,
     children: [
-      { href: "/settings/profile", label: "Profil Saya", icon: Users },
-      { href: "/settings/profile#security-section", label: "Keamanan Akun", icon: Shield },
+      { href: "/settings/profile", label: "Profil Saya", icon: ProfilSayaIcon },
+      { href: "/settings/profile#security-section", label: "Keamanan Akun", icon: KeamananAkunIcon },
     ]
   },
   { href: "/help", label: "Panduan", icon: PanduanIcon, featureKey: FEATURE_KEYS.help },

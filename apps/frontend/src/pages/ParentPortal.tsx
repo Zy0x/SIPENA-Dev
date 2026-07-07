@@ -1,3 +1,4 @@
+import { PortalOrangtuaIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -216,7 +217,7 @@ export default function ParentPortal() {
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Plus className="w-5 h-5 text-primary" />
+              <Plus className="w-5 h-5 " />
             </div>
             <div>
               <CardTitle className="text-lg">Buat Portal Baru</CardTitle>
@@ -321,7 +322,7 @@ export default function ParentPortal() {
                                     }
                                   }));
                                 }}
-                                className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                className="rounded border-border  focus:ring-primary h-3.5 w-3.5"
                               />
                               <span className="text-xs text-foreground">{detail.label}</span>
                             </label>
@@ -359,7 +360,7 @@ export default function ParentPortal() {
                         }}
                         className={`sipena-subject-chip px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
                           isSelected 
-                            ? "bg-primary text-primary-foreground border-primary" 
+                            ? "bg-primary -foreground border-primary" 
                             : "bg-muted/50 text-muted-foreground border-border hover:border-primary/40"
                         }`}
                       >
@@ -399,7 +400,7 @@ export default function ParentPortal() {
                           }}
                           className={`sipena-chapter-chip px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
                             isSelected 
-                              ? "bg-primary text-primary-foreground border-primary" 
+                              ? "bg-primary -foreground border-primary" 
                               : "bg-muted/50 text-muted-foreground border-border hover:border-primary/40"
                           }`}
                         >

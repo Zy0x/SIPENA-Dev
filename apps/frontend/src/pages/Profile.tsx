@@ -1,3 +1,5 @@
+import { KeamananAkunIcon } from "@/components/ui/animated-icons";
+import { ProfilSayaIcon } from "@/components/ui/animated-icons";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -277,7 +279,7 @@ export default function Profile() {
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Badge variant="outline" className="gap-1 text-xs">
-                    <Shield className="w-3 h-3" />
+                    <KeamananAkunIcon  className="w-3 h-3" / />
                     Guru
                   </Badge>
                   <Badge variant="outline" className="gap-1 text-xs">
