@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.155";
+export const APP_VERSION = "2.4.156";
 export const VERSION_DATE = "2026-07-07";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.156": "Tombol Ekspor Presensi V2 kembali membuka pemilih bulan dan Studio Ekspor dengan baseline pengaturan yang benar.",
   "2.4.155": "Legend kalender Presensi V2 diselaraskan dengan visual tanggal terpilih, Hari Minggu, Hari Ini, dan kontras warna yang lebih jelas.",
   "2.4.154": "Tour Guide Pengaturan Presensi V2 kini membersihkan overlay dan mengembalikan section/scroll modal saat panduan ditutup atau dilewati.",
   "2.4.153": "Optimasi animasi popover informasi Pengaturan Presensi V2 agar fade-in/fade-out berjalan stabil.",

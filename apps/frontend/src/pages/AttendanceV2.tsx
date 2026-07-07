@@ -796,7 +796,7 @@ export default function AttendanceV2Page() {
     setAttendanceInlineLabelStyle,
     attendanceDefaultSignatureConfig,
     resetAttendanceStudioDefaults,
-    openAttendanceExportMonthDialog,
+    openAttendanceExportMonthDialog: prepareAttendanceExportStudio,
     handleExportExcel,
     handleExportPDFVector,
     handleExportPNGV2,
@@ -1115,6 +1115,12 @@ export default function AttendanceV2Page() {
     }
   };
 
+  const handleOpenAttendanceExportMonthDialog = useCallback(() => {
+    prepareAttendanceExportStudio();
+    setExportPickerYear(currentMonth.getFullYear());
+    setShowExportMonthDialog(true);
+  }, [currentMonth, prepareAttendanceExportStudio]);
+
   const confirmAttendanceExportMonth = useCallback((monthIndex: number) => {
     const nextMonth = startOfMonth(new Date(exportPickerYear, monthIndex, 1));
     setCurrentMonth(nextMonth);
@@ -1159,7 +1165,7 @@ export default function AttendanceV2Page() {
           hasData={hasData}
           attendanceStudioOpen={showExportDialog}
           setAttendanceStudioOpen={setShowExportDialog}
-          openAttendanceExportMonthDialog={openAttendanceExportMonthDialog}
+          openAttendanceExportMonthDialog={handleOpenAttendanceExportMonthDialog}
           attendanceExportFormat={attendanceExportFormat}
           handleAttendanceExportFormatChange={setAttendanceExportFormat}
           selectedAttendanceColumnKeys={selectedAttendanceColumnKeys}

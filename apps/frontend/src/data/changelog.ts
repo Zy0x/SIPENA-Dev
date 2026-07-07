@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.156",
+    version: "2.4.156",
+    title: "Perbaikan Tombol Ekspor Presensi V2",
+    description: "Memperbaiki tombol Ekspor pada halaman Presensi V2 agar kembali membuka pemilih bulan dan Studio Ekspor Presensi.",
+    type: "bugfix",
+    is_critical: false,
+    released_at: "2026-07-07",
+    details: [
+      "Menyambungkan kembali handler tombol Ekspor Presensi V2 ke dialog pemilih bulan.",
+      "Memastikan baseline pengaturan Studio Ekspor tetap disiapkan sebelum dialog ekspor dibuka.",
+      "Menambahkan guard test agar tombol Ekspor V2 tidak kembali menjadi no-op."
+    ]
+  },
+  {
     id: "v2.4.155",
     version: "2.4.155",
     title: "Penyelarasan Legend Kalender Presensi V2",
