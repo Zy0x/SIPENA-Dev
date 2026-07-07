@@ -244,8 +244,6 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     checkDbTables();
   }, [user]);
 
-  const getOfflinePatches = useRef<() => QueuedAttendanceMutationParams[]>(() => []);
-
   // Fetch unified V2 dataset from REST API
   const datasetQuery = useQuery({
     queryKey: attendanceDatasetQueryKey,
@@ -270,14 +268,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         if (res.ok) {
           const json = await res.json();
           if (json.data && !json.error) {
-            let fetchedData = json.data as AttendanceDatasetCanonical;
-            const patches = getOfflinePatches.current();
-            for (const patch of patches) {
-              if (patch.classId === classId) {
-                fetchedData = applyAttendanceDatasetPatch(fetchedData, classId, patch) as AttendanceDatasetCanonical;
-              }
-            }
-            return fetchedData;
+            return json.data as AttendanceDatasetCanonical;
           }
         }
       } catch (apiError) {
@@ -299,7 +290,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         dayOfWeek: getDay(d),
       }));
 
-      let fetchedData = {
+      return {
         classId,
         month: monthStr,
         students: (studentsRes.data || []).map((s: any) => ({ id: s.id, name: s.name })),
@@ -328,14 +319,6 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         })),
         days
       } as AttendanceDatasetCanonical;
-      
-      const patches = getOfflinePatches.current();
-      for (const patch of patches) {
-        if (patch.classId === classId) {
-          fetchedData = applyAttendanceDatasetPatch(fetchedData, classId, patch) as AttendanceDatasetCanonical;
-        }
-      }
-      return fetchedData;
     },
     enabled: !!classId && !!user && dbAvailable,
     staleTime: 1000 * 60 * 5,
@@ -825,12 +808,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       );
     },
     onDrain: scheduleAttendanceRefresh,
-    storageKey: `sipena_attendance_queue_v2`,
   });
-
-  useEffect(() => {
-    getOfflinePatches.current = attendanceSaveQueue.getQueuedPatches;
-  }, [attendanceSaveQueue.getQueuedPatches]);
 
   // Update note only
   const updateNoteMutation = useMutation({
@@ -913,24 +891,51 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         });
         return null;
       }
+
+      const { data: { session } } = await (supabase as any).auth.getSession();
+      const token = session?.access_token;
+
       try {
-        const { data, error } = await (supabase as any).rpc("bulk_upsert_attendance_v2", {
-          p_user_id: user.id,
-          p_class_id: classId,
-          p_date: date,
-          p_status: status,
-          p_student_ids: studentIds,
-          p_source: "manual_bulk",
+        const response = await fetch(`${apiBaseUrl}/attendance/v2/bulk`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token || ""}`,
+          },
+          body: JSON.stringify({
+            patches: studentIds.map(studentId => ({
+              classId,
+              studentId,
+              date,
+              status,
+            })),
+          }),
         });
 
-        if (error) {
-          throw error;
+        if (response.ok) {
+          const json = await response.json();
+          return json.data;
         }
-        return data;
-      } catch (err) {
-        console.error("Bulk save failed:", err);
-        throw err;
+      } catch (apiError) {
+        console.warn("V2 API Bulk Save failed, falling back to direct Supabase RPCs:", apiError);
       }
+
+      // Fallback Direct Supabase RPC
+      const results = [];
+      for (const studentId of studentIds) {
+        const { data, error } = await (supabase as any).rpc("upsert_attendance_record", {
+          p_user_id: user.id,
+          p_class_id: classId,
+          p_student_id: studentId,
+          p_date: date,
+          p_status: status,
+          p_note: null,
+          p_source: "manual",
+        });
+        if (error) throw error;
+        results.push(data);
+      }
+      return results;
     },
     onSuccess: () => {
       if (dbAvailable) {
