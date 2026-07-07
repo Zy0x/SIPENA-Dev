@@ -720,25 +720,28 @@ export function YearSwitchDialog({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Plus className="h-5 w-5 text-primary" />
+                <DialogHeader className="pb-4 border-b border-border/50">
+                  <DialogTitle className="flex items-center gap-3 text-xl">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                      <Plus className="h-5 w-5 text-primary" />
+                    </div>
                     Buat Tahun Ajaran Baru
                   </DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="pt-2">
                     Masukkan nama tahun ajaran dan pilih semester yang akan dibuat
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="my-4 space-y-4">
+                <div className="my-5 space-y-5">
                   {/* Year Name Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="year-name">Nama Tahun Ajaran</Label>
+                  <div className="space-y-2.5">
+                    <Label htmlFor="year-name" className="text-sm font-semibold">Nama Tahun Ajaran</Label>
                     <Input
                       id="year-name"
                       value={newYearName}
                       onChange={(e) => setNewYearName(e.target.value)}
-                      placeholder="2025/2026"
+                      placeholder="Contoh: 2026/2027"
+                      className="h-12 text-base rounded-xl bg-background/50 focus-visible:ring-primary/30 transition-shadow"
                       disabled={isCreating}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && (semesterConfig.sem1 || semesterConfig.sem2)) {
@@ -750,8 +753,8 @@ export function YearSwitchDialog({
 
                   {/* Quick suggestion chips */}
                   {getSuggestedYears().length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Saran Tahun Ajaran:</Label>
+                    <div className="space-y-2.5">
+                      <Label className="text-xs font-medium text-muted-foreground">Saran Tahun Ajaran:</Label>
                       <div className="flex flex-wrap gap-2">
                         {getSuggestedYears().map((suggestion) => (
                           <Button
@@ -760,10 +763,10 @@ export function YearSwitchDialog({
                             variant="outline"
                             size="sm"
                             className={cn(
-                              "h-7 text-xs border-2 transition-all",
+                              "h-8 rounded-full px-4 text-xs font-medium transition-all duration-300",
                               newYearName === suggestion
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border hover:border-primary/50"
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm scale-[1.02]"
+                                : "border-border bg-background hover:bg-muted hover:border-muted-foreground/30"
                             )}
                             onClick={() => setNewYearName(suggestion)}
                             disabled={isCreating}
@@ -775,11 +778,11 @@ export function YearSwitchDialog({
                     </div>
                   )}
 
-                  <Separator />
+                  <Separator className="bg-border/60" />
 
                   {/* Semester Selection */}
-                  <div className="space-y-3">
-                    <Label className="flex items-center gap-2">
+                  <div className="space-y-3.5">
+                    <Label className="flex items-center gap-2 text-sm font-semibold">
                       <Layers className="h-4 w-4 text-primary" />
                       Pilih Semester yang Akan Dibuat
                     </Label>
@@ -787,10 +790,10 @@ export function YearSwitchDialog({
                     <div className="grid grid-cols-2 gap-3">
                       <div
                         className={cn(
-                          "p-3 rounded-lg border-2 cursor-pointer transition-all",
+                          "relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 overflow-hidden group",
                           semesterConfig.sem1
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:border-primary/30"
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-border bg-background hover:border-primary/40 hover:bg-muted/30"
                         )}
                         onClick={() => setSemesterConfig(prev => ({
                           ...prev,
@@ -798,25 +801,29 @@ export function YearSwitchDialog({
                           activeSemester: !prev.sem1 ? 1 : (prev.sem2 ? 2 : 1)
                         }))}
                       >
-                        <div className="flex items-center gap-2">
-                          <Checkbox 
-                            checked={semesterConfig.sem1} 
-                            onCheckedChange={() => {}}
-                            className="pointer-events-none"
-                          />
+                        {semesterConfig.sem1 && (
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl -mr-8 -mt-8 transition-all"></div>
+                        )}
+                        <div className="relative z-10 flex items-start gap-3">
+                          <div className={cn(
+                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-300",
+                            semesterConfig.sem1 ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30 bg-background"
+                          )}>
+                             {semesterConfig.sem1 && <Check className="h-3.5 w-3.5" />}
+                          </div>
                           <div>
-                            <p className="font-medium text-sm">Semester 1</p>
-                            <p className="text-xs text-muted-foreground">Ganjil</p>
+                            <p className={cn("font-semibold text-sm transition-colors duration-300", semesterConfig.sem1 ? "text-primary" : "text-foreground")}>Semester 1</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Ganjil</p>
                           </div>
                         </div>
                       </div>
 
                       <div
                         className={cn(
-                          "p-3 rounded-lg border-2 cursor-pointer transition-all",
+                          "relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 overflow-hidden group",
                           semesterConfig.sem2
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:border-primary/30"
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-border bg-background hover:border-primary/40 hover:bg-muted/30"
                         )}
                         onClick={() => setSemesterConfig(prev => ({
                           ...prev,
@@ -824,15 +831,19 @@ export function YearSwitchDialog({
                           activeSemester: !prev.sem2 ? 2 : (prev.sem1 ? 1 : 2)
                         }))}
                       >
-                        <div className="flex items-center gap-2">
-                          <Checkbox 
-                            checked={semesterConfig.sem2}
-                            onCheckedChange={() => {}}
-                            className="pointer-events-none"
-                          />
+                        {semesterConfig.sem2 && (
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl -mr-8 -mt-8 transition-all"></div>
+                        )}
+                        <div className="relative z-10 flex items-start gap-3">
+                          <div className={cn(
+                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-300",
+                            semesterConfig.sem2 ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30 bg-background"
+                          )}>
+                             {semesterConfig.sem2 && <Check className="h-3.5 w-3.5" />}
+                          </div>
                           <div>
-                            <p className="font-medium text-sm">Semester 2</p>
-                            <p className="text-xs text-muted-foreground">Genap</p>
+                            <p className={cn("font-semibold text-sm transition-colors duration-300", semesterConfig.sem2 ? "text-primary" : "text-foreground")}>Semester 2</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Genap</p>
                           </div>
                         </div>
                       </div>
@@ -840,30 +851,36 @@ export function YearSwitchDialog({
 
                     {/* Active semester selection */}
                     {(semesterConfig.sem1 || semesterConfig.sem2) && (
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Semester yang Diaktifkan:</Label>
-                        <div className="flex gap-2">
+                      <div className="space-y-2.5 pt-1">
+                        <Label className="text-xs font-medium text-muted-foreground">Semester yang Diaktifkan:</Label>
+                        <div className="flex bg-muted/40 p-1 rounded-xl w-fit border border-border/50">
                           {semesterConfig.sem1 && (
-                            <Button
-                              variant={semesterConfig.activeSemester === 1 ? "default" : "outline"}
-                              size="sm"
-                              className="h-8 px-4 text-xs font-medium border-2 min-w-[90px] whitespace-nowrap"
+                            <button
+                              className={cn(
+                                "flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs font-semibold transition-all duration-200",
+                                semesterConfig.activeSemester === 1 
+                                  ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" 
+                                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                              )}
                               onClick={() => setSemesterConfig(prev => ({ ...prev, activeSemester: 1 }))}
                             >
-                              {semesterConfig.activeSemester === 1 && <Check className="w-3 h-3 mr-1.5 shrink-0" />}
-                              <span>Sem 1</span>
-                            </Button>
+                              {semesterConfig.activeSemester === 1 && <Check className="w-3.5 h-3.5 text-primary" />}
+                              <span>Semester 1</span>
+                            </button>
                           )}
                           {semesterConfig.sem2 && (
-                            <Button
-                              variant={semesterConfig.activeSemester === 2 ? "default" : "outline"}
-                              size="sm"
-                              className="h-8 px-4 text-xs font-medium border-2 min-w-[90px] whitespace-nowrap"
+                            <button
+                              className={cn(
+                                "flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs font-semibold transition-all duration-200",
+                                semesterConfig.activeSemester === 2 
+                                  ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" 
+                                  : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                              )}
                               onClick={() => setSemesterConfig(prev => ({ ...prev, activeSemester: 2 }))}
                             >
-                              {semesterConfig.activeSemester === 2 && <Check className="w-3 h-3 mr-1.5 shrink-0" />}
-                              <span>Sem 2</span>
-                            </Button>
+                              {semesterConfig.activeSemester === 2 && <Check className="w-3.5 h-3.5 text-primary" />}
+                              <span>Semester 2</span>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -871,26 +888,27 @@ export function YearSwitchDialog({
 
                     {/* Validation message */}
                     {!semesterConfig.sem1 && !semesterConfig.sem2 && (
-                      <p className="text-xs text-destructive flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        Pilih minimal satu semester
+                      <p className="text-xs text-destructive flex items-center gap-1.5 bg-destructive/10 p-2.5 rounded-lg border border-destructive/20 font-medium">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        Pilih minimal satu semester untuk melanjutkan
                       </p>
                     )}
                   </div>
                 </div>
 
-                <DialogFooter className="flex gap-2 sm:gap-0">
+                <DialogFooter className="flex gap-3 sm:gap-2 mt-6 pt-5 border-t border-border/40">
                   <Button
                     variant="outline"
                     onClick={() => setMode("list")}
                     disabled={isCreating}
+                    className="rounded-xl h-10 px-5 transition-colors hover:bg-muted text-sm"
                   >
                     Kembali
                   </Button>
                   <Button
                     onClick={handleCreateYear}
                     disabled={isCreating || !newYearName.trim() || (!semesterConfig.sem1 && !semesterConfig.sem2)}
-                    className="gap-2"
+                    className="rounded-xl h-10 px-6 gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group text-sm"
                   >
                     {isCreating ? (
                       <>
@@ -899,7 +917,7 @@ export function YearSwitchDialog({
                       </>
                     ) : (
                       <>
-                        <Check className="h-4 w-4" />
+                        <Check className="h-4 w-4 group-hover:scale-110 transition-transform" />
                         Buat & Aktifkan
                       </>
                     )}
