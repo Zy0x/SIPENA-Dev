@@ -30,7 +30,29 @@ export function HeaderYearDisplay({
   }
 
   if (!activeYear) {
-    return null;
+    if (variant === "mobile" || variant === "tablet") {
+      return (
+        <div className={cn("flex flex-col items-start leading-tight min-w-0", className)}>
+          <span className="text-[10px] sm:text-xs font-semibold text-destructive truncate max-w-[80px] sm:max-w-[100px] md:max-w-[120px]">
+            Tahun Ajaran
+          </span>
+          <span className="text-[9px] sm:text-[10px] text-destructive/80 truncate max-w-[80px] sm:max-w-[100px]">
+            Belum Dipilih
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div className={cn("flex flex-col items-start leading-tight min-w-0", className)}>
+        <span className="text-sm font-semibold text-destructive truncate max-w-[150px]">
+          Tahun Ajaran
+        </span>
+        <span className="text-xs text-destructive/80 truncate max-w-[150px]">
+          Belum Dipilih
+        </span>
+      </div>
+    );
   }
 
   // Mobile/Tablet: Compact 2-line display
