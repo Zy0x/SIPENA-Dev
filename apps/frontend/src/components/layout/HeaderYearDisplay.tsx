@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
-import { Loader2, Plus, AlertCircle } from "lucide-react";
+import { Loader2, Plus, AlertCircle, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { YearSwitchDialog } from "./YearSwitchDialog";
 
@@ -38,30 +38,40 @@ export function HeaderYearDisplay({
         <button 
           onClick={() => setShowSwitchDialog(true)}
           className={cn(
-            "flex items-center gap-2 leading-tight min-w-0 transition-all duration-300",
-            "px-2.5 py-1.5 rounded-lg border border-destructive/30 hover:border-destructive/60 bg-destructive/10 hover:bg-destructive/20",
-            "active:scale-95 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50",
+            "flex items-center gap-2 leading-tight min-w-0 transition-all duration-300 text-left",
+            "group focus-visible:outline-none rounded-lg p-1 -ml-1 hover:bg-muted/50",
             className
           )}
           aria-label="Atur Tahun Ajaran"
         >
-          <AlertCircle className="h-4 w-4 text-destructive animate-pulse group-hover:animate-none shrink-0" />
+          <div className="flex items-center justify-center h-7 w-7 rounded-full bg-amber-100/50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0 transition-transform group-hover:scale-105 group-active:scale-95">
+             <Calendar className="h-3.5 w-3.5" />
+          </div>
+          
           {variant === "mobile" || variant === "tablet" ? (
-            <div className="flex flex-col items-start min-w-0 text-left">
-              <span className="text-[10px] sm:text-xs font-semibold text-destructive truncate max-w-[90px] sm:max-w-[120px]">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] sm:text-xs font-semibold text-foreground truncate max-w-[90px] sm:max-w-[120px] group-hover:text-primary transition-colors">
                 Pilih Tahun
               </span>
-              <span className="text-[9px] sm:text-[10px] text-destructive/80 truncate max-w-[90px] sm:max-w-[120px]">
+              <span className="text-[9px] sm:text-[10px] text-amber-600/80 dark:text-amber-400/80 truncate max-w-[90px] sm:max-w-[120px] flex items-center gap-1">
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                </span>
                 Ketuk di sini
               </span>
             </div>
           ) : (
-            <div className="flex flex-col items-start min-w-0 text-left">
-              <span className="text-sm font-semibold text-destructive truncate max-w-[150px]">
-                Pilih Tahun Ajaran
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-semibold text-foreground truncate max-w-[150px] group-hover:text-primary transition-colors">
+                Tahun Ajaran
               </span>
-              <span className="text-xs text-destructive/80 truncate max-w-[150px] flex items-center gap-1">
-                <Plus className="h-3 w-3" /> Klik untuk mengatur
+              <span className="text-xs text-amber-600/80 dark:text-amber-400/80 truncate max-w-[150px] flex items-center gap-1">
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                </span>
+                Belum diatur
               </span>
             </div>
           )}
