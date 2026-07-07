@@ -689,7 +689,7 @@ export function YearSwitchDialog({
                   </div>
                 </div>
 
-                <DialogFooter className="flex-col gap-2 sm:flex-row">
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
                   <Button
                     variant="outline"
                     onClick={() => onOpenChange(false)}
