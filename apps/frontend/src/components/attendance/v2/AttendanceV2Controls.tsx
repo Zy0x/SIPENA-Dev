@@ -334,19 +334,24 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
                     nationalHoliday: (date) => isNationalHoliday(date),
                   }}
                   modifiersClassNames={{ 
-                    holiday: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium", 
-                    sunday: "text-amber-600 dark:text-amber-400",
+                    holiday: "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold",
+                    sunday: "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold",
                     dayEvent: "ring-2 ring-primary/50 ring-inset font-bold",
                     customHoliday: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-medium",
                     nationalHoliday: "bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-400 font-semibold",
                   }}
+                  classNames={{
+                    head_cell: "text-slate-700 dark:text-slate-200 rounded-md w-9 font-semibold text-[0.78rem]",
+                    day_selected: "bg-primary/10 text-primary ring-2 ring-primary ring-inset rounded-md font-semibold hover:bg-primary/15 hover:text-primary focus:bg-primary/15 focus:text-primary",
+                    day_today: "bg-cyan-50 dark:bg-cyan-950/30 text-cyan-800 dark:text-cyan-100 font-semibold ring-1 ring-cyan-500/80 ring-inset rounded-md",
+                  }}
                 />
                 {/* Calendar Color Legend */}
                 <div className="px-3 pb-3 pt-2 border-t border-border/50 space-y-1.5">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Keterangan Warna Kalender:</p>
+                  <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Keterangan Warna Kalender:</p>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                     <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[9px] font-bold flex items-center justify-center border border-amber-200 dark:border-amber-800/50">15</div>
+                      <div className="w-6 h-6 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 text-[9px] font-semibold flex items-center justify-center border border-amber-200 dark:border-amber-800/50">15</div>
                       <span className="text-[10px] text-muted-foreground">Hari Libur</span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -354,7 +359,7 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
                       <span className="text-[10px] text-muted-foreground">Kustom (Libur/Kerja)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-md text-amber-600 dark:text-amber-400 text-[9px] font-bold flex items-center justify-center">7</div>
+                      <div className="w-6 h-6 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 text-[9px] font-semibold flex items-center justify-center border border-amber-200 dark:border-amber-800/50">7</div>
                       <span className="text-[10px] text-muted-foreground">Hari Minggu</span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -362,12 +367,16 @@ export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
                       <span className="text-[10px] text-muted-foreground">Kegiatan Khusus</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-md bg-red-50 dark:bg-red-950/30 text-red-500 text-[9px] font-bold flex items-center justify-center border border-red-200 dark:border-red-800/50">🇮🇩</div>
+                      <div className="w-7 h-7 rounded-md bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-300 text-[10px] font-semibold flex items-center justify-center border border-red-200 dark:border-red-800/50">ID</div>
                       <span className="text-[10px] text-muted-foreground">Libur Nasional</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-md bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">{new Date().getDate()}</div>
+                      <div className="w-6 h-6 rounded-md bg-primary/10 text-primary ring-2 ring-primary ring-inset text-[9px] font-semibold flex items-center justify-center">{new Date().getDate()}</div>
                       <span className="text-[10px] text-muted-foreground">Tanggal Terpilih</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-6 h-6 rounded-md bg-cyan-50 dark:bg-cyan-950/30 text-cyan-800 dark:text-cyan-100 ring-1 ring-cyan-500/80 ring-inset text-[9px] font-semibold flex items-center justify-center">{new Date().getDate()}</div>
+                      <span className="text-[10px] text-muted-foreground">Hari Ini</span>
                     </div>
                   </div>
                 </div>

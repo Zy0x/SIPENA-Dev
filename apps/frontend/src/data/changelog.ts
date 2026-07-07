@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.155",
+    version: "2.4.155",
+    title: "Penyelarasan Legend Kalender Presensi V2",
+    description: "Menyelaraskan keterangan warna kalender Presensi V2 dengan tampilan aktual pada date picker agar indikator tanggal terpilih, Hari Minggu, Hari Ini, dan libur lebih mudah dipahami.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-07",
+    details: [
+      "Mengubah contoh Tanggal Terpilih pada legend menjadi ring biru dengan background transparan sesuai date picker.",
+      "Menyamakan contoh Hari Minggu dengan background libur kuning karena Minggu dihitung sebagai hari tidak efektif.",
+      "Menambahkan legend Hari Ini dan meningkatkan kontras teks hari serta warna libur."
+    ]
+  },
+  {
     id: "v2.4.154",
     version: "2.4.154",
     title: "Perbaikan Cleanup Tour Guide Pengaturan Presensi V2",

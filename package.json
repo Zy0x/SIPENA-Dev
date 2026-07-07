@@ -1,7 +1,7 @@
 {
   "name": "sipena-monorepo",
   "private": true,
-  "version": "2.4.154",
+  "version": "2.4.155",
   "type": "module",
   "packageManager": "npm@10.9.2",
   "engines": {

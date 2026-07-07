@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.154";
+export const APP_VERSION = "2.4.155";
 export const VERSION_DATE = "2026-07-07";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.155": "Legend kalender Presensi V2 diselaraskan dengan visual tanggal terpilih, Hari Minggu, Hari Ini, dan kontras warna yang lebih jelas.",
   "2.4.154": "Tour Guide Pengaturan Presensi V2 kini membersihkan overlay dan mengembalikan section/scroll modal saat panduan ditutup atau dilewati.",
   "2.4.153": "Optimasi animasi popover informasi Pengaturan Presensi V2 agar fade-in/fade-out berjalan stabil.",
   "2.4.152": "Pemindahan fitur 'Merge ke V1' dari antarmuka Guru ke Panel Admin dengan penyortiran otomatis menggunakan Edge Function admin-database.",
