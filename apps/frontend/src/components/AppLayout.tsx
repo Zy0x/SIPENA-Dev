@@ -40,6 +40,11 @@
    <img src={morpheIconPure} alt="Morphe" className={cn("rounded", className)} />
  );
 
+ // Custom Mata Pelajaran icon using GIF
+ const MataPelajaranIcon = ({ className }: { className?: string }) => (
+   <img src="/icons/Mata_Pelajaran.gif" alt="Mata Pelajaran" className={cn("rounded w-full h-full object-contain", className)} />
+ );
+
  interface NavItem {
    href: string;
    label: string;
@@ -51,7 +56,7 @@
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, featureKey: FEATURE_KEYS.dashboard },
   { href: "/classes", label: "Kelas & Murid", icon: School, featureKey: FEATURE_KEYS.classes },
-  { href: "/subjects", label: "Mata Pelajaran", icon: BookOpen, featureKey: FEATURE_KEYS.subjects },
+  { href: "/subjects", label: "Mata Pelajaran", icon: MataPelajaranIcon, featureKey: FEATURE_KEYS.subjects },
   { href: "/grades", label: "Input Nilai", icon: FileSpreadsheet, featureKey: FEATURE_KEYS.grades },
   { href: "/attendance", label: "Presensi", icon: CalendarDays, isBeta: true, featureKey: FEATURE_KEYS.attendance },
   { href: "/attendance-v2", label: "Presensi V2", icon: CalendarDays, isBeta: true, featureKey: FEATURE_KEYS.attendanceV2 },
