@@ -24,6 +24,7 @@ import { TourButton } from "@/components/ui/product-tour";
 import { UnifiedExportStudio } from "@/components/export/UnifiedExportStudio";
 import { AttendanceExportPreviewV2 } from "@/components/export/AttendanceExportPreviewV2";
 import { cn } from "@/lib/utils";
+import type { ExportColumnOption } from "@/components/export/UnifiedExportStudio";
 
 interface AttendanceV2ControlsProps {
   selectedClassId: string;
@@ -59,7 +60,7 @@ interface AttendanceV2ControlsProps {
   attendanceDebugPanel: React.ReactNode;
   attendanceStylePanelExtra: React.ReactNode;
   attendanceDebugPreviewFooter: React.ReactNode;
-  attendanceColumnOptions: any[];
+  attendanceColumnOptions: ExportColumnOption[];
   handleAttendanceColumnOptionChange: (key: string, checked: boolean) => void;
   attendanceColumnTypographyOptions: any[];
   resetAttendanceStudioDefaults: () => void;

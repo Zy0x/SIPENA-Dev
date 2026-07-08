@@ -25,6 +25,7 @@ import {
   type AttendancePngRuntimeTrace,
 } from "@/lib/attendanceExportDebug";
 import { createDefaultReportDocumentStyle, type ReportDocumentStyle } from "@/lib/reportExportLayoutV2";
+import type { ExportColumnOption } from "@/components/export/UnifiedExportStudio";
 import type { ReportPaperSize } from "@/lib/reportExportLayout";
 
 interface Student {
@@ -257,16 +258,14 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
     return selectedAttendanceColumnKeys.length > 0 ? selectedAttendanceColumnKeys : defaultAttendanceVisibleColumnKeys;
   }, [selectedAttendanceColumnKeys, defaultAttendanceVisibleColumnKeys]);
 
-  const attendanceColumnOptions = useMemo(() => {
-    const options: { key: string; label: string; category: "Wajib" | "Tanggal" | "Rekap"; required: boolean }[] = [
-      { key: "no", label: "No", category: "Wajib", required: true },
-      { key: "name", label: "Nama Siswa", category: "Wajib", required: true },
-      { key: "nisn", label: "NISN", category: "Wajib", required: true },
-    ];
+    const attendanceColumnOptions = useMemo<ExportColumnOption[]>(() => {
+    const selectedSet = new Set(selectedAttendanceColumnKeys);
+    
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    days.forEach((day) => {
+    
+    const dayChildren: ExportColumnOption[] = days.map((day) => {
       const dateStr = format(day, "yyyy-MM-dd");
       const isSun = getDay(day) === 0;
       const isNat = isNationalHoliday(day);
@@ -275,19 +274,59 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
       if (isSun) label += " (Min)";
       else if (isNat) label += " (Libur Nas)";
       else if (isCustom) label += " (Kustom)";
-      options.push({ key: dateStr, label, category: "Tanggal" as const, required: false });
+      
+      return {
+        key: dateStr,
+        label,
+        description: isSun || isNat || isCustom
+          ? "Kolom hari libur. Nilai biasanya L atau kosong."
+          : "Kolom presensi harian siswa.",
+        checked: selectedSet.has(dateStr)
+      };
     });
-    options.push(
-      { key: "H", label: "H (Hadir)", category: "Rekap" as const, required: false },
-      { key: "S", label: "S (Sakit)", category: "Rekap" as const, required: false },
-      { key: "I", label: "I (Izin)", category: "Rekap" as const, required: false },
-      { key: "A", label: "A (Alfa)", category: "Rekap" as const, required: false },
-      { key: "D", label: "D (Dispen)", category: "Rekap" as const, required: false },
-      { key: "total", label: "Jumlah Tidak Hadir", category: "Rekap" as const, required: false },
-      { key: "Catatan Siswa", label: "Catatan Presensi", category: "Rekap" as const, required: false }
-    );
-    return options;
-  }, [currentMonth, holidays, isNationalHoliday]);
+
+    const totalChildren: ExportColumnOption[] = [
+      { key: "H", label: "Hadir (H)", description: "Jumlah hadir per siswa.", checked: selectedSet.has("H") },
+      { key: "S", label: "Sakit (S)", description: "Jumlah sakit per siswa.", checked: selectedSet.has("S") },
+      { key: "I", label: "Izin (I)", description: "Jumlah izin per siswa.", checked: selectedSet.has("I") },
+      { key: "A", label: "Alpha (A)", description: "Jumlah alpha per siswa.", checked: selectedSet.has("A") },
+      { key: "D", label: "Dispensasi (D)", description: "Jumlah dispensasi per siswa.", checked: selectedSet.has("D") },
+      { key: "total", label: "Jumlah Total", description: "Total akumulasi ketidakhadiran/rekap.", checked: selectedSet.has("total") },
+    ];
+
+    return [
+      {
+        key: "days",
+        label: "Kolom Hari",
+        description: "Pilih tanggal mana saja yang ingin ikut tampil di preview dan file ekspor.",
+        checked: dayChildren.length > 0 && dayChildren.every((child) => child.checked),
+        groupMeta: {
+          detailTitle: "Kolom presensi harian",
+          activeSummaryLabel: "hari aktif",
+          collapsedHint: "Daftar hari disembunyikan agar panel tetap ringkas. Tekan Detail untuk membuka pengaturan per hari presensi.",
+        },
+        children: dayChildren,
+      },
+      {
+        key: "totals",
+        label: "Rekap Status",
+        description: "Atur kolom ringkasan kehadiran di sisi kanan tabel.",
+        checked: totalChildren.every((child) => child.checked),
+        groupMeta: {
+          detailTitle: "Kolom rekap status",
+          activeSummaryLabel: "status aktif",
+          collapsedHint: "Gunakan Detail untuk memilih kategori rekap yang ditampilkan.",
+        },
+        children: totalChildren,
+      },
+      {
+        key: "Catatan Siswa",
+        label: "Catatan Presensi",
+        description: "Tambahkan kolom kosong untuk catatan manual (hanya untuk PDF/Print/PNG).",
+        checked: selectedSet.has("Catatan Siswa"),
+      },
+    ];
+  }, [selectedAttendanceColumnKeys, currentMonth, holidays, isNationalHoliday]);
 
   const handleAttendanceColumnOptionChange = useCallback((key: string, checked: boolean) => {
     setSelectedAttendanceColumnKeys((prev) => {
