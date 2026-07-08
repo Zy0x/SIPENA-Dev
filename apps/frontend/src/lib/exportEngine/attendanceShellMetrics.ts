@@ -10,7 +10,7 @@
 
 export const ATTENDANCE_SHELL_MM = {
   /** Unified top banner height (title + class pill + meta strip). */
-  topBanner: 18,
+  topBanner: 40,
   /** Legacy meta-bar slot (kept at 0 — meta is now inside topBanner). */
   metaBar: 0,
   /** Vertical padding between banner and table content. */

@@ -77,80 +77,76 @@ function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: Attendan
   const bannerY = plan.paper.marginTopMm;
   const contentLeft = plan.paper.marginLeftMm;
   const contentRight = plan.paper.pageWidthMm - plan.paper.marginRightMm;
-  const bannerHeight = plan.shell.topBanner - 2; // 16mm visible
+  const bannerHeight = plan.shell.topBanner - 2; 
   const bannerWidth = plan.paper.contentWidthMm;
 
-  // Solid banner with subtle bottom band for depth.
-  doc.setFillColor(...COLORS.header);
-  doc.roundedRect(contentLeft, bannerY, bannerWidth, bannerHeight, 2.2, 2.2, "F");
-  doc.setFillColor(...COLORS.headerDark);
-  doc.roundedRect(contentLeft, bannerY + bannerHeight - 1.4, bannerWidth, 1.4, 0, 0, "F");
+  // Garis Kop Surat (Ganda) di bagian bawah banner
+  const line1Y = bannerY + bannerHeight - 0.8;
+  const line2Y = bannerY + bannerHeight;
+  
+  doc.setFillColor(...COLORS.ink);
+  // Garis tebal (0.8mm)
+  doc.rect(contentLeft, line1Y - 0.5, bannerWidth, 0.8, "F");
+  // Garis tipis (0.3mm)
+  doc.rect(contentLeft, line2Y, bannerWidth, 0.3, "F");
 
-  doc.setTextColor(...COLORS.headerText);
+  // Konten ditarik ke bawah mendekati garis kop (sekitar 4mm di atas garis)
+  const bottomAnchorY = line1Y - 4;
 
-  // ── Top row: Title (left) + Class pill (right)
+  // ── Bagian Kiri: Judul Dokumen ──
+  // DOKUMEN AKADEMIK
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(plan.table.titleFontPt);
-  doc.text("REKAP PRESENSI BULANAN", contentLeft + 3.5, bannerY + 6.2);
+  doc.setFontSize(plan.table.metaFontPt + 2);
+  doc.setTextColor(...COLORS.header);
+  doc.text("DOKUMEN AKADEMIK", contentLeft, bottomAnchorY - 10);
+  
+  // REKAPITULASI PRESENSI
+  doc.setFontSize(plan.table.titleFontPt + 6);
+  doc.setTextColor(...COLORS.ink);
+  doc.text("REKAPITULASI PRESENSI", contentLeft, bottomAnchorY - 4.5);
 
-  const classText = `Kelas ${data.className}`;
-  doc.setFontSize(plan.table.metaFontPt + 1.2);
-  const classTextW = doc.getTextWidth(classText);
-  const pillPadX = 1.6;
-  const pillW = classTextW + pillPadX * 2;
-  const pillH = 4.6;
-  const pillX = contentRight - 3 - pillW;
-  const pillY = bannerY + 3.0;
-  doc.setFillColor(255, 255, 255);
-  docWithGState.setGState(new docWithGState.GState({ opacity: 0.18 }));
-  doc.roundedRect(pillX, pillY, pillW, pillH, 1.2, 1.2, "F");
-  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
-  doc.setTextColor(...COLORS.headerText);
-  doc.setFont("helvetica", "bold");
-  doc.text(classText, pillX + pillPadX, pillY + 3.4);
-
-  // ── Bottom row: Month (left) + meta pills (right, rendered RTL)
-  const bottomY = bannerY + 11.6;
+  // Periode: [monthLabel]
+  doc.setFontSize(plan.table.metaFontPt + 2);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(plan.table.metaFontPt + 1.2);
-  doc.setTextColor(...COLORS.headerText);
-  doc.text(data.monthLabel, contentLeft + 3.5, bottomY + 1.4);
+  doc.setTextColor(...COLORS.muted);
+  doc.text("Periode: ", contentLeft, bottomAnchorY);
+  const periodeW = doc.getTextWidth("Periode: ");
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...COLORS.ink);
+  doc.text(data.monthLabel, contentLeft + periodeW, bottomAnchorY);
 
-  const pills: Array<{ strong: string; rest: string }> = [
-    { strong: String(plan.rows.length), rest: " siswa" },
-    { strong: String(data.effectiveDays), rest: " hari efektif" },
-    { strong: "", rest: data.workDayFormatLabel },
-  ];
-  doc.setFontSize(plan.table.metaFontPt);
-  let cursorX = contentRight - 3;
-  for (let i = pills.length - 1; i >= 0; i -= 1) {
-    const pill = pills[i];
-    const text = `${pill.strong}${pill.rest}`;
-    const textW = doc.getTextWidth(text);
-    const pPad = 1.4;
-    const pW = textW + pPad * 2;
-    const pH = 4.4;
-    const pX = cursorX - pW;
-    const pY = bottomY - 1.6;
+  // ── Bagian Kanan: Info Kelas & Meta ──
+  // Meta text (bottom)
+  const metaText = `${plan.rows.length} Siswa   |   ${data.effectiveDays} Hari Efektif   |   ${data.workDayFormatLabel}`;
+  doc.setFontSize(plan.table.metaFontPt + 1);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...COLORS.muted);
+  const metaTextW = doc.getTextWidth(metaText);
+  doc.text(metaText, contentRight - metaTextW, bottomAnchorY);
 
-    doc.setFillColor(255, 255, 255);
-    docWithGState.setGState(new docWithGState.GState({ opacity: 0.16 }));
-    doc.roundedRect(pX, pY, pW, pH, 2.2, 2.2, "F");
-    docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
-    doc.setTextColor(...COLORS.headerText);
+  // Kelas badge (top right)
+  const classText = `Kelas ${data.className}`;
+  doc.setFontSize(plan.table.titleFontPt + 4);
+  doc.setFont("helvetica", "bold");
+  const classTextW = doc.getTextWidth(classText);
+  
+  const badgePadX = 2.8;
+  const badgePadY = 1.2; 
+  const badgeW = classTextW + badgePadX * 2;
+  const badgeH = 7.5; 
+  const badgeX = contentRight - badgeW;
+  const badgeY = bottomAnchorY - 11.5;
 
-    if (pill.strong) {
-      doc.setFont("helvetica", "bold");
-      doc.text(pill.strong, pX + pPad, pY + 3.2);
-      const strongW = doc.getTextWidth(pill.strong);
-      doc.setFont("helvetica", "normal");
-      doc.text(pill.rest, pX + pPad + strongW, pY + 3.2);
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.text(pill.rest, pX + pPad, pY + 3.2);
-    }
-    cursorX = pX - 1.2;
-  }
+  // Badge background & border
+  doc.setFillColor(...COLORS.panel);
+  doc.setDrawColor(...COLORS.border);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1, 1, "FD");
+
+  // Badge text
+  doc.setTextColor(...COLORS.headerDark);
+  // Vertically center text in badge (approximate based on font size)
+  doc.text(classText, badgeX + badgePadX, badgeY + 5.2);
 }
 
 function buildHeadRows(plan: AttendancePrintLayoutPlan) {
