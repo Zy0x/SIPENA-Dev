@@ -22,13 +22,24 @@ export function TopStudentsCarousel({
 }: TopStudentsCarouselProps) {
   const { classes, isLoading: classesLoading } = useClasses();
   const [currentClassIndex, setCurrentClassIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+
+  const paginate = (newDirection: number) => {
+    setDirection(newDirection);
+    setCurrentClassIndex((prev) => {
+      let next = prev + newDirection;
+      if (next < 0) next = classes.length - 1;
+      if (next >= classes.length) next = 0;
+      return next;
+    });
+  };
 
   // Rotate through classes
   useEffect(() => {
     if (classes.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentClassIndex((prev) => (prev + 1) % classes.length);
+      paginate(1);
     }, rotationInterval);
 
     return () => clearInterval(interval);
@@ -130,7 +141,10 @@ export function TopStudentsCarousel({
             {classes.map((cls, idx) => (
               <button
                 key={cls.id}
-                onClick={() => setCurrentClassIndex(idx)}
+                onClick={() => {
+                  setDirection(idx > currentClassIndex ? 1 : -1);
+                  setCurrentClassIndex(idx);
+                }}
                 className={cn(
                   "w-1.5 h-1.5 rounded-full transition-all duration-300",
                   idx === currentClassIndex
@@ -146,10 +160,22 @@ export function TopStudentsCarousel({
         <AnimatePresence mode="wait">
           <motion.div
             key={currentClass?.id}
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: direction > 0 ? 20 : -20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            exit={{ opacity: 0, x: direction > 0 ? -20 : 20 }}
             transition={{ duration: 0.3 }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(e, { offset }) => {
+              const swipe = offset.x;
+              if (swipe < -50) {
+                paginate(1);
+              } else if (swipe > 50) {
+                paginate(-1);
+              }
+            }}
+            className="touch-pan-y"
           >
             {rankingsLoading ? (
               <div className="flex items-center justify-center py-8">
