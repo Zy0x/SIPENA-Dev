@@ -1,20 +1,30 @@
 import { cn } from "@/lib/utils";
 import React from "react";
 
-export const createGifIcon = (filename: string) => {
-  return ({ className }: { className?: string }) => (
-    <>
-      <style>{`
-        .sipena-gif-${filename.split('.')[0]} { mix-blend-mode: multiply; filter: none; }
-        .dark .sipena-gif-${filename.split('.')[0]} { mix-blend-mode: screen; filter: invert(1) hue-rotate(180deg) brightness(1.2); }
-      `}</style>
-      <img 
-        src={`/icons/${filename}`} 
-        alt={filename.replace(".gif", "").replace("_", " ")} 
-        className={cn(`rounded w-full h-full object-contain scale-[1.35] sipena-gif-${filename.split('.')[0]}`, className)} 
-      />
-    </>
-  );
+export const createGifIcon = (filename: string, preserveColor: boolean = false) => {
+  return ({ className }: { className?: string }) => {
+    const baseClass = `sipena-gif-${filename.split('.')[0]}`;
+    
+    return (
+      <>
+        <style>{`
+          .${baseClass} { 
+            mix-blend-mode: ${preserveColor ? 'normal' : 'multiply'}; 
+            filter: none; 
+          }
+          .dark .${baseClass} { 
+            mix-blend-mode: ${preserveColor ? 'normal' : 'screen'}; 
+            filter: ${preserveColor ? 'none' : 'invert(1) hue-rotate(180deg) brightness(1.2)'}; 
+          }
+        `}</style>
+        <img 
+          src={`/icons/${filename}`} 
+          alt={filename.replace(".gif", "").replace("_", " ")} 
+          className={cn(`rounded w-full h-full object-contain scale-[1.35] ${baseClass}`, className)} 
+        />
+      </>
+    );
+  };
 };
 
 export const DashboardIcon = createGifIcon("Dashboard.gif");
@@ -31,4 +41,4 @@ export const LaporanNilaiIcon = createGifIcon("Laporan_Nilai.gif");
 export const PortalOrangtuaIcon = createGifIcon("Portal_Orangtua.gif");
 export const ProfilSayaIcon = createGifIcon("Profil_Saya.gif");
 export const RankingMuridIcon = createGifIcon("Ranking_Murid.gif");
-export const HandWaveIcon = createGifIcon("Hand_Wave.gif");
+export const HandWaveIcon = createGifIcon("Hand_Wave.gif", true);
