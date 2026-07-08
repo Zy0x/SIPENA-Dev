@@ -238,7 +238,7 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
 
   // Default values
   const defaultAttendanceVisibleColumnKeys = useMemo(() => {
-    const list: string[] = ["No", "Nama Siswa", "NISN"];
+    const list: string[] = ["no", "name", "nisn"];
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -259,9 +259,9 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
 
   const attendanceColumnOptions = useMemo(() => {
     const options: { key: string; label: string; category: "Wajib" | "Tanggal" | "Rekap"; required: boolean }[] = [
-      { key: "No", label: "No", category: "Wajib", required: true },
-      { key: "Nama Siswa", label: "Nama Siswa", category: "Wajib", required: true },
-      { key: "NISN", label: "NISN", category: "Wajib", required: true },
+      { key: "no", label: "No", category: "Wajib", required: true },
+      { key: "name", label: "Nama Siswa", category: "Wajib", required: true },
+      { key: "nisn", label: "NISN", category: "Wajib", required: true },
     ];
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -303,9 +303,9 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
 
   const attendanceColumnTypographyOptions = useMemo(() => {
     return [
-      { key: "No", label: "Kolom Nomor", align: "center" as const },
-      { key: "Nama Siswa", label: "Nama Siswa", align: "left" as const },
-      { key: "NISN", label: "Nomor Induk Siswa", align: "center" as const },
+      { key: "no", label: "Kolom Nomor", align: "center" as const },
+      { key: "name", label: "Nama Siswa", align: "left" as const },
+      { key: "nisn", label: "Nomor Induk Siswa", align: "center" as const },
       { key: "date-columns", label: "Kolom Harian (Tanggal)", align: "center" as const },
       { key: "recap-columns", label: "Kolom Rekap (HSIAD)", align: "center" as const },
       { key: "Catatan Siswa", label: "Kolom Catatan", align: "left" as const },
