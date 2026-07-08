@@ -143,10 +143,10 @@ export default function Classes() {
   }, [prefersReducedMotion]);
 
   useEffect(() => {
-    if (!isLoading && classesWithoutKkm.length > 0) {
+    if (!isLoading && classesWithoutKkm.length > 0 && !isTourDummyActive) {
       setShowClassKkmGuide(true);
     }
-  }, [classesWithoutKkm.length, isLoading]);
+  }, [classesWithoutKkm.length, isLoading, isTourDummyActive]);
 
   const prepareClassesTour = () => {
     preTourSearchQueryRef.current = searchQuery;
