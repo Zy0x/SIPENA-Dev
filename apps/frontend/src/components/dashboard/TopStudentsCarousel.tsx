@@ -163,23 +163,25 @@ export function TopStudentsCarousel({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: direction > 0 ? -20 : 20 }}
             transition={{ duration: 0.3 }}
-            drag="x"
-            dragDirectionLock
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2}
-            onDragEnd={(e, { offset, velocity }) => {
-              const swipe = offset.x;
-              const swipeVelocity = velocity.x;
-              
-              // Kombinasi deteksi jarak usapan (offset) dan kecepatan jentikan jari (velocity)
-              if (swipe < -20 || swipeVelocity < -400) {
-                paginate(1);
-              } else if (swipe > 20 || swipeVelocity > 400) {
-                paginate(-1);
-              }
-            }}
-            className="touch-pan-y"
           >
+            <motion.div
+              drag="x"
+              dragDirectionLock
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(e, { offset, velocity }) => {
+                const swipe = offset.x;
+                const swipeVelocity = velocity.x;
+                
+                // Kombinasi deteksi jarak usapan (offset) dan kecepatan jentikan jari (velocity)
+                if (swipe < -20 || swipeVelocity < -400) {
+                  paginate(1);
+                } else if (swipe > 20 || swipeVelocity > 400) {
+                  paginate(-1);
+                }
+              }}
+              className="touch-pan-y w-full"
+            >
             {rankingsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
@@ -253,6 +255,7 @@ export function TopStudentsCarousel({
                 </div>
               </div>
             )}
+            </motion.div>
           </motion.div>
         </AnimatePresence>
       </CardContent>
