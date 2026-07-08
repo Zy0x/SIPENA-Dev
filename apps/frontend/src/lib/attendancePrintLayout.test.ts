@@ -427,7 +427,7 @@ describe("attendance print layout", () => {
     });
   });
 
-  it("builds pdf documents with the same page count as the layout plan", () => {
+  it("builds pdf documents with the same page count as the layout plan", async () => {
     const dataset = createDataset({
       rows: Array.from({ length: 28 }, (_, index) => ({
         id: `s-${index + 1}`,

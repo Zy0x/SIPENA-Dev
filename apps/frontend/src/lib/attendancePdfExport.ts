@@ -1,3 +1,25 @@
+async function fetchBase64Data(url: string, isImage = false): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(isImage ? reader.result : reader.result.split(',')[1]);
+        } else {
+          resolve(null);
+        }
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    return null;
+  }
+}
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { addSignatureBlockPDF, type SignatureData } from "@/lib/exportSignature";
@@ -72,7 +94,15 @@ const ROTATE_90_LENGTH_SAFETY_MM = 2.4;
 const ROTATE_90_THICKNESS_SAFETY_MM = 1.2;
 const ROTATE_90_BASELINE_CENTER_FACTOR = 0.38;
 
-function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: AttendancePrintLayoutPlan, _page: AttendancePrintPage) {
+function drawPageHeader(
+  doc: jsPDF,
+  data: AttendancePrintDataset,
+  plan: AttendancePrintLayoutPlan,
+  page: PrintLayoutPage,
+  logoBase64: string | null = null,
+  defaultFont: string = "helvetica",
+  homeroomTeacher: string = "Nama Guru, S.Pd"
+) {
   const docWithGState = doc as JsPdfWithGState;
   const bannerY = plan.paper.marginTopMm;
   const contentLeft = plan.paper.marginLeftMm;
@@ -717,7 +747,7 @@ export function exportAttendancePdf(args: {
   debugCollector?.({ phase: "finish" });
 }
 
-export function buildAttendancePdfDocument(args: {
+export async function buildAttendancePdfDocument(args: {
   data: AttendancePrintDataset;
   plan: AttendancePrintLayoutPlan;
   signature?: SignatureData | null;
@@ -735,7 +765,30 @@ export function buildAttendancePdfDocument(args: {
     format: [plan.paper.pageWidthMm, plan.paper.pageHeightMm],
   });
 
-    const tableStartY = plan.paper.marginTopMm + plan.shell.topBanner + plan.shell.metaBar + plan.shell.contentPaddingY;
+  const defaultFont = "PlusJakartaSans";
+  const interRegularBase64 = await fetchBase64Data("/fonts/PlusJakartaSans-Regular.ttf", false);
+  const interBoldBase64 = await fetchBase64Data("/fonts/PlusJakartaSans-Bold.ttf", false);
+  const logoBase64 = await fetchBase64Data("/icon.png", true);
+
+  if (interRegularBase64) {
+    doc.addFileToVFS("PlusJakartaSans-Regular.ttf", interRegularBase64);
+    doc.addFont("PlusJakartaSans-Regular.ttf", "PlusJakartaSans", "normal");
+  }
+  if (interBoldBase64) {
+    doc.addFileToVFS("PlusJakartaSans-Bold.ttf", interBoldBase64);
+    doc.addFont("PlusJakartaSans-Bold.ttf", "PlusJakartaSans", "bold");
+  }
+  doc.setFont(interRegularBase64 ? defaultFont : "helvetica", "normal");
+
+  let homeroomTeacher = "Nama Guru, S.Pd";
+  if (args.signature?.signers) {
+    const teacherSigner = args.signature.signers.find(s => s.title && s.title.toLowerCase().includes("wali kelas"));
+    if (teacherSigner) {
+      homeroomTeacher = teacherSigner.name;
+    }
+  }
+
+  const tableStartY = plan.paper.marginTopMm + plan.shell.topBanner + plan.shell.metaBar + plan.shell.contentPaddingY;
   const bodyRowsByPage = plan.pages.map((page) => buildBodyRows(data, plan, page));
   const { row1, row2, mergedColumns } = buildHeadRows(plan);
   const columnStyles = buildColumnStyles(plan);
@@ -749,7 +802,23 @@ export function buildAttendancePdfDocument(args: {
       doc.addPage([plan.paper.pageWidthMm, plan.paper.pageHeightMm], "landscape");
     }
 
-    drawPageHeader(doc, data, plan, page);
+    
+      if (logoBase64) {
+        const docWithGState = doc as any;
+        if (docWithGState.GState) {
+          docWithGState.setGState(new docWithGState.GState({ opacity: 0.05 }));
+        }
+        const wmWidth = 80;
+        const wmHeight = 80;
+        const wmX = (plan.paper.pageWidthMm - wmWidth) / 2;
+        const wmY = (plan.paper.pageHeightMm - wmHeight) / 2;
+        doc.addImage(logoBase64, "PNG", wmX, wmY, wmWidth, wmHeight);
+        if (docWithGState.GState) {
+          docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+        }
+      }
+      drawPageHeader(doc, data, plan, page, logoBase64, defaultFont, homeroomTeacher);
+  
 
     // Dedicated signature-only page: skip the table entirely and draw just
     // the signature block + footer. Triggered when planner detects there
