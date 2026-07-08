@@ -21,7 +21,12 @@ serve(async (req) => {
     if (!groqApiKey) throw new Error("GROQ_API_KEY not configured in Supabase Secrets.");
 
     const body = await req.json();
-    const { studentId, subjectId, modelId = "llama-3.3-70b-versatile" } = body;
+    let { studentId, subjectId, modelId = "llama-3.3-70b-versatile" } = body;
+    
+    // Resolve auto model
+    if (modelId === "auto") {
+      modelId = "llama-3.3-70b-versatile";
+    }
 
     // Get user_id: prefer body (always sent by client), fallback to JWT
     let userId: string | null = body.user_id || null;

@@ -14,6 +14,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -29,20 +32,18 @@ import { GradePrediction } from "@/components/grades/GradePrediction";
 import { useClasses } from "@/hooks/useClasses";
 import { useStudents } from "@/hooks/useStudents";
 import { useSubjects } from "@/hooks/useSubjects";
-import { MORPHE_MODELS } from "@/hooks/useMorpheChat";
+import { MORPHE_MODELS, MORPHE_MODEL_GROUPS } from "@/hooks/useMorpheChat";
 
-// Hanya tampilkan model Production yang stabil untuk prediksi nilai
-const PREDICTION_MODELS = MORPHE_MODELS.filter(
-  (m) => m.group === "Production" || m.group === "Reasoning"
+// Hanya tampilkan grup model yang cocok untuk prediksi nilai
+const PREDICTION_GROUPS = MORPHE_MODEL_GROUPS.filter(
+  (g) => g.group === "Auto" || g.group === "Production" || g.group === "Reasoning"
 );
 
 export function StudentPredictionCard() {
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
-  const [selectedModel, setSelectedModel] = useState<string>(
-    "llama-3.3-70b-versatile"
-  );
+  const [selectedModel, setSelectedModel] = useState<string>("auto");
   const [isOpen, setIsOpen] = useState(false);
 
   const { classes } = useClasses();
@@ -114,20 +115,28 @@ export function StudentPredictionCard() {
                     <SelectValue placeholder="Pilih model AI" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PREDICTION_MODELS.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{model.label}</span>
-                          {model.recommended && (
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] px-1"
-                            >
-                              ★
-                            </Badge>
-                          )}
-                        </div>
-                      </SelectItem>
+                    {PREDICTION_GROUPS.map((group, groupIdx) => (
+                      <SelectGroup key={group.group}>
+                        {group.group !== "Auto" && (
+                          <SelectLabel className="text-xs text-muted-foreground uppercase tracking-wider">{group.group}</SelectLabel>
+                        )}
+                        {group.items.map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{model.label}</span>
+                              {model.recommended && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] px-1 bg-primary/10 text-primary"
+                                >
+                                  ✨
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {groupIdx < PREDICTION_GROUPS.length - 1 && <SelectSeparator />}
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>

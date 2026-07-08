@@ -34,26 +34,20 @@ export interface ImageAttachment {
   name: string;
 }
 
-// ─── Model list — Groq supported models 2025 ──────────────────────────────
+// 🌟 Model list – Groq supported models 2025 🌟
 export const MORPHE_MODELS = [
   // Auto
   { id: "auto", label: "Auto (Otomatis)", group: "Auto", speed: "Adaptif", ctx: "128K", recommended: true },
 
-  // Production — General Purpose
-  { id: "llama-3.3-70b-versatile",     label: "Llama 3.3 70B",       group: "Production",  speed: "Sedang",       ctx: "128K", recommended: false },
+  // Production – General Purpose
+  { id: "llama-3.3-70b-versatile",     label: "Llama 3.3 70B",       group: "Production",  speed: "Sedang",       ctx: "128K", recommended: true },
   { id: "llama-3.1-8b-instant",        label: "Llama 3.1 8B",        group: "Production",  speed: "Sangat Cepat", ctx: "128K", recommended: false },
-  { id: "llama3-70b-8192",             label: "Llama 3 70B",         group: "Production",  speed: "Sedang",       ctx: "8K",   recommended: false },
-  { id: "llama3-8b-8192",              label: "Llama 3 8B",          group: "Production",  speed: "Sangat Cepat", ctx: "8K",   recommended: false },
-  { id: "meta-llama/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout 17B (Vision)", group: "Production", speed: "Cepat", ctx: "128K", recommended: false },
-
-  // OpenAI GPT-OSS
-  { id: "openai/gpt-oss-120b",         label: "GPT-OSS 120B",        group: "OpenAI",      speed: "Sedang",       ctx: "128K", recommended: false },
-  { id: "openai/gpt-oss-20b",          label: "GPT-OSS 20B",         group: "OpenAI",      speed: "Cepat",        ctx: "128K", recommended: false },
+  { id: "llama-3.2-90b-vision-preview", label: "Llama 3.2 90B (Vision)", group: "Production", speed: "Sedang", ctx: "128K", recommended: false },
+  { id: "llama-3.2-11b-vision-preview", label: "Llama 3.2 11B (Vision)", group: "Production", speed: "Cepat", ctx: "128K", recommended: false },
 
   // Reasoning
   { id: "deepseek-r1-distill-llama-70b",  label: "DeepSeek R1 70B",     group: "Reasoning", speed: "Sedang", ctx: "128K", recommended: false },
   { id: "deepseek-r1-distill-qwen-32b",   label: "DeepSeek R1 Qwen 32B", group: "Reasoning", speed: "Cepat", ctx: "128K", recommended: false },
-  { id: "qwen/qwen3-32b",                 label: "Qwen 3 32B",          group: "Reasoning", speed: "Cepat", ctx: "128K", recommended: false },
   { id: "qwen-qwq-32b",                   label: "Qwen QwQ 32B",        group: "Reasoning", speed: "Cepat", ctx: "128K", recommended: false },
 
   // Coding & Specialized
@@ -69,14 +63,13 @@ export const MORPHE_MODELS = [
 export const MORPHE_MODEL_GROUPS = [
   { group: "Auto",        items: MORPHE_MODELS.filter((m) => m.group === "Auto") },
   { group: "Production",  items: MORPHE_MODELS.filter((m) => m.group === "Production") },
-  { group: "OpenAI",      items: MORPHE_MODELS.filter((m) => m.group === "OpenAI") },
   { group: "Reasoning",   items: MORPHE_MODELS.filter((m) => m.group === "Reasoning") },
   { group: "Coding",      items: MORPHE_MODELS.filter((m) => m.group === "Coding") },
   { group: "Lainnya",     items: MORPHE_MODELS.filter((m) => m.group === "Lainnya") },
 ];
 
 // Vision-capable models
-const VISION_MODELS = ["meta-llama/llama-4-scout-17b-16e-instruct"];
+const VISION_MODELS = ["llama-3.2-90b-vision-preview", "llama-3.2-11b-vision-preview"];
 
 const DEFAULT_SYSTEM_PROMPT = `Kamu adalah Morphe, asisten AI cerdas untuk guru di SIPENA (Sistem Informasi Penilaian Akademik). Kamu membantu guru dalam:
 - Menganalisis data nilai dan presensi siswa
@@ -95,7 +88,7 @@ const AUTO_SUMMARIZE_THRESHOLD = 28;
  * Resolve "auto" model to a concrete model based on content
  */
 function resolveAutoModel(hasImages: boolean, content: string): string {
-  if (hasImages) return "meta-llama/llama-4-scout-17b-16e-instruct";
+  if (hasImages) return "llama-3.2-90b-vision-preview";
   
   // Check for code-related keywords
   const codeKeywords = /\b(code|kode|program|function|fungsi|debug|error|script|api|endpoint|sql|query|algorithm)\b/i;
@@ -103,9 +96,9 @@ function resolveAutoModel(hasImages: boolean, content: string): string {
   
   // Check for reasoning/math keywords
   const reasoningKeywords = /\b(analisis|analisa|hitung|rumus|statistik|probabilitas|logika|buktikan|bandingkan|evaluasi)\b/i;
-  if (reasoningKeywords.test(content)) return "deepseek-r1-distill-qwen-32b";
+  if (reasoningKeywords.test(content)) return "deepseek-r1-distill-llama-70b";
   
-  // Default: versatile model
+  // Default general purpose
   return "llama-3.3-70b-versatile";
 }
 
