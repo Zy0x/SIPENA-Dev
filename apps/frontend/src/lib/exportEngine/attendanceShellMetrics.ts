@@ -9,7 +9,7 @@
  */
 
 export const ATTENDANCE_SHELL_MM = {
-  /** Minimalist letterhead: school name (left) + document title (right) on white, single accent strip. */
+  /** Unified top banner height (title + class pill + meta strip). */
   topBanner: 18,
   /** Legacy meta-bar slot (kept at 0 — meta is now inside topBanner). */
   metaBar: 0,

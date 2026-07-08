@@ -301,110 +301,101 @@ export function AttendancePrintDocument({
               color: COLORS.ink,
             }}
           >
-            {/* ── Minimalist Letterhead Banner ─────────────────────────────
-                 White background, single thin accent strip on top.
-                 Left: school name + city. Right: document title + class/month.
-                 Sync 1:1 with drawPageHeader() in attendancePdfExport.ts. */}
-            {(() => {
-              const schoolName = signature.signers[0]?.school_name?.trim() || "";
-              const cityName = signature.city?.trim() || "";
-              const ACCENT_H = mm(1.5);
-              const contentH = bannerHeight - ACCENT_H;
-              // Left zone takes 58%, right zone 42%
-              return (
-                <div
-                  className="attendance-print-banner"
-                  style={{
-                    height: bannerHeight,
-                    background: "#fff",
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: mm(1.6),
-                    overflow: "hidden",
-                    display: "flex",
-                    flexDirection: "column",
-                    marginBottom: bannerBottomGap,
-                    flexShrink: 0,
-                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                  }}
-                >
-                  {/* ── Accent strip ──────────────────────────────────────── */}
-                  <div style={{ height: ACCENT_H, background: COLORS.header, flexShrink: 0 }} />
+            {/* ── Unified Banner (single clean header) ───────────────────
+                 Berisi: Judul, Kelas, Bulan, dan info ringkas (siswa | hari efektif | format hari).
+                 Timestamp ekspor & nomor halaman pindah ke footer.
+                 Sinkron 1:1 dengan drawPageHeader() di attendancePdfExport.ts. */}
+            <div
+              className="attendance-print-banner"
+              style={{
+                position: "relative",
+                height: bannerHeight,
+                background: `linear-gradient(135deg, ${COLORS.header}, ${COLORS.headerDark})`,
+                color: "#fff",
+                borderRadius: mm(2.2),
+                flexShrink: 0,
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                marginBottom: bannerBottomGap,
+                overflow: "hidden",
+              }}
+            >
+              <div style={{
+                position: "absolute",
+                left: mm(3.5),
+                top: mm(3.2),
+                fontSize: titleFontPx,
+                fontWeight: 800,
+                lineHeight: 1.1,
+                letterSpacing: 0.2,
+              }}>
+                  REKAP PRESENSI BULANAN
+              </div>
+              <div style={{
+                position: "absolute",
+                right: mm(3),
+                top: mm(3),
+                fontSize: metaFontPx + 1.2,
+                fontWeight: 700,
+                lineHeight: 1.1,
+                textAlign: "right",
+                padding: `${mm(0.6)}px ${mm(1.6)}px`,
+                background: "rgba(255,255,255,0.18)",
+                borderRadius: mm(1.2),
+                whiteSpace: "nowrap",
+              }}>
+                Kelas {data.className}
+              </div>
 
-                  {/* ── Content row ───────────────────────────────────────── */}
-                  <div style={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    paddingLeft: mm(3.5),
-                    paddingRight: mm(3.5),
-                    minHeight: 0,
-                  }}>
-                    {/* Left: school name + city */}
-                    <div style={{ flex: "0 0 58%", minWidth: 0, paddingRight: mm(2.5) }}>
-                      <div style={{
-                        fontSize: Math.min(titleFontPx * 0.98, contentH * 0.34),
-                        fontWeight: 700,
-                        lineHeight: 1.2,
-                        color: schoolName ? COLORS.ink : COLORS.muted,
-                        fontStyle: schoolName ? "normal" : "italic",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        letterSpacing: "0.01em",
-                      }}>
-                        {schoolName || "Nama Sekolah"}
-                      </div>
-                      {cityName && (
-                        <div style={{
-                          fontSize: Math.min(metaFontPx * 0.92, contentH * 0.24),
-                          color: COLORS.muted,
-                          marginTop: 2,
-                          lineHeight: 1.1,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}>
-                          {cityName}
-                        </div>
-                      )}
-                    </div>
+              <div style={{
+                position: "absolute",
+                left: mm(3.5),
+                bottom: mm(2.8),
+                fontSize: metaFontPx + 1.2,
+                fontWeight: 600,
+                opacity: 0.96,
+                lineHeight: 1.1,
+              }}>
+                {data.monthLabel}
+              </div>
 
-                    {/* Divider */}
-                    <div style={{
-                      width: 1,
-                      background: COLORS.border,
-                      alignSelf: "stretch",
-                      marginTop: mm(1.2),
-                      marginBottom: mm(1.2),
-                      flexShrink: 0,
-                    }} />
-
-                    {/* Right: document title + class/month */}
-                    <div style={{ flex: "0 0 42%", paddingLeft: mm(2.5), textAlign: "right" }}>
-                      <div style={{
-                        fontSize: Math.min(metaFontPx + 0.4, contentH * 0.28),
-                        fontWeight: 700,
-                        color: COLORS.ink,
-                        lineHeight: 1.2,
-                        letterSpacing: "0.02em",
-                        whiteSpace: "nowrap",
-                      }}>
-                        REKAP PRESENSI BULANAN
-                      </div>
-                      <div style={{
-                        fontSize: Math.min(metaFontPx * 0.92, contentH * 0.24),
-                        color: COLORS.muted,
-                        marginTop: 2,
-                        lineHeight: 1.1,
-                        whiteSpace: "nowrap",
-                      }}>
-                        Kelas {data.className}&nbsp;&middot;&nbsp;{data.monthLabel}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+              <div style={{
+                position: "absolute",
+                right: mm(3),
+                bottom: mm(2.2),
+                display: "flex",
+                alignItems: "center",
+                gap: mm(1.2),
+                flexWrap: "nowrap",
+              }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: metaFontPx, fontWeight: 600,
+                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
+                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
+                  whiteSpace: "nowrap",
+                }}>
+                  <strong style={{ fontWeight: 800 }}>{plan.rows.length}</strong>&nbsp;siswa
+                </span>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: metaFontPx, fontWeight: 600,
+                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
+                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
+                  whiteSpace: "nowrap",
+                }}>
+                  <strong style={{ fontWeight: 800 }}>{data.effectiveDays}</strong>&nbsp;hari efektif
+                </span>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: metaFontPx, fontWeight: 600,
+                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
+                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
+                  whiteSpace: "nowrap",
+                }}>
+                  {data.workDayFormatLabel}
+                </span>
+              </div>
+            </div>
 
             {/* ── Table ──────────────────────────────────────────────────── */}
             {/* 
