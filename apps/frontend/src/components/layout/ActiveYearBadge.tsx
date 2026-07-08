@@ -92,25 +92,18 @@ export function ActiveYearBadge({
         <button
           onClick={() => setShowSwitchDialog(true)}
           className={cn(
-            "sipena-year-btn group relative flex w-full items-center gap-2.5 rounded-xl border-2 border-primary/50 bg-primary/10 p-2 text-left transition-all duration-300 hover:border-primary hover:bg-primary/20 hover:shadow-md active:scale-[0.98]",
-            "shadow-[0_0_15px_rgba(var(--primary),0.3)] animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]", // Glow and slow pulse
+            "sipena-year-btn group relative flex w-full items-center gap-2.5 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-2 text-left transition-all duration-300 hover:border-primary/60 hover:bg-primary/10 hover:shadow-sm active:scale-[0.98]",
             className
           )}
-          data-tour="setup-year"
         >
-          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/30">
-            {/* Ping indicator */}
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-            </span>
-            <Calendar className="h-4 w-4" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/25">
+            <Calendar className="h-4 w-4 animate-pulse" />
           </div>
           <div className="flex flex-col">
             <span className="text-xs font-bold leading-tight text-primary">Pilih Tahun Ajaran</span>
             <span className="text-[10px] font-medium leading-tight text-primary/70">Wajib diatur untuk memulai</span>
           </div>
-          <div className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all duration-300 group-hover:translate-x-0.5 shadow-sm">
+          <div className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary transition-all duration-300 group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-primary-foreground">
             <ChevronRight className="h-3.5 w-3.5" />
           </div>
         </button>
