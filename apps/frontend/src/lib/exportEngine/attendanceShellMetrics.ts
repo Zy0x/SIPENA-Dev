@@ -9,8 +9,8 @@
  */
 
 export const ATTENDANCE_SHELL_MM = {
-  /** Two-zone letterhead banner: school header (top) + document title (bottom). */
-  topBanner: 26,
+  /** Minimalist letterhead: school name (left) + document title (right) on white, single accent strip. */
+  topBanner: 18,
   /** Legacy meta-bar slot (kept at 0 — meta is now inside topBanner). */
   metaBar: 0,
   /** Vertical padding between banner and table content. */

@@ -42,6 +42,23 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.159",
+    version: "2.4.159",
+    title: "Revisi Kop Surat Ekspor Presensi — Minimalis & Ramah Cetak",
+    description: "Kop surat diperbaiki menjadi lebih minimalis, kompak, dan ramah cetak: latar putih dengan satu strip aksen biru tipis, nama sekolah di kiri, judul dokumen di kanan. Lebih banyak ruang untuk data tabel.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-08",
+    details: [
+      "Latar putih (#fff) menggantikan gradient navy — jauh lebih bersih saat dicetak (hitam-putih maupun warna).",
+      "Strip aksen biru tipis (1.5mm) di bagian atas tetap memberikan identitas visual tanpa memenuhi ruang.",
+      "Nama sekolah + kota (kiri) dan judul rekap + kelas/bulan (kanan) dalam satu baris kompak.",
+      "Divider vertikal tipis memisahkan dua blok informasi secara rapi.",
+      "Banner height kembali ke 18mm (hemat 8mm dibanding versi sebelumnya) — lebih banyak baris tabel terlihat per halaman.",
+      "Sinkron 1:1 antara preview live dan ekspor PDF."
+    ]
+  },
+  {
     id: "v2.4.158",
     version: "2.4.158",
     title: "Redesain Kop Surat Ekspor Presensi — Tampilan Profesional 2 Zona",
