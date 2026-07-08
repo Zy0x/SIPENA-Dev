@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Calendar, ChevronDown, Check, Plus, Loader2, ChevronRight } from "lucide-react";
 import { useAcademicYear } from "@/contexts/AcademicYearContext";
 import {
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { YearSwitchDialog } from "./YearSwitchDialog";
-import { SemesterToggle, SemesterUnavailableHint } from "./SemesterToggle";
 import gsap from "gsap";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
@@ -42,58 +41,10 @@ export function ActiveYearBadge({
   const [targetYearId, setTargetYearId] = useState<string | null>(null);
   
   const prefersReducedMotion = useReducedMotion();
-  const duration = prefersReducedMotion ? 0.01 : 0.25;
   
   // Refs for GSAP animations
   const yearButtonRef = useRef<HTMLButtonElement>(null);
-  const hintRef = useRef<HTMLDivElement>(null);
-  const arrowRef = useRef<HTMLSpanElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
-
-  // GSAP: Animated hint bounce — restart when component becomes visible
-  const arrowTlRef = useRef<gsap.core.Timeline | null>(null);
-
-  useEffect(() => {
-    if (!arrowRef.current || prefersReducedMotion) return;
-    
-    // Kill previous timeline if exists
-    if (arrowTlRef.current) arrowTlRef.current.kill();
-
-    const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.6 });
-    tl.to(arrowRef.current, { y: 6, opacity: 1, duration: 0.7, ease: "power2.inOut" })
-      .to(arrowRef.current, { y: 0, opacity: 0.4, duration: 0.7, ease: "power2.inOut" });
-    
-    arrowTlRef.current = tl;
-
-    // Visibility observer to pause/resume animation when sidebar hides/shows
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          tl.play();
-        } else {
-          tl.pause();
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(arrowRef.current);
-    
-    return () => {
-      tl.kill();
-      observer.disconnect();
-      arrowTlRef.current = null;
-    };
-  }, [prefersReducedMotion]);
-
-  // GSAP: Hint entrance
-  useEffect(() => {
-    if (!hintRef.current) return;
-    
-    gsap.fromTo(hintRef.current,
-      { opacity: 0, y: -3 },
-      { opacity: 1, y: 0, duration: duration * 1.2, delay: 0.1, ease: "power3.out" }
-    );
-  }, [duration]);
 
   // GSAP: Year button hover
   const handleButtonHover = useCallback((isEntering: boolean) => {
@@ -266,35 +217,15 @@ export function ActiveYearBadge({
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-foreground truncate">
                 {activeYear.name}
+                {showSemester && activeSemester && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    • {activeSemester.name}
+                  </span>
+                )}
               </p>
-              {showSemester && activeSemester && !showSemesterToggle && (
-                <p className="text-[10px] text-muted-foreground truncate">
-                  {activeSemester.name}
-                </p>
-              )}
             </div>
             <ChevronDown className="h-4 w-4 text-primary shrink-0" />
           </button>
-
-          {/* Semester Toggle with GSAP hint */}
-          <div className="relative pt-1">
-            {/* Animated hint label */}
-            <div 
-              ref={hintRef}
-              className="flex items-center justify-center gap-1.5 mb-1.5"
-            >
-              <span className="text-[10px] text-primary/60 font-medium flex items-center gap-1">
-                <span ref={arrowRef} style={{ opacity: 0.4 }}>↓</span>
-                <span>Pilih Semester</span>
-              </span>
-            </div>
-            
-            {semestersForActiveYear.length > 0 ? (
-              <SemesterToggle size="sm" className="w-full" />
-            ) : (
-              <SemesterUnavailableHint />
-            )}
-          </div>
         </div>
 
         <YearSwitchDialog
