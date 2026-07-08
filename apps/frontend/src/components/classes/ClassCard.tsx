@@ -79,7 +79,7 @@ export default function ClassCard({ classData, subjectCount = 0, isSubjectCountL
 
   return (
     <>
-      <Card className="group overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+      <Card className="group overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md" data-tour="class-card">
         <CardContent className="flex h-full flex-col gap-2.5 p-3">
           <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2.5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/10 sm:h-11 sm:w-11">
