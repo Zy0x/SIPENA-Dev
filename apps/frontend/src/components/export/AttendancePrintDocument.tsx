@@ -301,103 +301,99 @@ export function AttendancePrintDocument({
               color: COLORS.ink,
             }}
           >
-            {/* ── Kop Surat Profesional, Modern & Elegan ───────────────────
-                 Berisi: Judul Dokumen, Judul Laporan, Periode, Kelas, dan info ringkas.
-                 Desain disesuaikan menyerupai Kop Surat resmi namun dengan sentuhan modern.
+            {/* ── Unified Banner (single clean header) ───────────────────
+                 Berisi: Judul, Kelas, Bulan, dan info ringkas (siswa | hari efektif | format hari).
+                 Timestamp ekspor & nomor halaman pindah ke footer.
                  Sinkron 1:1 dengan drawPageHeader() di attendancePdfExport.ts. */}
             <div
               className="attendance-print-banner"
               style={{
                 position: "relative",
                 height: bannerHeight,
-                backgroundColor: "#ffffff",
+                background: `linear-gradient(135deg, ${COLORS.header}, ${COLORS.headerDark})`,
+                color: "#fff",
+                borderRadius: mm(2.2),
                 flexShrink: 0,
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                 marginBottom: bannerBottomGap,
+                overflow: "hidden",
               }}
             >
-              {/* Konten ditarik ke bawah mendekati garis kop */}
-              <div style={{ 
-                position: "absolute", 
-                bottom: mm(4), 
-                left: 0, 
-                right: 0,
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "flex-end"
+              <div style={{
+                position: "absolute",
+                left: mm(3.5),
+                top: mm(3.2),
+                fontSize: titleFontPx,
+                fontWeight: 800,
+                lineHeight: 1.1,
+                letterSpacing: 0.2,
               }}>
-                {/* Bagian Kiri: Judul Dokumen */}
-                <div style={{ display: "flex", flexDirection: "column", gap: mm(1.2) }}>
-                  <div style={{
-                    fontSize: metaFontPx + 2,
-                    fontWeight: 700,
-                    color: COLORS.header,
-                    letterSpacing: "0.15em",
-                    textTransform: "uppercase"
-                  }}>
-                    Dokumen Akademik
-                  </div>
-                  <div style={{
-                    fontSize: titleFontPx + 6,
-                    fontWeight: 800,
-                    lineHeight: 1,
-                    letterSpacing: "-0.01em",
-                    color: COLORS.ink,
-                  }}>
-                    REKAPITULASI PRESENSI
-                  </div>
-                  <div style={{
-                    fontSize: metaFontPx + 2,
-                    fontWeight: 500,
-                    color: COLORS.muted,
-                    marginTop: mm(0.5)
-                  }}>
-                    Periode: <strong style={{ color: COLORS.ink, fontWeight: 700 }}>{data.monthLabel}</strong>
-                  </div>
-                </div>
-
-                {/* Bagian Kanan: Info Kelas & Meta */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: mm(1.5) }}>
-                  <div style={{
-                    fontSize: titleFontPx + 4,
-                    fontWeight: 800,
-                    color: COLORS.headerDark,
-                    padding: `${mm(1.2)}px ${mm(2.8)}px`,
-                    borderRadius: mm(1),
-                    border: `1px solid ${COLORS.border}`,
-                    backgroundColor: COLORS.panel,
-                  }}>
-                    Kelas {data.className}
-                  </div>
-                  <div style={{
-                    display: "flex",
-                    gap: mm(1.2),
-                  }}>
-                    <span style={{
-                      fontSize: metaFontPx + 1,
-                      fontWeight: 600,
-                      color: COLORS.muted,
-                    }}>{plan.rows.length} Siswa</span>
-                    <span style={{ color: COLORS.border }}>|</span>
-                    <span style={{
-                      fontSize: metaFontPx + 1,
-                      fontWeight: 600,
-                      color: COLORS.muted,
-                    }}>{data.effectiveDays} Hari Efektif</span>
-                    <span style={{ color: COLORS.border }}>|</span>
-                    <span style={{
-                      fontSize: metaFontPx + 1,
-                      fontWeight: 600,
-                      color: COLORS.muted,
-                    }}>{data.workDayFormatLabel}</span>
-                  </div>
-                </div>
+                  REKAP PRESENSI BULANAN
+              </div>
+              <div style={{
+                position: "absolute",
+                right: mm(3),
+                top: mm(3),
+                fontSize: metaFontPx + 1.2,
+                fontWeight: 700,
+                lineHeight: 1.1,
+                textAlign: "right",
+                padding: `${mm(0.6)}px ${mm(1.6)}px`,
+                background: "rgba(255,255,255,0.18)",
+                borderRadius: mm(1.2),
+                whiteSpace: "nowrap",
+              }}>
+                Kelas {data.className}
               </div>
 
-              {/* Garis Kop Surat (Ganda) */}
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
-                <div style={{ height: mm(0.8), backgroundColor: COLORS.ink, width: "100%", marginBottom: mm(0.5) }} />
-                <div style={{ height: mm(0.3), backgroundColor: COLORS.ink, width: "100%" }} />
+              <div style={{
+                position: "absolute",
+                left: mm(3.5),
+                bottom: mm(2.8),
+                fontSize: metaFontPx + 1.2,
+                fontWeight: 600,
+                opacity: 0.96,
+                lineHeight: 1.1,
+              }}>
+                {data.monthLabel}
+              </div>
+
+              <div style={{
+                position: "absolute",
+                right: mm(3),
+                bottom: mm(2.2),
+                display: "flex",
+                alignItems: "center",
+                gap: mm(1.2),
+                flexWrap: "nowrap",
+              }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: metaFontPx, fontWeight: 600,
+                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
+                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
+                  whiteSpace: "nowrap",
+                }}>
+                  <strong style={{ fontWeight: 800 }}>{plan.rows.length}</strong>&nbsp;siswa
+                </span>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: metaFontPx, fontWeight: 600,
+                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
+                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
+                  whiteSpace: "nowrap",
+                }}>
+                  <strong style={{ fontWeight: 800 }}>{data.effectiveDays}</strong>&nbsp;hari efektif
+                </span>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: metaFontPx, fontWeight: 600,
+                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
+                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
+                  whiteSpace: "nowrap",
+                }}>
+                  {data.workDayFormatLabel}
+                </span>
               </div>
             </div>
 

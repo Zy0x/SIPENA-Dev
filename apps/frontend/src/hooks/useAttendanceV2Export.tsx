@@ -972,7 +972,7 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
 
         progress.update({ percent: 24, phase: "PDF Sumber", message: "Menyusun PDF sumber untuk raster PNG." });
         await progress.yieldFrame();
-        const builtPdf = await buildAttendancePdfDocument({
+        const builtPdf = buildAttendancePdfDocument({
           data: attendancePrintDataset,
           plan,
           signature: exportSignature,

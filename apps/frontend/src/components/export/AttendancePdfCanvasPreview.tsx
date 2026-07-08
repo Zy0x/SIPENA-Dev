@@ -205,7 +205,7 @@ export function AttendancePdfCanvasPreview({
         detail: "Menghitung halaman, kolom, rekap, dan tanda tangan.",
       });
       await yieldPreviewFrame();
-      const built = await buildAttendancePdfDocument({
+      const built = buildAttendancePdfDocument({
         data,
         plan,
         signature,
