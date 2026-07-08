@@ -175,6 +175,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
     };
   }, []);
 
+  // Global event listener to open sidebar programmatically
+  useEffect(() => {
+    const handleOpenSidebar = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarCollapsed(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    window.addEventListener("sipena:open-sidebar", handleOpenSidebar);
+    return () => window.removeEventListener("sipena:open-sidebar", handleOpenSidebar);
+  }, []);
+
   // Persist collapse state + GSAP animations
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', sidebarCollapsed.toString());

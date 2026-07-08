@@ -206,6 +206,14 @@ export default function Dashboard() {
                   Buat tahun ajaran dari menu sidebar (klik ikon kalender)
                 </p>
               </div>
+              <Button 
+                size="sm" 
+                onClick={() => window.dispatchEvent(new Event("sipena:open-sidebar"))} 
+                className="text-xs bg-grade-warning hover:bg-grade-warning/90 text-white"
+              >
+                Buka
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1" />
+              </Button>
             </CardContent>
           </Card>
         )}
