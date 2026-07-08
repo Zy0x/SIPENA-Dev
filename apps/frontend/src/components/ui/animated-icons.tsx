@@ -9,12 +9,12 @@ export const createGifIcon = (filename: string, preserveColor: boolean = false) 
       <>
         <style>{`
           .${baseClass} { 
-            mix-blend-mode: ${preserveColor ? 'normal' : 'multiply'}; 
+            mix-blend-mode: multiply; 
             filter: none; 
           }
           .dark .${baseClass} { 
-            mix-blend-mode: ${preserveColor ? 'normal' : 'screen'}; 
-            filter: ${preserveColor ? 'none' : 'invert(1) hue-rotate(180deg) brightness(1.2)'}; 
+            mix-blend-mode: screen; 
+            filter: ${preserveColor ? 'invert(1) hue-rotate(180deg) brightness(3) saturate(0.8)' : 'invert(1) hue-rotate(180deg) brightness(1.2)'}; 
           }
         `}</style>
         <img 
