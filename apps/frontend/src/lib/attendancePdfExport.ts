@@ -72,84 +72,181 @@ const ROTATE_90_LENGTH_SAFETY_MM = 2.4;
 const ROTATE_90_THICKNESS_SAFETY_MM = 1.2;
 const ROTATE_90_BASELINE_CENTER_FACTOR = 0.38;
 
-function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: AttendancePrintLayoutPlan, _page: AttendancePrintPage) {
+function drawPageHeader(doc: jsPDF, data: AttendancePrintDataset, plan: AttendancePrintLayoutPlan, _page: AttendancePrintPage, signature?: { city?: string; signers?: Array<{ school_name?: string }> } | null) {
   const docWithGState = doc as JsPdfWithGState;
   const bannerY = plan.paper.marginTopMm;
   const contentLeft = plan.paper.marginLeftMm;
   const contentRight = plan.paper.pageWidthMm - plan.paper.marginRightMm;
-  const bannerHeight = plan.shell.topBanner - 2; // 16mm visible
+  const bannerHeight = plan.shell.topBanner - 2; // slightly tighter than reserved space
   const bannerWidth = plan.paper.contentWidthMm;
 
-  // Solid banner with subtle bottom band for depth.
-  doc.setFillColor(...COLORS.header);
+  // Zone split: 53% school header, 47% document title
+  const zone1H = Number((bannerHeight * 0.53).toFixed(2));
+  const zone2H = Number((bannerHeight - zone1H).toFixed(2));
+
+  // Background: deep navy gradient (approximated with two fills)
+  doc.setFillColor(30, 58, 138); // #1e3a8a
   doc.roundedRect(contentLeft, bannerY, bannerWidth, bannerHeight, 2.2, 2.2, "F");
-  doc.setFillColor(...COLORS.headerDark);
-  doc.roundedRect(contentLeft, bannerY + bannerHeight - 1.4, bannerWidth, 1.4, 0, 0, "F");
+  // Slightly lighter right portion to simulate gradient
+  doc.setFillColor(29, 78, 216); // #1d4ed8
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.4 }));
+  doc.roundedRect(contentLeft + bannerWidth * 0.5, bannerY, bannerWidth * 0.5, bannerHeight, 0, 2.2, "F");
+  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+
+  // ── Zone 1: School Letterhead ────────────────────────────────────────────
+  const schoolName = (signature?.signers?.[0]?.school_name ?? "").trim();
+  const cityName = (signature?.city ?? "").trim();
+  const initial = schoolName
+    ? schoolName.split(/\s+/).filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
+    : "S";
+
+  const zone1MidY = bannerY + zone1H / 2;
+  const logoR = Math.min(zone1H * 0.36, 3.8); // circle radius mm
+  const logoCX = contentLeft + 9;
+  const logoCY = zone1MidY;
+
+  // Logo circle
+  doc.setFillColor(255, 255, 255);
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.15 }));
+  doc.circle(logoCX, logoCY, logoR, "F");
+  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+  // Circle border
+  doc.setDrawColor(255, 255, 255);
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.35 }));
+  doc.setLineWidth(0.3);
+  doc.circle(logoCX, logoCY, logoR, "S");
+  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+  // Initial text in circle
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  const initFontPt = Math.max(logoR * 1.4, 5.5);
+  doc.setFontSize(initFontPt);
+  const initW = doc.getTextWidth(initial);
+  doc.text(initial, logoCX - initW / 2, logoCY + initFontPt * 0.35);
+
+  // School name (centered in banner width)
+  const schoolFontPt = Math.min(plan.table.titleFontPt * 1.06, zone1H * 1.2);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(schoolFontPt);
+  doc.setTextColor(255, 255, 255);
+  if (schoolName) {
+    const sW = doc.getTextWidth(schoolName);
+    const centerX = contentLeft + bannerWidth / 2 - sW / 2;
+    doc.text(schoolName, centerX, zone1MidY + (cityName ? -1.2 : schoolFontPt * 0.18));
+  } else {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(Math.max(schoolFontPt * 0.8, 7));
+    docWithGState.setGState(new docWithGState.GState({ opacity: 0.55 }));
+    const ph = "Nama Sekolah";
+    const phW = doc.getTextWidth(ph);
+    doc.text(ph, contentLeft + bannerWidth / 2 - phW / 2, zone1MidY);
+    docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+  }
+  // City sub-label
+  if (cityName) {
+    const cityFontPt = Math.max(plan.table.metaFontPt - 0.5, 6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(cityFontPt);
+    docWithGState.setGState(new docWithGState.GState({ opacity: 0.80 }));
+    const cW = doc.getTextWidth(cityName);
+    doc.text(cityName, contentLeft + bannerWidth / 2 - cW / 2, zone1MidY + schoolFontPt * 0.38);
+    docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+  }
+
+  // ── Separator ─────────────────────────────────────────────────────────────
+  const sepY = bannerY + zone1H;
+  doc.setDrawColor(255, 255, 255);
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.22 }));
+  doc.setLineWidth(0.3);
+  doc.line(contentLeft + 3.5, sepY, contentLeft + bannerWidth - 3.5, sepY);
+  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+
+  // ── Zone 2: Document Title ────────────────────────────────────────────────
+  const zone2Y = sepY;
+  // Dark overlay for zone 2
+  doc.setFillColor(0, 0, 0);
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.13 }));
+  doc.roundedRect(contentLeft, zone2Y, bannerWidth, zone2H + 0.5, 0, 2.2, "F");
+  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
 
   doc.setTextColor(...COLORS.headerText);
+  const zone2MidY = zone2Y + zone2H / 2;
 
-  // ── Top row: Title (left) + Class pill (right)
+  // Left: Document title
+  const titleFontPt = Math.min(plan.table.titleFontPt * 0.9, zone2H * 1.1);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(plan.table.titleFontPt);
-  doc.text("REKAP PRESENSI BULANAN", contentLeft + 3.5, bannerY + 6.2);
+  doc.setFontSize(titleFontPt);
+  doc.text("REKAP PRESENSI BULANAN", contentLeft + 3.5, zone2MidY - 1.0);
 
+  // Month sub-label
+  const monthFontPt = Math.min(plan.table.metaFontPt + 0.8, zone2H * 0.9);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(monthFontPt);
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.88 }));
+  doc.text(data.monthLabel, contentLeft + 3.5, zone2MidY + titleFontPt * 0.45);
+  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+
+  // Right: Class pill + meta pills (rendered RTL)
+  const pillFontPt = Math.min(plan.table.metaFontPt + 1, zone2H * 1.0);
+  const metaPillFontPt = Math.min(plan.table.metaFontPt, zone2H * 0.88);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(pillFontPt);
+
+  // Class pill
   const classText = `Kelas ${data.className}`;
-  doc.setFontSize(plan.table.metaFontPt + 1.2);
-  const classTextW = doc.getTextWidth(classText);
-  const pillPadX = 1.6;
-  const pillW = classTextW + pillPadX * 2;
-  const pillH = 4.6;
-  const pillX = contentRight - 3 - pillW;
-  const pillY = bannerY + 3.0;
+  const classW = doc.getTextWidth(classText);
+  const cPillPadX = 1.6;
+  const cPillW = classW + cPillPadX * 2;
+  const cPillH = Math.min(zone2H * 0.68, 4.8);
+  const cPillX = contentRight - 3 - cPillW;
+  const cPillY = zone2MidY - cPillH / 2;
   doc.setFillColor(255, 255, 255);
-  docWithGState.setGState(new docWithGState.GState({ opacity: 0.18 }));
-  doc.roundedRect(pillX, pillY, pillW, pillH, 1.2, 1.2, "F");
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.22 }));
+  doc.roundedRect(cPillX, cPillY, cPillW, cPillH, 1.2, 1.2, "F");
+  docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
+  doc.setDrawColor(255, 255, 255);
+  docWithGState.setGState(new docWithGState.GState({ opacity: 0.28 }));
+  doc.setLineWidth(0.2);
+  doc.roundedRect(cPillX, cPillY, cPillW, cPillH, 1.2, 1.2, "S");
   docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
   doc.setTextColor(...COLORS.headerText);
   doc.setFont("helvetica", "bold");
-  doc.text(classText, pillX + pillPadX, pillY + 3.4);
+  doc.setFontSize(pillFontPt);
+  doc.text(classText, cPillX + cPillPadX, cPillY + cPillH * 0.68);
 
-  // ── Bottom row: Month (left) + meta pills (right, rendered RTL)
-  const bottomY = bannerY + 11.6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(plan.table.metaFontPt + 1.2);
-  doc.setTextColor(...COLORS.headerText);
-  doc.text(data.monthLabel, contentLeft + 3.5, bottomY + 1.4);
-
+  // Meta pills (siswa, hari efektif, work day format)
   const pills: Array<{ strong: string; rest: string }> = [
     { strong: String(plan.rows.length), rest: " siswa" },
     { strong: String(data.effectiveDays), rest: " hari efektif" },
     { strong: "", rest: data.workDayFormatLabel },
   ];
-  doc.setFontSize(plan.table.metaFontPt);
-  let cursorX = contentRight - 3;
+  doc.setFontSize(metaPillFontPt);
+  let cursorX = cPillX - 1.2;
   for (let i = pills.length - 1; i >= 0; i -= 1) {
     const pill = pills[i];
     const text = `${pill.strong}${pill.rest}`;
     const textW = doc.getTextWidth(text);
-    const pPad = 1.4;
+    const pPad = 1.2;
     const pW = textW + pPad * 2;
-    const pH = 4.4;
+    const pH = Math.min(zone2H * 0.64, 4.4);
     const pX = cursorX - pW;
-    const pY = bottomY - 1.6;
-
+    const pY = zone2MidY - pH / 2;
     doc.setFillColor(255, 255, 255);
-    docWithGState.setGState(new docWithGState.GState({ opacity: 0.16 }));
+    docWithGState.setGState(new docWithGState.GState({ opacity: 0.13 }));
     doc.roundedRect(pX, pY, pW, pH, 2.2, 2.2, "F");
     docWithGState.setGState(new docWithGState.GState({ opacity: 1 }));
     doc.setTextColor(...COLORS.headerText);
-
     if (pill.strong) {
       doc.setFont("helvetica", "bold");
-      doc.text(pill.strong, pX + pPad, pY + 3.2);
+      doc.text(pill.strong, pX + pPad, pY + pH * 0.68);
       const strongW = doc.getTextWidth(pill.strong);
       doc.setFont("helvetica", "normal");
-      doc.text(pill.rest, pX + pPad + strongW, pY + 3.2);
+      doc.text(pill.rest, pX + pPad + strongW, pY + pH * 0.68);
     } else {
       doc.setFont("helvetica", "normal");
-      doc.text(pill.rest, pX + pPad, pY + 3.2);
+      doc.text(pill.rest, pX + pPad, pY + pH * 0.68);
     }
-    cursorX = pX - 1.2;
+    cursorX = pX - 1.1;
   }
 }
 
@@ -749,7 +846,7 @@ export function buildAttendancePdfDocument(args: {
       doc.addPage([plan.paper.pageWidthMm, plan.paper.pageHeightMm], "landscape");
     }
 
-    drawPageHeader(doc, data, plan, page);
+    drawPageHeader(doc, data, plan, page, signature);
 
     // Dedicated signature-only page: skip the table entirely and draw just
     // the signature block + footer. Triggered when planner detects there

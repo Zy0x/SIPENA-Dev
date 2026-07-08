@@ -42,6 +42,23 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.158",
+    version: "2.4.158",
+    title: "Redesain Kop Surat Ekspor Presensi — Tampilan Profesional 2 Zona",
+    description: "Kop surat pada Studio Ekspor Presensi V2 kini tampil dalam dua zona: identitas sekolah di atas dan judul dokumen di bawah, menghasilkan dokumen yang lebih formal, elegan, dan mudah dibaca.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-08",
+    details: [
+      "Zona Kop Sekolah: menampilkan nama sekolah dan kota dari pengaturan TTD, dengan ikon inisial sekolah dalam lingkaran.",
+      "Zona Judul Dokumen: memuat judul rekap presensi, nama bulan, kelas, dan statistik ringkas (jumlah siswa, hari efektif, format hari).",
+      "Desain gradient navy (#1e3a8a → #1d4ed8) lebih kaya dengan overlay dekoratif dan pemisah garis halus antara dua zona.",
+      "Kelas pill kini memiliki border transparan untuk pembedaan visual yang lebih jelas.",
+      "Sinkron 1:1 antara preview live dan hasil ekspor PDF — banner height naik dari 18mm menjadi 26mm.",
+      "Jika nama sekolah belum diisi, kop tetap elegan dengan teks placeholder italic."
+    ]
+  },
+  {
     id: "v2.4.157",
     version: "2.4.157",
     title: "Elevasi Header Web dan Sidebar",

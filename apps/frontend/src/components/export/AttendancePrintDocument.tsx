@@ -301,101 +301,226 @@ export function AttendancePrintDocument({
               color: COLORS.ink,
             }}
           >
-            {/* ── Unified Banner (single clean header) ───────────────────
-                 Berisi: Judul, Kelas, Bulan, dan info ringkas (siswa | hari efektif | format hari).
-                 Timestamp ekspor & nomor halaman pindah ke footer.
+            {/* ── Two-zone Letterhead Banner ───────────────────────────────
+                 Zone 1 (school header): Logo initial, school name, city.
+                 Zone 2 (document title): Rekap title, class pill, month, meta pills.
                  Sinkron 1:1 dengan drawPageHeader() di attendancePdfExport.ts. */}
-            <div
-              className="attendance-print-banner"
-              style={{
-                position: "relative",
-                height: bannerHeight,
-                background: `linear-gradient(135deg, ${COLORS.header}, ${COLORS.headerDark})`,
-                color: "#fff",
-                borderRadius: mm(2.2),
-                flexShrink: 0,
-                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                marginBottom: bannerBottomGap,
-                overflow: "hidden",
-              }}
-            >
-              <div style={{
-                position: "absolute",
-                left: mm(3.5),
-                top: mm(3.2),
-                fontSize: titleFontPx,
-                fontWeight: 800,
-                lineHeight: 1.1,
-                letterSpacing: 0.2,
-              }}>
-                  REKAP PRESENSI BULANAN
-              </div>
-              <div style={{
-                position: "absolute",
-                right: mm(3),
-                top: mm(3),
-                fontSize: metaFontPx + 1.2,
-                fontWeight: 700,
-                lineHeight: 1.1,
-                textAlign: "right",
-                padding: `${mm(0.6)}px ${mm(1.6)}px`,
-                background: "rgba(255,255,255,0.18)",
-                borderRadius: mm(1.2),
-                whiteSpace: "nowrap",
-              }}>
-                Kelas {data.className}
-              </div>
+            {(() => {
+              const schoolName = signature.signers[0]?.school_name?.trim() || "";
+              const cityName = signature.city?.trim() || "";
+              const initial = schoolName
+                ? schoolName.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+                : "S";
+              // Zone 1: ~55% of banner height; Zone 2: ~45%
+              const zone1H = Math.round(bannerHeight * 0.53);
+              const zone2H = bannerHeight - zone1H;
+              const logoSize = Math.round(Math.min(zone1H * 0.72, mm(7.2)));
+              const schoolFontPx = Math.min(titleFontPx * 1.06, zone1H * 0.32);
+              const cityFontPx = Math.max(metaFontPx - 0.5, metaFontPx * 0.9);
+              return (
+                <div
+                  className="attendance-print-banner"
+                  style={{
+                    position: "relative",
+                    height: bannerHeight,
+                    background: "linear-gradient(160deg, #1e3a8a 0%, #1e40af 45%, #1d4ed8 100%)",
+                    color: "#fff",
+                    borderRadius: mm(2.2),
+                    flexShrink: 0,
+                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                    marginBottom: bannerBottomGap,
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {/* Subtle decorative pattern overlay */}
+                  <div style={{
+                    position: "absolute", inset: 0, pointerEvents: "none",
+                    backgroundImage: "radial-gradient(circle at 85% 15%, rgba(255,255,255,0.07) 0%, transparent 55%), radial-gradient(circle at 10% 90%, rgba(255,255,255,0.05) 0%, transparent 45%)",
+                  }} />
 
-              <div style={{
-                position: "absolute",
-                left: mm(3.5),
-                bottom: mm(2.8),
-                fontSize: metaFontPx + 1.2,
-                fontWeight: 600,
-                opacity: 0.96,
-                lineHeight: 1.1,
-              }}>
-                {data.monthLabel}
-              </div>
+                  {/* ── Zone 1: School Letterhead ─────────────────────────── */}
+                  <div style={{
+                    height: zone1H,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: mm(2.2),
+                    paddingLeft: mm(4),
+                    paddingRight: mm(4),
+                    flexShrink: 0,
+                    position: "relative",
+                  }}>
+                    {/* Logo placeholder — school initial in circle */}
+                    <div style={{
+                      width: logoSize,
+                      height: logoSize,
+                      borderRadius: "50%",
+                      background: "rgba(255,255,255,0.15)",
+                      border: "1.5px solid rgba(255,255,255,0.35)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      fontSize: Math.max(logoSize * 0.38, 8),
+                      fontWeight: 800,
+                      letterSpacing: 0.5,
+                      color: "#fff",
+                      boxShadow: "0 1px 6px rgba(0,0,0,0.18)",
+                    }}>
+                      {initial}
+                    </div>
 
-              <div style={{
-                position: "absolute",
-                right: mm(3),
-                bottom: mm(2.2),
-                display: "flex",
-                alignItems: "center",
-                gap: mm(1.2),
-                flexWrap: "nowrap",
-              }}>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  fontSize: metaFontPx, fontWeight: 600,
-                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
-                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
-                  whiteSpace: "nowrap",
-                }}>
-                  <strong style={{ fontWeight: 800 }}>{plan.rows.length}</strong>&nbsp;siswa
-                </span>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  fontSize: metaFontPx, fontWeight: 600,
-                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
-                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
-                  whiteSpace: "nowrap",
-                }}>
-                  <strong style={{ fontWeight: 800 }}>{data.effectiveDays}</strong>&nbsp;hari efektif
-                </span>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  fontSize: metaFontPx, fontWeight: 600,
-                  padding: `${mm(0.5)}px ${mm(1.4)}px`,
-                  background: "rgba(255,255,255,0.16)", borderRadius: 999,
-                  whiteSpace: "nowrap",
-                }}>
-                  {data.workDayFormatLabel}
-                </span>
-              </div>
-            </div>
+                    {/* School name & city */}
+                    <div style={{ textAlign: "center", flex: 1, minWidth: 0 }}>
+                      {schoolName ? (
+                        <div style={{
+                          fontSize: schoolFontPx,
+                          fontWeight: 800,
+                          letterSpacing: "0.04em",
+                          lineHeight: 1.15,
+                          textTransform: "uppercase",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          textShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                        }}>
+                          {schoolName}
+                        </div>
+                      ) : (
+                        <div style={{
+                          fontSize: Math.max(schoolFontPx * 0.8, 9),
+                          fontWeight: 600,
+                          opacity: 0.55,
+                          fontStyle: "italic",
+                          letterSpacing: "0.02em",
+                        }}>
+                          Nama Sekolah
+                        </div>
+                      )}
+                      {cityName && (
+                        <div style={{
+                          fontSize: cityFontPx,
+                          fontWeight: 500,
+                          opacity: 0.80,
+                          marginTop: 2,
+                          letterSpacing: "0.02em",
+                        }}>
+                          {cityName}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right spacer to balance logo */}
+                    <div style={{ width: logoSize, flexShrink: 0 }} />
+                  </div>
+
+                  {/* ── Separator ─────────────────────────────────────────── */}
+                  <div style={{
+                    height: 1,
+                    background: "rgba(255,255,255,0.22)",
+                    marginLeft: mm(3.5),
+                    marginRight: mm(3.5),
+                    flexShrink: 0,
+                  }} />
+
+                  {/* ── Zone 2: Document Title ────────────────────────────── */}
+                  <div style={{
+                    height: zone2H,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingLeft: mm(3.5),
+                    paddingRight: mm(3),
+                    flexShrink: 0,
+                    background: "rgba(0,0,0,0.13)",
+                    gap: mm(2),
+                  }}>
+                    {/* Left: document title + month */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: Math.min(titleFontPx * 0.9, zone2H * 0.35),
+                        fontWeight: 800,
+                        lineHeight: 1.1,
+                        letterSpacing: "0.03em",
+                        whiteSpace: "nowrap",
+                      }}>
+                        REKAP PRESENSI BULANAN
+                      </div>
+                      <div style={{
+                        fontSize: Math.min(metaFontPx + 0.8, zone2H * 0.28),
+                        fontWeight: 500,
+                        opacity: 0.88,
+                        lineHeight: 1.1,
+                        whiteSpace: "nowrap",
+                      }}>
+                        {data.monthLabel}
+                      </div>
+                    </div>
+
+                    {/* Right: class + meta pills */}
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: mm(1.1),
+                      flexShrink: 0,
+                      flexWrap: "nowrap",
+                    }}>
+                      {/* Class pill — accent style */}
+                      <span style={{
+                        display: "inline-flex", alignItems: "center",
+                        fontSize: Math.min(metaFontPx + 1, zone2H * 0.32),
+                        fontWeight: 700,
+                        padding: `${mm(0.55)}px ${mm(1.6)}px`,
+                        background: "rgba(255,255,255,0.22)",
+                        borderRadius: mm(1.2),
+                        border: "1px solid rgba(255,255,255,0.28)",
+                        whiteSpace: "nowrap",
+                      }}>
+                        Kelas {data.className}
+                      </span>
+                      {/* Meta pill: siswa */}
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 3,
+                        fontSize: Math.min(metaFontPx, zone2H * 0.28),
+                        fontWeight: 600,
+                        padding: `${mm(0.5)}px ${mm(1.2)}px`,
+                        background: "rgba(255,255,255,0.13)",
+                        borderRadius: 999,
+                        whiteSpace: "nowrap",
+                      }}>
+                        <strong style={{ fontWeight: 800 }}>{plan.rows.length}</strong>&nbsp;siswa
+                      </span>
+                      {/* Meta pill: hari efektif */}
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 3,
+                        fontSize: Math.min(metaFontPx, zone2H * 0.28),
+                        fontWeight: 600,
+                        padding: `${mm(0.5)}px ${mm(1.2)}px`,
+                        background: "rgba(255,255,255,0.13)",
+                        borderRadius: 999,
+                        whiteSpace: "nowrap",
+                      }}>
+                        <strong style={{ fontWeight: 800 }}>{data.effectiveDays}</strong>&nbsp;hari efektif
+                      </span>
+                      {/* Meta pill: work day format */}
+                      <span style={{
+                        display: "inline-flex", alignItems: "center",
+                        fontSize: Math.min(metaFontPx, zone2H * 0.28),
+                        fontWeight: 600,
+                        padding: `${mm(0.5)}px ${mm(1.2)}px`,
+                        background: "rgba(255,255,255,0.13)",
+                        borderRadius: 999,
+                        whiteSpace: "nowrap",
+                      }}>
+                        {data.workDayFormatLabel}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── Table ──────────────────────────────────────────────────── */}
             {/* 
