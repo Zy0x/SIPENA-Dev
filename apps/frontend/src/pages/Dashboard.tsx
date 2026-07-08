@@ -208,7 +208,15 @@ export default function Dashboard() {
               </div>
               <Button 
                 size="sm" 
-                onClick={() => window.dispatchEvent(new Event("sipena:open-sidebar"))} 
+                onClick={() => {
+                  window.dispatchEvent(new Event("sipena:open-sidebar"));
+                  // Wait for sidebar to animate open before triggering tour
+                  setTimeout(() => {
+                    import("@/components/ui/product-tour").then(({ triggerTour }) => {
+                      triggerTour("setup-year-tour");
+                    });
+                  }, 300);
+                }} 
                 className="text-xs bg-grade-warning hover:bg-grade-warning/90 text-white"
               >
                 Buka
@@ -443,8 +451,22 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Product Tour */}
+      {/* Product Tours */}
       <ProductTour steps={dashboardTourSteps} tourKey="dashboard-tour" />
+      
+      <ProductTour 
+        steps={[
+          {
+            target: "[data-tour='setup-year']",
+            title: "Pilih Tahun Ajaran",
+            description: "Klik di sini untuk mengatur Tahun Ajaran dan Semester aktif Anda.",
+            placement: "right"
+          }
+        ]} 
+        tourKey="setup-year-tour" 
+        requireOnboarding={true}
+        shouldAutoStart={false}
+      />
 
       {/* Theme Selection Dialog for new users - shown on first visit */}
       <ThemeSelectionDialog
