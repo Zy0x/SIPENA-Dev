@@ -77,19 +77,6 @@ const classesTourSteps: TourStep[] = [
 export default function Classes() {
   const location = useLocation();
 
-  useEffect(() => {
-    // Only trigger if location state explicitly asks for it
-    if ((location.state as any)?.startTour) {
-      // Clear state so it doesn't retrigger on refresh
-      window.history.replaceState({}, document.title);
-      setTimeout(() => {
-        import("@/components/ui/product-tour").then(({ triggerTour }) => {
-          triggerTour("classes-tour");
-        });
-      }, 500);
-    }
-  }, [location.state]);
-
   const { classes, isLoading } = useClasses();
   const { allSubjects, isLoading: subjectsLoading } = useSubjects();
   const [searchQuery, setSearchQuery] = useState("");
@@ -224,6 +211,26 @@ export default function Classes() {
       preTourSearchQueryRef.current = "";
     }
   };
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Only trigger if location state explicitly asks for it
+    if ((location.state as any)?.startTour) {
+      // Clear state via React Router so it doesn't retrigger on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+      setTimeout(() => {
+        prepareClassesTour(); // Inject dummy data
+        // Wait for React to render the dummy classes
+        setTimeout(() => {
+          import("@/components/ui/product-tour").then(({ triggerTour }) => {
+            triggerTour("classes-tour");
+          });
+        }, 200);
+      }, 300);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   return (
     <>
