@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Trophy, Medal, Award, TrendingUp, Users, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -191,7 +190,7 @@ export function TopStudentsCarousel({
                 <p className="text-xs text-center">Belum ada data nilai</p>
               </div>
             ) : (
-              <ScrollArea className="h-[240px] sm:h-[280px]">
+              <div className="h-[240px] sm:h-[280px] overflow-y-auto scrollbar-thin touch-pan-y pr-1">
                 <div className="space-y-0.5 sm:space-y-1">
                   {rankings.map((student, index) => (
                     <motion.div
@@ -252,7 +251,7 @@ export function TopStudentsCarousel({
                     </motion.div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             )}
           </motion.div>
         </AnimatePresence>
