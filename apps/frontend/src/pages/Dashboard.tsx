@@ -249,7 +249,7 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div 
-          className="grid grid-cols-4 gap-1.5 sm:gap-2 lg:gap-4 animate-fade-in-up delay-100"
+          className="grid grid-cols-4 gap-1.5 sm:gap-2 lg:gap-4"
           data-tour="stats-grid"
         >
           {isLoading ? (
@@ -267,7 +267,7 @@ export default function Dashboard() {
             ))
           ) : (
           stats.map((stat, index) => (
-            <Card key={index} className="relative overflow-hidden border border-border shadow-sm">
+            <Card key={index} className="relative overflow-hidden border border-border shadow-sm animate-fade-in">
               <CardContent className="p-2 sm:p-3 lg:p-4">
                 <div className="flex flex-col items-center sm:flex-row sm:justify-between">
                   <div className="text-center sm:text-left w-full">
@@ -322,7 +322,7 @@ export default function Dashboard() {
 
         {/* Classes Overview - Compact */}
         {classes.length > 0 && (
-          <div className="animate-fade-in-up delay-300">
+          <div className="animate-fade-in">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <h2 className="text-xs sm:text-sm font-semibold text-foreground">Kelas Anda</h2>
               <Button variant="ghost" size="sm" onClick={() => navigate("/classes")} className="text-[10px] sm:text-xs h-6 sm:h-7">
@@ -353,7 +353,7 @@ export default function Dashboard() {
         )}
 
         {/* Activity, Prediction & Ranking Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in-up delay-400">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* AI Prediction Card */}
           <StudentPredictionCard />
 
@@ -387,7 +387,7 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : activityLogs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="flex flex-col items-center justify-center py-6 text-center animate-fade-in">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mb-2 sm:mb-3">
                     <FileSpreadsheet className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                   </div>
@@ -395,7 +395,7 @@ export default function Dashboard() {
                   <p className="text-[9px] sm:text-[10px] text-muted-foreground/60 mt-1">Aktivitas akan muncul saat Anda mulai menggunakan SIPENA</p>
                 </div>
               ) : (
-              <ScrollArea className="h-[240px] sm:h-[280px]">
+              <ScrollArea className="h-[240px] sm:h-[280px] animate-fade-in">
                 <div className="space-y-1 sm:space-y-1.5 pr-2">
                   {activityLogs.map((log) => {
                     const getActionIcon = (entityType: string) => {
