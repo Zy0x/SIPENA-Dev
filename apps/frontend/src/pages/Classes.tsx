@@ -1,6 +1,6 @@
 import { KelasIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
