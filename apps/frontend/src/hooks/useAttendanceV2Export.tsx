@@ -230,7 +230,7 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
   const [includeSignature, setIncludeSignature] = useState(true);
   const [paperSize, setPaperSize] = useState<ReportPaperSize>("a4");
   const [documentStyle, setDocumentStyle] = useState<ReportDocumentStyle>(() => createDefaultReportDocumentStyle());
-  const [autoFitOnePage, setAutoFitOnePage] = useState(false);
+  const [autoFitOnePage, setAutoFitOnePage] = useState(true);
   const [attendanceDebugEnabled, setAttendanceDebugEnabled] = useState(false);
   const [lastAttendanceExportTrace, setLastAttendanceExportTrace] = useState<AttendanceExportTrace | null>(null);
 
@@ -246,7 +246,7 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
     days.forEach((day) => {
       list.push(format(day, "yyyy-MM-dd"));
     });
-    list.push("H", "S", "I", "A", "D", "total", "Catatan Siswa");
+    list.push("H", "S", "I", "A", "D", "total");
     return list;
   }, [currentMonth]);
 
