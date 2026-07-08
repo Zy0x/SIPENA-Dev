@@ -134,7 +134,7 @@ export default function Subjects() {
       {
         target: "[data-tour='class-select']",
         title: "Pilih Kelas",
-        description: "Pilih kelas tujuan. Daftar mapel, KKM, pencarian, dan tindakan di bawah akan mengikuti kelas ini.",
+        description: "Pilih kelas tujuan. Jika belum ada kelas, Anda dapat langsung memilih 'Tambah Kelas Baru' di menu ini.",
       },
       {
         target: "[data-tour='import-subject']",
@@ -144,7 +144,7 @@ export default function Subjects() {
       {
         target: "[data-tour='add-subject']",
         title: "Tambah Satuan atau Batch",
-        description: "Tambahkan satu mapel atau gunakan mode Batch untuk memilih banyak mapel sekaligus dan mengatur KKM masing-masing.",
+        description: "Jika kelas masih kosong, gunakan tombol ini untuk menambahkan mapel baru satu per satu atau secara massal (Batch).",
       },
       {
         target: "[data-tour='search-subject']",
@@ -345,7 +345,7 @@ export default function Subjects() {
                 Buat kelas terlebih dahulu untuk dapat menambahkan dan mengelola mata pelajaran.
               </p>
               <Button 
-                onClick={() => navigate("/classes")} 
+                onClick={() => navigate("/classes", { state: { startTour: true } })} 
                 className="mt-3 h-9 rounded-xl text-xs font-medium gap-2 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group-hover:scale-[1.02]"
               >
                 <Plus className="h-4 w-4" />
