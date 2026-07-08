@@ -24,7 +24,7 @@ import { TourButton } from "@/components/ui/product-tour";
 import { UnifiedExportStudio } from "@/components/export/UnifiedExportStudio";
 import { AttendanceExportPreviewV2 } from "@/components/export/AttendanceExportPreviewV2";
 import { cn } from "@/lib/utils";
-import type { ExportColumnOption } from "@/components/export/UnifiedExportStudio";
+import type { ExportColumnOption, ExportStudioFormatOption } from "@/components/export/UnifiedExportStudio";
 
 interface AttendanceV2ControlsProps {
   selectedClassId: string;
@@ -90,11 +90,11 @@ interface AttendanceV2ControlsProps {
   commitAttendanceTrace: (trace: any) => void;
 }
 
-const ATTENDANCE_EXPORT_FORMATS = [
-  { id: "excel", label: "Excel Spreadsheet (.xlsx)", description: "Unduh rekapitulasi tahunan dalam format Excel terpolarisasi dengan tab bulanan.", icon: FileSpreadsheet, badge: "TAHUNAN" },
-  { id: "pdf", label: "PDF Document (.pdf)", description: "Cetak atau simpan presensi bulanan dalam format vektor berkualitas tinggi.", icon: FileText, badge: "VEKTOR" },
-  { id: "png-hd", label: "PNG Image (HD)", description: "Ekspor halaman presensi sebagai gambar beresolusi tinggi (1080p).", icon: ImageIcon },
-  { id: "png-4k", label: "PNG Image (4K)", description: "Ekspor halaman presensi sebagai gambar resolusi ultra tinggi (2160p) untuk cetak tajam.", icon: ImageIcon, badge: "TAJAM" },
+const ATTENDANCE_EXPORT_FORMATS: ExportStudioFormatOption[] = [
+  { id: "excel", label: "Excel Spreadsheet (.xlsx)", description: "Unduh rekapitulasi tahunan dalam format Excel terpolarisasi dengan tab bulanan.", icon: FileSpreadsheet, badge: "TAHUNAN", previewMode: null },
+  { id: "pdf", label: "PDF Document (.pdf)", description: "Cetak atau simpan presensi bulanan dalam format vektor berkualitas tinggi.", icon: FileText, badge: "VEKTOR", previewMode: "pdf" },
+  { id: "png-hd", label: "PNG Image (HD)", description: "Ekspor halaman presensi sebagai gambar beresolusi tinggi (1080p).", icon: ImageIcon, previewMode: "png" },
+  { id: "png-4k", label: "PNG Image (4K)", description: "Ekspor halaman presensi sebagai gambar resolusi ultra tinggi (2160p) untuk cetak tajam.", icon: ImageIcon, badge: "TAJAM", previewMode: "png" },
 ];
 
 export const AttendanceV2Controls: React.FC<AttendanceV2ControlsProps> = ({
