@@ -3,11 +3,17 @@ import React from "react";
 
 export const createGifIcon = (filename: string) => {
   return ({ className }: { className?: string }) => (
-    <img 
-      src={`/icons/${filename}`} 
-      alt={filename.replace(".gif", "").replace("_", " ")} 
-      className={cn("rounded w-full h-full object-contain mix-blend-multiply dark:invert dark:mix-blend-screen scale-[1.35]", className)} 
-    />
+    <>
+      <style>{`
+        .sipena-gif-${filename.split('.')[0]} { mix-blend-mode: multiply; filter: none; }
+        .dark .sipena-gif-${filename.split('.')[0]} { mix-blend-mode: screen; filter: invert(1) hue-rotate(180deg) brightness(1.2); }
+      `}</style>
+      <img 
+        src={`/icons/${filename}`} 
+        alt={filename.replace(".gif", "").replace("_", " ")} 
+        className={cn(`rounded w-full h-full object-contain scale-[1.35] sipena-gif-${filename.split('.')[0]}`, className)} 
+      />
+    </>
   );
 };
 
