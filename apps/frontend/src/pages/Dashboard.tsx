@@ -239,7 +239,7 @@ export default function Dashboard() {
                   Tambahkan kelas dan siswa
                 </p>
               </div>
-              <Button size="sm" onClick={() => navigate("/classes")} className="text-xs">
+              <Button size="sm" onClick={() => navigate("/classes", { state: { startTour: true } })} className="text-xs">
                 Buat
                 <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1" />
               </Button>

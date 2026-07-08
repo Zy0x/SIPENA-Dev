@@ -1,5 +1,6 @@
 import { KelasIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,21 @@ const classesTourSteps: TourStep[] = [
 ];
 
 export default function Classes() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Only trigger if location state explicitly asks for it
+    if ((location.state as any)?.startTour) {
+      // Clear state so it doesn't retrigger on refresh
+      window.history.replaceState({}, document.title);
+      setTimeout(() => {
+        import("@/components/ui/product-tour").then(({ triggerTour }) => {
+          triggerTour("classes-tour");
+        });
+      }, 500);
+    }
+  }, [location.state]);
+
   const { classes, isLoading } = useClasses();
   const { allSubjects, isLoading: subjectsLoading } = useSubjects();
   const [searchQuery, setSearchQuery] = useState("");
