@@ -165,13 +165,17 @@ export function TopStudentsCarousel({
             exit={{ opacity: 0, x: direction > 0 ? -20 : 20 }}
             transition={{ duration: 0.3 }}
             drag="x"
+            dragDirectionLock
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.2}
-            onDragEnd={(e, { offset }) => {
+            onDragEnd={(e, { offset, velocity }) => {
               const swipe = offset.x;
-              if (swipe < -50) {
+              const swipeVelocity = velocity.x;
+              
+              // Kombinasi deteksi jarak usapan (offset) dan kecepatan jentikan jari (velocity)
+              if (swipe < -20 || swipeVelocity < -400) {
                 paginate(1);
-              } else if (swipe > 50) {
+              } else if (swipe > 20 || swipeVelocity > 400) {
                 paginate(-1);
               }
             }}
