@@ -24,6 +24,7 @@ import { FeatureFlagProvider } from "@/app/providers/FeatureFlagProvider";
 import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 import { FeatureRouteGuard } from "@/components/FeatureGate";
 import AttendanceRuntimeRoute from "@/features/attendance/runtime/AttendanceRuntimeRoute";
+import AttendanceStableRoute from "@/features/attendance/stable/AttendanceStableRoute";
 
 // Pages
 import Index from "../pages/Index";
@@ -87,7 +88,7 @@ const App = () => {
               <MaintenanceBanner />
               
               {showSplash && (
-                <SplashScreen onComplete={handleSplashComplete} minDuration={2500} />
+                <SplashScreen onComplete={handleSplashComplete} minDuration={1400} />
               )}
               
               <BrowserRouter>
@@ -128,7 +129,7 @@ const App = () => {
                         </FeatureRouteGuard>
                       } />
                       <Route path="/classes" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.classes}><Classes /></FeatureRouteGuard>} />
-                      <Route path="/attendance" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.attendance}><AttendanceRuntimeRoute forcedEngine="v1" /></FeatureRouteGuard>} />
+                      <Route path="/attendance" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.attendance}><AttendanceStableRoute /></FeatureRouteGuard>} />
                       <Route path="/attendance-v2" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.attendanceV2}><AttendanceRuntimeRoute forcedEngine="v2" /></FeatureRouteGuard>} />
                       <Route path="/subjects" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.subjects}><Subjects /></FeatureRouteGuard>} />
                       <Route path="/grades" element={<FeatureRouteGuard featureKey={FEATURE_KEYS.grades}><Grades /></FeatureRouteGuard>} />

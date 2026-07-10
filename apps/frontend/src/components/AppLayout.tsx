@@ -140,9 +140,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const visibleNavItems = useMemo(() => {
     const filterItem = (item: NavItem): NavItem | null => {
       if (item.featureKey && getAccessStatus(item.featureKey) !== "allowed") {
-        if (item.featureKey !== FEATURE_KEYS.attendanceV2) {
-          return null;
-        }
+        return null;
       }
 
       const children = item.children

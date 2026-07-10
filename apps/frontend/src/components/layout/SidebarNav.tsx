@@ -73,7 +73,7 @@ export function CollapsedNavItem({ item, isActive, onNavigate, onMobileClose }: 
         <div className="flex items-center gap-2">
           {item.label}
           {item.isBeta && (
-            <Badge variant="outline" className="text-[9px] px-1 py-0 border-status-connecting/50 text-status-connecting">
+            <Badge variant="outline" className="border-amber-300 bg-amber-50 px-1 py-0 text-[9px] text-amber-800 dark:border-amber-400/40 dark:bg-amber-950/40 dark:text-amber-200">
               <Sparkles className="w-2 h-2 mr-0.5" />Beta
             </Badge>
           )}
@@ -213,7 +213,9 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
             {item.isBeta && (
               <Badge variant="outline" className={cn(
                 "text-[9px] px-1.5 py-0 gap-0.5 shrink-0",
-                isActive ? "border-primary/30 text-primary bg-primary/5" : "border-status-connecting/50 text-status-connecting"
+                isActive
+                  ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-400/40 dark:bg-amber-950/40 dark:text-amber-200"
+                  : "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-400/40 dark:bg-amber-950/40 dark:text-amber-200"
               )}>
                 <Sparkles className="w-2 h-2" />Beta
               </Badge>
@@ -252,7 +254,7 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
             const childHash = child.href.includes('#') ? child.href.split('#')[1] : null;
             const isChildActive = childHash
               ? (location.pathname === childPath && location.hash === `#${childHash}`)
-              : location.pathname === child.href;
+              : (location.pathname === child.href && !location.hash);
             return (
               <li key={child.href} ref={el => { childRefs.current[idx] = el; }}
                 onMouseEnter={(e) => handleChildHover(e.currentTarget, true)}

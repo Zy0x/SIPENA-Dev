@@ -7,7 +7,7 @@ interface SplashScreenProps {
   minDuration?: number;
 }
 
-export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenProps) {
+export function SplashScreen({ onComplete, minDuration = 1400 }: SplashScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const logoContainerRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
@@ -45,9 +45,9 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
         }
       });
       
-      // Create particles
+      // Create a small number of particles so the PWA launch feels polished without being distracting.
       if (particlesRef.current) {
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 6; i++) {
           const particle = document.createElement("div");
           particle.className = "absolute w-1 h-1 bg-primary/60 rounded-full";
           particle.style.left = `${Math.random() * 100}%`;
@@ -55,12 +55,12 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
           particlesRef.current.appendChild(particle);
           
           gsap.to(particle, {
-            x: (Math.random() - 0.5) * 200,
-            y: (Math.random() - 0.5) * 200,
+            x: (Math.random() - 0.5) * 90,
+            y: (Math.random() - 0.5) * 90,
             opacity: 0,
             scale: 0,
-            duration: 2 + Math.random() * 2,
-            delay: 0.5 + Math.random() * 0.5,
+            duration: 1.1 + Math.random() * 0.6,
+            delay: 0.2 + Math.random() * 0.25,
             ease: "power2.out"
           });
         }
@@ -69,9 +69,9 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
       // Glow pulse animation
       if (glowRef.current) {
         gsap.to(glowRef.current, {
-          scale: 1.5,
-          opacity: 0.3,
-          duration: 1.5,
+          scale: 1.18,
+          opacity: 0.22,
+          duration: 1,
           repeat: -1,
           yoyo: true,
           ease: "sine.inOut"
@@ -84,11 +84,11 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
           gsap.fromTo(ring,
             { scale: 0, opacity: 0.8, rotation: 0 },
             {
-              scale: 2 + i * 0.5,
+              scale: 1.45 + i * 0.25,
               opacity: 0,
-              rotation: 180 + i * 45,
-              duration: 2,
-              delay: 0.3 + i * 0.2,
+              rotation: 10 + i * 8,
+              duration: 1.25,
+              delay: 0.2 + i * 0.18,
               ease: "power2.out",
               repeat: -1,
               repeatDelay: 0.5
@@ -99,38 +99,27 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
       
       // Main timeline
       tl
-        // Initial logo entrance - dramatic scale and rotation
+        // Initial logo entrance - short and brand-focused for PWA launch
         .fromTo(logoRef.current,
-          { scale: 0, rotation: -180, opacity: 0 },
-          { scale: 1, rotation: 0, opacity: 1, duration: 1, ease: "back.out(1.7)" }
+          { scale: 0.86, rotation: -6, opacity: 0 },
+          { scale: 1, rotation: 0, opacity: 1, duration: 0.45, ease: "power3.out" }
         )
-        // Logo bounce
-        .to(logoRef.current, {
-          y: -15,
-          duration: 0.3,
-          ease: "power2.out"
-        })
-        .to(logoRef.current, {
-          y: 0,
-          duration: 0.4,
-          ease: "bounce.out"
-        })
         // Text reveal with split animation
         .fromTo(textRef.current,
-          { opacity: 0, y: 30, scale: 0.9 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "back.out(1.5)" },
-          "-=0.2"
+          { opacity: 0, y: 14, scale: 0.98 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "power2.out" },
+          "-=0.1"
         )
         // Tagline slide in
         .fromTo(taglineRef.current,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" },
-          "-=0.3"
+          { opacity: 0, y: 10 },
+          { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" },
+          "-=0.18"
         )
         // Progress bar animation
         .fromTo(progressRef.current,
           { scaleX: 0 },
-          { scaleX: 1, duration: 1.2, ease: "power2.inOut" },
+          { scaleX: 1, duration: 0.75, ease: "power2.inOut" },
           "-=0.2"
         );
         
@@ -152,7 +141,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
       ref={containerRef}
       className="fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, hsl(221 83% 12%) 0%, hsl(221 83% 20%) 50%, hsl(173 80% 15%) 100%)"
+        background: "linear-gradient(135deg, hsl(221 68% 14%) 0%, hsl(221 72% 22%) 58%, hsl(214 55% 18%) 100%)"
       }}
     >
       {/* Animated gradient overlay */}
@@ -168,7 +157,7 @@ export function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenPro
       />
       
       {/* Expanding rings */}
-      {[0, 1, 2].map((i) => (
+      {[0, 1].map((i) => (
         <div
           key={i}
           ref={(el) => { if (el) ringRefs.current[i] = el; }}

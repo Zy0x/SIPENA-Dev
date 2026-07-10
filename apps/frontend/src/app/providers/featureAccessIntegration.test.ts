@@ -23,7 +23,21 @@ describe("feature access integration guard", () => {
     const app = readSource("apps/frontend/src/app/App.tsx");
     expect(app).toContain("<FeatureFlagProvider>");
     expect(app).toContain("AttendanceRuntimeRoute");
+    expect(app).toContain("AttendanceStableRoute");
     expect(app).not.toContain('from "../pages/Attendance"');
+  });
+
+  it("keeps stable attendance cutover config-controlled with legacy rollback", () => {
+    const app = readSource("apps/frontend/src/app/App.tsx");
+    const stableRoute = readSource("apps/frontend/src/features/attendance/stable/AttendanceStableRoute.tsx");
+    const stablePage = readSource("apps/frontend/src/features/attendance/stable/AttendanceStable.tsx");
+
+    expect(app).toContain('<Route path="/attendance"');
+    expect(app).toContain("<AttendanceStableRoute />");
+    expect(stableRoute).toContain("VITE_ATTENDANCE_STABLE_CUTOVER");
+    expect(stableRoute).toContain("AttendanceV1Wrapper");
+    expect(stableRoute).toContain("AttendanceStable");
+    expect(stablePage).toContain("AttendanceV2Page");
   });
 
   it("keeps attendance v2 behind feature runtime resolution", () => {
@@ -118,10 +132,44 @@ describe("feature access integration guard", () => {
 
   it("does not render guarded page content before access status is final", () => {
     const gate = readSource("apps/frontend/src/components/FeatureGate.tsx");
+    const layout = readSource("apps/frontend/src/components/AppLayout.tsx");
     expect(gate).toContain("getAccessStatus");
     expect(gate).toContain('accessStatus === "loading"');
     expect(gate).toContain('accessStatus === "allowed"');
     expect(gate).toContain('accessStatus === "error"');
+    expect(gate).not.toContain('featureKey === "page.attendance-v2"');
+    expect(gate).not.toContain("page.attendance-v2\")");
+    expect(layout).not.toContain('item.featureKey !== FEATURE_KEYS.attendanceV2');
+    expect(layout).not.toContain('featureKey !== FEATURE_KEYS.attendanceV2');
+  });
+
+  it("keeps PWA manifest icon references backed by real public assets", () => {
+    const manifest = readSource("apps/frontend/public/manifest.json");
+    const webManifest = readSource("apps/frontend/public/manifest.webmanifest");
+    const sw = readSource("apps/frontend/public/sw.js");
+
+    expect(manifest).toContain("/icon-192.png");
+    expect(manifest).toContain("/icon-512.png");
+    expect(webManifest).toContain("/icon-192.png");
+    expect(webManifest).toContain("/icon-512.png");
+    expect(sw).toContain("/icon-192.png");
+    expect(existsSync(resolve(repoRoot, "apps/frontend/public/icon-192.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/icon-192.png"))).toBe(true);
+    expect(existsSync(resolve(repoRoot, "apps/frontend/public/icon-512.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/icon-512.png"))).toBe(true);
+    expect(existsSync(resolve(repoRoot, "apps/frontend/public/apple-touch-icon.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/apple-touch-icon.png"))).toBe(true);
+  });
+
+  it("keeps attendance core migration additive and idempotent", () => {
+    const migration = readSource("supabase/migrations/20260711090000_attendance_core_stable_migration.sql");
+    expect(migration).toContain("attendance_core_records");
+    expect(migration).toContain("attendance_core_calendar_events");
+    expect(migration).toContain("attendance_core_migration_runs");
+    expect(migration).toContain("migrate_legacy_attendance_to_core");
+    expect(migration).toContain("legacy_record_id");
+    expect(migration).toContain("ON CONFLICT DO NOTHING");
+    expect(migration).toContain("SECURITY INVOKER");
+    expect(migration).not.toContain("ALTER TABLE public.attendance_records");
+    expect(migration).not.toContain("DROP TABLE public.attendance_records");
+    expect(migration).not.toContain("DELETE FROM public.attendance_records");
   });
 
   it("keeps admin feature writes behind the admin Edge Function", () => {

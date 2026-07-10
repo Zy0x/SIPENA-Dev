@@ -1,7 +1,7 @@
 import { PanduanIcon } from "@/components/ui/animated-icons";
 import { useNavigate } from "react-router-dom";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -374,11 +374,11 @@ export default function Help() {
         {/* Quick Start Card */}
         <Card className="animate-fade-in-up delay-100 bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20 shadow-sm">
           <CardHeader className="pb-2 sm:pb-4">
-            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <h2 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-foreground">
               <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-grade-pass" />
               Mulai Cepat
-            </CardTitle>
-            <CardDescription className="text-[10px] sm:text-xs">
+            </h2>
+            <CardDescription className="text-xs">
               Ikuti 4 langkah sederhana untuk memulai menggunakan SIPENA
             </CardDescription>
           </CardHeader>
@@ -396,7 +396,7 @@ export default function Help() {
                   className="h-auto py-3 sm:py-4 flex flex-col gap-1.5 sm:gap-2 text-foreground hover:border-primary hover:bg-primary/10 hover:text-foreground focus-visible:text-foreground text-xs sm:text-sm"
                   onClick={() => navigate(item.link)}
                 >
-                  <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary -foreground flex items-center justify-center text-[10px] sm:text-sm font-bold">
+                  <span className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs sm:text-sm font-bold">
                     {item.step}
                   </span>
                   <span className="font-medium truncate">{item.text}</span>
@@ -410,10 +410,10 @@ export default function Help() {
         {/* Keyboard Shortcut Quick Reference */}
         <Card className="animate-fade-in-up delay-150 border border-border shadow-sm">
           <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <h2 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-foreground">
               <Keyboard className="w-4 h-4 sm:w-5 sm:h-5 " />
               Shortcut Cepat
-            </CardTitle>
+            </h2>
           </CardHeader>
           <CardContent className="pb-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -428,10 +428,10 @@ export default function Help() {
                 { keys: "Escape", label: "Tutup" },
               ].map((shortcut) => (
                 <div key={shortcut.keys} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1.5 py-0.5 font-mono">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0.5 font-mono">
                     {shortcut.keys}
                   </Badge>
-                  <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{shortcut.label}</span>
+                  <span className="text-xs text-muted-foreground truncate">{shortcut.label}</span>
                 </div>
               ))}
             </div>
@@ -441,8 +441,8 @@ export default function Help() {
         {/* Accordion Guides */}
         <Card className="animate-fade-in-up delay-200 border border-border shadow-sm">
           <CardHeader className="pb-2 sm:pb-4">
-            <CardTitle className="text-sm sm:text-base">Panduan Lengkap</CardTitle>
-            <CardDescription className="text-[10px] sm:text-xs">
+            <h2 className="text-sm sm:text-base font-semibold text-foreground">Panduan Lengkap</h2>
+            <CardDescription className="text-xs">
               Klik pada topik untuk melihat panduan detail
             </CardDescription>
           </CardHeader>
@@ -457,7 +457,7 @@ export default function Help() {
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-foreground text-xs sm:text-sm truncate">{guide.title}</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground font-normal truncate">
+                        <p className="text-xs text-muted-foreground font-normal truncate">
                           {guide.description}
                         </p>
                       </div>
@@ -471,13 +471,13 @@ export default function Help() {
                             {step.trim() === "" ? (
                               <div className="h-2" />
                             ) : step.startsWith("  ") ? (
-                              <span className="text-[10px] sm:text-xs text-muted-foreground pl-4">{step.trim()}</span>
+                              <span className="text-xs text-muted-foreground pl-4">{step.trim()}</span>
                             ) : (
                               <>
-                                <span className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10  text-[10px] sm:text-xs font-medium flex items-center justify-center mt-0.5">
+                                <span className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-xs font-medium flex items-center justify-center mt-0.5">
                                   {index + 1}
                                 </span>
-                                <span className="text-[10px] sm:text-xs text-muted-foreground">{step}</span>
+                                <span className="text-xs text-muted-foreground">{step}</span>
                               </>
                             )}
                           </li>
@@ -495,8 +495,8 @@ export default function Help() {
         <Card className="animate-fade-in-up delay-300 border border-border shadow-sm">
           <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-3 py-4 sm:py-6">
             <div className="text-center sm:text-left min-w-0">
-              <h3 className="font-semibold text-foreground text-sm sm:text-base">Butuh Bantuan Lebih?</h3>
-              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+              <h2 className="font-semibold text-foreground text-sm sm:text-base">Butuh Bantuan Lebih?</h2>
+              <p className="text-xs text-muted-foreground truncate">
                 Hubungi tim support kami jika ada pertanyaan
               </p>
             </div>

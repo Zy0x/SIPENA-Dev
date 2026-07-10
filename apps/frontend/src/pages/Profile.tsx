@@ -40,6 +40,7 @@ export default function Profile() {
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hashScrollLockRef = useRef(false);
   const { createActivityLog } = useActivityLogs();
   
   // Section refs for scroll navigation
@@ -61,12 +62,16 @@ export default function Profile() {
   useEffect(() => {
     const hash = location.hash;
     if (hash) {
+      hashScrollLockRef.current = true;
       const timer = setTimeout(() => {
         const id = hash.replace("#", "");
         const el = document.getElementById(id);
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "start" });
         }
+        window.setTimeout(() => {
+          hashScrollLockRef.current = false;
+        }, 500);
       }, 150);
       return () => clearTimeout(timer);
     } else {
@@ -74,6 +79,42 @@ export default function Profile() {
       profileSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [location.hash, location.key]);
+
+  useEffect(() => {
+    const profileEl = profileSectionRef.current;
+    const securityEl = securitySectionRef.current;
+    if (!profileEl || !securityEl) return;
+
+    const replaceHash = (hash: string) => {
+      const target = hash ? `${location.pathname}${hash}` : location.pathname;
+      const current = `${location.pathname}${location.hash}`;
+      if (target !== current) {
+        navigate(target, { replace: true, preventScrollReset: true });
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (hashScrollLockRef.current) return;
+
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+
+        if (!visible?.target) return;
+        replaceHash(visible.target === securityEl ? "#security-section" : "");
+      },
+      {
+        root: null,
+        rootMargin: "-24% 0px -58% 0px",
+        threshold: [0.16, 0.32, 0.5, 0.68],
+      },
+    );
+
+    observer.observe(profileEl);
+    observer.observe(securityEl);
+    return () => observer.disconnect();
+  }, [location.hash, location.pathname, navigate]);
 
   // Load avatar on mount - Priority: Supabase storage > Google avatar
   useEffect(() => {

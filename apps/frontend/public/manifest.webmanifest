@@ -55,14 +55,14 @@
       "short_name": "Dashboard",
       "url": "/dashboard",
       "description": "Lihat ringkasan nilai",
-      "icons": [{"src": "/favicon.ico", "sizes": "96x96"}]
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
     },
     {
       "name": "Input Nilai",
       "short_name": "Nilai",
       "url": "/grades",
       "description": "Input nilai siswa",
-      "icons": [{"src": "/favicon.ico", "sizes": "96x96"}]
+      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
     }
   ]
 }
