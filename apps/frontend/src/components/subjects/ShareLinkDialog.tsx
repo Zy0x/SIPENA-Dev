@@ -9,6 +9,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -120,14 +128,14 @@ export function ShareLinkDialog({
 
   return (
     <>
-      <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent className="max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b border-border px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+            <DialogTitle className="flex items-center gap-2 pr-10 text-left text-xl">
               <Link2 className="w-5 h-5 text-primary" />
               Bagikan Akses Input Nilai
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
+            </DialogTitle>
+            <DialogDescription asChild>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                   Buat link akses untuk guru tamu agar dapat menginput nilai pada mata pelajaran dan kelas tertentu.
@@ -143,10 +151,10 @@ export function ShareLinkDialog({
                   </Badge>
                 </div>
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 px-5 py-4 sm:px-6">
             {/* Privacy Notice */}
             <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg border">
               <Shield className="w-5 h-5 text-primary mt-0.5" />
@@ -209,11 +217,11 @@ export function ShareLinkDialog({
                 {/* Link URL */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Link Akses</label>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
                     <Input
                       value={shareUrl}
                       readOnly
-                      className="font-mono text-xs"
+                      className="min-w-0 font-mono text-xs"
                     />
                     <Button
                       variant="outline"
@@ -242,13 +250,14 @@ export function ShareLinkDialog({
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <div className="grid gap-2 border-t pt-3 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
                   {isActive && (
                     <>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => window.open(shareUrl, "_blank")}
+                        className="min-h-11 justify-center"
                       >
                         <ExternalLink className="w-4 h-4 mr-1" />
                         Buka Link
@@ -257,7 +266,7 @@ export function ShareLinkDialog({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowConfirmRevoke(true)}
-                        className="text-destructive hover:text-destructive"
+                        className="min-h-11 justify-center text-destructive hover:text-destructive"
                       >
                         <XCircle className="w-4 h-4 mr-1" />
                         Cabut Akses
@@ -271,6 +280,7 @@ export function ShareLinkDialog({
                       size="sm"
                       onClick={handleReactivate}
                       disabled={reactivateSharedLink.isPending}
+                      className="min-h-11 justify-center"
                     >
                       <RefreshCw className="w-4 h-4 mr-1" />
                       Aktifkan Kembali
@@ -281,7 +291,7 @@ export function ShareLinkDialog({
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowConfirmDelete(true)}
-                    className="text-destructive hover:text-destructive"
+                    className="min-h-11 justify-center text-destructive hover:text-destructive"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
                     Hapus Link
@@ -291,11 +301,13 @@ export function ShareLinkDialog({
             )}
           </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel>Tutup</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <DialogFooter className="border-t border-border px-5 py-4 sm:px-6">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="min-h-11">
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm Revoke Dialog */}
       <AlertDialog open={showConfirmRevoke} onOpenChange={setShowConfirmRevoke}>

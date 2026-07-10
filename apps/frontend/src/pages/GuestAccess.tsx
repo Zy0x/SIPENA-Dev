@@ -12,6 +12,7 @@ import { GuestAuthDialog } from "@/components/auth/GuestAuthDialog";
 import { ReCaptchaDisclosure, ReCaptchaBadgeHider, useReCaptcha } from "@/components/auth/ReCaptcha";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useEnhancedToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   UserCircle,
   Mail,
@@ -80,6 +81,7 @@ export default function GuestAccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { error: showError, success: showSuccess } = useEnhancedToast();
+  const { user: signedInUser, loading: authLoading } = useAuth();
   
   // Memoize token to prevent unnecessary re-renders
   const token = useMemo(() => searchParams.get("token"), [searchParams]);
@@ -100,6 +102,14 @@ export default function GuestAccess() {
   // Guest auth dialog state - MUST be at top level
   const [showGuestAuthDialog, setShowGuestAuthDialog] = useState(false);
   const { isConfigured: isRecaptchaConfigured } = useReCaptcha();
+
+  const signedInUserName = useMemo(() => (
+    signedInUser?.user_metadata?.full_name ||
+    signedInUser?.email?.split("@")[0] ||
+    "Guru"
+  ), [signedInUser]);
+
+  const signedInUserEmail = signedInUser?.email || "";
 
   // Auto-login for Google OAuth redirect - moved after handleGuestAuthSuccess definition
 
@@ -441,6 +451,24 @@ export default function GuestAccess() {
     }
   }, [name, email, tokenValidation, token, navigate, showError, showSuccess]);
 
+  const handleContinueWithSignedInAccount = useCallback(async () => {
+    if (!signedInUser || !tokenValidation?.is_valid) return;
+
+    await handleGuestAuthSuccess({
+      guestId: signedInUser.id,
+      name: signedInUserName,
+      email: signedInUserEmail,
+      isMainTeacher: true,
+      mainUserId: signedInUser.id,
+    });
+  }, [
+    signedInUser,
+    signedInUserEmail,
+    signedInUserName,
+    tokenValidation?.is_valid,
+    handleGuestAuthSuccess,
+  ]);
+
   // No token provided
   if (!token) {
     return (
@@ -557,6 +585,178 @@ export default function GuestAccess() {
     );
   }
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+            <p className="text-muted-foreground">Memeriksa sesi akun...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const isOwnerOpeningOwnLink = !!signedInUser && signedInUser.id === tokenValidation.user_id;
+  const ownerGradesUrl = `/grades?classId=${encodeURIComponent(tokenValidation.class_id)}&subjectId=${encodeURIComponent(tokenValidation.subject_id)}`;
+
+  if (isOwnerOpeningOwnLink) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
+        <ReCaptchaBadgeHider />
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardHeader className="text-center relative">
+            <div className="absolute left-4 top-4">
+              <Button asChild variant="ghost" size="icon" className="h-12 w-12">
+                <Link to="/">
+                  <ArrowLeft className="w-5 h-5" />
+                </Link>
+              </Button>
+            </div>
+
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Ini Link Milik Anda</CardTitle>
+            <CardDescription>
+              Link ini dibuat dari akun SIPENA yang sedang aktif.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
+              {loadingInfo ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Mapel:</span>
+                    <Badge variant="secondary">{subjectInfo?.name || "-"}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <School className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Kelas:</span>
+                    <Badge variant="outline">{classInfo?.name || "-"}</Badge>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertTitle>Akses Pemilik Kelas</AlertTitle>
+              <AlertDescription className="text-xs">
+                Anda tidak perlu masuk sebagai guru tamu. Gunakan halaman Nilai biasa untuk mengelola mapel ini sebagai pemilik data.
+              </AlertDescription>
+            </Alert>
+
+            <Button asChild className="w-full h-12">
+              <Link to={ownerGradesUrl}>
+                Buka Input Nilai Saya
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full h-12">
+              <Link to="/dashboard">
+                Kembali ke Dashboard
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (signedInUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
+        <ReCaptchaBadgeHider />
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardHeader className="text-center relative">
+            <div className="absolute left-4 top-4">
+              <Button asChild variant="ghost" size="icon" className="h-12 w-12">
+                <Link to="/">
+                  <ArrowLeft className="w-5 h-5" />
+                </Link>
+              </Button>
+            </div>
+
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <UserCheck className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Lanjut dengan Akun SIPENA</CardTitle>
+            <CardDescription>
+              Anda sudah login. Gunakan akun ini sebagai guru tamu untuk akses yang dibagikan.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
+              {loadingInfo ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Mapel:</span>
+                    <Badge variant="secondary">{subjectInfo?.name || "-"}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <School className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Kelas:</span>
+                    <Badge variant="outline">{classInfo?.name || "-"}</Badge>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertTitle>Akses Aman & Tersimpan</AlertTitle>
+              <AlertDescription className="text-xs">
+                Akses ini akan tersimpan di akun {signedInUserEmail || signedInUserName}, sehingga bisa dibuka lagi dari Dashboard atau halaman Kelas selama link masih aktif.
+              </AlertDescription>
+            </Alert>
+
+            <div className="rounded-lg border bg-card p-4">
+              <p className="text-sm font-medium">{signedInUserName}</p>
+              <p className="text-xs text-muted-foreground">{signedInUserEmail || "Akun SIPENA aktif"}</p>
+            </div>
+
+            <Button
+              type="button"
+              className="w-full h-12"
+              onClick={handleContinueWithSignedInAccount}
+            >
+              Lanjut Input Nilai
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+            <Button variant="outline" className="w-full h-12" onClick={() => setShowGuestAuthDialog(true)}>
+              Gunakan Akun Lain
+            </Button>
+          </CardContent>
+        </Card>
+
+        <GuestAuthDialog
+          isOpen={showGuestAuthDialog}
+          onClose={() => setShowGuestAuthDialog(false)}
+          onSuccess={handleGuestAuthSuccess}
+          subjectName={subjectInfo?.name}
+          className={classInfo?.name}
+          shareToken={token || undefined}
+        />
+      </div>
+    );
+  }
+
   // Valid token - show unified login/register form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
@@ -627,7 +827,7 @@ export default function GuestAccess() {
               </div>
               <div className="text-left flex-1">
                 <p className="font-medium">Login / Daftar</p>
-                <p className="text-xs opacity-80">Gunakan akun SIPENA atau daftar baru</p>
+                <p className="text-xs opacity-80">Untuk akun yang belum login di perangkat ini</p>
               </div>
               <ArrowRight className="w-5 h-5" />
             </Button>

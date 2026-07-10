@@ -32,4 +32,19 @@ describe("guest class card guard", () => {
     expect(dashboard).toContain("Akses Guru Tamu");
     expect(dashboard).toContain("buildGuestSessionPayload");
   });
+
+  it("keeps share link and logged-in guest access flows usable", () => {
+    const shareDialog = readSource("apps/frontend/src/components/subjects/ShareLinkDialog.tsx");
+    const guestAccess = readSource("apps/frontend/src/pages/GuestAccess.tsx");
+
+    expect(shareDialog).toContain("Dialog open={open}");
+    expect(shareDialog).toContain("AlertDialog open={showConfirmRevoke}");
+    expect(shareDialog).toContain("AlertDialog open={showConfirmDelete}");
+    expect(shareDialog).toContain("sm:grid-cols-[repeat(3,minmax(0,1fr))]");
+    expect(guestAccess).toContain("useAuth");
+    expect(guestAccess).toContain("Lanjut dengan Akun SIPENA");
+    expect(guestAccess).toContain("Lanjut Input Nilai");
+    expect(guestAccess).toContain("Ini Link Milik Anda");
+    expect(guestAccess).toContain("handleContinueWithSignedInAccount");
+  });
 });
