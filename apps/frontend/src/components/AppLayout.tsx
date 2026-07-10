@@ -1,7 +1,6 @@
  import { useState, useEffect, useRef, useCallback, useMemo } from "react";
  import { Link, useLocation, useNavigate } from "react-router-dom";
  import { useAuth } from "@/contexts/AuthContext";
- import { useEnhancedToast } from "@/contexts/ToastContext";
  import { cn } from "@/lib/utils";
  import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
  import Footer from "@/components/Footer";
@@ -29,7 +28,6 @@
     CalendarDays,
     Trophy,
     Shield,
-    Power,
     UserCheck,
   } from "lucide-react";
  import { CollapsedNavItem, ExpandedNavItem } from "@/components/layout/SidebarNav";
@@ -129,12 +127,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
    const overlayRef = useRef<HTMLDivElement>(null);
    const logoTextRef = useRef<HTMLDivElement>(null);
    const yearBadgeRef = useRef<HTMLDivElement>(null);
-   const logoutTextRef = useRef<HTMLSpanElement>(null);
-   const ctrlHintRef = useRef<HTMLParagraphElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
-  const { success, error: showError } = useEnhancedToast();
+  const { user } = useAuth();
   const { getAccessStatus } = useFeatureFlags();
 
   const visibleNavItems = useMemo(() => {
@@ -208,26 +203,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
         paddingTop: effectiveSidebarCollapsed ? 0 : 8,
         paddingBottom: effectiveSidebarCollapsed ? 0 : 8,
         duration: 0.25,
-        ease: "power2.out",
-        overwrite: "auto",
-      });
-    }
-
-    if (logoutTextRef.current) {
-      gsap.to(logoutTextRef.current, {
-        opacity: effectiveSidebarCollapsed ? 0 : 1,
-        width: effectiveSidebarCollapsed ? 0 : "auto",
-        duration: 0.2,
-        ease: "power2.out",
-        overwrite: "auto",
-      });
-    }
-
-    if (ctrlHintRef.current) {
-      gsap.to(ctrlHintRef.current, {
-        opacity: effectiveSidebarCollapsed ? 0 : 1,
-        height: effectiveSidebarCollapsed ? 0 : "auto",
-        duration: 0.2,
         ease: "power2.out",
         overwrite: "auto",
       });
@@ -438,26 +413,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         .slice(0, 2)
     : user?.email?.charAt(0).toUpperCase() || "U";
 
-   // Logout handler - proper route
-    const handleLogout = useCallback(async () => {
-     try {
-       await signOut();
-       // Clear all sensitive storage
-       localStorage.removeItem("admin_session_token");
-       sessionStorage.clear();
-       // Force full reload to clear all React state and caches
-       window.location.replace("/auth");
-     } catch (error) {
-       showError("Gagal keluar dari akun");
-     }
-   }, [signOut, showError]);
-
    // GSAP: Logo hover effects
    const logoDesktopRef = useRef<HTMLButtonElement>(null);
    const logoMobileRef = useRef<HTMLButtonElement>(null);
    const mobileMenuBtnRef = useRef<HTMLButtonElement>(null);
-   const logoutBtnRef = useRef<HTMLButtonElement>(null);
-   const logoutBtnExpandedRef = useRef<HTMLButtonElement>(null);
 
    // Global search keyboard shortcut (Ctrl+K / Cmd+K)
    useEffect(() => {
@@ -671,58 +630,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
              })}
            </ul>
          </nav>
- 
-         {/* Logout section */}
-         <div className={cn(
-           "shrink-0 mt-auto border-t border-border/40 bg-card/50",
-           effectiveSidebarCollapsed ? "p-2" : "px-3 py-1.5"
-         )}>
-           {effectiveSidebarCollapsed ? (
-             <Tooltip delayDuration={0}>
-               <TooltipTrigger asChild>
-                 <button
-                   ref={logoutBtnRef}
-                   onClick={handleLogout}
-                   onMouseEnter={() => handleGSAPHover(logoutBtnRef.current, true)}
-                   onMouseLeave={() => handleGSAPHover(logoutBtnRef.current, false)}
-                   onMouseDown={() => handleGSAPPress(logoutBtnRef.current, true)}
-                   onMouseUp={() => handleGSAPPress(logoutBtnRef.current, false)}
-                   className={cn(
-                     "flex items-center justify-center w-12 h-12 mx-auto rounded-xl transition-colors touch-manipulation",
-                     "text-destructive hover:bg-destructive/10"
-                   )}
-                 >
-                   <Power className="w-5 h-5" aria-hidden="true" />
-                 </button>
-               </TooltipTrigger>
-               <TooltipContent side="right" sideOffset={12} className="font-medium">
-                 Keluar
-               </TooltipContent>
-             </Tooltip>
-           ) : (
-             <div className="space-y-1">
-               <button
-                 ref={logoutBtnExpandedRef}
-                 onClick={handleLogout}
-                 onMouseEnter={() => handleGSAPHover(logoutBtnExpandedRef.current, true, { scale: 1.01 })}
-                 onMouseLeave={() => handleGSAPHover(logoutBtnExpandedRef.current, false)}
-                 onMouseDown={() => handleGSAPPress(logoutBtnExpandedRef.current, true)}
-                 onMouseUp={() => handleGSAPPress(logoutBtnExpandedRef.current, false)}
-                 className={cn(
-                   "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all touch-manipulation min-h-[40px]",
-                   "text-destructive hover:bg-destructive/10"
-                 )}
-               >
-                 <Power className="w-5 h-5 shrink-0" aria-hidden="true" />
-                 <span ref={logoutTextRef} className="truncate flex-1 text-left">Keluar</span>
-               </button>
-               
-               <p ref={ctrlHintRef} className="hidden lg:block text-[9px] text-muted-foreground/50 text-center pb-0.5 overflow-hidden">
-                 <kbd className="px-1 py-0.5 bg-muted/50 rounded text-[8px] font-mono">Ctrl+B</kbd> toggle
-               </p>
-             </div>
-           )}
-         </div>
        </aside>
  
        {/* Spacer for sidebar on desktop */}
@@ -768,7 +675,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <HeaderYearDisplay variant="mobile" />
               </div>
              
-             <div className="flex items-center gap-1 sm:gap-1.5">
+             <div className="flex items-center gap-2">
                 <GlobalSearchTrigger onClick={() => setShowGlobalSearch(true)} />
                 <NotificationDropdown />
                <button
@@ -778,11 +685,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
                  onMouseLeave={() => handleGSAPHover(avatarTriggerRef.current, false)}
                  onMouseDown={() => handleGSAPPress(avatarTriggerRef.current, true)}
                  onMouseUp={() => handleGSAPPress(avatarTriggerRef.current, false)}
-                 className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 touch-manipulation"
+                 className="flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 touch-manipulation"
                  aria-label="Buka menu profil"
                  aria-expanded={showMiniProfile}
                >
-                 <Avatar className="h-8 w-8 sm:h-9 sm:w-9 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
+                 <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
                    <AvatarImage src={avatarUrl || undefined} alt="Foto profil" />
                    <AvatarFallback className="bg-primary/10 text-foreground text-xs sm:text-sm font-semibold">
                      {userInitials}
@@ -797,7 +704,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
          <header className="sipena-app-header-elevated hidden lg:flex sticky top-0 z-30 bg-muted/30 backdrop-blur-xl border-b border-border shadow-sm items-center justify-between px-6 h-14">
             <HeaderYearDisplay variant="desktop" />
            
-           <div className="flex items-center gap-2">
+           <div className="flex items-center gap-2.5">
               <GlobalSearchTrigger onClick={() => setShowGlobalSearch(true)} />
               <NotificationDropdown />
              <button
@@ -814,7 +721,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                onMouseLeave={(e) => handleGSAPHover(e.currentTarget, false)}
                onMouseDown={(e) => handleGSAPPress(e.currentTarget, true)}
                onMouseUp={(e) => handleGSAPPress(e.currentTarget, false)}
-               className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+               className="flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                aria-label="Buka menu profil"
                aria-expanded={showMiniProfile}
              >

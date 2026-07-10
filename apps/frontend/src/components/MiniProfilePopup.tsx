@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/drawer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEnhancedToast } from "@/contexts/ToastContext";
-import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import {
   Moon,
   Sun,
@@ -236,32 +235,31 @@ export function MiniProfilePopup({
     onClose();
     
     try {
+      await signOut();
+
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && (
-          key.includes('supabase') || 
-          key.includes('sb-') || 
-          key.includes('auth') ||
-          key.includes('token')
+          key.includes("supabase") ||
+          key.includes("sb-") ||
+          key.includes("auth") ||
+          key.includes("token")
         )) {
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-      
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+
       sessionStorage.clear();
-      
+
       document.cookie.split(";").forEach((c) => {
         const eqPos = c.indexOf("=");
         const name = eqPos > -1 ? c.substring(0, eqPos).trim() : c.trim();
-        if (name.includes('sb-') || name.includes('supabase')) {
-          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        if (name.includes("sb-") || name.includes("supabase")) {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
         }
       });
-      
-      await supabase.auth.signOut({ scope: 'global' });
-      await signOut();
       
       success("Berhasil Keluar", "Anda telah berhasil logout dari akun.");
       window.location.href = "/auth";

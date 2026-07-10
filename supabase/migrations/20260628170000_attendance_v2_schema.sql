@@ -133,27 +133,35 @@ ALTER TABLE public.attendance_v2_idempotency_keys ENABLE ROW LEVEL SECURITY;
 -- =====================================================
 -- RLS Policies
 -- =====================================================
+DROP POLICY IF EXISTS "Users can manage own V2 records" ON public.attendance_v2_records;
 CREATE POLICY "Users can manage own V2 records" ON public.attendance_v2_records
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own V2 holidays" ON public.attendance_v2_holidays;
 CREATE POLICY "Users can manage own V2 holidays" ON public.attendance_v2_holidays
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own V2 day events" ON public.attendance_v2_day_events;
 CREATE POLICY "Users can manage own V2 day events" ON public.attendance_v2_day_events
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own V2 locks" ON public.attendance_v2_locks;
 CREATE POLICY "Users can manage own V2 locks" ON public.attendance_v2_locks
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own V2 overrides" ON public.attendance_v2_overrides;
 CREATE POLICY "Users can manage own V2 overrides" ON public.attendance_v2_overrides
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view own V2 audit logs" ON public.attendance_v2_audit_logs;
 CREATE POLICY "Users can view own V2 audit logs" ON public.attendance_v2_audit_logs
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own V2 audit logs" ON public.attendance_v2_audit_logs;
 CREATE POLICY "Users can insert own V2 audit logs" ON public.attendance_v2_audit_logs
   FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own V2 idempotency keys" ON public.attendance_v2_idempotency_keys;
 CREATE POLICY "Users can manage own V2 idempotency keys" ON public.attendance_v2_idempotency_keys
   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 

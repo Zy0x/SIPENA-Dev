@@ -124,7 +124,7 @@ export function NotificationDropdown() {
     <>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
+          <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl">
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
               <Badge 

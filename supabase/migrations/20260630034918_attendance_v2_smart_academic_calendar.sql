@@ -161,24 +161,31 @@ ALTER TABLE public.attendance_v2_recap_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance_v2_delegations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance_v2_month_snapshots ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own attendance V2 schools" ON public.attendance_v2_schools;
 CREATE POLICY "Users can manage own attendance V2 schools" ON public.attendance_v2_schools
   FOR ALL TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own attendance V2 academic calendars" ON public.attendance_v2_academic_calendars;
 CREATE POLICY "Users can manage own attendance V2 academic calendars" ON public.attendance_v2_academic_calendars
   FOR ALL TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own attendance V2 class contexts" ON public.attendance_v2_class_contexts;
 CREATE POLICY "Users can manage own attendance V2 class contexts" ON public.attendance_v2_class_contexts
   FOR ALL TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own attendance V2 calendar events" ON public.attendance_v2_calendar_events;
 CREATE POLICY "Users can manage own attendance V2 calendar events" ON public.attendance_v2_calendar_events
   FOR ALL TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own attendance V2 recap profiles" ON public.attendance_v2_recap_profiles;
 CREATE POLICY "Users can manage own attendance V2 recap profiles" ON public.attendance_v2_recap_profiles
   FOR ALL TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own attendance V2 delegations" ON public.attendance_v2_delegations;
 CREATE POLICY "Users can manage own attendance V2 delegations" ON public.attendance_v2_delegations
   FOR ALL TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
+DROP POLICY IF EXISTS "Users can manage own attendance V2 month snapshots" ON public.attendance_v2_month_snapshots;
 CREATE POLICY "Users can manage own attendance V2 month snapshots" ON public.attendance_v2_month_snapshots
   FOR ALL TO authenticated USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 

@@ -75,8 +75,14 @@ export default function Profile() {
       }, 150);
       return () => clearTimeout(timer);
     } else {
-      // No hash - scroll to profile section (top)
+      // No hash - scroll to profile section (top). Keep scroll-spy muted while
+      // the smooth scroll is in progress so it cannot snap back to security.
+      hashScrollLockRef.current = true;
       profileSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const unlockTimer = window.setTimeout(() => {
+        hashScrollLockRef.current = false;
+      }, 650);
+      return () => clearTimeout(unlockTimer);
     }
   }, [location.hash, location.key]);
 

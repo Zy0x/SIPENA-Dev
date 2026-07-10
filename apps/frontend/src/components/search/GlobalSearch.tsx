@@ -287,7 +287,7 @@ export function GlobalSearchTrigger({ onClick }: { onClick: () => void }) {
         <button
           onClick={onClick}
           className={cn(
-            "flex items-center justify-center w-9 h-9 rounded-xl transition-colors touch-manipulation",
+            "flex h-10 w-10 items-center justify-center rounded-xl transition-colors touch-manipulation",
             "text-muted-foreground hover:bg-muted hover:text-foreground active:bg-muted/80",
           )}
           aria-label="Pencarian global (Ctrl+K)"
