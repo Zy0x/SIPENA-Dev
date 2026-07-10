@@ -55,6 +55,27 @@ interface TokenValidation {
   user_id: string;
 }
 
+type GuestAccessRpcClient = {
+  rpc: <T = unknown>(name: string, args?: Record<string, unknown>) => Promise<{ data: T | null; error: any }>;
+};
+
+const guestAccessRpc = supabase as unknown as GuestAccessRpcClient;
+
+async function persistGuestAccessGrant(token: string | null, guestUserId?: string | null) {
+  if (!token) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return;
+
+  const { error } = await guestAccessRpc.rpc("accept_guest_access", {
+    p_token: token,
+    p_guest_user_id: guestUserId || null,
+  });
+
+  if (error) {
+    console.warn("[GuestAccess] Failed to persist guest access grant:", error);
+  }
+}
+
 export default function GuestAccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -255,6 +276,8 @@ export default function GuestAccess() {
         })
         .eq("id", tokenValidation.id);
 
+      await persistGuestAccessGrant(token, guestUserId);
+
       // Create notification for the link owner
       await supabase.from("notifications").insert({
         user_id: tokenValidation.user_id,
@@ -388,6 +411,8 @@ export default function GuestAccess() {
           guest_user_id: guestId,
         })
         .eq("id", tokenValidation.id);
+
+      await persistGuestAccessGrant(token, guestId);
 
       // Store guest info in session storage
       sessionStorage.setItem(

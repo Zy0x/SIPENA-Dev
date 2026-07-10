@@ -1,6 +1,6 @@
 import { KelasIcon } from "@/components/ui/animated-icons";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import {
   ChevronDown,
   AlertCircle,
   Target,
+  ShieldCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,11 +30,13 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useStudents } from "@/hooks/useStudents";
 import AddClassDialog from "@/components/classes/AddClassDialog";
 import ClassCard from "@/components/classes/ClassCard";
+import GuestClassCard from "@/components/classes/GuestClassCard";
 import ClassKkmSetupDialog from "@/components/classes/ClassKkmSetupDialog";
 import ImportClassesStudentsDialog from "@/components/classes/ImportClassesStudentsDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 import { ProductTour, TourButton, TourStep } from "@/components/ui/product-tour";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useGuestAccesses } from "@/hooks/useGuestAccesses";
 import gsap from "gsap";
 
 const classesTourSteps: TourStep[] = [
@@ -69,16 +72,18 @@ const classesTourSteps: TourStep[] = [
   },
   {
     target: "[data-tour='class-card-menu']",
-    title: "Pengaturan Lanjutan",
+    title: "Menu Lanjutan",
     description: "Ingin mengubah nama kelas, menduplikasi, atau menghapusnya? Temukan semua opsi pengaturan tersebut di balik menu titik tiga ini.",
   },
 ];
 
 export default function Classes() {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { classes, isLoading } = useClasses();
   const { allSubjects, isLoading: subjectsLoading } = useSubjects();
+  const { activeGuestClasses, inactiveGuestClasses, isLoading: guestAccessLoading, touchGuestAccess } = useGuestAccesses();
   const [searchQuery, setSearchQuery] = useState("");
   const [isTourDummyActive, setIsTourDummyActive] = useState(false);
   const [tourDummyClasses, setTourDummyClasses] = useState<Class[]>([]);
@@ -92,6 +97,21 @@ export default function Classes() {
   const prefersReducedMotion = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const { students: ocrTargetStudents, createStudentsBatch } = useStudents(ocrTargetClassId);
+  const accessFilter = searchParams.get("view") === "guest"
+    ? "guest"
+    : searchParams.get("view") === "owner"
+      ? "owner"
+      : "all";
+
+  const setAccessFilter = (nextFilter: "all" | "owner" | "guest") => {
+    const next = new URLSearchParams(searchParams);
+    if (nextFilter === "all") {
+      next.delete("view");
+    } else {
+      next.set("view", nextFilter);
+    }
+    setSearchParams(next, { replace: true });
+  };
 
   const ocrClassOptions = useMemo(() => {
     if (!ocrCreatedClass || classes.some((item) => item.id === ocrCreatedClass.id)) return classes;
@@ -123,6 +143,24 @@ export default function Classes() {
         cls.description?.toLowerCase().includes(query)
     );
   }, [displayClasses, searchQuery]);
+
+  const filteredGuestClasses = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return activeGuestClasses;
+    return activeGuestClasses.filter((access) => (
+      access.name.toLowerCase().includes(query) ||
+      access.description?.toLowerCase().includes(query) ||
+      access.ownerName?.toLowerCase().includes(query) ||
+      access.ownerEmail?.toLowerCase().includes(query) ||
+      access.subjects.some((subject) => subject.name.toLowerCase().includes(query))
+    ));
+  }, [activeGuestClasses, searchQuery]);
+
+  const showOwnerClasses = accessFilter === "all" || accessFilter === "owner";
+  const showGuestClasses = accessFilter === "all" || accessFilter === "guest";
+  const visibleOwnerCount = showOwnerClasses ? filteredClasses.length : 0;
+  const visibleGuestCount = showGuestClasses ? filteredGuestClasses.length : 0;
+  const hasAnyClassShortcut = displayClasses.length > 0 || activeGuestClasses.length > 0;
 
   const classesWithoutKkm = useMemo(() => (
     displayClasses.filter((cls) => cls.class_kkm === null)
@@ -164,7 +202,7 @@ export default function Classes() {
           user_id: "tour-preview",
           academic_year_id: null,
           semester_id: null,
-          name: "Kelas 7A - Unggulan",
+          name: "Contoh Kelas VIIA",
           description: "Kelas percontohan untuk panduan dengan KKM dasar telah terkonfigurasi dengan baik.",
           class_kkm: 75,
           created_at: now,
@@ -301,14 +339,14 @@ export default function Classes() {
         </div>
 
         {/* Loading State */}
-        {isLoading && (
+        {(isLoading || guestAccessLoading) && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin " />
           </div>
         )}
 
         {/* Empty State */}
-        {!isLoading && displayClasses.length === 0 && (
+        {!isLoading && !guestAccessLoading && displayClasses.length === 0 && activeGuestClasses.length === 0 && (
           <div className="rounded-2xl bg-card border border-border/60 overflow-hidden">
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-16 h-16 rounded-[20px] bg-primary/10 flex items-center justify-center mb-4">
@@ -332,11 +370,36 @@ export default function Classes() {
           </div>
         )}
 
+        {!isLoading && !guestAccessLoading && hasAnyClassShortcut && (
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              ["all", "Semua", displayClasses.length + activeGuestClasses.length],
+              ["owner", "Kelas Saya", displayClasses.length],
+              ["guest", "Guru Tamu", activeGuestClasses.length],
+            ] as const).map(([value, label, count]) => (
+              <Button
+                key={value}
+                type="button"
+                variant={accessFilter === value ? "default" : "outline"}
+                size="sm"
+                className="h-8 rounded-full px-3 text-xs"
+                onClick={() => setAccessFilter(value)}
+              >
+                {value === "guest" && <ShieldCheck className="mr-1 h-3.5 w-3.5" />}
+                {label}
+                <span className="ml-1 rounded-full bg-background/25 px-1.5 text-[10px]">
+                  {count}
+                </span>
+              </Button>
+            ))}
+          </div>
+        )}
+
         {/* Info hint */}
-        {!isLoading && displayClasses.length > 0 && (
+        {!isLoading && !guestAccessLoading && hasAnyClassShortcut && (
           <div className="flex items-center gap-2 px-1 text-[10px] sm:text-xs text-muted-foreground">
             <Users className="w-3 h-3 flex-shrink-0" />
-            <span>Gunakan tombol di kartu kelas untuk membuka detail, murid, mapel, atau nilai.</span>
+            <span>Gunakan tombol di kartu kelas untuk membuka detail, murid, mapel, atau nilai. Badge Guru Tamu berarti data tetap milik guru pemilik.</span>
           </div>
         )}
 
@@ -361,22 +424,47 @@ export default function Classes() {
         )}
 
         {/* Classes Grid */}
-        {!isLoading && filteredClasses.length > 0 && (
+        {!isLoading && !guestAccessLoading && (visibleOwnerCount + visibleGuestCount) > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredClasses.map((cls, index) => (
-              <div key={cls.id} data-tour={index === 0 ? "class-card" : undefined}>
-                <ClassCard
-                  classData={cls}
-                  subjectCount={subjectCountByClassId.get(cls.id) || 0}
-                  isSubjectCountLoading={subjectsLoading}
-                />
-              </div>
+            {showOwnerClasses && filteredClasses.map((cls, index) => (
+                <div key={cls.id} data-tour={index === 0 ? "class-card" : undefined}>
+                  <ClassCard
+                    classData={cls}
+                    subjectCount={subjectCountByClassId.get(cls.id) || 0}
+                    isSubjectCountLoading={subjectsLoading}
+                  />
+                </div>
+              ))}
+            {showGuestClasses && filteredGuestClasses.map((access) => (
+              <GuestClassCard
+                key={`guest-${access.id}`}
+                access={access}
+                onTouchAccess={(sharedLinkId) => touchGuestAccess.mutate(sharedLinkId)}
+              />
             ))}
           </div>
         )}
 
+        {!isLoading && !guestAccessLoading && accessFilter === "guest" && activeGuestClasses.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-sky-300/70 bg-sky-50/50 p-6 text-center dark:border-sky-400/30 dark:bg-sky-950/20">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/10">
+              <ShieldCheck className="h-6 w-6 text-sky-600" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Belum ada akses guru tamu</h3>
+            <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+              Buka link yang dibagikan guru lain untuk menambahkan akses. Setelah tersimpan, kelas dan mapel tamu akan muncul di sini.
+            </p>
+          </div>
+        )}
+
+        {!isLoading && !guestAccessLoading && accessFilter === "guest" && inactiveGuestClasses.length > 0 && activeGuestClasses.length === 0 && (
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4 text-xs text-muted-foreground">
+            Ada {inactiveGuestClasses.length} akses lama yang sudah dicabut atau kedaluwarsa. Minta link baru ke guru pemilik untuk membuka kembali akses.
+          </div>
+        )}
+
         {/* No Search Results */}
-        {!isLoading && displayClasses.length > 0 && filteredClasses.length === 0 && (
+        {!isLoading && !guestAccessLoading && hasAnyClassShortcut && (visibleOwnerCount + visibleGuestCount) === 0 && (
           <div className="rounded-2xl bg-card border border-border/60 overflow-hidden">
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <Search className="w-10 h-10 text-muted-foreground mb-3" />

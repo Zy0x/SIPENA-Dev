@@ -19,6 +19,7 @@ import {
   Plus,
   User,
   Clock,
+  ShieldCheck,
 } from "lucide-react";
 import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
@@ -26,6 +27,7 @@ import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useSemesters } from "@/hooks/useSemesters";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { useInputProgress } from "@/hooks/useInputProgress";
+import { buildGuestSessionPayload, useGuestAccesses, type GuestAccessClass, type GuestAccessSubject } from "@/hooks/useGuestAccesses";
 import { StudentPredictionCard } from "@/components/dashboard/StudentPredictionCard";
 import { TopStudentsCarousel } from "@/components/dashboard/TopStudentsCarousel";
 import { ProductTour, TourButton, TourStep } from "@/components/ui/product-tour";
@@ -63,6 +65,7 @@ export default function Dashboard() {
   const { activeSemester, isLoading: semestersLoading } = useSemesters();
   const { activityLogs, isLoading: activityLoading } = useActivityLogs();
   const { data: inputProgress, isLoading: inputProgressLoading } = useInputProgress();
+  const { activeGuestClasses, touchGuestAccess } = useGuestAccesses();
   const { needsOnboarding, createPreferences } = useUserPreferences();
 
   // Handle theme selection for new users (moved from Grades)
@@ -171,6 +174,22 @@ export default function Dashboard() {
   const isLoading = classesLoading || subjectsLoading || yearsLoading || semestersLoading;
   const needsSetup = !activeYear || !activeSemester;
   const hasNoClasses = !classesLoading && classes.length === 0;
+  const guestSubjectCount = useMemo(
+    () => activeGuestClasses.reduce((sum, item) => sum + item.subjects.length, 0),
+    [activeGuestClasses],
+  );
+
+  const openGuestSubject = useCallback((access: GuestAccessClass, subject: GuestAccessSubject) => {
+    sessionStorage.setItem("guest_session", JSON.stringify(buildGuestSessionPayload({
+      userId: user?.id,
+      userName: user?.user_metadata?.full_name || user?.email,
+      userEmail: user?.email,
+      access,
+      subject,
+    })));
+    touchGuestAccess.mutate(subject.sharedLinkId);
+    navigate(`/guest/grades?token=${encodeURIComponent(subject.token)}`);
+  }, [navigate, touchGuestAccess, user]);
 
   return (
     <>
@@ -319,6 +338,77 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {activeGuestClasses.length > 0 && (
+          <Card className="border-sky-300/60 bg-sky-50/60 shadow-sm dark:border-sky-400/30 dark:bg-sky-950/20">
+            <CardHeader className="p-3 sm:p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                    <ShieldCheck className="h-4 w-4 text-sky-600" />
+                    Akses Guru Tamu
+                  </CardTitle>
+                  <CardDescription className="mt-1 text-xs">
+                    {activeGuestClasses.length} kelas tamu aktif, {guestSubjectCount} mapel bisa diisi.
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 shrink-0 text-xs"
+                  onClick={() => navigate("/classes?view=guest")}
+                >
+                  Lihat Semua
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-2 p-3 pt-0 sm:grid-cols-2 lg:grid-cols-3">
+              {activeGuestClasses.slice(0, 3).map((access) => {
+                const firstSubject = access.subjects[0];
+                return (
+                  <div
+                    key={access.id}
+                    className="rounded-xl border border-sky-200/70 bg-background/75 p-3 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">{access.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          Dibagikan oleh {access.ownerName || access.ownerEmail || "guru pemilik"}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-sky-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                        Guru Tamu
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {access.subjects.slice(0, 2).map((subject) => (
+                        <span key={subject.sharedLinkId} className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-800 dark:bg-sky-900/50 dark:text-sky-100">
+                          {subject.name}
+                        </span>
+                      ))}
+                      {access.subjects.length > 2 && (
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                          +{access.subjects.length - 2}
+                        </span>
+                      )}
+                    </div>
+                    {firstSubject && (
+                      <Button
+                        size="sm"
+                        className="mt-3 h-8 w-full gap-1.5 text-xs"
+                        onClick={() => access.subjects.length === 1 ? openGuestSubject(access, firstSubject) : navigate("/classes?view=guest")}
+                      >
+                        Lanjut Input Nilai
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Classes Overview - Compact */}
         {classes.length > 0 && (

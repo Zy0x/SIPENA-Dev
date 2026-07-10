@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.158",
+    version: "2.4.158",
+    title: "Akses Guru Tamu Tersimpan",
+    description: "Kelas dan mapel yang pernah dibagikan guru lain kini muncul kembali sebagai akses guru tamu di Dashboard dan halaman Kelas.",
+    type: "feature",
+    is_critical: false,
+    released_at: "2026-07-10",
+    details: [
+      "Menambahkan shortcut Akses Guru Tamu di Dashboard tanpa mencampurnya ke statistik kelas milik sendiri.",
+      "Menampilkan kartu Guru Tamu di halaman Kelas dengan badge pembeda, daftar mapel yang dibagikan, dan tombol Input Nilai mode tamu.",
+      "Menambahkan penyimpanan grant Supabase yang tetap memvalidasi link aktif agar akses dicabut atau kedaluwarsa tidak bisa dipakai ulang."
+    ]
+  },
+  {
     id: "v2.4.157",
     version: "2.4.157",
     title: "Elevasi Header Web dan Sidebar",

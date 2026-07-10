@@ -256,6 +256,51 @@ function readGuestSession(token: string): GuestSession | null {
   }
 }
 
+async function recoverGuestSessionFromAuth(token: string): Promise<GuestSession | null> {
+  if (!token) return null;
+
+  const { data: { session } } = await supabase.auth.getSession();
+  const authUser = session?.user;
+  if (!authUser) return null;
+
+  const { data, error } = await supabase.rpc("validate_share_token", {
+    p_token: token,
+  });
+  if (error || !data || data.length === 0 || !data[0]?.is_valid) return null;
+
+  const link = data[0] as {
+    id: string;
+    subject_id: string;
+    class_id: string;
+    user_id: string;
+  };
+
+  await guestRpcClient.rpc("accept_guest_access", {
+    p_token: token,
+    p_guest_user_id: null,
+  }).then(({ error: grantError }) => {
+    if (grantError) {
+      console.warn("[Grades] Failed to refresh guest access grant:", grantError);
+    }
+  });
+
+  const recovered: GuestSession = {
+    guestId: authUser.id,
+    name: authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Guru Tamu",
+    email: authUser.email || "",
+    token,
+    sharedLinkId: link.id,
+    subjectId: link.subject_id,
+    classId: link.class_id,
+    userId: link.user_id,
+    isMainTeacher: true,
+    mainUserId: authUser.id,
+  };
+
+  sessionStorage.setItem("guest_session", JSON.stringify(recovered));
+  return recovered;
+}
+
 function normalizeGuestGradeInputData(raw: unknown, session: GuestSession): GuestGradeInputData {
   const data = (raw || {}) as GuestRawGradeInputData;
 
@@ -461,25 +506,48 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   }, [activeTab, clearTabChangeTimers]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!isGuestMode) {
       setGuestSession(null);
       setGuestSessionChecked(true);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
-    const session = readGuestSession(token);
-    if (!session) {
+    const resolveGuestSession = async () => {
+      const session = readGuestSession(token);
+      if (session) {
+        if (!cancelled) {
+          setGuestSession(session);
+          setGuestSessionChecked(true);
+        }
+        return;
+      }
+
+      const recoveredSession = await recoverGuestSessionFromAuth(token);
+      if (cancelled) return;
+
+      if (recoveredSession) {
+        setGuestSession(recoveredSession);
+        setGuestSessionChecked(true);
+        return;
+      }
+
       sessionStorage.removeItem("guest_session");
       setGuestSession(null);
       setGuestSessionChecked(true);
       if (token) {
         navigate(`/share?token=${token}`, { replace: true });
       }
-      return;
-    }
+    };
 
-    setGuestSession(session);
-    setGuestSessionChecked(true);
+    void resolveGuestSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isGuestMode, token, navigate]);
 
   const openAppFullscreen = useCallback(() => {
