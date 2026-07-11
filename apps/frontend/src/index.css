@@ -3522,24 +3522,24 @@
     transform: none !important;
   }
 
-  [data-button-variant="default"]:not([class*="sipena-"]):hover,
-  [data-button-variant="default"]:not([class*="sipena-"]):active,
-  [data-button-variant="default"]:not([class*="sipena-"]):focus-visible {
+  [data-button-variant="default"]:hover,
+  [data-button-variant="default"]:active,
+  [data-button-variant="default"]:focus-visible {
     background-color: hsl(var(--primary)) !important;
     border-color: hsl(var(--primary)) !important;
     color: hsl(var(--primary-foreground)) !important;
   }
 
-  [data-button-variant="destructive"]:not([class*="sipena-"]):hover,
-  [data-button-variant="destructive"]:not([class*="sipena-"]):active,
-  [data-button-variant="destructive"]:not([class*="sipena-"]):focus-visible {
+  [data-button-variant="destructive"]:hover,
+  [data-button-variant="destructive"]:active,
+  [data-button-variant="destructive"]:focus-visible {
     background-color: hsl(var(--destructive)) !important;
     color: hsl(var(--destructive-foreground)) !important;
   }
 
-  [data-button-variant="outline"]:not([class*="sipena-"]):hover,
-  [data-button-variant="outline"]:not([class*="sipena-"]):active,
-  [data-button-variant="outline"]:not([class*="sipena-"]):focus-visible {
+  [data-button-variant="outline"]:hover,
+  [data-button-variant="outline"]:active,
+  [data-button-variant="outline"]:focus-visible {
     background-color: hsl(var(--background)) !important;
     border-color: hsl(var(--border)) !important;
     color: hsl(var(--foreground)) !important;
@@ -3571,6 +3571,13 @@
   .sipena-grade-toolbar [role="combobox"],
   .sipena-grade-toolbar--fullscreen [role="combobox"] {
     touch-action: pan-x pan-y !important;
+  }
+
+  [data-button-variant],
+  .sipena-tab-trigger,
+  .sipena-choice-button {
+    transform: none !important;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .sipena-grade-scroll {
@@ -3630,7 +3637,36 @@
   }
 }
 
+@media (max-width: 639px), (max-height: 600px) {
+  .sipena-bulk-attendance-dialog {
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
 @layer components {
+  .sipena-bulk-attendance-dialog {
+    width: calc(100vw - 1.5rem);
+  }
+
+  .sipena-safe-area-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .sipena-choice-button {
+    -webkit-tap-highlight-color: transparent;
+    transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .sipena-choice-button:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   .app-page {
     @apply box-border w-full min-w-0 max-w-none space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5 lg:px-8 lg:py-8;
   }
@@ -5253,10 +5289,26 @@
   max-height: min(100dvh, var(--sipena-visual-viewport-height, 100dvh));
   overflow: hidden;
   overscroll-behavior: contain;
+  transform: translate3d(-100%, 0, 0);
 }
 
 .sipena-app-sidebar[data-sidebar-state="open"] {
+  transform: translate3d(0, 0, 0);
   will-change: transform;
+}
+
+.sipena-sidebar-overlay {
+  transition: opacity 180ms ease-out;
+}
+
+html[data-motion-profile="light"] .sipena-sidebar-overlay {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  transition-duration: 100ms;
+}
+
+html[data-motion-profile="light"] .sipena-app-sidebar {
+  transition-duration: 120ms !important;
 }
 
 [aria-label="Menu navigasi"] {
@@ -5299,6 +5351,7 @@
   .sipena-app-sidebar {
     width: var(--sipena-sidebar-expanded-width, 260px);
     max-width: none;
+    transform: translate3d(0, 0, 0);
   }
 
   .sipena-app-sidebar[data-sidebar-collapsed="true"] {

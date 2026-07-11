@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,31 +23,43 @@ import { useTouchScrollClickGuard } from "@/hooks/useTouchScrollClickGuard";
 import { FeatureFlagProvider } from "@/app/providers/FeatureFlagProvider";
 import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 import { FeatureRouteGuard } from "@/components/FeatureGate";
-import AttendanceRuntimeRoute from "@/features/attendance/runtime/AttendanceRuntimeRoute";
-import AttendanceStableRoute from "@/features/attendance/stable/AttendanceStableRoute";
+import { Loader2 } from "lucide-react";
 
 // Pages
-import Index from "../pages/Index";
-import Auth from "../pages/Auth";
-import Dashboard from "../pages/Dashboard";
-import Classes from "../pages/Classes";
-import Subjects from "../pages/Subjects";
-import Grades from "../pages/Grades";
-import Reports from "../pages/Reports";
-import GradeReports from "../pages/GradeReports";
-import StudentRankings from "../pages/StudentRankings";
-import Settings from "../pages/Settings";
-import Profile from "../pages/Profile";
-import Help from "../pages/Help";
-import About from "../pages/About";
-import NotFound from "../pages/NotFound";
-import GuestAccess from "../pages/GuestAccess";
-import Admin from "../pages/Admin";
-import Changelog from "../pages/Changelog";
-import ParentPortal from "../pages/ParentPortal";
-import PortalView from "../pages/PortalView";
-import MorpheChat from "../pages/MorpheChat";
-import Terms from "../pages/Terms";
+const Index = lazy(() => import("../pages/Index"));
+const Auth = lazy(() => import("../pages/Auth"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Classes = lazy(() => import("../pages/Classes"));
+const Subjects = lazy(() => import("../pages/Subjects"));
+const Grades = lazy(() => import("../pages/Grades"));
+const Reports = lazy(() => import("../pages/Reports"));
+const GradeReports = lazy(() => import("../pages/GradeReports"));
+const StudentRankings = lazy(() => import("../pages/StudentRankings"));
+const Settings = lazy(() => import("../pages/Settings"));
+const Profile = lazy(() => import("../pages/Profile"));
+const Help = lazy(() => import("../pages/Help"));
+const About = lazy(() => import("../pages/About"));
+const NotFound = lazy(() => import("../pages/NotFound"));
+const GuestAccess = lazy(() => import("../pages/GuestAccess"));
+const Admin = lazy(() => import("../pages/Admin"));
+const Changelog = lazy(() => import("../pages/Changelog"));
+const ParentPortal = lazy(() => import("../pages/ParentPortal"));
+const PortalView = lazy(() => import("../pages/PortalView"));
+const MorpheChat = lazy(() => import("../pages/MorpheChat"));
+const Terms = lazy(() => import("../pages/Terms"));
+const AttendanceRuntimeRoute = lazy(() => import("@/features/attendance/runtime/AttendanceRuntimeRoute"));
+const AttendanceStableRoute = lazy(() => import("@/features/attendance/stable/AttendanceStableRoute"));
+
+function RouteLoading() {
+  return (
+    <div className="flex min-h-[45vh] items-center justify-center px-4 py-8" role="status" aria-live="polite">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Memuat halaman...
+      </div>
+    </div>
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,6 +107,7 @@ const App = () => {
                 <ViewportTelemetryReporter />
                 <KeyboardShortcutsProvider>
                   <ErrorBoundary fallbackTitle="Aplikasi mengalami error">
+                  <Suspense fallback={<RouteLoading />}>
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<Index />} />
@@ -145,6 +158,7 @@ const App = () => {
 
                     <Route path="*" element={<NotFound />} />
                   </Routes>
+                  </Suspense>
                   </ErrorBoundary>
                   <RotationOverlay />
                 </KeyboardShortcutsProvider>

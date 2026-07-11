@@ -1,5 +1,5 @@
 import { InputNilaiIcon } from "@/components/ui/animated-icons";
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { startTransition, useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -99,7 +99,6 @@ import { SmartStudentSearch } from "@/components/grades/SmartStudentSearch";
 import { ChapterStructure } from "@/components/grades/ChapterStructure";
 import { SpreadsheetTable } from "@/components/grades/SpreadsheetTable";
 import { EmptyStudentsState } from "@/components/grades/EmptyStudentsState";
-import { lockGradeTabsMinHeight } from "@/components/grades/gradeTabViewportStability";
 import GradeBackupRestoreDialog from "@/components/grades/GradeBackupRestoreDialog";
 import GradeImportExportDialog, { type GradeImportExportTab } from "@/components/grades/GradeImportExportDialog";
 import {
@@ -381,15 +380,6 @@ export default function Grades({ mode = "owner" }: GradesProps) {
   const [lockedStudentId, setLockedStudentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("input");
   const gradeTabsRef = useRef<HTMLDivElement>(null);
-  const tabTransitionTimerRef = useRef<any>(null);
-  const tabMeasureTimerRef = useRef<any>(null);
-  const tabScrollTimerRef = useRef<any>(null);
-
-  const clearTabChangeTimers = useCallback(() => {
-    if (tabTransitionTimerRef.current) clearTimeout(tabTransitionTimerRef.current);
-    if (tabMeasureTimerRef.current) clearTimeout(tabMeasureTimerRef.current);
-    if (tabScrollTimerRef.current) clearTimeout(tabScrollTimerRef.current);
-  }, []);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenMode, setFullscreenMode] = useState<"browser" | "maximal" | null>(null);
@@ -420,90 +410,28 @@ export default function Grades({ mode = "owner" }: GradesProps) {
     gradeOverlayOpenRef.current = gradeOverlayOpen;
   }, [gradeOverlayOpen]);
 
-  useEffect(() => {
-    return () => {
-      clearTabChangeTimers();
-    };
-  }, [clearTabChangeTimers]);
-
   const handleActiveTabChange = useCallback((nextTab: string) => {
     if (nextTab === activeTab) return;
 
     const tabsElement = gradeTabsRef.current;
     if (!tabsElement) {
-      setActiveTab(nextTab);
+      startTransition(() => setActiveTab(nextTab));
       return;
     }
 
-    // Cancel any ongoing transitions to avoid race conditions
-    clearTabChangeTimers();
+    const previousTop = tabsElement.getBoundingClientRect().top;
+    startTransition(() => setActiveTab(nextTab));
 
-    // 1. Get current height before changing tab
-    const oldHeight = Math.ceil(tabsElement.getBoundingClientRect().height);
-    
-    // Lock height and set overflow to hidden to prevent sudden layout jumps
-    tabsElement.style.height = `${oldHeight}px`;
-    tabsElement.style.overflow = "hidden";
-    tabsElement.style.transition = "none";
+    requestAnimationFrame(() => {
+      const currentElement = gradeTabsRef.current;
+      if (!currentElement) return;
 
-    setActiveTab(nextTab);
-
-    // 2. Measure the new tab content height and animate height smoothly
-    tabMeasureTimerRef.current = setTimeout(() => {
-      if (!tabsElement) return;
-
-      // Lock body min-height to prevent document scroll height from shrinking
-      const oldBodyMinHeight = document.body.style.minHeight;
-      const oldBodyHeight = document.body.style.height;
-      document.body.style.minHeight = `${document.documentElement.scrollHeight}px`;
-
-      // Temporarily remove height to measure new natural height
-      tabsElement.style.height = "";
-      const newHeight = Math.ceil(tabsElement.getBoundingClientRect().height);
-      
-      // Restore the old height to start transition from
-      tabsElement.style.height = `${oldHeight}px`;
-
-      // Restore body styles immediately in the same block
-      document.body.style.minHeight = oldBodyMinHeight;
-      document.body.style.height = oldBodyHeight;
-
-      // Force a layout reflow
-      void tabsElement.offsetHeight;
-
-      // Apply smooth ease-in-out transition for height expanding/shrinking
-      tabsElement.style.transition = "height 400ms cubic-bezier(0.4, 0, 0.2, 1)";
-      tabsElement.style.height = `${newHeight}px`;
-
-      // 3. Clean up inline styles once transition completes
-      tabTransitionTimerRef.current = setTimeout(() => {
-        if (!tabsElement) return;
-        tabsElement.style.height = "";
-        tabsElement.style.overflow = "";
-        tabsElement.style.transition = "";
-      }, 450);
-    }, 50);
-
-    // 4. Scroll smoothly to the container to prevent jarring viewport jumps (accounting for sticky headers)
-    tabScrollTimerRef.current = setTimeout(() => {
-      if (!tabsElement) return;
-      
-      const rect = tabsElement.getBoundingClientRect();
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const elementTop = rect.top + scrollTop;
-      
-      // 76px safety margin accounts for the sticky header + spacing
-      const targetScrollY = Math.max(0, elementTop - 76);
-      const currentScrollY = window.scrollY || document.documentElement.scrollTop;
-      
-      if (Math.abs(currentScrollY - targetScrollY) > 8) {
-        window.scrollTo({
-          top: targetScrollY,
-          behavior: "smooth"
-        });
+      const topDelta = currentElement.getBoundingClientRect().top - previousTop;
+      if (Math.abs(topDelta) > 1) {
+        window.scrollBy({ top: topDelta, behavior: "auto" });
       }
-    }, 80);
-  }, [activeTab, clearTabChangeTimers]);
+    });
+  }, [activeTab]);
 
   useEffect(() => {
     let cancelled = false;

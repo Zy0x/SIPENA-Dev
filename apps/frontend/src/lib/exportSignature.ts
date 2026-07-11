@@ -2,7 +2,7 @@
  * Export Signature Block utilities
  * Adds official signature blocks to PDF, Excel, CSV, dan PNG
  */
-import jsPDF from "jspdf";
+import type jsPDF from "jspdf";
 import {
   estimateSignatureTextWidthMm,
   getSignatureLineSpacing,

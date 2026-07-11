@@ -14,6 +14,7 @@
  import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
  import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
  import { FEATURE_KEYS } from "@/app/providers/featureAccess";
+ import { useAdaptiveMotion } from "@/hooks/useAdaptiveMotion";
  import gsap from "gsap";
  import {
     LayoutDashboard,
@@ -131,6 +132,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { getAccessStatus } = useFeatureFlags();
+  const lightMotion = useAdaptiveMotion();
 
   const visibleNavItems = useMemo(() => {
     const filterItem = (item: NavItem): NavItem | null => {
@@ -185,7 +187,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', sidebarCollapsed.toString());
 
-    if (logoTextRef.current) {
+    if (!lightMotion && logoTextRef.current) {
       gsap.to(logoTextRef.current, {
         opacity: effectiveSidebarCollapsed ? 0 : 1,
         x: effectiveSidebarCollapsed ? -10 : 0,
@@ -196,7 +198,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       });
     }
 
-    if (yearBadgeRef.current) {
+    if (!lightMotion && yearBadgeRef.current) {
       gsap.to(yearBadgeRef.current, {
         opacity: effectiveSidebarCollapsed ? 0 : 1,
         height: effectiveSidebarCollapsed ? 0 : "auto",
@@ -209,7 +211,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
 
     // Stagger nav items on collapse/expand (desktop only)
-    if (sidebarRef.current && isDesktopSidebar) {
+    if (!lightMotion && sidebarRef.current && isDesktopSidebar) {
       const items = Array.from(
         sidebarRef.current.querySelectorAll<HTMLElement>("[data-sidebar-nav-item='true']")
       );
@@ -231,66 +233,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         );
       }
     }
-  }, [sidebarCollapsed, effectiveSidebarCollapsed, isDesktopSidebar]);
- 
-   // GSAP: Mobile overlay animation
-   useEffect(() => {
-     if (!overlayRef.current) return;
- 
-     if (sidebarOpen) {
-       gsap.set(overlayRef.current, { display: "block" });
-       gsap.to(overlayRef.current, {
-         opacity: 1,
-         duration: 0.25,
-         ease: "power2.out"
-       });
-     } else {
-       gsap.to(overlayRef.current, {
-         opacity: 0,
-         duration: 0.2,
-         ease: "power2.in",
-         onComplete: () => {
-           if (overlayRef.current) {
-             gsap.set(overlayRef.current, { display: "none" });
-           }
-         }
-       });
-     }
-   }, [sidebarOpen]);
- 
-   // GSAP: Mobile sidebar slide animation + Desktop initial setup
-   useEffect(() => {
-     if (!sidebarRef.current) return;
- 
-     if (isDesktopSidebar) {
-       gsap.set(sidebarRef.current, { x: 0 });
-     } else {
-       if (sidebarOpen) {
-         gsap.to(sidebarRef.current, {
-           x: 0,
-           duration: 0.3,
-           ease: "power3.out"
-         });
-       } else {
-         gsap.to(sidebarRef.current, {
-           x: "-100%",
-           duration: 0.25,
-           ease: "power2.in"
-         });
-       }
-     }
-   }, [sidebarOpen, isDesktopSidebar]);
- 
-   // Keep transform stable when switching between mobile overlay and desktop rail.
-   useEffect(() => {
-     if (!sidebarRef.current) return;
-
-     if (isDesktopSidebar) {
-       gsap.set(sidebarRef.current, { x: 0 });
-     } else if (!sidebarOpen) {
-       gsap.set(sidebarRef.current, { x: "-100%" });
-     }
-   }, [isDesktopSidebar, sidebarOpen]);
+  }, [sidebarCollapsed, effectiveSidebarCollapsed, isDesktopSidebar, lightMotion]);
 
   // Lock body scroll and contain overscroll when mobile sidebar is open
   useEffect(() => {
@@ -432,6 +375,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
  
    const handleGSAPHover = useCallback((el: HTMLElement | null, isEntering: boolean, config?: { scale?: number; rotation?: number }) => {
      if (!el) return;
+     if (lightMotion) return;
      const scale = config?.scale || 1.05;
      const rotation = config?.rotation || 0;
      gsap.to(el, {
@@ -440,25 +384,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
        duration: 0.2,
        ease: isEntering ? "back.out(1.7)" : "power2.out"
      });
-   }, []);
+   }, [lightMotion]);
  
    const handleGSAPPress = useCallback((el: HTMLElement | null, isPressed: boolean) => {
      if (!el) return;
+     if (lightMotion) return;
      gsap.to(el, {
        scale: isPressed ? 0.92 : 1,
        duration: 0.1,
        ease: "power2.out"
      });
-   }, []);
+   }, [lightMotion]);
  
    return (
      <div className="min-h-screen bg-background flex w-full">
        {/* Mobile overlay */}
        <div
          ref={overlayRef}
-         className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 lg:hidden touch-none"
+         className={cn(
+           "sipena-sidebar-overlay fixed inset-0 z-40 bg-black/70 backdrop-blur-md lg:hidden touch-none",
+           sidebarOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
+         )}
          onClick={() => setSidebarOpen(false)}
-         style={{ display: "none", opacity: 0 }}
          aria-hidden="true"
        />
  
@@ -471,12 +418,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
             "lg:bg-card lg:border-r lg:border-border",
             "bg-card/95 backdrop-blur-xl border-r border-border",
             "shadow-2xl shadow-black/10",
-           "lg:translate-x-0 transition-[width] duration-300 ease-out",
+           "transition-[transform,width] duration-200 ease-out lg:translate-x-0",
            effectiveSidebarCollapsed ? "lg:w-[72px]" : "lg:w-[260px]",
            !isDesktopSidebar && sidebarOpen && "sipena-scroll-isolated"
          )}
          style={{
-           transform: "translateX(-100%)",
            top: "var(--banner-top-offset, 0px)",
            height: "calc(100vh - var(--banner-top-offset, 0px))",
            "--sipena-sidebar-expanded-width": `${SIDEBAR_EXPANDED_WIDTH}px`,

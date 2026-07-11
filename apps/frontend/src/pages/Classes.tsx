@@ -3,6 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,7 +36,7 @@ import ClassKkmSetupDialog from "@/components/classes/ClassKkmSetupDialog";
 import ImportClassesStudentsDialog from "@/components/classes/ImportClassesStudentsDialog";
 import OCRImportDialog from "@/components/import/OCRImportDialog";
 import { ProductTour, TourButton, TourStep } from "@/components/ui/product-tour";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useAdaptiveMotion } from "@/hooks/useAdaptiveMotion";
 import { useGuestAccesses } from "@/hooks/useGuestAccesses";
 import gsap from "gsap";
 
@@ -94,7 +95,7 @@ export default function Classes() {
   const [ocrAddClassOpen, setOcrAddClassOpen] = useState(false);
   const [ocrCreatedClass, setOcrCreatedClass] = useState<Class | null>(null);
   const [showClassKkmGuide, setShowClassKkmGuide] = useState(false);
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useAdaptiveMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const { students: ocrTargetStudents, createStudentsBatch } = useStudents(ocrTargetClassId);
   const accessFilter = searchParams.get("view") === "guest"
@@ -371,30 +372,33 @@ export default function Classes() {
         )}
 
         {!isLoading && !guestAccessLoading && hasAnyClassShortcut && (
-          <div className="flex flex-wrap items-center gap-2">
-            {([
-              ["all", "Semua", displayClasses.length + activeGuestClasses.length],
-              ["owner", "Kelas Saya", displayClasses.length],
-              ["guest", "Guru Tamu", activeGuestClasses.length],
-            ] as const).map(([value, label, count]) => (
-              <Button
-                key={value}
-                type="button"
-                variant={accessFilter === value ? "default" : "outline"}
-                size="sm"
-                className="h-8 rounded-full px-3 text-xs"
-                onClick={() => setAccessFilter(value)}
-              >
-                {value === "guest" && <ShieldCheck className="mr-1 h-3.5 w-3.5" />}
-                {label}
-                <span className="ml-1 rounded-full bg-background/25 px-1.5 text-[10px]">
-                  {count}
-                </span>
-              </Button>
-            ))}
-          </div>
+          <Tabs
+            value={accessFilter}
+            onValueChange={(value) => setAccessFilter(value as "all" | "owner" | "guest")}
+            className="w-full sm:w-auto"
+            data-tour="class-access-filter"
+          >
+            <TabsList className="grid h-11 w-full grid-cols-3 p-1 sm:inline-grid sm:w-auto">
+              {([
+                ["all", "Semua", displayClasses.length + activeGuestClasses.length],
+                ["owner", "Kelas Saya", displayClasses.length],
+                ["guest", "Guru Tamu", activeGuestClasses.length],
+              ] as const).map(([value, label, count]) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className="min-w-0 gap-1 px-2 text-xs sm:min-w-[7.5rem] sm:px-3"
+                >
+                  {value === "guest" && <ShieldCheck className="h-3.5 w-3.5" />}
+                  <span className="truncate">{label}</span>
+                  <span className="rounded-full bg-current/10 px-1.5 text-[10px] tabular-nums">
+                    {count}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         )}
-
         {/* Info hint */}
         {!isLoading && !guestAccessLoading && hasAnyClassShortcut && (
           <div className="flex items-center gap-2 px-1 text-[10px] sm:text-xs text-muted-foreground">

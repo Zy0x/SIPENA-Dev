@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMont
 import { id as idLocale } from "date-fns/locale";
 import gsap from "gsap";
 import { 
-  Loader2, MessageSquare, AlertCircle, X, CalendarDays, CheckCircle2,
+  Loader2, MessageSquare, AlertCircle, CalendarDays, CheckCircle2,
   Users, UserCheck, BarChart3, ChevronLeft, ChevronRight, Bookmark, Plus 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import { useStudents, type Student } from "@/hooks/useStudents";
 import { useAttendanceV2, type AttendanceStatusValue, type DayEvent, type RecapProfile } from "@/hooks/useAttendanceV2";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useEnhancedToast } from "@/contexts/ToastContext";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useAdaptiveMotion } from "@/hooks/useAdaptiveMotion";
 import { useExportLoader } from "@/components/ExportLoaderOverlay";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +47,7 @@ import { AttendanceV2Controls } from "@/components/attendance/v2/AttendanceV2Con
 import { AttendanceV2DailyView } from "@/components/attendance/v2/AttendanceV2DailyView";
 import { AttendanceV2MonthlyView } from "@/components/attendance/v2/AttendanceV2MonthlyView";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { BulkAttendanceDialog } from "@/components/attendance/shared/BulkAttendanceDialog";
 
 type AttendanceStatus = AttendanceStatusValue | null;
 
@@ -134,7 +135,7 @@ const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Jul
 
 export default function AttendanceV2Page() {
   const navigate = useNavigate();
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useAdaptiveMotion();
   const { success: showSuccess, warning: showWarning } = useEnhancedToast();
   const { runWithLoader, overlay: exportOverlay } = useExportLoader();
 
@@ -1391,120 +1392,31 @@ export default function AttendanceV2Page() {
           </div>
         )}
 
-        {/* Bulk Attendance Dialog */}
-        <Dialog open={showBulkDialog} onOpenChange={(open) => { setShowBulkDialog(open); if (!open) { setShowBulkConfirm(false); setExistingBulkStudents([]); } }}>
-          <DialogContent className="sm:max-w-md mx-3 rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-sm sm:text-base">Presensi Massal</DialogTitle>
-              <DialogDescription>
-                Set presensi untuk semua murid pada {format(selectedDate, "d MMMM yyyy", { locale: idLocale })}
-              </DialogDescription>
-            </DialogHeader>
-            
-            {showBulkConfirm && existingBulkStudents.length > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-grade-warning/10 border border-grade-warning/30">
-                  <AlertCircle className="w-4 h-4 text-grade-warning shrink-0 mt-0.5" />
-                  <div className="text-xs">
-                    <p className="font-semibold text-grade-warning">Data presensi sudah ada!</p>
-                    <p className="text-muted-foreground mt-0.5">
-                      {existingBulkStudents.length} dari {students.length} murid sudah memiliki data presensi pada tanggal ini.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="max-h-[200px] overflow-y-auto rounded-xl border border-border">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/50 sticky top-0">
-                      <tr>
-                        <th className="text-left px-3 py-1.5 font-medium">Nama Murid</th>
-                        <th className="text-center px-2 py-1.5 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {existingBulkStudents.map((s, i) => (
-                        <tr key={i} className="border-t border-border/30">
-                          <td className="px-3 py-1.5">{s.name}</td>
-                          <td className="px-2 py-1.5 text-center font-medium">{s.status}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                
-                <p className="text-xs text-muted-foreground">
-                  Apakah Anda yakin ingin menimpa data presensi yang sudah ada dengan status <strong>{statusLabels[bulkStatus!]}</strong>?
-                </p>
-                
-                <DialogFooter className="gap-2 flex flex-col sm:flex-row sm:justify-end">
-                  <Button variant="outline" onClick={() => { setShowBulkConfirm(false); setExistingBulkStudents([]); }} size="sm" className="sipena-btn text-xs rounded-xl">
-                    Batal
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => handleBulkAttendance(true)} 
-                    disabled={isSaving} 
-                    size="sm" 
-                    className="sipena-btn text-xs rounded-xl text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 dark:text-amber-400 dark:border-amber-900/50 dark:bg-amber-950/20"
-                  >
-                    Isi yang Kosong Saja ({students.length - existingBulkStudents.length})
-                  </Button>
-                  <Button variant="destructive" onClick={() => handleBulkAttendance(false)} disabled={isSaving} size="sm" className="sipena-btn text-xs rounded-xl">
-                    {isSaving && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-                    Timpa Semua ({students.length})
-                  </Button>
-                </DialogFooter>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-2 py-3">
-                  {allStatuses.map((s) => {
-                    const cfg = statusConfig[s];
-                    const IconComp = cfg.icon;
-                    return (
-                      <button key={s} onClick={() => setBulkStatus(s)}
-                        className={cn("sipena-bulk-option-btn flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px]",
-                          bulkStatus === s ? cn(cfg.bgActive, "shadow-md") : "bg-muted/50 text-foreground active:bg-muted/80 lg:hover:bg-muted"
-                        )}>
-                        <IconComp className="w-5 h-5 flex-shrink-0" />
-                        <div><p className="text-sm font-bold">{s}</p><p className="text-[10px] opacity-70">{cfg.label}</p></div>
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => setBulkStatus(null)}
-                    className={cn(
-                      "sipena-bulk-option-btn flex items-center gap-3 p-3 rounded-2xl transition-all text-left touch-manipulation min-h-[52px] col-span-2",
-                      bulkStatus === null
-                        ? "bg-muted-foreground text-background shadow-md"
-                        : "bg-muted/50 text-foreground active:bg-muted/80 lg:hover:bg-muted border border-dashed border-border"
-                    )}
-                  >
-                    <X className="w-5 h-5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-bold">Kosongkan</p>
-                      <p className="text-[10px] opacity-70">Hapus semua presensi di tanggal ini</p>
-                    </div>
-                  </button>
-                </div>
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" onClick={() => setShowBulkDialog(false)} size="sm" className="sipena-btn text-xs rounded-xl">Batal</Button>
-                  <Button
-                    onClick={bulkStatus === null ? handleBulkClear : () => handleBulkAttendance(false)}
-                    disabled={isSaving}
-                    size="sm"
-                    className="sipena-btn text-xs rounded-xl"
-                    variant={bulkStatus === null ? "destructive" : "default"}
-                  >
-                    {isSaving && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-                    {bulkStatus === null ? `Kosongkan (${students.length})` : `Terapkan (${students.length})`}
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
-
+        <BulkAttendanceDialog
+          open={showBulkDialog}
+          onOpenChange={(open) => {
+            setShowBulkDialog(open);
+            if (!open) {
+              setShowBulkConfirm(false);
+              setExistingBulkStudents([]);
+            }
+          }}
+          selectedDate={selectedDate}
+          studentCount={students.length}
+          selectedStatus={bulkStatus}
+          onStatusChange={setBulkStatus}
+          statusConfig={statusConfig}
+          statusLabels={statusLabels}
+          isSaving={isSaving}
+          showConfirm={showBulkConfirm}
+          existingStudents={existingBulkStudents}
+          onCancelConfirm={() => {
+            setShowBulkConfirm(false);
+            setExistingBulkStudents([]);
+          }}
+          onApply={(onlyEmpty) => void handleBulkAttendance(onlyEmpty)}
+          onClear={() => void handleBulkClear()}
+        />
         {/* Note Dialog */}
         <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
           <DialogContent className="sm:max-w-sm mx-3 rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">

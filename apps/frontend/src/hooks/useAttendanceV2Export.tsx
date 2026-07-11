@@ -8,12 +8,9 @@ import {
   FileText, FileSpreadsheet, Image as ImageIcon, Bookmark, 
   Loader2, CheckCircle2, Clock, ShieldAlert, XCircle, Info
 } from "lucide-react";
-import * as XLSX from "xlsx-js-style";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import type * as XLSXType from "xlsx-js-style";
 import { addSignatureBlockPDF, getSignatureRowsExcel, generateSignatureHTML, generateSignatureHTMLInline } from "@/lib/exportSignature";
 import { buildAttendancePrintLayoutPlan, type AttendanceAnnotationDisplayMode, type AttendanceInlineLabelStyle, type AttendancePrintDataset } from "@/lib/attendancePrintLayout";
-import { buildAttendancePdfDocument, exportAttendancePdf } from "@/lib/attendancePdfExport";
 import {
   collectTraceMismatches,
   downloadAttendanceExportTrace,
@@ -32,6 +29,13 @@ interface Student {
   id: string;
   name: string;
   nisn?: string | null;
+}
+
+let XLSX: typeof XLSXType | undefined;
+
+async function loadAttendanceXlsx() {
+  XLSX ??= await import("xlsx-js-style");
+  return XLSX;
 }
 
 interface HolidayRecord {
@@ -117,13 +121,14 @@ function getAttendancePngTargetWidthPx(quality: "hd" | "4k") {
 }
 
 
-function styleAttendanceCell(ws: XLSX.WorkSheet, row: number, col: number, style: XLSX.CellStyle) {
+function styleAttendanceCell(ws: XLSXType.WorkSheet, row: number, col: number, style: XLSXType.CellStyle) {
+  if (!XLSX) throw new Error("Excel engine belum dimuat");
   const ref = XLSX.utils.encode_cell({ r: row, c: col });
   if (!ws[ref]) ws[ref] = { t: "s", v: "" };
   ws[ref].s = { ...(ws[ref].s || {}), ...style };
 }
 
-function styleAttendanceRange(ws: XLSX.WorkSheet, startRow: number, endRow: number, startCol: number, endCol: number, style: XLSX.CellStyle | ((row: number, col: number) => XLSX.CellStyle)) {
+function styleAttendanceRange(ws: XLSXType.WorkSheet, startRow: number, endRow: number, startCol: number, endCol: number, style: XLSXType.CellStyle | ((row: number, col: number) => XLSXType.CellStyle)) {
   for (let row = startRow; row <= endRow; row += 1) {
     for (let col = startCol; col <= endCol; col += 1) {
       styleAttendanceCell(ws, row, col, typeof style === "function" ? style(row, col) : style);
@@ -142,7 +147,7 @@ function statusFill(value: unknown) {
   return undefined;
 }
 
-function polishAttendanceWorksheet(ws: XLSX.WorkSheet, options: {
+function polishAttendanceWorksheet(ws: XLSXType.WorkSheet, options: {
   titleRow?: number;
   headerRowStart?: number;
   headerRowEnd?: number;
@@ -154,6 +159,7 @@ function polishAttendanceWorksheet(ws: XLSX.WorkSheet, options: {
   dayStartCol?: number;
   dayEndCol?: number;
 }) {
+  if (!XLSX) throw new Error("Excel engine belum dimuat");
   const {
     titleRow = 0,
     headerRowStart,
@@ -183,7 +189,7 @@ function polishAttendanceWorksheet(ws: XLSX.WorkSheet, options: {
       border: EXCEL_BORDER,
     });
     ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: headerRowEnd, c: 0 }, e: { r: Math.max(headerRowEnd, dataRowEnd ?? headerRowEnd), c: lastCol } }) };
-    (ws as XLSX.WorkSheet & { "!freeze"?: { xSplit?: number; ySplit?: number } })["!freeze"] = { xSplit: 3, ySplit: headerRowEnd + 1 };
+    (ws as XLSXType.WorkSheet & { "!freeze"?: { xSplit?: number; ySplit?: number } })["!freeze"] = { xSplit: 3, ySplit: headerRowEnd + 1 };
   }
   if (dataRowStart !== undefined && dataRowEnd !== undefined) {
     styleAttendanceRange(ws, dataRowStart, dataRowEnd, 0, lastCol, (row, col) => {
@@ -529,6 +535,7 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
     const visibleSet = new Set(exportVisibleColumnKeys);
     const fileName = `Presensi_${selectedClass.name}_${currentMonth.getFullYear()}.xlsx`;
     await runWithLoader(fileName, async (progress) => {
+      await loadAttendanceXlsx();
       progress.update({ percent: 8, phase: "Data", message: "Mengambil data presensi tahunan." });
       await progress.yieldFrame();
       const year = currentMonth.getFullYear();
@@ -838,6 +845,7 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
 
     try {
       await runWithLoader(fileName, async (progress) => {
+        const { exportAttendancePdf } = await import("@/lib/attendancePdfExport");
         progress.update({ percent: 12, phase: "Layout PDF", message: "Menghitung layout halaman presensi." });
         await progress.yieldFrame();
         const plan = buildAttendancePrintLayoutPlan({
@@ -954,6 +962,7 @@ export function useAttendanceV2Export(params: UseAttendanceV2ExportParams) {
 
     try {
       const exportResult = await runWithLoader(`${baseFileName}.png`, async (progress) => {
+        const { buildAttendancePdfDocument } = await import("@/lib/attendancePdfExport");
         progress.update({ percent: 10, phase: "Layout", message: "Menghitung layout presensi untuk PNG." });
         await progress.yieldFrame();
         const plan = buildAttendancePrintLayoutPlan({

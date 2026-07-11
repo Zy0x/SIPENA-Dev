@@ -43,6 +43,9 @@ describe("app layout responsive sidebar guard", () => {
     expect(globalStyles).toContain('@media (min-width: 640px) and (max-width: 1023px)');
     expect(globalStyles).toContain('@media (min-width: 1024px)');
     expect(globalStyles).toContain('.sipena-app-sidebar[data-sidebar-collapsed="true"]');
+    expect(globalStyles).toContain('.sipena-app-sidebar[data-sidebar-state="open"]');
+    expect(globalStyles).toContain("transform: translate3d(-100%, 0, 0)");
+    expect(appLayoutSource).toContain("useAdaptiveMotion");
     expect(globalStyles).toContain("--sipena-sidebar-expanded-width");
     expect(globalStyles).toContain("--sipena-sidebar-collapsed-width");
 

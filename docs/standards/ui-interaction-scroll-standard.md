@@ -26,6 +26,9 @@ Dokumen ini menjadi standar global untuk tombol, state warna, modal, dropdown, p
 - Source guard UI wajib memeriksa keberadaan `sipena-tab-trigger` dan `sipena-tour-action` ketika primitive tab atau tour diubah.
 - Pilihan katalog/kategori yang berperilaku seperti toggle wajib menyimpan state pada `data-selected`, bukan mengandalkan `:hover` atau `:active`. Gunakan kelas semantik domain seperti `sipena-subject-choice` agar warna aktif tetap permanen setelah tap pada coarse pointer.
 - Shared `Button` membawa `data-button-variant`. Aturan coarse-pointer wajib mempertahankan warna dasar variant utama, destructive, dan outline pada `hover`, `active`, dan `focus-visible`; jangan menghapus warna tombol secara global tanpa pengganti berbasis variant.
+- Semua shared `Button` wajib memakai `touch-manipulation` dan melepaskan focus visual setelah tap coarse-pointer selesai. Efek `active:scale` dan sticky hover tidak boleh dipakai sebagai satu-satunya indikator aksi.
+- Segmented filter yang memilih satu dari beberapa tampilan wajib memakai shared `Tabs`. Pada mobile, gunakan track grid simetris agar pilihan tidak membungkus menjadi baris acak.
+- Tombol pilihan custom yang bukan tab wajib memakai `aria-pressed`, `data-selected`, dan kelas `sipena-choice-button`; warna terpilih harus berasal dari state tersebut.
 
 ### Collapsible dan Kartu Pilihan Touch
 

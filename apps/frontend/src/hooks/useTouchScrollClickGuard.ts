@@ -29,6 +29,16 @@ function isInteractiveTarget(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest(INTERACTIVE_SELECTOR));
 }
 
+function releaseTouchFocus(target: EventTarget | null) {
+  if (!(target instanceof Element)) return;
+  const interactive = target.closest<HTMLElement>(INTERACTIVE_SELECTOR);
+  if (!interactive || interactive.matches("input, textarea, select, [contenteditable='true']")) return;
+
+  requestAnimationFrame(() => {
+    if (document.activeElement === interactive) interactive.blur();
+  });
+}
+
 export function useTouchScrollClickGuard() {
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -74,6 +84,8 @@ export function useTouchScrollClickGuard() {
       if (isTouchPointer(event) && event.pointerId === activePointerId) {
         if (movedBeyondThreshold) {
           markTouchScroll();
+        } else {
+          releaseTouchFocus(event.target);
         }
         clearPointer();
       }
