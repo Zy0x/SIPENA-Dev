@@ -17,6 +17,14 @@ const apiBaseUrl = (() => {
   }
   return base;
 })();
+
+type AttendanceV2StorageMode = "legacy" | "v2";
+
+const getAttendanceV2StorageMode = (): AttendanceV2StorageMode => {
+  if (typeof window === "undefined") return "v2";
+  return window.location.pathname === "/attendance" ? "legacy" : "v2";
+};
+
 import {
   createAttendancePersistOutcome,
   useQueuedAttendanceSave,
@@ -197,6 +205,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   const queryClient = useQueryClient();
   const monthStart = format(startOfMonth(month), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(month), "yyyy-MM-dd");
+  const storageMode = useMemo(() => getAttendanceV2StorageMode(), []);
+  const usesLegacyAttendanceStorage = storageMode === "legacy";
 
   const [localAttendance, setLocalAttendance] = useState<AttendanceRecord[]>([]);
   const [localHolidays, setLocalHolidays] = useState<HolidayRecord[]>([]);
@@ -223,8 +233,8 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
   }, [monthStart]);
 
   const attendanceDatasetQueryKey = useMemo(
-    () => ["attendance_v2_dataset", classId, monthStart, dbAvailable] as const,
-    [classId, monthStart, dbAvailable]
+    () => ["attendance_v2_dataset", storageMode, classId, monthStart, dbAvailable] as const,
+    [storageMode, classId, monthStart, dbAvailable]
   );
 
   useEffect(() => {
@@ -251,37 +261,52 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     queryFn: async () => {
       if (!classId || !user || !dbAvailable) return null;
 
-      const { data: { session } } = await (supabase as any).auth.getSession();
-      const token = session?.access_token;
-
       // Ambil format YYYY-MM untuk query parameter month
       const monthStr = monthStart.substring(0, 7);
-      const url = `${apiBaseUrl}/attendance/v2?classId=${classId}&month=${monthStr}`;
 
-      try {
-        const res = await fetch(url, {
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token || ""}`,
-          },
-        });
+      if (!usesLegacyAttendanceStorage) {
+        const { data: { session } } = await (supabase as any).auth.getSession();
+        const token = session?.access_token;
+        const url = `${apiBaseUrl}/attendance/v2?classId=${classId}&month=${monthStr}`;
 
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data && !json.error) {
-            return json.data as AttendanceDatasetCanonical;
+        try {
+          const res = await fetch(url, {
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token || ""}`,
+            },
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            if (json.data && !json.error) {
+              return json.data as AttendanceDatasetCanonical;
+            }
           }
+        } catch (apiError) {
+          console.warn("V2 API Fetch failed, falling back to direct Supabase queries:", apiError);
         }
-      } catch (apiError) {
-        console.warn("V2 API Fetch failed, falling back to direct Supabase queries:", apiError);
       }
 
       // Direct Supabase Fallback Fetch
+      const recordsQuery = usesLegacyAttendanceStorage
+        ? (supabase as any).from("attendance_records").select("*").eq("class_id", classId).gte("date", monthStart).lte("date", monthEnd)
+        : (supabase as any).from("attendance_v2_records").select("*").eq("class_id", classId).gte("date", monthStart).lte("date", monthEnd);
+      const holidaysQuery = usesLegacyAttendanceStorage
+        ? (supabase as any).from("attendance_holidays").select("*").eq("user_id", user.id)
+        : (supabase as any).from("attendance_v2_holidays").select("*").or(`class_id.eq.${classId},class_id.is.null`).gte("date", monthStart).lte("date", monthEnd);
+      const dayEventsQuery = usesLegacyAttendanceStorage
+        ? (supabase as any).from("attendance_day_events").select("*").eq("user_id", user.id)
+        : (supabase as any).from("attendance_v2_day_events").select("*").eq("class_id", classId).gte("date", monthStart).lte("date", monthEnd);
+      const locksQuery = usesLegacyAttendanceStorage
+        ? (supabase as any).from("attendance_locks").select("*").eq("class_id", classId).eq("user_id", user.id).eq("month", monthStart)
+        : (supabase as any).from("attendance_v2_locks").select("*").eq("class_id", classId).eq("month", monthStr);
+
       const [recordsRes, holidaysRes, dayEventsRes, locksRes, studentsRes] = await Promise.all([
-        (supabase as any).from("attendance_v2_records").select("*").eq("class_id", classId).gte("date", monthStart).lte("date", monthEnd),
-        (supabase as any).from("attendance_v2_holidays").select("*").or(`class_id.eq.${classId},class_id.is.null`).gte("date", monthStart).lte("date", monthEnd),
-        (supabase as any).from("attendance_v2_day_events").select("*").eq("class_id", classId).gte("date", monthStart).lte("date", monthEnd),
-        (supabase as any).from("attendance_v2_locks").select("*").eq("class_id", classId).eq("month", monthStr),
+        recordsQuery,
+        holidaysQuery,
+        dayEventsQuery,
+        locksQuery,
         (supabase as any).from("students").select("id, name").eq("class_id", classId)
       ]);
 
@@ -553,12 +578,70 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       localStorage.removeItem(key);
       window.dispatchEvent(new CustomEvent("attendance_v2_sync_complete", { detail: { successCount, totalCount: queue.length } }));
       
-      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
       syncInProgressRef.current = false;
     };
 
     performSync();
-  }, [dbAvailable, user, classId, monthStart]);
+  }, [attendanceDatasetQueryKey, dbAvailable, user, classId, monthStart]);
+
+  const persistLegacyAttendancePatch = useCallback(async ({
+    studentId,
+    date,
+    status,
+    note,
+    classId: patchClassId,
+  }: QueuedAttendanceMutationParams): Promise<AttendanceRecord | null> => {
+    if (!user || !patchClassId) throw new Error("User or class not set");
+    if (!dbAvailable) return null;
+
+    const { data: existingData } = await (supabase as any)
+      .from("attendance_records")
+      .select("id,note")
+      .eq("class_id", patchClassId)
+      .eq("student_id", studentId)
+      .eq("date", date)
+      .maybeSingle();
+
+    const existing = existingData as { id: string; note?: string | null } | null;
+
+    if (status === null) {
+      if (existing) {
+        const { error } = await (supabase as any).from("attendance_records").delete().eq("id", existing.id);
+        if (error) throw error;
+      }
+      return null;
+    }
+
+    const payload: Record<string, unknown> = { status };
+    payload.note = note !== undefined ? note : existing?.note ?? null;
+
+    if (existing) {
+      const { data, error } = await (supabase as any)
+        .from("attendance_records")
+        .update(payload)
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as AttendanceRecord;
+    }
+
+    const { data, error } = await (supabase as any)
+      .from("attendance_records")
+      .insert({
+        class_id: patchClassId,
+        student_id: studentId,
+        date,
+        status,
+        note: note ?? null,
+        created_by: user.id,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as AttendanceRecord;
+  }, [dbAvailable, user]);
 
   // Set attendance mutation (supports D status + note)
   const setAttendanceMutation = useMutation({
@@ -584,6 +667,10 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
           return [...prev, { class_id: classId, student_id: studentId, date, status, note: note || null }];
         });
         return null;
+      }
+
+      if (usesLegacyAttendanceStorage) {
+        return persistLegacyAttendancePatch({ classId, studentId, date, status, note });
       }
 
       const { data: { session } } = await (supabase as any).auth.getSession();
@@ -736,6 +823,13 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
         cursor += 1;
         try {
           const snapshot = entry.previousSnapshot;
+
+          if (usesLegacyAttendanceStorage) {
+            const result = await persistLegacyAttendancePatch(entry.patch);
+            outcome.successes.set(entry.key, result ? { id: result.id, updatedAt: null } : null);
+            continue;
+          }
+
           const expectedUpdatedAt = snapshot && 'updatedAt' in snapshot ? snapshot.updatedAt : (snapshot && 'updated_at' in snapshot ? snapshot.updated_at : null);
           
           const { data, error } = await (supabase as any).rpc("upsert_attendance_v2_optimistic", {
@@ -817,7 +911,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
 
     await Promise.all(Array.from({ length: workerCount }, runWorker));
     return outcome;
-  }, [addOfflineMutation, dbAvailable, user]);
+  }, [addOfflineMutation, dbAvailable, persistLegacyAttendancePatch, user, usesLegacyAttendanceStorage]);
 
   const attendanceSaveQueue = useQueuedAttendanceSave<QueuedAttendanceMutationParams, any>({
     debounceMs: 300,
@@ -851,6 +945,25 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
           }
           return prev;
         });
+        return null;
+      }
+
+      if (usesLegacyAttendanceStorage) {
+        const { data: existingData } = await (supabase as any)
+          .from("attendance_records")
+          .select("id")
+          .eq("class_id", classId)
+          .eq("student_id", studentId)
+          .eq("date", date)
+          .maybeSingle();
+
+        if (existingData) {
+          const { error } = await (supabase as any)
+            .from("attendance_records")
+            .update({ note })
+            .eq("id", existingData.id);
+          if (error) throw error;
+        }
         return null;
       }
 
@@ -889,7 +1002,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
     onSuccess: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
       }
     },
   });
@@ -915,6 +1028,27 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
           return [...filtered, ...newRecords];
         });
         return null;
+      }
+
+      if (usesLegacyAttendanceStorage) {
+        const { error: deleteError } = await (supabase as any)
+          .from("attendance_records")
+          .delete()
+          .eq("class_id", classId)
+          .eq("date", date);
+        if (deleteError) throw deleteError;
+
+        const records = studentIds.map((studentId) => ({
+          class_id: classId,
+          student_id: studentId,
+          date,
+          status,
+          created_by: user.id,
+        }));
+
+        const { data, error } = await (supabase as any).from("attendance_records").insert(records).select();
+        if (error) throw error;
+        return data;
       }
 
       const { data: { session } } = await (supabase as any).auth.getSession();
@@ -971,7 +1105,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
     onSuccess: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
       }
     },
   });
@@ -991,6 +1125,28 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
           : [...prev, { date, description: description || "Hari Libur", class_id: resolvedClassId || null } as any]
         );
         return { action: exists ? "deleted" : "added" };
+      }
+
+      if (usesLegacyAttendanceStorage) {
+        const { data: existingData } = await (supabase as any)
+          .from("attendance_holidays")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("date", date)
+          .maybeSingle();
+
+        const existing = existingData as { id: string } | null;
+        if (existing) {
+          const { error } = await (supabase as any).from("attendance_holidays").delete().eq("id", existing.id);
+          if (error) throw error;
+          return { action: "deleted" };
+        }
+
+        const { error } = await (supabase as any)
+          .from("attendance_holidays")
+          .insert({ user_id: user.id, date, description: description || "Hari Libur" });
+        if (error) throw error;
+        return { action: "added" };
       }
 
       const { data: { session } } = await (supabase as any).auth.getSession();
@@ -1018,13 +1174,13 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
     onMutate: async ({ date, description, classId: targetClassId }) => {
       const resolvedClassId = targetClassId !== undefined ? targetClassId : classId;
-      await queryClient.cancelQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      await queryClient.cancelQueries({ queryKey: attendanceDatasetQueryKey });
       
-      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(["attendance_v2_dataset", classId, monthStart]);
+      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(attendanceDatasetQueryKey);
       
       if (previousDataset && dbAvailable) {
         queryClient.setQueryData<AttendanceDatasetCanonical>(
-          ["attendance_v2_dataset", classId, monthStart],
+          attendanceDatasetQueryKey,
           (old) => {
             if (!old) return old;
             
@@ -1045,12 +1201,12 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
     onError: (err, newHoliday, context) => {
       if (context?.previousDataset) {
-        queryClient.setQueryData(["attendance_v2_dataset", classId, monthStart], context.previousDataset);
+        queryClient.setQueryData(attendanceDatasetQueryKey, context.previousDataset);
       }
     },
     onSettled: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
       }
     },
   });
@@ -1071,6 +1227,40 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
           }
           return [...prev, { ...event, user_id: user.id }];
         });
+        return;
+      }
+
+      if (usesLegacyAttendanceStorage) {
+        const { data: existingData } = await (supabase as any)
+          .from("attendance_day_events")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("date", event.date)
+          .maybeSingle();
+
+        if (existingData) {
+          const { error } = await (supabase as any)
+            .from("attendance_day_events")
+            .update({
+              label: event.label,
+              description: event.description,
+              color: event.color,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingData.id);
+          if (error) throw error;
+        } else {
+          const { error } = await (supabase as any)
+            .from("attendance_day_events")
+            .insert({
+              user_id: user.id,
+              date: event.date,
+              label: event.label,
+              description: event.description,
+              color: event.color || "blue",
+            });
+          if (error) throw error;
+        }
         return;
       }
 
@@ -1097,12 +1287,12 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       }
     },
     onMutate: async (event) => {
-      await queryClient.cancelQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
-      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(["attendance_v2_dataset", classId, monthStart]);
+      await queryClient.cancelQueries({ queryKey: attendanceDatasetQueryKey });
+      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(attendanceDatasetQueryKey);
       
       if (previousDataset && dbAvailable) {
         queryClient.setQueryData<AttendanceDatasetCanonical>(
-          ["attendance_v2_dataset", classId, monthStart],
+          attendanceDatasetQueryKey,
           (old: any) => {
             if (!old) return old;
             const exists = old.dayEvents?.findIndex((e: any) => e.date === event.date) ?? -1;
@@ -1131,12 +1321,12 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
     onError: (err, newEvent, context) => {
       if (context?.previousDataset) {
-        queryClient.setQueryData(["attendance_v2_dataset", classId, monthStart], context.previousDataset);
+        queryClient.setQueryData(attendanceDatasetQueryKey, context.previousDataset);
       }
     },
     onSettled: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
       }
     },
   });
@@ -1148,6 +1338,16 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       if (!dbAvailable) {
         addOfflineMutation("deleteDayEvent", date);
         setLocalDayEvents(prev => prev.filter(e => e.date !== date));
+        return;
+      }
+
+      if (usesLegacyAttendanceStorage) {
+        const { error } = await (supabase as any)
+          .from("attendance_day_events")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("date", date);
+        if (error) throw error;
         return;
       }
 
@@ -1170,12 +1370,12 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       }
     },
     onMutate: async (date) => {
-      await queryClient.cancelQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
-      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(["attendance_v2_dataset", classId, monthStart]);
+      await queryClient.cancelQueries({ queryKey: attendanceDatasetQueryKey });
+      const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical>(attendanceDatasetQueryKey);
       
       if (previousDataset && dbAvailable) {
         queryClient.setQueryData<AttendanceDatasetCanonical>(
-          ["attendance_v2_dataset", classId, monthStart],
+          attendanceDatasetQueryKey,
           (old: any) => {
             if (!old) return old;
             return {
@@ -1189,12 +1389,12 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
     onError: (err, date, context) => {
       if (context?.previousDataset) {
-        queryClient.setQueryData(["attendance_v2_dataset", classId, monthStart], context.previousDataset);
+        queryClient.setQueryData(attendanceDatasetQueryKey, context.previousDataset);
       }
     },
     onSettled: () => {
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
       }
     },
   });
@@ -1243,7 +1443,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       ]);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
     }
   });
 
@@ -1297,6 +1497,36 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
 
       const monthStr = monthStart.substring(0, 7);
 
+      if (usesLegacyAttendanceStorage) {
+        const { data: existingData } = await (supabase as any)
+          .from("attendance_locks")
+          .select("id")
+          .eq("class_id", classId)
+          .eq("user_id", user.id)
+          .eq("month", monthStart)
+          .maybeSingle();
+
+        if (existingData) {
+          const { error } = await (supabase as any)
+            .from("attendance_locks")
+            .update({ is_locked: locked, locked_at: new Date().toISOString() })
+            .eq("id", existingData.id);
+          if (error) throw error;
+        } else {
+          const { error } = await (supabase as any)
+            .from("attendance_locks")
+            .insert({
+              class_id: classId,
+              user_id: user.id,
+              month: monthStart,
+              is_locked: locked,
+              locked_by: user.id,
+            });
+          if (error) throw error;
+        }
+        return locked;
+      }
+
       try {
         const { data: { session } } = await (supabase as any).auth.getSession();
         const token = session?.access_token;
@@ -1349,7 +1579,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
     onMutate: async (locked: boolean) => {
       // Cancel active query refetches
-      await queryClient.cancelQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      await queryClient.cancelQueries({ queryKey: attendanceDatasetQueryKey });
 
       const previousDataset = queryClient.getQueryData<AttendanceDatasetCanonical | null>(attendanceDatasetQueryKey);
 
@@ -1381,7 +1611,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     onSuccess: (locked) => {
       setLocalLocked(locked);
       if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
       }
     },
   });
@@ -1418,7 +1648,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     onSuccess: () => {
       if (dbAvailable) {
         queryClient.invalidateQueries({ queryKey: ["attendance", classId, monthStart] });
-        queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+        queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
       }
     },
   });
@@ -1512,7 +1742,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance_v2_recap_profile", classId] });
-      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
     },
   });
 
@@ -1617,7 +1847,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       return json.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["attendance_v2_dataset", classId, monthStart] });
+      queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
     },
   });
 
@@ -1771,9 +2001,15 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     }
 
      const [attendanceResult, holidaysResult, dayEventsResult] = await Promise.all([
-      (supabase as any).from("attendance_v2_records").select("*").eq("class_id", classId).gte("date", yearStart).lte("date", yearEnd),
-      (supabase as any).from("attendance_v2_holidays").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd),
-      (supabase as any).from("attendance_v2_day_events").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd).then((r: any) => r).catch(() => ({ data: [] })),
+      usesLegacyAttendanceStorage
+        ? (supabase as any).from("attendance_records").select("*").eq("class_id", classId).gte("date", yearStart).lte("date", yearEnd)
+        : (supabase as any).from("attendance_v2_records").select("*").eq("class_id", classId).gte("date", yearStart).lte("date", yearEnd),
+      usesLegacyAttendanceStorage
+        ? (supabase as any).from("attendance_holidays").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd)
+        : (supabase as any).from("attendance_v2_holidays").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd),
+      usesLegacyAttendanceStorage
+        ? (supabase as any).from("attendance_day_events").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd).then((r: any) => r).catch(() => ({ data: [] }))
+        : (supabase as any).from("attendance_v2_day_events").select("*").eq("user_id", user.id).gte("date", yearStart).lte("date", yearEnd).then((r: any) => r).catch(() => ({ data: [] })),
     ]);
 
     return {
@@ -1781,7 +2017,7 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
       holidays: (holidaysResult.data || []) as HolidayRecord[],
       dayEvents: (dayEventsResult.data || []) as DayEvent[],
     };
-  }, [user, classId, dbAvailable, localAttendance, localHolidays, localDayEvents]);
+  }, [user, classId, dbAvailable, localAttendance, localHolidays, localDayEvents, usesLegacyAttendanceStorage]);
 
   return {
     attendanceRecords, holidays, dayEvents, isLocked, dbAvailable,
