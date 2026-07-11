@@ -49,6 +49,17 @@ function verifyAdminPassword(password: string): boolean {
   return password === envPassword;
 }
 
+function disabledV2PromotionResponse() {
+  return new Response(
+    JSON.stringify({
+      error: "V2_TO_PRODUCTION_PROMOTION_DISABLED",
+      message:
+        "Merge data Presensi V2 ke tabel produksi lama dinonaktifkan untuk menjaga data presensi lama tetap aman. Gunakan jalur migrasi idempotent yang sudah tervalidasi sebelum cutover.",
+    }),
+    { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
 // Dynamically discover all public tables in the database
 async function discoverTables(supabase: any): Promise<string[]> {
   try {
@@ -213,10 +224,10 @@ serve(async (req) => {
         return await handleDiscoverTables(supabaseAdmin);
       }
       case "v2-pending-list": {
-        return await handleV2PendingList(supabaseAdmin);
+        return disabledV2PromotionResponse();
       }
       case "v2-promote": {
-        return await handleV2Promote(supabaseAdmin, classId, month, workDayFormat);
+        return disabledV2PromotionResponse();
       }
       case "table-detail": {
         if (!table || typeof table !== "string") {
@@ -682,148 +693,5 @@ async function handleStats(supabase: any): Promise<Response> {
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
-}
-
-// --- V2 Merge Handlers ---
-
-async function handleV2PendingList(supabase: any) {
-  try {
-    // We get distinct class_id and month from attendance_v2_records
-    // Since Supabase doesn't have a distinct query builder, we fetch all and distinct in JS (ok for small-mid datasets)
-    const { data: records, error } = await supabase
-      .from("attendance_v2_records")
-      .select("class_id, date, classes(name)");
-      
-    if (error) throw error;
-    
-    const pendingMap = new Map<string, any>();
-    
-    (records || []).forEach((r: any) => {
-      const month = r.date.substring(0, 7); // yyyy-MM
-      const key = `${r.class_id}_${month}`;
-      if (!pendingMap.has(key)) {
-        pendingMap.set(key, {
-          class_id: r.class_id,
-          class_name: r.classes?.name || "Unknown Class",
-          month: month,
-          record_count: 1
-        });
-      } else {
-        pendingMap.get(key).record_count++;
-      }
-    });
-    
-    return new Response(
-      JSON.stringify({ success: true, data: Array.from(pendingMap.values()) }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error: any) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-}
-
-async function handleV2Promote(supabase: any, classId: string, month: string, workDayFormat: string = "6days") {
-  if (!classId || !month) {
-    return new Response(
-      JSON.stringify({ error: "classId and month are required" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  try {
-    // 1. Fetch V2 data for the month
-    const startDate = `${month}-01`;
-    const tempDate = new Date(`${month}-01`);
-    const endDate = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0).toISOString().split('T')[0];
-
-    const [v2Records, v2Holidays, v2Events, v2Locks] = await Promise.all([
-      supabase.from("attendance_v2_records").select("*").eq("class_id", classId).gte("date", startDate).lte("date", endDate),
-      supabase.from("attendance_v2_holidays").select("*").eq("class_id", classId).gte("date", startDate).lte("date", endDate),
-      supabase.from("attendance_v2_events").select("*").eq("class_id", classId).gte("date", startDate).lte("date", endDate),
-      supabase.from("attendance_v2_locks").select("*").eq("class_id", classId).gte("month", startDate).lte("month", endDate),
-    ]);
-
-    if (v2Records.error) throw v2Records.error;
-
-    // Optional filtering for 5-day format (skip Saturdays - Day 6)
-    const filter5Days = (item: any, dateField: string) => {
-      if (workDayFormat !== "5days") return true;
-      const d = new Date(item[dateField]);
-      return d.getDay() !== 6;
-    };
-
-    const finalRecords = (v2Records.data || []).filter(r => filter5Days(r, "date"));
-    const finalHolidays = (v2Holidays.data || []).filter(h => filter5Days(h, "date"));
-    const finalEvents = (v2Events.data || []).filter(e => filter5Days(e, "date"));
-
-    // 2. Delete existing V1 data for that month
-    await Promise.all([
-      supabase.from("attendance_records").delete().eq("class_id", classId).gte("date", startDate).lte("date", endDate),
-      supabase.from("attendance_holidays").delete().eq("class_id", classId).gte("date", startDate).lte("date", endDate),
-      supabase.from("attendance_day_events").delete().eq("class_id", classId).gte("date", startDate).lte("date", endDate),
-    ]);
-
-    // 3. Insert into V1
-    const inserts = [];
-
-    if (finalRecords.length > 0) {
-      const payload = finalRecords.map((r: any) => ({
-        class_id: r.class_id,
-        student_id: r.student_id,
-        date: r.date,
-        status: r.status,
-        created_at: new Date().toISOString()
-      }));
-      inserts.push(supabase.from("attendance_records").insert(payload));
-    }
-
-    if (finalHolidays.length > 0) {
-      const payload = finalHolidays.map((h: any) => ({
-        class_id: h.class_id,
-        date: h.date,
-        description: h.description,
-      }));
-      inserts.push(supabase.from("attendance_holidays").insert(payload));
-    }
-
-    if (finalEvents.length > 0) {
-      const payload = finalEvents.map((e: any) => ({
-        class_id: e.class_id,
-        date: e.date,
-        label: e.label,
-        description: e.description,
-      }));
-      inserts.push(supabase.from("attendance_day_events").insert(payload));
-    }
-    
-    // Also merge locks if they exist in V2
-    if (v2Locks.data && v2Locks.data.length > 0) {
-      const payload = v2Locks.data.map((l: any) => ({
-        class_id: l.class_id,
-        month: l.month,
-        is_locked: l.is_locked,
-        locked_at: l.locked_at,
-        locked_by: l.locked_by
-      }));
-      // Delete old locks first
-      await supabase.from("attendance_locks").delete().eq("class_id", classId).gte("month", startDate).lte("month", endDate);
-      inserts.push(supabase.from("attendance_locks").insert(payload));
-    }
-
-    await Promise.all(inserts);
-
-    return new Response(
-      JSON.stringify({ success: true, message: `Migrated ${finalRecords.length} records.` }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error: any) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
 }
 

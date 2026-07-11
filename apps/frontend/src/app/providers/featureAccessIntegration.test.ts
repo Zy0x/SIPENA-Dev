@@ -40,6 +40,22 @@ describe("feature access integration guard", () => {
     expect(stablePage).toContain("AttendanceV2Page");
   });
 
+  it("keeps unsafe attendance v2 promotion controls disabled", () => {
+    const admin = readSource("apps/frontend/src/pages/Admin.tsx");
+    const adminDatabase = readSource("supabase/functions/admin-database/index.ts");
+    const useAttendanceV2 = readSource("apps/frontend/src/hooks/useAttendanceV2.ts");
+
+    expect(admin).not.toContain("AttendanceMergePanel");
+    expect(admin).not.toContain('id: "merge-v2"');
+    expect(admin).not.toContain("Merge Data V2");
+    expect(adminDatabase).toContain("V2_TO_PRODUCTION_PROMOTION_DISABLED");
+    expect(adminDatabase).toContain('case "v2-pending-list"');
+    expect(adminDatabase).toContain('case "v2-promote"');
+    expect(adminDatabase).toContain("return disabledV2PromotionResponse()");
+    expect(useAttendanceV2).not.toContain("/attendance/v2/promote");
+    expect(useAttendanceV2).toContain("Promosi data Presensi V2 dinonaktifkan");
+  });
+
   it("keeps attendance v2 behind feature runtime resolution", () => {
     const route = readSource("apps/frontend/src/features/attendance/runtime/AttendanceRuntimeRoute.tsx");
     const v2Entry = readSource("apps/frontend/src/features/attendance/ui/AttendanceV2.tsx");

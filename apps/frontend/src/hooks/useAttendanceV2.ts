@@ -1616,40 +1616,11 @@ export function useAttendanceV2(classId: string, month: Date, workDayFormat: Wor
     },
   });
 
-  // Promote V2 dataset to V1 (Merge sandbox data to production)
+  // Promotion from the experimental V2 store to the stable attendance store is disabled.
+  // Data migration must use the reviewed, idempotent database migration path instead.
   const promoteMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !classId) throw new Error("User or class not set");
-      if (!dbAvailable) throw new Error("Database not available for promotion");
-
-      const { data: { session } } = await (supabase as any).auth.getSession();
-      const token = session?.access_token;
-
-      const response = await fetch(`${apiBaseUrl}/attendance/v2/promote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token || ""}`,
-        },
-        body: JSON.stringify({
-          classId,
-          month: monthStart.substring(0, 7),
-          workDayFormat,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-      }
-
-      const json = await response.json();
-      return json.data;
-    },
-    onSuccess: () => {
-      if (dbAvailable) {
-        queryClient.invalidateQueries({ queryKey: ["attendance", classId, monthStart] });
-        queryClient.invalidateQueries({ queryKey: attendanceDatasetQueryKey });
-      }
+      throw new Error("Promosi data Presensi V2 dinonaktifkan. Gunakan migrasi data yang sudah tervalidasi.");
     },
   });
 
