@@ -1,15 +1,15 @@
 import React from "react";
-import AttendanceV2Page from "@/pages/AttendanceV2";
+import AttendanceStablePage from "@/pages/AttendanceStable";
 
 /**
  * Stable Attendance UI boundary.
  *
- * This intentionally starts from the matured Attendance V2 implementation while
- * keeping `/attendance-v2` available for future experimental work. The app route
- * only enters this component when the stable cutover config is enabled.
+ * This renders the standalone stable attendance copy. It must not import the
+ * experimental page or component tree, so `/attendance` remains safe even if
+ * the experimental route is removed later.
  */
 export const AttendanceStable: React.FC = () => {
-  return <AttendanceV2Page />;
+  return <AttendanceStablePage />;
 };
 
 export default AttendanceStable;

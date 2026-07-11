@@ -27,17 +27,28 @@ describe("feature access integration guard", () => {
     expect(app).not.toContain('from "../pages/Attendance"');
   });
 
-  it("keeps stable attendance routed directly to the matured V2 page", () => {
+  it("keeps stable attendance routed to a standalone stable copy", () => {
     const app = readSource("apps/frontend/src/app/App.tsx");
     const stableRoute = readSource("apps/frontend/src/features/attendance/stable/AttendanceStableRoute.tsx");
     const stablePage = readSource("apps/frontend/src/features/attendance/stable/AttendanceStable.tsx");
+    const stablePageImpl = readSource("apps/frontend/src/pages/AttendanceStable.tsx");
+    const stableHook = readSource("apps/frontend/src/hooks/useAttendanceStable.ts");
+    const stableSettings = readSource("apps/frontend/src/components/attendance/stable/SettingsDashboard.tsx");
 
     expect(app).toContain('<Route path="/attendance"');
     expect(app).toContain("<AttendanceStableRoute />");
     expect(stableRoute).toContain("AttendanceStable");
     expect(stableRoute).not.toContain("VITE_ATTENDANCE_STABLE_CUTOVER");
     expect(stableRoute).not.toContain("AttendanceV1Wrapper");
-    expect(stablePage).toContain("AttendanceV2Page");
+    expect(stablePage).toContain("AttendanceStablePage");
+    expect(stablePage).not.toContain("@/pages/AttendanceV2");
+    expect(stablePageImpl).not.toContain("@/components/attendance/v2");
+    expect(stablePageImpl).not.toContain("@/hooks/useAttendanceV2");
+    expect(stableHook).toContain('type AttendanceStorageMode = "legacy"');
+    expect(stableHook).toContain('return "legacy"');
+    expect(stableHook).not.toContain("attendance_v2_");
+    expect(stableSettings).toContain("attendance-settings");
+    expect(stableSettings).not.toContain("attendance-v2-settings");
   });
 
   it("keeps unsafe attendance v2 promotion controls disabled", () => {
