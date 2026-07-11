@@ -27,16 +27,16 @@ describe("feature access integration guard", () => {
     expect(app).not.toContain('from "../pages/Attendance"');
   });
 
-  it("keeps stable attendance cutover config-controlled with legacy rollback", () => {
+  it("keeps stable attendance routed directly to the matured V2 page", () => {
     const app = readSource("apps/frontend/src/app/App.tsx");
     const stableRoute = readSource("apps/frontend/src/features/attendance/stable/AttendanceStableRoute.tsx");
     const stablePage = readSource("apps/frontend/src/features/attendance/stable/AttendanceStable.tsx");
 
     expect(app).toContain('<Route path="/attendance"');
     expect(app).toContain("<AttendanceStableRoute />");
-    expect(stableRoute).toContain("VITE_ATTENDANCE_STABLE_CUTOVER");
-    expect(stableRoute).toContain("AttendanceV1Wrapper");
     expect(stableRoute).toContain("AttendanceStable");
+    expect(stableRoute).not.toContain("VITE_ATTENDANCE_STABLE_CUTOVER");
+    expect(stableRoute).not.toContain("AttendanceV1Wrapper");
     expect(stablePage).toContain("AttendanceV2Page");
   });
 
