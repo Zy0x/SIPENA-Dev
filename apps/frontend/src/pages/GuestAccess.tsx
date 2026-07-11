@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { GuestAuthDialog } from "@/components/auth/GuestAuthDialog";
 import { ReCaptchaDisclosure, ReCaptchaBadgeHider, useReCaptcha } from "@/components/auth/ReCaptcha";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
@@ -27,6 +26,9 @@ import {
   UserCheck,
   ArrowRight,
   ArrowLeft,
+  ChevronDown,
+  KeyRound,
+  Wifi,
 } from "lucide-react";
 import { z } from "zod";
 
@@ -54,6 +56,96 @@ interface TokenValidation {
   subject_id: string;
   class_id: string;
   user_id: string;
+}
+
+interface GuestAccessShellProps {
+  children: React.ReactNode;
+  backHref?: string;
+  compact?: boolean;
+}
+
+function GuestAccessShell({ children, backHref = "/", compact = false }: GuestAccessShellProps) {
+  return (
+    <div className="min-h-[100dvh] overflow-x-hidden bg-background sm:bg-muted/35 sm:px-4 sm:py-6 lg:py-10">
+      <main
+        className={`mx-auto flex min-h-[100dvh] w-full flex-col bg-background sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border sm:border-border/80 sm:shadow-xl sm:shadow-black/[0.07] ${compact ? "sm:max-w-md" : "sm:max-w-[600px]"}`}
+      >
+        <header className="flex min-h-16 items-center justify-between gap-3 border-b border-border/80 px-4 py-3 sm:px-6">
+          <Button asChild variant="ghost" size="icon" className="h-11 w-11 shrink-0 touch-manipulation" aria-label="Kembali">
+            <Link to={backHref}>
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+
+          <div className="flex min-w-0 items-center gap-3">
+            <img src="/icon-192.png" alt="Logo SIPENA" className="h-10 w-10 shrink-0 rounded-xl object-cover" />
+            <div className="min-w-0 text-left">
+              <p className="truncate text-sm font-semibold text-foreground">SIPENA</p>
+              <p className="truncate text-xs text-muted-foreground">Akses Guru Tamu</p>
+            </div>
+          </div>
+
+          <div className="w-11 shrink-0" aria-hidden="true" />
+        </header>
+
+        <div className="flex-1 px-5 py-6 sm:px-7 sm:py-7">{children}</div>
+
+        <footer className="border-t border-border/70 px-5 py-4 text-center text-xs leading-relaxed text-muted-foreground sm:px-7">
+          Akses hanya berlaku untuk kelas dan mata pelajaran yang dibagikan.
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+function AccessHeading({ icon: Icon, title, description }: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <Icon className="h-7 w-7" />
+      </div>
+      <h1 className="text-xl font-semibold text-foreground sm:text-2xl">{title}</h1>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function AccessDetails({ loading, subjectName, className }: {
+  loading: boolean;
+  subjectName?: string;
+  className?: string;
+}) {
+  return (
+    <section className="border-y border-border/80 py-4" aria-label="Detail akses">
+      {loading ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <BookOpen className="h-5 w-5 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">Mata Pelajaran</p>
+              <p className="truncate text-sm font-semibold text-foreground">{subjectName || "Belum tersedia"}</p>
+            </div>
+          </div>
+          <div className="flex min-w-0 items-center gap-3">
+            <School className="h-5 w-5 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">Kelas</p>
+              <p className="truncate text-sm font-semibold text-foreground">{className || "Belum tersedia"}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 type GuestAccessRpcClient = {
@@ -98,6 +190,8 @@ export default function GuestAccess() {
   const [subjectInfo, setSubjectInfo] = useState<SubjectInfo | null>(null);
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
   const [loadingInfo, setLoadingInfo] = useState(false);
+  const [quickAccessOpen, setQuickAccessOpen] = useState(false);
+  const [isContinuingAccount, setIsContinuingAccount] = useState(false);
   
   // Guest auth dialog state - MUST be at top level
   const [showGuestAuthDialog, setShowGuestAuthDialog] = useState(false);
@@ -147,7 +241,6 @@ export default function GuestAccess() {
             user_id: ''
           });
         } else {
-          console.log("[GuestAccess] Token validated:", data[0]);
           setTokenValidation(data[0] as TokenValidation);
         }
       } catch (err) {
@@ -358,6 +451,7 @@ export default function GuestAccess() {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setErrors({});
 
     // Validate input
@@ -449,152 +543,109 @@ export default function GuestAccess() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, email, tokenValidation, token, navigate, showError, showSuccess]);
+  }, [name, email, tokenValidation, token, navigate, showError, showSuccess, isSubmitting]);
 
   const handleContinueWithSignedInAccount = useCallback(async () => {
-    if (!signedInUser || !tokenValidation?.is_valid) return;
+    if (!signedInUser || !tokenValidation?.is_valid || isContinuingAccount) return;
 
-    await handleGuestAuthSuccess({
-      guestId: signedInUser.id,
-      name: signedInUserName,
-      email: signedInUserEmail,
-      isMainTeacher: true,
-      mainUserId: signedInUser.id,
-    });
+    setIsContinuingAccount(true);
+    try {
+      await handleGuestAuthSuccess({
+        guestId: signedInUser.id,
+        name: signedInUserName,
+        email: signedInUserEmail,
+        isMainTeacher: true,
+        mainUserId: signedInUser.id,
+      });
+    } finally {
+      setIsContinuingAccount(false);
+    }
   }, [
     signedInUser,
     signedInUserEmail,
     signedInUserName,
     tokenValidation?.is_valid,
     handleGuestAuthSuccess,
+    isContinuingAccount,
   ]);
 
-  // No token provided
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
-        <Card className="w-full max-w-md animate-fade-in">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-              <XCircle className="w-8 h-8 text-destructive" />
-            </div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">
-              Link Tidak Valid
-            </h2>
-            <p className="text-muted-foreground text-center mb-4">
-              Token akses tidak ditemukan. Pastikan Anda menggunakan link yang benar.
-            </p>
-            <Button asChild variant="outline">
-              <Link to="/">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Kembali ke Beranda
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <GuestAccessShell compact>
+        <div className="space-y-7 py-4">
+          <AccessHeading
+            icon={XCircle}
+            title="Link Tidak Lengkap"
+            description="Token akses tidak ditemukan. Buka kembali link lengkap yang dibagikan oleh guru pemilik kelas."
+          />
+          <Button asChild variant="outline" className="h-12 w-full touch-manipulation">
+            <Link to="/">Kembali ke Beranda</Link>
+          </Button>
+        </div>
+      </GuestAccessShell>
     );
   }
 
-  // Validating token
-  if (validating) {
+  if (validating || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
-        <Card className="w-full max-w-md animate-fade-in">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
-            <p className="text-muted-foreground">Memvalidasi akses...</p>
-          </CardContent>
-        </Card>
-      </div>
+      <GuestAccessShell compact>
+        <div className="flex min-h-64 flex-col items-center justify-center py-8 text-center" role="status" aria-live="polite">
+          <Loader2 className="mb-4 h-9 w-9 animate-spin text-primary" />
+          <h1 className="text-lg font-semibold text-foreground">
+            {validating ? "Memeriksa Link Akses" : "Memeriksa Sesi Akun"}
+          </h1>
+          <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
+            {validating
+              ? "SIPENA sedang memastikan link masih aktif dan aman digunakan."
+              : "SIPENA sedang memeriksa apakah akun Anda sudah aktif di perangkat ini."}
+          </p>
+        </div>
+      </GuestAccessShell>
     );
   }
 
-  // Validation error
   if (validationError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
-        <Card className="w-full max-w-md animate-fade-in">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-              <AlertCircle className="w-8 h-8 text-destructive" />
-            </div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">
-              Terjadi Kesalahan
-            </h2>
-            <p className="text-muted-foreground text-center mb-4">
-              {validationError}
-            </p>
-            <div className="flex gap-2">
-              <Button onClick={() => window.location.reload()} variant="outline">
-                Coba Lagi
-              </Button>
-              <Button asChild variant="ghost">
-                <Link to="/">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Beranda
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <GuestAccessShell compact>
+        <div className="space-y-7 py-4">
+          <AccessHeading icon={AlertCircle} title="Akses Belum Dapat Diperiksa" description={validationError} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button onClick={() => window.location.reload()} className="h-12 touch-manipulation">Coba Lagi</Button>
+            <Button asChild variant="outline" className="h-12 touch-manipulation">
+              <Link to="/">Kembali ke Beranda</Link>
+            </Button>
+          </div>
+        </div>
+      </GuestAccessShell>
     );
   }
 
-  // Token invalid
   if (!tokenValidation?.is_valid) {
     const errorMsg = tokenValidation?.error_message || "Link tidak dapat digunakan";
-    const isRevoked = errorMsg.includes("dicabut");
-    const isExpired = errorMsg.includes("kadaluarsa");
+    const normalizedError = errorMsg.toLowerCase();
+    const isRevoked = normalizedError.includes("dicabut");
+    const isExpired = normalizedError.includes("kadaluarsa") || normalizedError.includes("kedaluwarsa");
+    const title = isRevoked
+      ? "Akses Sudah Dicabut"
+      : isExpired
+        ? "Link Sudah Kedaluwarsa"
+        : "Link Tidak Dapat Digunakan";
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
-        <Card className="w-full max-w-md animate-fade-in">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-              {isRevoked ? (
-                <XCircle className="w-8 h-8 text-destructive" />
-              ) : isExpired ? (
-                <Clock className="w-8 h-8 text-amber-500" />
-              ) : (
-                <AlertCircle className="w-8 h-8 text-destructive" />
-              )}
-            </div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">
-              Akses Tidak Valid
-            </h2>
-            <p className="text-muted-foreground text-center mb-4">
-              {errorMsg}
-            </p>
-            <Alert variant="destructive" className="max-w-sm mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Hubungi wali kelas untuk mendapatkan link akses yang baru.
-              </AlertDescription>
-            </Alert>
-            <Button asChild variant="outline">
-              <Link to="/">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Kembali ke Beranda
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
-        <Card className="w-full max-w-md animate-fade-in">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
-            <p className="text-muted-foreground">Memeriksa sesi akun...</p>
-          </CardContent>
-        </Card>
-      </div>
+      <GuestAccessShell compact>
+        <div className="space-y-7 py-4">
+          <AccessHeading icon={isExpired ? Clock : XCircle} title={title} description={errorMsg} />
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Hubungi guru pemilik link untuk meminta akses baru.
+            </AlertDescription>
+          </Alert>
+          <Button asChild variant="outline" className="h-12 w-full touch-manipulation">
+            <Link to="/">Kembali ke Beranda</Link>
+          </Button>
+        </div>
+      </GuestAccessShell>
     );
   }
 
@@ -603,147 +654,77 @@ export default function GuestAccess() {
 
   if (isOwnerOpeningOwnLink) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
+      <GuestAccessShell>
         <ReCaptchaBadgeHider />
-        <Card className="w-full max-w-md animate-fade-in">
-          <CardHeader className="text-center relative">
-            <div className="absolute left-4 top-4">
-              <Button asChild variant="ghost" size="icon" className="h-12 w-12">
-                <Link to="/">
-                  <ArrowLeft className="w-5 h-5" />
-                </Link>
-              </Button>
-            </div>
-
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle className="text-xl">Ini Link Milik Anda</CardTitle>
-            <CardDescription>
-              Link ini dibuat dari akun SIPENA yang sedang aktif.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-            <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
-              {loadingInfo ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Mapel:</span>
-                    <Badge variant="secondary">{subjectInfo?.name || "-"}</Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <School className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Kelas:</span>
-                    <Badge variant="outline">{classInfo?.name || "-"}</Badge>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <Alert>
-              <Shield className="h-4 w-4" />
-              <AlertTitle>Akses Pemilik Kelas</AlertTitle>
-              <AlertDescription className="text-xs">
-                Anda tidak perlu masuk sebagai guru tamu. Gunakan halaman Nilai biasa untuk mengelola mapel ini sebagai pemilik data.
-              </AlertDescription>
-            </Alert>
-
-            <Button asChild className="w-full h-12">
+        <div className="space-y-6">
+          <AccessHeading
+            icon={Shield}
+            title="Ini Link Milik Anda"
+            description="Anda terdeteksi sebagai pemilik kelas. Kelola mata pelajaran ini melalui halaman Input Nilai biasa."
+          />
+          <AccessDetails loading={loadingInfo} subjectName={subjectInfo?.name} className={classInfo?.name} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button asChild className="h-12 touch-manipulation">
               <Link to={ownerGradesUrl}>
                 Buka Input Nilai Saya
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild variant="outline" className="w-full h-12">
-              <Link to="/dashboard">
-                Kembali ke Dashboard
-              </Link>
+            <Button asChild variant="outline" className="h-12 touch-manipulation">
+              <Link to="/dashboard">Kembali ke Dashboard</Link>
             </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </GuestAccessShell>
     );
   }
 
   if (signedInUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
+      <GuestAccessShell>
         <ReCaptchaBadgeHider />
-        <Card className="w-full max-w-md animate-fade-in">
-          <CardHeader className="text-center relative">
-            <div className="absolute left-4 top-4">
-              <Button asChild variant="ghost" size="icon" className="h-12 w-12">
-                <Link to="/">
-                  <ArrowLeft className="w-5 h-5" />
-                </Link>
-              </Button>
+        <div className="space-y-6">
+          <AccessHeading
+            icon={UserCheck}
+            title="Lanjut dengan Akun SIPENA"
+            description="Akun aktif ditemukan. Konfirmasi untuk menyimpan akses ini sebagai akses guru tamu Anda."
+          />
+          <AccessDetails loading={loadingInfo} subjectName={subjectInfo?.name} className={classInfo?.name} />
+
+          <section className="flex items-center gap-3 rounded-xl bg-muted/55 px-4 py-3" aria-label="Akun yang sedang aktif">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {signedInUserName.slice(0, 1).toUpperCase()}
             </div>
-
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <UserCheck className="w-8 h-8 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">{signedInUserName}</p>
+              <p className="truncate text-xs text-muted-foreground">{signedInUserEmail || "Akun SIPENA aktif"}</p>
             </div>
-            <CardTitle className="text-xl">Lanjut dengan Akun SIPENA</CardTitle>
-            <CardDescription>
-              Anda sudah login. Gunakan akun ini sebagai guru tamu untuk akses yang dibagikan.
-            </CardDescription>
-          </CardHeader>
+            <Badge variant="secondary" className="shrink-0">Aktif</Badge>
+          </section>
 
-          <CardContent className="space-y-5">
-            <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
-              {loadingInfo ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Mapel:</span>
-                    <Badge variant="secondary">{subjectInfo?.name || "-"}</Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <School className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Kelas:</span>
-                    <Badge variant="outline">{classInfo?.name || "-"}</Badge>
-                  </div>
-                </>
-              )}
-            </div>
+          <div className="flex items-start gap-3 text-sm text-muted-foreground">
+            <Shield className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <p className="leading-relaxed">
+              Akses tersimpan di akun ini dan dapat dibuka kembali dari Dashboard atau halaman Kelas selama link masih aktif.
+            </p>
+          </div>
 
-            <Alert>
-              <Shield className="h-4 w-4" />
-              <AlertTitle>Akses Aman & Tersimpan</AlertTitle>
-              <AlertDescription className="text-xs">
-                Akses ini akan tersimpan di akun {signedInUserEmail || signedInUserName}, sehingga bisa dibuka lagi dari Dashboard atau halaman Kelas selama link masih aktif.
-              </AlertDescription>
-            </Alert>
-
-            <div className="rounded-lg border bg-card p-4">
-              <p className="text-sm font-medium">{signedInUserName}</p>
-              <p className="text-xs text-muted-foreground">{signedInUserEmail || "Akun SIPENA aktif"}</p>
-            </div>
-
+          <div className="grid gap-3 sm:grid-cols-2">
             <Button
               type="button"
-              className="w-full h-12"
+              className="h-12 touch-manipulation sm:order-2"
               onClick={handleContinueWithSignedInAccount}
+              disabled={isContinuingAccount}
             >
+              {isContinuingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Lanjut Input Nilai
-              <ArrowRight className="w-4 h-4 ml-2" />
+              {!isContinuingAccount && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
-            <Button variant="outline" className="w-full h-12" onClick={() => setShowGuestAuthDialog(true)}>
+            <Button variant="outline" className="h-12 touch-manipulation sm:order-1" onClick={() => setShowGuestAuthDialog(true)} disabled={isContinuingAccount}>
               Gunakan Akun Lain
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <GuestAuthDialog
           isOpen={showGuestAuthDialog}
@@ -753,104 +734,74 @@ export default function GuestAccess() {
           className={classInfo?.name}
           shareToken={token || undefined}
         />
-      </div>
+      </GuestAccessShell>
     );
   }
 
   // Valid token - show unified login/register form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
+    <GuestAccessShell>
       <ReCaptchaBadgeHider />
-      <Card className="w-full max-w-md animate-fade-in">
-        <CardHeader className="text-center relative">
-          {/* Back button */}
-          <div className="absolute left-4 top-4">
-            <Button asChild variant="ghost" size="icon" className="h-12 w-12">
-              <Link to="/">
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-            </Button>
-          </div>
-          
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <UserCircle className="w-8 h-8 text-primary" />
-          </div>
-          <CardTitle className="text-xl">Akses Input Nilai</CardTitle>
-          <CardDescription>
-            Pilih cara masuk untuk melanjutkan
-          </CardDescription>
-        </CardHeader>
+      <div className="space-y-6">
+        <AccessHeading
+          icon={UserCircle}
+          title="Akses Input Nilai"
+          description="Masuk sebagai guru tamu untuk mengisi nilai pada kelas dan mata pelajaran yang dibagikan."
+        />
+        <AccessDetails loading={loadingInfo} subjectName={subjectInfo?.name} className={classInfo?.name} />
 
-        <CardContent className="space-y-6">
-          {/* Subject & Class Info */}
-          <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
-            {loadingInfo ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Mapel:</span>
-                  <Badge variant="secondary">{subjectInfo?.name || "-"}</Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <School className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Kelas:</span>
-                  <Badge variant="outline">{classInfo?.name || "-"}</Badge>
-                </div>
-              </>
-            )}
-          </div>
+        <div className="flex items-start gap-3 text-sm text-muted-foreground">
+          <Wifi className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <p className="leading-relaxed">
+            Perubahan nilai tersinkron langsung dengan data guru pemilik tanpa mengubah data pribadi akun Anda.
+          </p>
+        </div>
 
-          {/* Privacy & Sync Notice */}
-          <Alert>
-            <Shield className="h-4 w-4" />
-            <AlertTitle>Akses Aman & Sinkron</AlertTitle>
-            <AlertDescription className="text-xs">
-              Input nilai akan langsung sinkron dengan kelas pemilik link, 
-              tanpa mengubah data pribadi akun Anda.
-            </AlertDescription>
-          </Alert>
+        <Button
+          type="button"
+          className="h-auto min-h-14 w-full justify-start gap-3 px-4 py-3 text-left touch-manipulation"
+          onClick={() => setShowGuestAuthDialog(true)}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15">
+            <UserCheck className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Masuk / Daftar SIPENA</span>
+            <span className="block text-xs font-normal leading-relaxed text-primary-foreground/80">Akses tersimpan dan dapat dibuka kembali</span>
+          </span>
+          <ArrowRight className="h-5 w-5 shrink-0" />
+        </Button>
 
-          {/* Main Login/Register Button */}
-          <div className="space-y-3">
-            <Button
-              variant="default"
-              className="w-full h-14 justify-start gap-4"
-              onClick={() => setShowGuestAuthDialog(true)}
+        <Collapsible open={quickAccessOpen} onOpenChange={setQuickAccessOpen} className="rounded-xl border border-border/80">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="group flex min-h-14 w-full touch-manipulation items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-muted/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label={quickAccessOpen ? "Tutup formulir masuk cepat" : "Buka formulir masuk cepat"}
             >
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <UserCheck className="w-5 h-5" />
-              </div>
-              <div className="text-left flex-1">
-                <p className="font-medium">Login / Daftar</p>
-                <p className="text-xs opacity-80">Untuk akun yang belum login di perangkat ini</p>
-              </div>
-              <ArrowRight className="w-5 h-5" />
-            </Button>
-
-            <Separator className="my-2" />
-
-            <p className="text-xs text-center text-muted-foreground">
-              Atau masuk cepat tanpa akun (data tidak tersimpan)
-            </p>
-          </div>
-
-          {/* Quick Access Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+              <KeyRound className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-foreground">Masuk Cepat tanpa Akun</span>
+                <span className="block text-xs leading-relaxed text-muted-foreground">Untuk penggunaan sekali; akses tidak tersimpan di Dashboard</span>
+              </span>
+              <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <form onSubmit={handleSubmit} className="space-y-4 border-t border-border/80 px-4 pb-4 pt-5">
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Masukkan identitas yang dapat dikenali guru pemilik link. Pilihan ini tidak membuat akun SIPENA.
+              </p>
             <div className="space-y-2">
               <Label htmlFor="name">Nama Lengkap</Label>
               <div className="relative">
-                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <UserCircle className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="name"
                   placeholder="Masukkan nama lengkap"
                   value={name}
                   onChange={handleNameChange}
-                  className={`pl-10 h-12 ${errors.name ? "border-destructive" : ""}`}
+                  className={`h-12 pl-10 ${errors.name ? "border-destructive" : ""}`}
                   disabled={isSubmitting}
                   autoComplete="name"
                 />
@@ -863,14 +814,14 @@ export default function GuestAccess() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="email@example.com"
                   value={email}
                   onChange={handleEmailChange}
-                  className={`pl-10 h-12 ${errors.email ? "border-destructive" : ""}`}
+                  className={`h-12 pl-10 ${errors.email ? "border-destructive" : ""}`}
                   disabled={isSubmitting}
                   autoComplete="email"
                 />
@@ -880,7 +831,7 @@ export default function GuestAccess() {
               )}
             </div>
 
-            <Button type="submit" variant="outline" className="w-full h-12" disabled={isSubmitting}>
+            <Button type="submit" variant="outline" className="h-12 w-full touch-manipulation" disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
@@ -888,16 +839,15 @@ export default function GuestAccess() {
               )}
               Masuk Cepat
             </Button>
-          </form>
+            </form>
+          </CollapsibleContent>
+        </Collapsible>
 
-          {/* Terms */}
-          <p className="text-xs text-center text-muted-foreground">
-            Dengan melanjutkan, Anda menyetujui ketentuan penggunaan sistem.
-          </p>
-
-          {isRecaptchaConfigured && <ReCaptchaDisclosure />}
-        </CardContent>
-      </Card>
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
+          Dengan melanjutkan, Anda menyetujui ketentuan penggunaan SIPENA.
+        </p>
+        {isRecaptchaConfigured && <ReCaptchaDisclosure />}
+      </div>
 
       {/* Guest Auth Dialog - Unified */}
       <GuestAuthDialog
@@ -908,6 +858,6 @@ export default function GuestAccess() {
         className={classInfo?.name}
         shareToken={token || undefined}
       />
-    </div>
+    </GuestAccessShell>
   );
 }

@@ -3,11 +3,13 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FloatingLabelInput } from "./FloatingLabelInput";
 import { ReCaptchaDisclosure, useReCaptcha } from "./ReCaptcha";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
@@ -22,15 +24,10 @@ import {
   ArrowRight,
   CheckCircle2,
   Info,
+  BookOpen,
+  School,
 } from "lucide-react";
 import { z } from "zod";
-
-const formSchema = z.object({
-  email: z.string().email("Format email tidak valid"),
-  password: z.string().min(1, "Password wajib diisi"),
-  name: z.string().optional(),
-  phone: z.string().optional(),
-});
 
 interface GuestAuthDialogProps {
   isOpen: boolean;
@@ -111,30 +108,6 @@ export function GuestAuthDialog({
     }
   };
 
-  // Check if email exists and determine account type
-  const checkAccountStatus = async (email: string): Promise<{ 
-    exists: boolean; 
-    type: "main" | "guest" | null;
-  }> => {
-    try {
-      // Check guest_users table first
-      const { data: guestUser } = await supabase
-        .from("guest_users")
-        .select("id, is_registered")
-        .eq("email", email.toLowerCase())
-        .maybeSingle();
-
-      if (guestUser?.is_registered) {
-        return { exists: true, type: "guest" };
-      }
-
-      // We can't directly check auth.users, but we'll try login later
-      return { exists: false, type: null };
-    } catch {
-      return { exists: false, type: null };
-    }
-  };
-
   // Hash password using SHA-256
   const hashPassword = async (password: string): Promise<string> => {
     const encoder = new TextEncoder();
@@ -146,6 +119,7 @@ export function GuestAuthDialog({
 
   // Main unified login/register handler
   const handleSubmit = async () => {
+    if (loading || isGoogleLoading) return;
     setError("");
     setSuccessMessage("");
     setAccountInfo({ type: null, message: "" });
@@ -349,6 +323,7 @@ export function GuestAuthDialog({
   };
 
   const handleGoogleSignIn = async () => {
+    if (isGoogleLoading || loading) return;
     setIsGoogleLoading(true);
     setError("");
     
@@ -394,30 +369,60 @@ export function GuestAuthDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-primary" />
-            {mode === "register" ? "Daftar Akun" : "Login"}
+      <DialogContent
+        className="flex max-h-[min(94dvh,760px)] w-[calc(100vw-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
+        <DialogHeader className="shrink-0 border-b border-border/80 px-5 pb-4 pt-5 pr-14 text-left sm:px-6 sm:pb-5 sm:pt-6 sm:pr-14">
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <UserCheck className="h-5 w-5" />
+            </span>
+            Akses dengan Akun SIPENA
           </DialogTitle>
-          <DialogDescription>
-            {subjectName 
-              ? `Akses untuk input nilai ${subjectName}${className ? ` kelas ${className}` : ''}`
-              : "Masukkan email dan password untuk melanjutkan"
-            }
+          <DialogDescription className="leading-relaxed">
+            Gunakan akun agar akses guru tamu tersimpan dan dapat dibuka kembali.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Info Banner */}
-        <Alert className="bg-primary/5 border-primary/20">
-          <Shield className="h-4 w-4 text-primary" />
-          <AlertDescription className="text-xs">
-            <strong>Akses tamu aman:</strong> Input nilai akan sinkron langsung dengan kelas pemilik link, 
-            tanpa mengubah data pribadi akun Anda.
-          </AlertDescription>
-        </Alert>
+        <form
+          id="guest-auth-form"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSubmit();
+          }}
+        >
+          <div className="space-y-5">
+            {(subjectName || className) && (
+              <section className="grid gap-3 border-b border-border/80 pb-4 sm:grid-cols-2" aria-label="Akses yang dibagikan">
+                <div className="flex min-w-0 items-center gap-3">
+                  <BookOpen className="h-5 w-5 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Mata Pelajaran</p>
+                    <p className="truncate text-sm font-semibold text-foreground">{subjectName || "-"}</p>
+                  </div>
+                </div>
+                <div className="flex min-w-0 items-center gap-3">
+                  <School className="h-5 w-5 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Kelas</p>
+                    <p className="truncate text-sm font-semibold text-foreground">{className || "-"}</p>
+                  </div>
+                </div>
+              </section>
+            )}
 
-        <div className="space-y-4">
+            <Tabs
+              value={mode}
+              onValueChange={(value) => value === "register" ? switchToRegister() : switchToLogin()}
+            >
+              <TabsList className="grid h-12 w-full grid-cols-2">
+                <TabsTrigger value="initial" className="min-h-10">Masuk</TabsTrigger>
+                <TabsTrigger value="register" className="min-h-10">Daftar</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -445,12 +450,11 @@ export function GuestAuthDialog({
             </Alert>
           )}
 
-          {/* Google Sign-In untuk Guru Tamu */}
           <button
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isGoogleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 h-12 rounded-xl border border-border bg-muted/50 hover:bg-muted text-foreground text-sm font-medium transition-all duration-200 touch-manipulation disabled:opacity-50 min-h-[48px]"
+            className="flex min-h-12 w-full touch-manipulation items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-medium text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
           >
             {isGoogleLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -471,7 +475,6 @@ export function GuestAuthDialog({
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* Registration fields (shown only in register mode) */}
           {mode === "register" && (
             <FloatingLabelInput
               label="Nama Lengkap"
@@ -485,7 +488,6 @@ export function GuestAuthDialog({
             />
           )}
 
-          {/* Email - always shown */}
           <FloatingLabelInput
             label="Email"
             type="email"
@@ -498,7 +500,6 @@ export function GuestAuthDialog({
             autoComplete="email"
           />
 
-          {/* Password - always shown */}
           <FloatingLabelInput
             label={mode === "register" ? "Password (min. 8 karakter)" : "Password"}
             value={formData.password}
@@ -511,7 +512,6 @@ export function GuestAuthDialog({
             autoComplete={mode === "register" ? "new-password" : "current-password"}
           />
 
-          {/* Phone - only in register mode */}
           {mode === "register" && (
             <FloatingLabelInput
               label="No. Telepon (opsional)"
@@ -523,51 +523,30 @@ export function GuestAuthDialog({
             />
           )}
 
-          {/* Submit Button */}
+          <div className="flex items-start gap-3 border-t border-border/80 pt-4 text-xs leading-relaxed text-muted-foreground">
+            <Shield className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <p>Identitas akun dipakai untuk mencatat guru yang melakukan perubahan dan menjaga akses tetap aman.</p>
+          </div>
+
+          {isRecaptchaConfigured && <ReCaptchaDisclosure />}
+          </div>
+        </form>
+
+        <DialogFooter className="shrink-0 border-t border-border/80 bg-background px-5 py-4 sm:px-6">
           <Button
-            onClick={handleSubmit}
-            className="w-full h-12"
-            disabled={loading}
+            type="submit"
+            form="guest-auth-form"
+            className="h-12 w-full touch-manipulation"
+            disabled={loading || isGoogleLoading}
           >
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <ArrowRight className="w-4 h-4 mr-2" />
+              <ArrowRight className="mr-2 h-4 w-4" />
             )}
-            {mode === "register" ? "Daftar & Masuk" : "Masuk"}
+            {mode === "register" ? "Daftar & Lanjutkan" : "Masuk & Lanjutkan"}
           </Button>
-
-          {/* Toggle between login and register */}
-          <div className="text-center">
-            {mode === "initial" ? (
-              <button
-                type="button"
-                onClick={switchToRegister}
-                className="text-xs text-primary hover:underline transition-colors min-h-[44px] px-4 inline-flex items-center"
-              >
-                Belum punya akun? Daftar di sini
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={switchToLogin}
-                className="text-xs text-primary hover:underline transition-colors min-h-[44px] px-4 inline-flex items-center"
-              >
-                Sudah punya akun? Masuk di sini
-              </button>
-            )}
-          </div>
-
-          {/* Explanation */}
-          <div className="text-xs text-muted-foreground text-center p-3 bg-muted/30 rounded-lg">
-            <p>
-              Gunakan <strong>email & password akun utama SIPENA</strong> untuk login langsung, 
-              atau <strong>daftar akun baru</strong> jika Anda belum memiliki akun.
-            </p>
-          </div>
-        </div>
-
-        {isRecaptchaConfigured && <ReCaptchaDisclosure />}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
