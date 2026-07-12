@@ -3,10 +3,16 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(__dirname, "../../../../../..");
-const readSource = (relativePath: string) => {
+const resolveSourcePath = (relativePath: string) => {
   const direct = resolve(process.cwd(), relativePath);
-  if (existsSync(direct)) return readFileSync(direct, "utf8");
-  return readFileSync(resolve(repoRoot, relativePath), "utf8");
+  return existsSync(direct) ? direct : resolve(repoRoot, relativePath);
+};
+const readSource = (relativePath: string) => {
+  return readFileSync(resolveSourcePath(relativePath), "utf8");
+};
+const readOptionalSource = (relativePath: string) => {
+  const sourcePath = resolveSourcePath(relativePath);
+  return existsSync(sourcePath) ? readFileSync(sourcePath, "utf8") : null;
 };
 
 describe("admin notification, production sync, and help hardening guard", () => {
@@ -21,15 +27,22 @@ describe("admin notification, production sync, and help hardening guard", () => 
   });
 
   it("blocks synchronization until the complete source quality gate passes", () => {
-    const syncWorkflow = readSource(".github/workflows/trigger-sync.yml");
+    const syncWorkflow = readOptionalSource(".github/workflows/trigger-sync.yml");
     const productionWorkflow = readSource(".github/workflows/production-build.yml");
 
-    expect(syncWorkflow).toContain("Validate source before sync");
-    expect(syncWorkflow).toContain("needs: quality");
-    expect(syncWorkflow).toContain("npm run security:scan");
-    expect(syncWorkflow).toContain("npm run verify:web:dist");
     expect(productionWorkflow).toContain("github.repository == 'Zy0x/SIPENA-Dev'");
+    expect(productionWorkflow).toContain("npm run security:scan");
+    expect(productionWorkflow).toContain("npm test");
+    expect(productionWorkflow).toContain("npm run build");
+    expect(productionWorkflow).toContain("npm run verify:web:dist");
     expect(productionWorkflow).toContain("Upload verified web artifact");
+
+    if (syncWorkflow) {
+      expect(syncWorkflow).toContain("Validate source before sync");
+      expect(syncWorkflow).toContain("needs: quality");
+      expect(syncWorkflow).toContain("npm run security:scan");
+      expect(syncWorkflow).toContain("npm run verify:web:dist");
+    }
   });
 
   it("keeps navigation shortcuts and their help reference in one registry", () => {

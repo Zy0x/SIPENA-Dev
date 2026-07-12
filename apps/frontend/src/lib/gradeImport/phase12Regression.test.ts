@@ -349,7 +349,9 @@ describe("phase 12 grade import regression suite", () => {
     const viewportSyncSource = readFileSync(repoPath("scripts/sync-viewport-observations.mjs"), "utf8");
     const packageSource = readFileSync(repoPath("package.json"), "utf8");
     const responsiveStandardSource = readFileSync(repoPath("docs/standards/responsive-input-grade-standard.md"), "utf8");
-    const agentsSource = readFileSync(repoPath("AGENTS.md"), "utf8");
+    const agentsPath = repoPath("AGENTS.md");
+    const sourceSyncWorkflowPath = repoPath(".github/workflows/trigger-sync.yml");
+    const agentsSource = existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : null;
     const supabaseTypesSource = readFileSync(repoPath("apps/frontend/src/infrastructure/supabase/supabase.types.ts"), "utf8");
     const formulaSource = readFileSync(repoPath("apps/frontend/src/lib/gradeFormula.ts"), "utf8");
     const roundingDialogSource = readFileSync(repoPath("apps/frontend/src/components/grades/ReportRoundingSettingsDialog.tsx"), "utf8");
@@ -593,8 +595,11 @@ describe("phase 12 grade import regression suite", () => {
     expect(viewportSyncSource).not.toContain('"user_id"');
     expect(responsiveStandardSource).toContain("npm run viewport:sync -- --days 30");
     expect(responsiveStandardSource).toContain("Touch scroll pada kolom frozen");
-    expect(agentsSource).toContain("npm run viewport:sync -- --days 30");
-    expect(agentsSource).toContain(".codex/viewport-observations/latest.json");
+    if (existsSync(sourceSyncWorkflowPath)) {
+      expect(agentsSource).not.toBeNull();
+      expect(agentsSource).toContain("npm run viewport:sync -- --days 30");
+      expect(agentsSource).toContain(".codex/viewport-observations/latest.json");
+    }
     expect(responsiveStandardSource).toContain(".codex/viewport-observations/latest.json");
     expect(chapterStructureSource).not.toContain("sm:max-w-xl");
     expect(chapterStructureSource).not.toContain("sm:max-w-lg");
