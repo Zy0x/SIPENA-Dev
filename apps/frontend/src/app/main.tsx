@@ -34,17 +34,7 @@ const notifyPwaState = (detail: { needsUpdate?: boolean; offlineReady?: boolean 
 const initializePWA = () => {
   if (!("serviceWorker" in navigator)) return;
 
-  // Cleanup any old manually-registered /sw.js (legacy from index.html) so the
-  // vite-plugin-pwa virtual SW becomes the single source of truth. Without this
-  // cleanup, browsers with old caches keep serving stale content and never
-  // surface the update banner.
-  navigator.serviceWorker.getRegistrations().then((regs) => {
-    regs.forEach((reg) => {
-      if (reg.active?.scriptURL && reg.active.scriptURL.endsWith("/sw.js")) {
-        reg.unregister().catch(() => undefined);
-      }
-    });
-  }).catch(() => undefined);
+
 
   const updateServiceWorker = registerSW({
     immediate: true,

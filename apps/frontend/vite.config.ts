@@ -86,7 +86,7 @@ export default defineConfig(({ mode }) => {
       workbox: {
         cleanupOutdatedCaches: true,
         skipWaiting: false,
-        clientsClaim: false,
+        clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         // Exclude version.json from SW cache so it always fetches fresh
         navigateFallbackDenylist: [/\/version\.json/],
