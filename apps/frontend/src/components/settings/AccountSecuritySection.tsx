@@ -60,6 +60,10 @@ export function AccountSecuritySection() {
   const [totpQrCode, setTotpQrCode] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState("");
   const [isSettingUpTotp, setIsSettingUpTotp] = useState(false);
+  const authProviders = Array.isArray(user?.app_metadata?.providers)
+    ? user.app_metadata.providers
+    : [user?.app_metadata?.provider].filter(Boolean);
+  const hasPasswordLogin = authProviders.includes("email") || user?.user_metadata?.sipena_password_configured === true;
 
   // Load user preferences
   useEffect(() => {
@@ -94,8 +98,21 @@ export function AccountSecuritySection() {
 
     setIsChangingPassword(true);
     try {
+      if (hasPasswordLogin) {
+        if (!currentPassword || !user?.email) {
+          showError("Password Saat Ini Diperlukan", "Masukkan password saat ini untuk melanjutkan.");
+          return;
+        }
+        const { error: reauthError } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: currentPassword,
+        });
+        if (reauthError) throw new Error("Password saat ini tidak sesuai.");
+      }
+
       const { error } = await supabase.auth.updateUser({
-        password: newPassword
+        password: newPassword,
+        data: { sipena_password_configured: true },
       });
 
       if (error) throw error;
@@ -111,7 +128,7 @@ export function AccountSecuritySection() {
     } finally {
       setIsChangingPassword(false);
     }
-  }, [newPassword, confirmPassword, success, showError]);
+  }, [confirmPassword, currentPassword, hasPasswordLogin, newPassword, showError, success, user?.email]);
 
   const handleSendPhoneOtp = useCallback(async () => {
     if (!phoneNumber.trim()) {
@@ -251,8 +268,11 @@ export function AccountSecuritySection() {
           <div className="flex items-center gap-3 min-w-0">
             <Lock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
             <div className="min-w-0">
-              <p className="font-medium text-sm">Password</p>
-              <p className="text-xs text-muted-foreground truncate">Ubah password akun Anda</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium text-sm">Password</p>
+                {!hasPasswordLogin && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Perlu dibuat</Badge>}
+              </div>
+              <p className="text-xs text-muted-foreground">{hasPasswordLogin ? "Ubah password akun Anda" : "Aktifkan login email tanpa memutus login Google"}</p>
             </div>
           </div>
           <Button 
@@ -262,7 +282,7 @@ export function AccountSecuritySection() {
             className="w-full sm:w-auto min-h-[44px] sm:min-h-0"
           >
             <Key className="w-4 h-4 mr-1.5" />
-            Ubah Password
+            {hasPasswordLogin ? "Ubah Password" : "Buat Password"}
           </Button>
         </div>
 
@@ -336,13 +356,24 @@ export function AccountSecuritySection() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Key className="w-5 h-5 text-primary" />
-              Ubah Password
+              {hasPasswordLogin ? "Ubah Password" : "Buat Password Login"}
             </DialogTitle>
             <DialogDescription>
-              Password minimal 8 karakter untuk keamanan akun
+              {hasPasswordLogin ? "Verifikasi password saat ini, lalu buat password baru minimal 8 karakter." : "Buat password minimal 8 karakter agar akun dapat masuk melalui Google maupun email."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {hasPasswordLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Password Saat Ini</Label>
+                <div className="relative">
+                  <Input id="current-password" type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" className="pr-11" />
+                  <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2" onClick={() => setShowCurrentPassword((value) => !value)} aria-label={showCurrentPassword ? "Sembunyikan password saat ini" : "Tampilkan password saat ini"}>
+                    {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="new-password">Password Baru</Label>
               <div className="relative">
@@ -387,7 +418,7 @@ export function AccountSecuritySection() {
             </Button>
             <Button 
               onClick={handleChangePassword}
-              disabled={isChangingPassword || newPassword.length < 8 || newPassword !== confirmPassword}
+              disabled={isChangingPassword || (hasPasswordLogin && !currentPassword) || newPassword.length < 8 || newPassword !== confirmPassword}
             >
               {isChangingPassword ? (
                 <>

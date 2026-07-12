@@ -15,7 +15,6 @@
  import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
  import { FEATURE_KEYS } from "@/app/providers/featureAccess";
  import { useAdaptiveMotion } from "@/hooks/useAdaptiveMotion";
- import gsap from "gsap";
  import {
     LayoutDashboard,
     Users,
@@ -32,7 +31,7 @@
     UserCheck,
   } from "lucide-react";
  import { CollapsedNavItem, ExpandedNavItem } from "@/components/layout/SidebarNav";
- import morpheIconPure from "@/icon/icon_morphe_pure.png";
+ import morpheIconPure from "@/icon/icon_morphe_pure_96.png";
 
  // Morphe icon component using actual icon
  const MorpheIcon = ({ className }: { className?: string }) => (
@@ -183,57 +182,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => window.removeEventListener("sipena:open-sidebar", handleOpenSidebar);
   }, []);
 
-  // Persist collapse state + GSAP animations
+  // Persist collapse state. CSS handles visual transitions so the application
+  // shell does not evaluate an animation runtime during startup.
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', sidebarCollapsed.toString());
-
-    if (!lightMotion && logoTextRef.current) {
-      gsap.to(logoTextRef.current, {
-        opacity: effectiveSidebarCollapsed ? 0 : 1,
-        x: effectiveSidebarCollapsed ? -10 : 0,
-        width: effectiveSidebarCollapsed ? 0 : "auto",
-        duration: 0.25,
-        ease: "power2.out",
-        overwrite: "auto",
-      });
-    }
-
-    if (!lightMotion && yearBadgeRef.current) {
-      gsap.to(yearBadgeRef.current, {
-        opacity: effectiveSidebarCollapsed ? 0 : 1,
-        height: effectiveSidebarCollapsed ? 0 : "auto",
-        paddingTop: effectiveSidebarCollapsed ? 0 : 8,
-        paddingBottom: effectiveSidebarCollapsed ? 0 : 8,
-        duration: 0.25,
-        ease: "power2.out",
-        overwrite: "auto",
-      });
-    }
-
-    // Stagger nav items on collapse/expand (desktop only)
-    if (!lightMotion && sidebarRef.current && isDesktopSidebar) {
-      const items = Array.from(
-        sidebarRef.current.querySelectorAll<HTMLElement>("[data-sidebar-nav-item='true']")
-      );
-
-      if (items.length) {
-        gsap.killTweensOf(items);
-        gsap.fromTo(
-          items,
-          { opacity: 0, x: effectiveSidebarCollapsed ? -8 : 8 },
-          {
-            opacity: 1,
-            x: 0,
-            duration: 0.28,
-            ease: "power3.out",
-            stagger: 0.015,
-            clearProps: "opacity,transform",
-            overwrite: "auto",
-          }
-        );
-      }
-    }
-  }, [sidebarCollapsed, effectiveSidebarCollapsed, isDesktopSidebar, lightMotion]);
+  }, [sidebarCollapsed]);
 
   // Lock body scroll and contain overscroll when mobile sidebar is open
   useEffect(() => {
@@ -378,22 +331,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
      if (lightMotion) return;
      const scale = config?.scale || 1.05;
      const rotation = config?.rotation || 0;
-     gsap.to(el, {
-       scale: isEntering ? scale : 1,
-       rotation: isEntering ? rotation : 0,
-       duration: 0.2,
-       ease: isEntering ? "back.out(1.7)" : "power2.out"
-     });
+      el.style.transition = "transform 180ms cubic-bezier(.2,.8,.2,1)";
+      el.style.transform = isEntering ? `scale(${scale}) rotate(${rotation}deg)` : "scale(1) rotate(0deg)";
    }, [lightMotion]);
  
    const handleGSAPPress = useCallback((el: HTMLElement | null, isPressed: boolean) => {
      if (!el) return;
      if (lightMotion) return;
-     gsap.to(el, {
-       scale: isPressed ? 0.92 : 1,
-       duration: 0.1,
-       ease: "power2.out"
-     });
+      el.style.transition = "transform 100ms ease-out";
+      el.style.transform = isPressed ? "scale(.92)" : "scale(1)";
    }, [lightMotion]);
  
    return (

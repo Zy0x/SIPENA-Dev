@@ -41,3 +41,15 @@ verify_jwt = false
 
 [functions.admin-feature-access]
 verify_jwt = false
+
+[functions.admin-monitoring-config]
+verify_jwt = false
+
+[functions.monitoring-alert]
+verify_jwt = false
+
+[functions.synthetic-health]
+verify_jwt = false
+
+[functions.admin-event-notifications]
+verify_jwt = false

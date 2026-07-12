@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
+import { EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY, supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -36,25 +36,38 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
   const [isLoading, setIsLoading] = useState(false);
   const [isLive, setIsLive] = useState(false);
 
+  const request = useCallback(async (action: string, payload: Record<string, unknown> = {}) => {
+    const response = await fetch(`${EDGE_FUNCTIONS_URL}/admin-event-notifications`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_EXTERNAL_ANON_KEY}`,
+        apikey: SUPABASE_EXTERNAL_ANON_KEY,
+        "x-admin-session-token": localStorage.getItem("admin_session_token") || "",
+      },
+      body: JSON.stringify({ action, password: adminPassword, ...payload }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success) throw new Error(result.error || "Aksi notifikasi gagal");
+    return result;
+  }, [adminPassword]);
+
   const fetchNotifications = useCallback(async () => {
     if (!adminPassword) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", "00000000-0000-0000-0000-000000000000")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      setNotifications((data as AdminNotification[]) || []);
+      const result = await request("list");
+      setNotifications((result.notifications || []).map((item: AdminNotification & { event_type?: string }) => ({
+        ...item,
+        type: item.event_type || item.type,
+      })));
       setIsLive(true);
     } catch {
       toast({ variant: "destructive", title: "Error", description: "Gagal memuat notifikasi admin" });
     } finally {
       setIsLoading(false);
     }
-  }, [adminPassword, toast]);
+  }, [adminPassword, request, toast]);
 
   useEffect(() => {
     if (adminPassword) fetchNotifications();
@@ -81,16 +94,24 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
     return () => { supabase.removeChannel(channel); };
   }, [adminPassword, toast]);
 
+  useEffect(() => {
+    if (!adminPassword) return;
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void fetchNotifications();
+    }, 30_000);
+    return () => window.clearInterval(interval);
+  }, [adminPassword, fetchNotifications]);
+
   const markAsRead = async (notificationId: string) => {
     try {
-      await supabase.from("notifications").update({ read: true }).eq("id", notificationId);
+      await request("mark-read", { id: notificationId });
       setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)));
     } catch {}
   };
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      await supabase.from("notifications").delete().eq("id", notificationId);
+      await request("delete", { id: notificationId });
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       toast({ title: "Notifikasi Dihapus" });
     } catch {}
@@ -98,11 +119,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
 
   const markAllAsRead = async () => {
     try {
-      await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", "00000000-0000-0000-0000-000000000000")
-        .eq("read", false);
+      await request("mark-all-read");
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       toast({ title: "Semua Ditandai Dibaca" });
     } catch {}
@@ -112,6 +129,9 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
     switch (type) {
       case "new_user_registration":
         return <UserPlus className="w-4 h-4 text-blue-400" />;
+      case "guest_teacher_access":
+      case "quick_guest_registration":
+        return <UserPlus className="w-4 h-4 text-emerald-500" />;
       default:
         return <Bell className="w-4 h-4 text-muted-foreground" />;
     }
@@ -142,7 +162,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
               {isLive && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Real-time
+                  Sinkron otomatis
                 </span>
               )}
             </div>

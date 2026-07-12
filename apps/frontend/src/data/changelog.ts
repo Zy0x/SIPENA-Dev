@@ -42,6 +42,34 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.160",
+    version: "2.4.160",
+    title: "Hardening PWA, Presensi, dan Akun",
+    description: "Cold start PWA, keamanan Rekap Bulanan, navigasi Profil, notifikasi Admin, dan akun Google diperkuat tanpa menghapus data lama.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-12",
+    details: [
+      "Memisahkan ikon PWA any dan maskable serta menampilkan splash statis sejak HTML pertama agar cold launch tidak diawali layar putih.",
+      "Mengunci bulan Presensi secara default sambil mempertahankan bulan yang pernah dibuka secara eksplisit.",
+      "Memperhalus scroll-spy Profil, mengamankan notifikasi pendaftar Admin, dan menyediakan pembuatan password bagi akun Google."
+    ]
+  },
+  {
+    id: "v2.4.159",
+    version: "2.4.159",
+    title: "Monitoring Produksi Dinamis",
+    description: "Panel Admin kini dapat mengatur Telegram dan kebijakan alert produksi secara langsung dengan secret terenkripsi di Supabase Vault.",
+    type: "security",
+    is_critical: false,
+    released_at: "2026-07-11",
+    details: [
+      "Menambahkan monitoring read-only untuk web, Supabase Auth, database, feature access, dan Edge Function health.",
+      "Menyimpan Bot Token, Chat ID, dan webhook key di Supabase Vault tanpa mengirim secret kembali ke browser.",
+      "Menambahkan HMAC, nonce anti-replay, deduplikasi incident, audit konfigurasi, dan notifikasi recovery Telegram."
+    ]
+  },
+  {
     id: "v2.4.158",
     version: "2.4.158",
     title: "Akses Guru Tamu Tersimpan",

@@ -41,6 +41,7 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hashScrollLockRef = useRef(false);
+  const hashUpdateSourceRef = useRef<"idle" | "menu" | "scrollspy">("idle");
   const { createActivityLog } = useActivityLogs();
   
   // Section refs for scroll navigation
@@ -57,33 +58,43 @@ export default function Profile() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
 
-  // Handle hash navigation for section scrolling
-  // Uses location.key to detect re-navigation to same hash
+  // Hash changes from the sidebar scroll once. Scroll-spy hash updates only
+  // update navigation state and must never start another scroll animation.
   useEffect(() => {
-    const hash = location.hash;
-    if (hash) {
-      hashScrollLockRef.current = true;
-      const timer = setTimeout(() => {
-        const id = hash.replace("#", "");
-        const el = document.getElementById(id);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        window.setTimeout(() => {
-          hashScrollLockRef.current = false;
-        }, 500);
-      }, 150);
-      return () => clearTimeout(timer);
-    } else {
-      // No hash - scroll to profile section (top). Keep scroll-spy muted while
-      // the smooth scroll is in progress so it cannot snap back to security.
-      hashScrollLockRef.current = true;
-      profileSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      const unlockTimer = window.setTimeout(() => {
-        hashScrollLockRef.current = false;
-      }, 650);
-      return () => clearTimeout(unlockTimer);
+    if (hashUpdateSourceRef.current === "scrollspy") {
+      hashUpdateSourceRef.current = "idle";
+      return;
     }
+
+    const hash = location.hash;
+    const target = hash ? document.getElementById(hash.replace("#", "")) : profileSectionRef.current;
+    if (!target) return;
+
+    hashUpdateSourceRef.current = "menu";
+    hashScrollLockRef.current = true;
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      hashUpdateSourceRef.current = "idle";
+      hashScrollLockRef.current = false;
+      window.removeEventListener("scrollend", finish);
+    };
+
+    const frame = window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.addEventListener("scrollend", finish, { once: true });
+    });
+    const fallback = window.setTimeout(finish, 1000);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(fallback);
+      window.removeEventListener("scrollend", finish);
+      if (!finished) {
+        hashScrollLockRef.current = false;
+      }
+    };
   }, [location.hash, location.key]);
 
   useEffect(() => {
@@ -95,6 +106,7 @@ export default function Profile() {
       const target = hash ? `${location.pathname}${hash}` : location.pathname;
       const current = `${location.pathname}${location.hash}`;
       if (target !== current) {
+        hashUpdateSourceRef.current = "scrollspy";
         navigate(target, { replace: true, preventScrollReset: true });
       }
     };

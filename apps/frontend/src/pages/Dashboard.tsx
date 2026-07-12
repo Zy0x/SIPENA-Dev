@@ -65,7 +65,7 @@ export default function Dashboard() {
   const { activeSemester, isLoading: semestersLoading } = useSemesters();
   const { activityLogs, isLoading: activityLoading } = useActivityLogs();
   const { data: inputProgress, isLoading: inputProgressLoading } = useInputProgress();
-  const { activeGuestClasses, touchGuestAccess } = useGuestAccesses();
+  const { activeGuestClasses, isLoading: guestAccessLoading, touchGuestAccess } = useGuestAccesses();
   const { needsOnboarding, createPreferences } = useUserPreferences();
 
   // Handle theme selection for new users (moved from Grades)
@@ -100,7 +100,7 @@ export default function Dashboard() {
         bgColor: "bg-accent/10",
       },
       {
-        label: "Siswa",
+        label: "Murid",
         value: totalStudents.toString(),
         icon: Users,
         color: "text-grade-pass",
@@ -203,11 +203,9 @@ export default function Dashboard() {
                 <HandWaveIcon />
               </div>
             </h1>
-            {activeYear && activeSemester && (
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
-                {activeYear.name} - {activeSemester.name}
-              </p>
-            )}
+            <p className="min-h-5 text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
+              {activeYear && activeSemester ? `${activeYear.name} - ${activeSemester.name}` : " "}
+            </p>
           </div>
           <TourButton tourKey="dashboard-tour" />
         </div>
@@ -339,7 +337,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {activeGuestClasses.length > 0 && (
+        {!guestAccessLoading && activeGuestClasses.length > 0 && (
           <Card className="border-sky-300/60 bg-sky-50/60 shadow-sm dark:border-sky-400/30 dark:bg-sky-950/20">
             <CardHeader className="p-3 sm:p-4">
               <div className="flex items-start justify-between gap-3">
@@ -411,7 +409,14 @@ export default function Dashboard() {
         )}
 
         {/* Classes Overview - Compact */}
-        {classes.length > 0 && (
+        {classesLoading ? (
+          <div className="min-h-[92px] space-y-3" aria-hidden="true">
+            <Skeleton className="h-5 w-24" />
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-16 rounded-lg" />)}
+            </div>
+          </div>
+        ) : classes.length > 0 && (
           <div className="animate-fade-in">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <h2 className="text-xs sm:text-sm font-semibold text-foreground">Kelas Anda</h2>
@@ -431,7 +436,7 @@ export default function Dashboard() {
                       <div className="min-w-0">
                         <h3 className="font-medium text-foreground text-xs sm:text-sm truncate">{cls.name}</h3>
                         <p className="text-[10px] sm:text-xs text-muted-foreground">
-                          {cls.student_count || 0} siswa
+                          {cls.student_count || 0} murid
                         </p>
                       </div>
                     </div>

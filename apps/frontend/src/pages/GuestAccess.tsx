@@ -78,7 +78,7 @@ function GuestAccessShell({ children, backHref = "/", compact = false }: GuestAc
           </Button>
 
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/icon-192.png" alt="Logo SIPENA" className="h-10 w-10 shrink-0 rounded-xl object-cover" />
+            <img src="/sipena-icon-any-192-v2.png" alt="Logo SIPENA" className="h-10 w-10 shrink-0 object-contain" />
             <div className="min-w-0 text-left">
               <p className="truncate text-sm font-semibold text-foreground">SIPENA</p>
               <p className="truncate text-xs text-muted-foreground">Akses Guru Tamu</p>

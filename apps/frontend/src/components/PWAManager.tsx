@@ -23,19 +23,33 @@ const UPDATE_AUTO_APPLY_SECONDS = 10;
 const UPDATE_WAIT_MS = 2 * 60_000;
 const UPDATE_HARD_RELOAD_MS = 12_000;
 const UPDATE_RESOLVED_RELOAD_MS = 700;
+let versionCheckPromise: Promise<string | null> | null = null;
+let lastVersionCheckAt = 0;
+let lastVersionValue: string | null = null;
 
 async function fetchCurrentVersion(): Promise<string | null> {
-  try {
-    const res = await fetch(`${VERSION_URL}?t=${Date.now()}`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return typeof data?.version === "string" ? data.version : null;
-  } catch {
-    return null;
-  }
+  if (versionCheckPromise) return versionCheckPromise;
+  if (Date.now() - lastVersionCheckAt < 5_000) return lastVersionValue;
+
+  versionCheckPromise = (async () => {
+    try {
+      const res = await fetch(`${VERSION_URL}?t=${Date.now()}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      lastVersionValue = typeof data?.version === "string" ? data.version : null;
+      lastVersionCheckAt = Date.now();
+      return lastVersionValue;
+    } catch {
+      return null;
+    } finally {
+      versionCheckPromise = null;
+    }
+  })();
+
+  return versionCheckPromise;
 }
 
 function scheduleFollowUpCheck(check: () => void) {

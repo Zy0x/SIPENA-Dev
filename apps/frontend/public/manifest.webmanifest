@@ -5,43 +5,38 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
+  "background_color": "#eff6ff",
   "theme_color": "#2563eb",
   "orientation": "natural",
   "lang": "id",
   "id": "/",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-192.png",
+      "src": "/sipena-icon-maskable-192-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
+      "src": "/sipena-icon-any-192-v2.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/sipena-icon-maskable-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "/sipena-icon-any-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/sipena-apple-touch-v2.png",
       "sizes": "180x180",
       "type": "image/png"
     }
@@ -55,14 +50,14 @@
       "short_name": "Dashboard",
       "url": "/dashboard",
       "description": "Lihat ringkasan nilai",
-      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+      "icons": [{"src": "/sipena-icon-any-192-v2.png", "sizes": "192x192"}]
     },
     {
       "name": "Input Nilai",
       "short_name": "Nilai",
       "url": "/grades",
       "description": "Input nilai siswa",
-      "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]
+      "icons": [{"src": "/sipena-icon-any-192-v2.png", "sizes": "192x192"}]
     }
   ]
 }

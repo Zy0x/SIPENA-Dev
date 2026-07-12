@@ -44,12 +44,33 @@
     <meta name="apple-mobile-web-app-title" content="SIPENA" />
     
     <!-- Icons -->
-    <link rel="icon" type="image/png" href="/icon.png">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="/sipena-icon-any-192-v2.png">
+    <link rel="apple-touch-icon" href="/sipena-apple-touch-v2.png" />
+
+    <style>
+      html, body { background: #eff6ff; }
+      #sipena-boot-splash { display: none; }
+      @media (display-mode: standalone) {
+        #sipena-boot-splash {
+          position: fixed; inset: 0; z-index: 2147483647; display: grid;
+          place-items: center; background: #eff6ff; color: #0f172a;
+          transition: opacity 180ms ease-out, visibility 180ms ease-out;
+        }
+        #sipena-boot-splash[data-closing="true"] { opacity: 0; visibility: hidden; }
+        .sipena-boot-mark { display: grid; justify-items: center; gap: 18px; }
+        .sipena-boot-mark img {
+          width: clamp(112px, 30vw, 156px); aspect-ratio: 1; object-fit: contain;
+          filter: drop-shadow(0 18px 28px rgba(37, 99, 235, .18));
+          animation: sipena-boot-enter 420ms cubic-bezier(.2,.8,.2,1) both;
+        }
+        .sipena-boot-mark strong { font: 700 22px/1.2 system-ui, sans-serif; letter-spacing: 0; }
+        .sipena-boot-mark span { font: 500 13px/1.4 system-ui, sans-serif; color: #64748b; }
+        @keyframes sipena-boot-enter { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+        @media (prefers-reduced-motion: reduce) { .sipena-boot-mark img { animation: none; } }
+      }
+    </style>
     
-    <!-- Preconnect -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
     
   
   
@@ -81,6 +102,13 @@
 </head>
 
   <body>
+    <div id="sipena-boot-splash" role="status" aria-label="Memuat SIPENA">
+      <div class="sipena-boot-mark">
+        <img src="/sipena-icon-any-192-v2.png" alt="" width="192" height="192" />
+        <strong>SIPENA</strong>
+        <span>Menyiapkan ruang kerja Anda...</span>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/app/main.tsx"></script>
     <script>

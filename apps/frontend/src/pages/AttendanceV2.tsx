@@ -270,7 +270,7 @@ export default function AttendanceV2Page() {
     attendanceRecords, holidays, dayEvents, isLocked, dbAvailable,
     getAttendance: dbGetAttendance, getAttendanceNote: dbGetAttendanceNote, getDayEvent, isHoliday, getHolidayDescription, getMonthStats: dbGetMonthStats, getDayStats: dbGetDayStats, getYearlyData,
     setAttendance: setAttendanceDb, updateNote, bulkSetAttendance, toggleHoliday, upsertDayEvent, deleteDayEvent, toggleLock,
-    pendingAttendanceSaves, failedAttendanceSaves, retryFailedAttendanceSaves,
+    pendingAttendanceSaves, failedAttendanceSaves, flushAttendanceSaves, retryFailedAttendanceSaves,
     isSaving, isLoading, promoteV2ToV1, isPromoting,
     recapProfile, snapshots, delegations,
     updateRecapProfile, createSnapshot, restoreSnapshot, createDelegation, revokeDelegation, duplicateAgenda,
@@ -802,8 +802,8 @@ export default function AttendanceV2Page() {
     handleExportExcel,
     handleExportPDFVector,
     handleExportPNGV2,
-    handlePrevMonth,
-    handleNextMonth,
+    handlePrevMonth: handlePrevMonthImmediately,
+    handleNextMonth: handleNextMonthImmediately,
     commitAttendanceTrace,
     attendanceDebugPanel,
     attendanceDebugPreviewFooter,
@@ -839,6 +839,16 @@ export default function AttendanceV2Page() {
     getDayEvent,
     setShowExportDialog,
   });
+
+  const handlePrevMonth = useCallback(async () => {
+    await flushAttendanceSaves();
+    handlePrevMonthImmediately();
+  }, [flushAttendanceSaves, handlePrevMonthImmediately]);
+
+  const handleNextMonth = useCallback(async () => {
+    await flushAttendanceSaves();
+    handleNextMonthImmediately();
+  }, [flushAttendanceSaves, handleNextMonthImmediately]);
 
   const showThrottledNotification = useCallback((title: string, message: string) => {
     const now = Date.now();
@@ -1105,14 +1115,15 @@ export default function AttendanceV2Page() {
     window.location.reload();
   }, [selectedDate, isHolidayCombined, getHolidayDescriptionCombined, showSuccess, showWarning, selectedClassId]);
 
-  const handleDateSelect = (date: Date | undefined) => {
+  const handleDateSelect = async (date: Date | undefined) => {
     if (date) {
-      setSelectedDate(date);
       const dateMonth = startOfMonth(date);
       const current = startOfMonth(currentMonth);
       if (dateMonth.getTime() !== current.getTime()) {
+        await flushAttendanceSaves();
         setCurrentMonth(date);
       }
+      setSelectedDate(date);
       setIsDatePickerOpen(false);
     }
   };
@@ -1123,13 +1134,14 @@ export default function AttendanceV2Page() {
     setShowExportMonthDialog(true);
   }, [currentMonth, prepareAttendanceExportStudio]);
 
-  const confirmAttendanceExportMonth = useCallback((monthIndex: number) => {
+  const confirmAttendanceExportMonth = useCallback(async (monthIndex: number) => {
     const nextMonth = startOfMonth(new Date(exportPickerYear, monthIndex, 1));
+    await flushAttendanceSaves();
     setCurrentMonth(nextMonth);
     setSelectedDate(nextMonth);
     setShowExportMonthDialog(false);
     window.setTimeout(() => setShowExportDialog(true), 180);
-  }, [exportPickerYear, setCurrentMonth, setSelectedDate, setShowExportDialog]);
+  }, [exportPickerYear, flushAttendanceSaves, setCurrentMonth, setSelectedDate, setShowExportDialog]);
 
   const handleToggleLock = async () => await toggleLock(!isLocked);
 

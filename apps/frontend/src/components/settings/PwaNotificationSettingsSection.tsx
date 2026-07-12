@@ -422,8 +422,8 @@ export function PwaNotificationSettingsSection() {
   const showTestNotification = useCallback(async (registration: ServiceWorkerRegistration | null) => {
     const payload = {
       body: "Notifikasi SIPENA sudah aktif di perangkat ini.",
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      icon: "/sipena-icon-any-192-v2.png",
+      badge: "/sipena-icon-any-192-v2.png",
       tag: "sipena-notification-test",
       data: { url: "/dashboard" },
     };

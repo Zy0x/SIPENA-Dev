@@ -388,6 +388,7 @@ export function useAttendanceStable(classId: string, month: Date, workDayFormat:
   const isLocked = useMemo(() => {
     if (!dbAvailable) return localLocked;
     const locks = datasetQuery.data?.locks || [];
+    if (locks.length === 0) return true;
     return locks.some((l: any) => l.isLocked === true || l.is_locked === true);
   }, [dbAvailable, datasetQuery.data?.locks, localLocked]);
 

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,15 +10,10 @@ import { AcademicYearProvider } from "@/contexts/AcademicYearContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { AdminRouteGuard } from "@/components/admin/AdminRouteGuard";
 import LayoutRoute from "@/components/LayoutRoute";
-import PWAManager from "@/components/PWAManager";
-import { RotationOverlay } from "@/components/RotationOverlay";
 import { KeyboardShortcutsProvider } from "@/components/KeyboardShortcutsProvider";
-import { SplashScreen } from "@/components/SplashScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ExternalAuthOnboarding } from "@/components/onboarding/ExternalAuthOnboarding";
-import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { ThemePreferenceSync } from "@/components/theme/ThemePreferenceSync";
-import { ViewportTelemetryReporter } from "@/hooks/useViewportTelemetry";
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { useTouchScrollClickGuard } from "@/hooks/useTouchScrollClickGuard";
 import { FeatureFlagProvider } from "@/app/providers/FeatureFlagProvider";
 import { FEATURE_KEYS } from "@/app/providers/featureAccess";
@@ -49,6 +44,16 @@ const MorpheChat = lazy(() => import("../pages/MorpheChat"));
 const Terms = lazy(() => import("../pages/Terms"));
 const AttendanceRuntimeRoute = lazy(() => import("@/features/attendance/runtime/AttendanceRuntimeRoute"));
 const AttendanceStableRoute = lazy(() => import("@/features/attendance/stable/AttendanceStableRoute"));
+const PWAManager = lazy(() => import("@/components/PWAManager"));
+const ExternalAuthOnboarding = lazy(() =>
+  import("@/components/onboarding/ExternalAuthOnboarding").then((module) => ({ default: module.ExternalAuthOnboarding })),
+);
+const RotationOverlay = lazy(() =>
+  import("@/components/RotationOverlay").then((module) => ({ default: module.RotationOverlay })),
+);
+const ViewportTelemetryReporter = lazy(() =>
+  import("@/hooks/useViewportTelemetry").then((module) => ({ default: module.ViewportTelemetryReporter })),
+);
 
 function RouteLoading() {
   return (
@@ -72,18 +77,30 @@ const queryClient = new QueryClient({
 
 const App = () => {
   useTouchScrollClickGuard();
+  const [nonCriticalReady, setNonCriticalReady] = useState(false);
 
-  // Show splash screen only on first visit or PWA launch
-  const [showSplash, setShowSplash] = useState(() => {
-    const isPWA = window.matchMedia("(display-mode: standalone)").matches;
-    const hasSeenSplash = sessionStorage.getItem("sipena_splash_shown");
-    return isPWA && !hasSeenSplash;
-  });
+  useEffect(() => {
+    const splash = document.getElementById("sipena-boot-splash");
+    if (!splash) return;
 
-  const handleSplashComplete = () => {
-    setShowSplash(false);
-    sessionStorage.setItem("sipena_splash_shown", "true");
-  };
+    const closeSplash = window.setTimeout(() => {
+      splash.setAttribute("data-closing", "true");
+      window.setTimeout(() => splash.remove(), 220);
+    }, 360);
+
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const idleHandle = idleWindow.requestIdleCallback?.(() => setNonCriticalReady(true), { timeout: 1800 });
+    const idleFallback = idleHandle == null ? window.setTimeout(() => setNonCriticalReady(true), 1200) : null;
+
+    return () => {
+      window.clearTimeout(closeSplash);
+      if (idleHandle != null) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (idleFallback != null) window.clearTimeout(idleFallback);
+    };
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -95,16 +112,14 @@ const App = () => {
               <ThemePreferenceSync />
               <Toaster />
               <Sonner />
-              <PWAManager />
-              <ExternalAuthOnboarding />
-              <MaintenanceBanner />
-              
-              {showSplash && (
-                <SplashScreen onComplete={handleSplashComplete} minDuration={1400} />
-              )}
+              <Suspense fallback={null}>
+                <MaintenanceBanner />
+                {nonCriticalReady && <PWAManager />}
+                {nonCriticalReady && <ExternalAuthOnboarding />}
+              </Suspense>
               
               <BrowserRouter>
-                <ViewportTelemetryReporter />
+                {nonCriticalReady && <Suspense fallback={null}><ViewportTelemetryReporter /></Suspense>}
                 <KeyboardShortcutsProvider>
                   <ErrorBoundary fallbackTitle="Aplikasi mengalami error">
                   <Suspense fallback={<RouteLoading />}>
@@ -160,7 +175,7 @@ const App = () => {
                   </Routes>
                   </Suspense>
                   </ErrorBoundary>
-                  <RotationOverlay />
+                  {nonCriticalReady && <Suspense fallback={null}><RotationOverlay /></Suspense>}
                 </KeyboardShortcutsProvider>
               </BrowserRouter>
             </TooltipProvider>

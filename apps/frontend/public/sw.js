@@ -6,9 +6,11 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/favicon.ico',
   '/icon.png',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/apple-touch-icon.png',
+  '/sipena-icon-any-192-v2.png',
+  '/sipena-icon-any-512-v2.png',
+  '/sipena-icon-maskable-192-v2.png',
+  '/sipena-icon-maskable-512-v2.png',
+  '/sipena-apple-touch-v2.png',
 ];
 
 // Install event - cache static assets
@@ -86,7 +88,7 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'SIPENA', body: 'Ada pembaruan data.', icon: '/icon-192.png' };
+  let data = { title: 'SIPENA', body: 'Ada pembaruan data.', icon: '/sipena-icon-any-192-v2.png' };
   
   try {
     if (event.data) {
@@ -98,8 +100,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: data.icon || '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: data.icon || '/sipena-icon-any-192-v2.png',
+    badge: '/sipena-icon-any-192-v2.png',
     vibrate: [100, 50, 100],
     data: data,
     actions: [

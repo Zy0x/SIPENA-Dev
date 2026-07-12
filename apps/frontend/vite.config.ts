@@ -74,7 +74,14 @@ export default defineConfig(({ mode }) => {
       VitePWA({
       registerType: "prompt",
       injectRegister: false,
-      includeAssets: ["icon.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png"],
+      includeAssets: [
+        "icon.png",
+        "sipena-icon-any-192-v2.png",
+        "sipena-icon-any-512-v2.png",
+        "sipena-icon-maskable-192-v2.png",
+        "sipena-icon-maskable-512-v2.png",
+        "sipena-apple-touch-v2.png",
+      ],
       manifest: false, // Using manual manifest.json
       workbox: {
         cleanupOutdatedCaches: true,

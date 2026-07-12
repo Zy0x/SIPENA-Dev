@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -97,25 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: { full_name: name },
       },
     });
-    
-    if (!error && data?.user) {
-      try {
-        await supabase.from("notifications").insert({
-          user_id: "00000000-0000-0000-0000-000000000000",
-          type: "new_user_registration",
-          title: "Pengguna Baru Terdaftar",
-          message: `${name} (${email}) baru saja mendaftar di SIPENA`,
-          data: {
-            new_user_id: data.user.id,
-            new_user_email: email,
-            new_user_name: name,
-            registered_at: new Date().toISOString(),
-          },
-        });
-      } catch (notifError) {
-        console.error("Failed to create admin notification:", notifError);
-      }
-    }
     
     return { error: error as Error | null };
   };

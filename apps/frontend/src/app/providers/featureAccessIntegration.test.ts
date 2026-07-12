@@ -175,14 +175,14 @@ describe("feature access integration guard", () => {
     const webManifest = readSource("apps/frontend/public/manifest.webmanifest");
     const sw = readSource("apps/frontend/public/sw.js");
 
-    expect(manifest).toContain("/icon-192.png");
-    expect(manifest).toContain("/icon-512.png");
-    expect(webManifest).toContain("/icon-192.png");
-    expect(webManifest).toContain("/icon-512.png");
-    expect(sw).toContain("/icon-192.png");
-    expect(existsSync(resolve(repoRoot, "apps/frontend/public/icon-192.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/icon-192.png"))).toBe(true);
-    expect(existsSync(resolve(repoRoot, "apps/frontend/public/icon-512.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/icon-512.png"))).toBe(true);
-    expect(existsSync(resolve(repoRoot, "apps/frontend/public/apple-touch-icon.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/apple-touch-icon.png"))).toBe(true);
+    expect(manifest).toContain("/sipena-icon-any-192-v2.png");
+    expect(manifest).toContain("/sipena-icon-maskable-512-v2.png");
+    expect(webManifest).toContain("/sipena-icon-any-192-v2.png");
+    expect(webManifest).toContain("/sipena-icon-maskable-512-v2.png");
+    expect(sw).toContain("/sipena-icon-any-192-v2.png");
+    expect(existsSync(resolve(repoRoot, "apps/frontend/public/sipena-icon-any-192-v2.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/sipena-icon-any-192-v2.png"))).toBe(true);
+    expect(existsSync(resolve(repoRoot, "apps/frontend/public/sipena-icon-maskable-512-v2.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/sipena-icon-maskable-512-v2.png"))).toBe(true);
+    expect(existsSync(resolve(repoRoot, "apps/frontend/public/sipena-apple-touch-v2.png")) || existsSync(resolve(process.cwd(), "apps/frontend/public/sipena-apple-touch-v2.png"))).toBe(true);
   });
 
   it("keeps attendance core migration additive and idempotent", () => {

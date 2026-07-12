@@ -30,6 +30,7 @@ import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
 import { TeamManagementPanel } from "@/components/admin/TeamManagementPanel";
 import { AuthLockoutResetRequestsManager } from "@/components/admin/AuthLockoutResetRequestsManager";
 import { FeatureAccessPanel } from "@/components/admin/FeatureAccessPanel";
+import { MonitoringSystemPanel } from "@/components/admin/MonitoringSystemPanel";
 import { useThemes, themes } from "@/hooks/useThemes";
 import {
   DropdownMenu,
@@ -62,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "deletion",     label: "Permintaan Hapus",     icon: AlertTriangle,      group: "Permintaan" },
   { id: "auth-reset",   label: "Auth Reset",           icon: TimerReset,         group: "Permintaan" },
   { id: "features",     label: "Feature Flags",        icon: SlidersHorizontal,  group: "Sistem" },
+  { id: "monitoring",   label: "Monitoring Sistem",    icon: Activity,            group: "Sistem" },
   { id: "credentials",  label: "Kredensial",           icon: Key,                group: "Sistem" },
 ];
 
@@ -904,6 +906,17 @@ const Admin = () => {
                 )}
 
                 {/* ── Credentials ── */}
+                {activeSection === "monitoring" && (
+                  <>
+                    <SectionHeader
+                      icon={Activity}
+                      title="Monitoring Sistem"
+                      description="Kelola Telegram, kebijakan alert, dan audit monitoring produksi"
+                    />
+                    <MonitoringSystemPanel adminPassword={getBackendPassword()} />
+                  </>
+                )}
+
                 {activeSection === "credentials" && (
                   <>
                     <SectionHeader
