@@ -85,7 +85,7 @@ export default defineConfig(({ mode }) => {
       manifest: false, // Using manual manifest.json
       workbox: {
         cleanupOutdatedCaches: true,
-        skipWaiting: false,
+
         clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         // Exclude version.json from SW cache so it always fetches fresh
