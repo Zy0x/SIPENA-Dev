@@ -669,9 +669,10 @@ export function YearSwitchDialog({
                                   
                                   {/* Delete year */}
                                   <DropdownMenuItem
-                                    onClick={() => {
-                                      onOpenChange(false);
-                                      setTimeout(() => setYearToDelete(year.id), 200);
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setYearToDelete(year.id);
                                     }}
                                     className="cursor-pointer text-destructive focus:text-destructive"
                                   >
