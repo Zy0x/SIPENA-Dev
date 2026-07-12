@@ -1,61 +1,24 @@
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { isEditableShortcutTarget, SHORTCUT_PATH_BY_KEY } from "@/lib/keyboardShortcuts";
 
 export function KeyboardShortcutsProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Don't trigger shortcuts when typing in inputs
-    const target = e.target as HTMLElement;
-    const isInputActive = target.tagName === "INPUT" || 
-                          target.tagName === "TEXTAREA" || 
-                          target.isContentEditable;
+    const isInputActive = isEditableShortcutTarget(e.target);
+
+    if (isInputActive && e.key !== "Escape") return;
     
     // Navigation shortcuts: Ctrl/Cmd + Shift + Key
     if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
       const key = e.key.toLowerCase();
       
-      switch (key) {
-        case "d":
-          e.preventDefault();
-          navigate("/dashboard");
-          break;
-        case "k":
-          e.preventDefault();
-          navigate("/classes");
-          break;
-        case "m":
-          e.preventDefault();
-          navigate("/subjects");
-          break;
-        case "n":
-          e.preventDefault();
-          navigate("/grades");
-          break;
-        case "l":
-          e.preventDefault();
-          navigate("/reports");
-          break;
-        case "p":
-          e.preventDefault();
-          navigate("/attendance");
-          break;
-        case "s":
-          e.preventDefault();
-          navigate("/subjects"); // Changed from /setup - S for Subjects
-          break;
-        case "h":
-          e.preventDefault();
-          navigate("/help");
-          break;
-        case "t":
-          e.preventDefault();
-          navigate("/settings");
-          break;
-        case "a":
-          e.preventDefault();
-          navigate("/about");
-          break;
+      const path = SHORTCUT_PATH_BY_KEY.get(key);
+      if (path) {
+        e.preventDefault();
+        navigate(path);
       }
       return;
     }
@@ -63,9 +26,12 @@ export function KeyboardShortcutsProvider({ children }: { children: React.ReactN
     // Search focus: Ctrl/Cmd + /
     if ((e.ctrlKey || e.metaKey) && e.key === "/") {
       e.preventDefault();
-      const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]') as HTMLInputElement;
+      const searchInput = document.querySelector(
+        'input[type="search"], input[placeholder*="Cari"], input[placeholder*="cari"]',
+      ) as HTMLInputElement | null;
       if (searchInput) {
         searchInput.focus();
+        searchInput.select();
       }
       return;
     }

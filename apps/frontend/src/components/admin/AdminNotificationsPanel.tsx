@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY, supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
+import { EDGE_FUNCTIONS_URL, SUPABASE_EXTERNAL_ANON_KEY } from "@/core/repositories/supabase-compat.repository";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -35,6 +35,7 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLive, setIsLive] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const request = useCallback(async (action: string, payload: Record<string, unknown> = {}) => {
     const response = await fetch(`${EDGE_FUNCTIONS_URL}/admin-event-notifications`, {
@@ -48,13 +49,17 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
       body: JSON.stringify({ action, password: adminPassword, ...payload }),
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.success) throw new Error(result.error || "Aksi notifikasi gagal");
+    if (!response.ok || !result.success) {
+      const message = typeof result.error === "string" ? result.error : `Aksi notifikasi gagal (${response.status})`;
+      throw new Error(message);
+    }
     return result;
   }, [adminPassword]);
 
   const fetchNotifications = useCallback(async () => {
     if (!adminPassword) return;
     setIsLoading(true);
+    setLoadError(null);
     try {
       const result = await request("list");
       setNotifications((result.notifications || []).map((item: AdminNotification & { event_type?: string }) => ({
@@ -62,8 +67,11 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
         type: item.event_type || item.type,
       })));
       setIsLive(true);
-    } catch {
-      toast({ variant: "destructive", title: "Error", description: "Gagal memuat notifikasi admin" });
+    } catch (error) {
+      setIsLive(false);
+      const message = error instanceof Error ? error.message : "Layanan notifikasi Admin tidak merespons";
+      setLoadError(message);
+      toast({ variant: "destructive", title: "Gagal memuat notifikasi Admin", description: message });
     } finally {
       setIsLoading(false);
     }
@@ -72,27 +80,6 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
   useEffect(() => {
     if (adminPassword) fetchNotifications();
   }, [adminPassword, fetchNotifications]);
-
-  useEffect(() => {
-    if (!adminPassword) return;
-    const channel = supabase
-      .channel("admin-notifications")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: "user_id=eq.00000000-0000-0000-0000-000000000000",
-        },
-        (payload) => {
-          setNotifications((prev) => [payload.new as AdminNotification, ...prev]);
-          toast({ title: "🔔 Notifikasi Baru", description: (payload.new as AdminNotification).title });
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [adminPassword, toast]);
 
   useEffect(() => {
     if (!adminPassword) return;
@@ -201,6 +188,18 @@ export function AdminNotificationsPanel({ adminPassword }: AdminNotificationsPan
           <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground/60">
             <Loader2 className="w-6 h-6 animate-spin" />
             <p className="text-sm">Memuat notifikasi...</p>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <Bell className="h-9 w-9 text-destructive/60" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">Notifikasi belum dapat dimuat</p>
+              <p className="mt-1 max-w-md text-xs text-muted-foreground">{loadError}</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={fetchNotifications}>
+              <RefreshCw className="mr-2 h-3.5 w-3.5" />
+              Coba lagi
+            </Button>
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-10 text-muted-foreground/60">

@@ -2,6 +2,7 @@
  import { Link, useLocation, useNavigate } from "react-router-dom";
  import { useAuth } from "@/contexts/AuthContext";
  import { cn } from "@/lib/utils";
+ import { isEditableShortcutTarget } from "@/lib/keyboardShortcuts";
  import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
  import Footer from "@/components/Footer";
  import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
@@ -314,17 +315,30 @@ export default function AppLayout({ children }: AppLayoutProps) {
    const logoMobileRef = useRef<HTMLButtonElement>(null);
    const mobileMenuBtnRef = useRef<HTMLButtonElement>(null);
 
-   // Global search keyboard shortcut (Ctrl+K / Cmd+K)
+   // Shell shortcuts stay here because they control layout-owned state.
    useEffect(() => {
      const handleKeyDown = (e: KeyboardEvent) => {
-       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+       if (!(e.metaKey || e.ctrlKey) || e.shiftKey) return;
+       if (isEditableShortcutTarget(e.target)) return;
+
+       if (e.key.toLowerCase() === 'k') {
          e.preventDefault();
          setShowGlobalSearch(true);
+         return;
+       }
+
+       if (e.key.toLowerCase() === 'b') {
+         e.preventDefault();
+         if (isDesktopSidebar) {
+           setSidebarCollapsed((current) => !current);
+         } else {
+           setSidebarOpen((current) => !current);
+         }
        }
      };
      window.addEventListener('keydown', handleKeyDown);
      return () => window.removeEventListener('keydown', handleKeyDown);
-   }, []);
+   }, [isDesktopSidebar]);
  
    const handleGSAPHover = useCallback((el: HTMLElement | null, isEntering: boolean, config?: { scale?: number; rotation?: number }) => {
      if (!el) return;
@@ -467,7 +481,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
          {/* Active Year Badge */}
          <div
            ref={yearBadgeRef}
-           className="px-4 border-b border-border/30 shrink-0 overflow-hidden"
+           className="shrink-0 overflow-hidden border-b border-border/30 px-4 py-2"
            style={{ opacity: effectiveSidebarCollapsed ? 0 : 1, height: effectiveSidebarCollapsed ? 0 : "auto" }}
          >
            <ActiveYearBadge variant="minimal" showSemester={true} />

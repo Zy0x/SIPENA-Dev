@@ -86,8 +86,8 @@ Setelah deploy, Anda perlu menambahkan secrets yang diperlukan:
 ```bash
 # Set semua secrets sekaligus
 supabase secrets set \
-  ADMIN_DB_PASSWORD="password_admin_anda" \
-  SBASE_SERVICE_ROLE_KEY="service_role_key_anda" \
+  ADMIN_DB_PASSWORD="$ADMIN_DB_PASSWORD" \
+  SBASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
   GROQ_API_KEY="groq_api_key_anda" \
   RESEND_OTP_KEY="resend_api_key_anda" \
   RECAPTCHA_SECRET_KEY="recaptcha_secret_anda" \
@@ -168,7 +168,7 @@ supabase functions deploy delete-auth-user --project-ref jdncrsmjvbweyxcbtnou
 
 **Set secrets yang diperlukan:**
 ```bash
-supabase secrets set ADMIN_DB_PASSWORD="sipena2024" SBASE_SERVICE_ROLE_KEY="your_service_role_key" --project-ref jdncrsmjvbweyxcbtnou
+supabase secrets set ADMIN_DB_PASSWORD="$ADMIN_DB_PASSWORD" SBASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" --project-ref jdncrsmjvbweyxcbtnou
 ```
 
 Setelah deploy, akun akan muncul di panel admin.

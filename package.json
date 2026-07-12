@@ -1,7 +1,7 @@
 {
   "name": "sipena-monorepo",
   "private": true,
-  "version": "2.4.160",
+  "version": "2.4.161",
   "type": "module",
   "packageManager": "npm@10.9.2",
   "engines": {
@@ -27,6 +27,7 @@
     "deploy:netlify:preview": "node scripts/netlify-deploy.mjs --preview",
     "verify:web": "node scripts/verify-web-not-blank.mjs",
     "verify:web:dist": "node scripts/verify-web-not-blank.mjs --dist apps/frontend/dist --no-render",
+    "security:scan": "node scripts/ci-security-check.mjs",
     "monitor:synthetic": "node scripts/synthetic-monitor.mjs",
     "viewport:sync": "node scripts/sync-viewport-observations.mjs",
     "erapor:probe": "node scripts/erapor-automation.mjs --phase all",

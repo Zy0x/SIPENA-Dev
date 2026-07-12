@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.161",
+    version: "2.4.161",
+    title: "Hardening Sinkronisasi dan Panduan",
+    description: "Notifikasi Admin kembali aktif, pipeline sinkronisasi kini melewati quality gate, dan Panduan lebih lengkap serta konsisten.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-12",
+    details: [
+      "Memperbaiki startup Edge Function notifikasi Admin dan menambahkan error state yang dapat dicoba ulang.",
+      "Menambahkan secret scan, typecheck, lint, test, build, dan verifikasi artifact sebelum source disinkronkan ke repo produksi.",
+      "Merapikan jarak pemilih semester serta menyatukan shortcut aktual dan referensi Panduan dalam satu registry."
+    ]
+  },
+  {
     id: "v2.4.160",
     version: "2.4.160",
     title: "Hardening PWA, Presensi, dan Akun",

@@ -1,9 +1,12 @@
 import { PanduanIcon } from "@/components/ui/animated-icons";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { NAVIGATION_SHORTCUTS, UTILITY_SHORTCUTS } from "@/lib/keyboardShortcuts";
 import {
   Accordion,
   AccordionContent,
@@ -37,21 +40,23 @@ import {
   Github,
   ExternalLink,
   CalendarDays,
+  Search,
 } from "lucide-react";
 
 export default function Help() {
   const navigate = useNavigate();
+  const [guideQuery, setGuideQuery] = useState("");
 
   const guides = [
     {
       id: "setup",
       icon: Settings,
-      title: "Setup Awal Aplikasi",
+      title: "Pengaturan Awal Aplikasi",
       description: "Langkah pertama untuk memulai menggunakan SIPENA",
       steps: [
         "Daftar atau masuk ke akun SIPENA Anda melalui halaman login",
         "Setelah login, Anda akan diarahkan ke Dashboard",
-        "Buka menu 'Pengaturan Awal' untuk mengatur tahun ajaran dan semester aktif",
+        "Tekan pemilih tahun ajaran di bagian atas sidebar",
         "Pilih tahun ajaran yang sedang berjalan (contoh: 2024/2025)",
         "Pilih semester aktif (Ganjil atau Genap)",
         "Perubahan tersimpan otomatis",
@@ -60,19 +65,19 @@ export default function Help() {
     {
       id: "classes",
       icon: Users,
-      title: "Mengelola Kelas & Siswa",
-      description: "Cara membuat kelas dan menambahkan data siswa",
+      title: "Mengelola Kelas & Murid",
+      description: "Cara membuat kelas dan menambahkan data murid",
       steps: [
-        "Buka menu 'Kelas & Siswa' dari sidebar navigasi",
+        "Buka menu 'Kelas & Murid' dari sidebar navigasi",
         "Klik tombol 'Tambah Kelas' untuk membuat kelas baru",
         "Masukkan nama kelas (contoh: Kelas 4A, Kelas 5B)",
         "Tambahkan deskripsi kelas jika diperlukan (opsional)",
         "Setelah kelas dibuat, klik pada kartu kelas untuk melihat detail",
-        "Pilih 'Tambah Siswa' untuk input manual satu per satu",
-        "Masukkan Nama Siswa dan NISN (Nomor Induk Siswa Nasional)",
-        "Atau gunakan 'Import Excel/CSV' untuk tambah banyak siswa sekaligus",
-        "Format CSV/Excel: Kolom A = Nama, Kolom B = NISN",
-        "Siswa dapat diberi bookmark (⭐) untuk penandaan khusus",
+        "Pilih 'Tambah Murid' untuk input manual satu per satu",
+        "Masukkan nama murid dan NISN (Nomor Induk Siswa Nasional)",
+        "Gunakan Import Kelas & Murid untuk menambahkan beberapa kelas dari template resmi",
+        "Gunakan Import dari Foto (BETA) bila sumber data berupa foto tabel",
+        "Murid dapat diberi tanda favorit untuk memudahkan pencarian",
       ],
     },
     {
@@ -111,7 +116,7 @@ export default function Help() {
     {
       id: "grades",
       icon: FileSpreadsheet,
-      title: "Input Nilai Siswa",
+      title: "Input Nilai Murid",
       description: "Cara memasukkan dan mengedit nilai dengan cepat",
       steps: [
         "Buka menu 'Input Nilai' dari sidebar atau tombol pada kartu mapel",
@@ -130,17 +135,17 @@ export default function Help() {
     {
       id: "attendance",
       icon: CalendarDays,
-      title: "Presensi Siswa (Beta)",
-      description: "Kelola kehadiran siswa dengan kalender",
+      title: "Presensi Murid",
+      description: "Kelola kehadiran murid dengan kalender",
       steps: [
         "Buka menu 'Presensi' dari sidebar (ditandai badge Beta)",
         "Pilih kelas yang akan dikelola presensinya",
         "Pilih tanggal menggunakan kalender popup",
-        "Klik tombol H/I/S/A untuk setiap siswa (Hadir/Izin/Sakit/Alpha)",
-        "Gunakan 'Semua Hadir' untuk presensi massal",
-        "Lihat rekap bulanan di bagian bawah halaman",
-        "Klik tombol Kunci untuk mengunci rekap bulanan",
-        "Ekspor data presensi ke Excel untuk dokumentasi",
+        "Klik H/S/I/A/D untuk setiap murid (Hadir/Sakit/Izin/Alpha/Dispensasi)",
+        "Gunakan Presensi Massal untuk menerapkan status ke banyak murid",
+        "Buka Rekap Bulanan untuk melihat jumlah dan persentase kehadiran",
+        "Bulan terkunci secara default; buka kunci hanya saat perlu mengubah data",
+        "Gunakan Studio Ekspor untuk membuat PDF, Excel, atau gambar rekap",
         "Statistik otomatis terhitung per bulan",
       ],
     },
@@ -191,8 +196,8 @@ export default function Help() {
         "Klik ikon 'Link' pada kartu mata pelajaran yang ingin dibagikan",
         "Link akses akan dibuat otomatis dengan masa berlaku 7 hari",
         "Salin link dan bagikan ke guru tamu via WhatsApp/Email",
-        "Guru tamu dapat mengakses tanpa perlu login",
-        "Guru tamu diminta mengisi nama dan email saat pertama kali akses",
+        "Guru tamu dapat melanjutkan dengan akun SIPENA agar akses tersimpan",
+        "Masuk Cepat tanpa akun tetap tersedia untuk akses sementara",
         "Anda akan menerima notifikasi saat guru tamu mulai input nilai",
         "Link dapat dicabut aksesnya kapan saja",
       ],
@@ -219,24 +224,14 @@ export default function Help() {
       title: "Shortcut Keyboard",
       description: "Pintasan keyboard untuk navigasi cepat",
       steps: [
-        "Navigasi Halaman (Ctrl/Cmd + Shift + Key):",
-        "  D = Dashboard",
-        "  K = Kelas & Siswa",
-        "  M = Mata Pelajaran",
-        "  N = Input Nilai",
-        "  L = Laporan",
-        "  P = Presensi",
-        "  S = Setup Awal",
-        "  H = Panduan (Halaman ini)",
-        "  T = Pengaturan",
-        "  A = Tentang",
+        "Navigasi halaman memakai Ctrl/Cmd + Shift + huruf:",
+        ...NAVIGATION_SHORTCUTS.map((shortcut) => `  ${shortcut.key} = ${shortcut.label}`),
         "",
         "Shortcut Lainnya:",
-        "  Ctrl/Cmd + / = Fokus ke kolom pencarian",
+        ...UTILITY_SHORTCUTS.map((shortcut) => `  ${shortcut.keys} = ${shortcut.label}`),
         "  Enter = Pindah ke sel berikutnya (vertikal)",
         "  Tab = Pindah ke sel berikutnya (horizontal)",
         "  Arrow Keys = Navigasi sel ke segala arah",
-        "  Escape = Tutup dialog/keluar mode",
       ],
     },
     {
@@ -310,7 +305,7 @@ export default function Help() {
       id: "portal",
       icon: Users,
       title: "Portal Orang Tua",
-      description: "Bagikan perkembangan siswa ke orang tua/wali",
+      description: "Bagikan perkembangan murid ke orang tua/wali",
       steps: [
         "Buka Laporan > Portal Orang Tua dari sidebar",
         "Pilih kelas yang akan dibagikan",
@@ -352,6 +347,15 @@ export default function Help() {
   ];
 
   const allGuides = [...guides, ...additionalGuides];
+  const normalizedGuideQuery = guideQuery.trim().toLocaleLowerCase("id-ID");
+  const filteredGuides = normalizedGuideQuery
+    ? allGuides.filter((guide) =>
+        [guide.title, guide.description, ...guide.steps]
+          .join(" ")
+          .toLocaleLowerCase("id-ID")
+          .includes(normalizedGuideQuery),
+      )
+    : allGuides;
 
   return (
     <>
@@ -366,13 +370,13 @@ export default function Help() {
               Pelajari cara menggunakan SIPENA dengan mudah
             </p>
           </div>
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg flex-shrink-0">
-            <PanduanIcon  className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 sm:h-14 sm:w-14">
+            <PanduanIcon className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
           </div>
         </div>
 
         {/* Quick Start Card */}
-        <Card className="animate-fade-in-up delay-100 bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20 shadow-sm">
+        <Card className="animate-fade-in-up delay-100 border border-border shadow-sm">
           <CardHeader className="pb-2 sm:pb-4">
             <h2 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-foreground">
               <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-grade-pass" />
@@ -386,7 +390,7 @@ export default function Help() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               {[
                 { step: 1, text: "Buat Kelas", link: "/classes" },
-                { step: 2, text: "Tambah Siswa", link: "/classes" },
+                { step: 2, text: "Tambah Murid", link: "/classes" },
                 { step: 3, text: "Atur Mapel", link: "/subjects" },
                 { step: 4, text: "Input Nilai", link: "/grades" },
               ].map((item) => (
@@ -416,22 +420,22 @@ export default function Help() {
             </h2>
           </CardHeader>
           <CardContent className="pb-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+              Gunakan <strong>Ctrl</strong> di Windows/Linux atau <strong>Cmd</strong> di macOS. Shortcut navigasi tidak aktif saat Anda sedang mengetik di form.
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                { keys: "Ctrl+Shift+D", label: "Dashboard" },
-                { keys: "Ctrl+Shift+N", label: "Input Nilai" },
-                { keys: "Ctrl+Shift+L", label: "Laporan" },
-                { keys: "Ctrl+Shift+P", label: "Presensi" },
-                { keys: "Ctrl+Shift+K", label: "Kelas" },
-                { keys: "Ctrl+Shift+M", label: "Mapel" },
-                { keys: "Ctrl+/", label: "Pencarian" },
-                { keys: "Escape", label: "Tutup" },
+                ...NAVIGATION_SHORTCUTS.map((shortcut) => ({
+                  keys: `Ctrl/Cmd + Shift + ${shortcut.key}`,
+                  label: shortcut.label,
+                })),
+                ...UTILITY_SHORTCUTS,
               ].map((shortcut) => (
-                <div key={shortcut.keys} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0.5 font-mono">
+                <div key={shortcut.keys} className="flex min-h-11 items-center gap-2 rounded-md border border-border/70 bg-muted/30 p-2.5">
+                  <Badge variant="outline" className="shrink-0 px-1.5 py-0.5 font-mono text-[10px] sm:text-xs">
                     {shortcut.keys}
                   </Badge>
-                  <span className="text-xs text-muted-foreground truncate">{shortcut.label}</span>
+                  <span className="min-w-0 text-xs text-muted-foreground">{shortcut.label}</span>
                 </div>
               ))}
             </div>
@@ -443,12 +447,23 @@ export default function Help() {
           <CardHeader className="pb-2 sm:pb-4">
             <h2 className="text-sm sm:text-base font-semibold text-foreground">Panduan Lengkap</h2>
             <CardDescription className="text-xs">
-              Klik pada topik untuk melihat panduan detail
+              Cari topik, lalu buka bagian yang ingin dipelajari.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={guideQuery}
+                onChange={(event) => setGuideQuery(event.target.value)}
+                placeholder="Cari panduan kelas, nilai, presensi, ekspor..."
+                className="h-11 pl-10"
+                aria-label="Cari topik panduan"
+              />
+            </div>
             <Accordion type="single" collapsible className="w-full">
-              {allGuides.map((guide) => (
+              {filteredGuides.map((guide) => (
                 <AccordionItem key={guide.id} value={guide.id}>
                   <AccordionTrigger className="hover:no-underline group py-3 sm:py-4">
                     <div className="flex items-center gap-2 sm:gap-3 text-left min-w-0">
@@ -488,6 +503,13 @@ export default function Help() {
                 </AccordionItem>
               ))}
             </Accordion>
+            {filteredGuides.length === 0 && (
+              <div className="py-10 text-center">
+                <HelpCircle className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                <p className="mt-3 text-sm font-medium text-foreground">Topik belum ditemukan</p>
+                <p className="mt-1 text-xs text-muted-foreground">Coba kata yang lebih umum, misalnya kelas, nilai, atau presensi.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

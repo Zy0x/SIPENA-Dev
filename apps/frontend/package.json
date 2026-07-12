@@ -1,7 +1,7 @@
 {
   "name": "@sipena/frontend",
   "private": true,
-  "version": "2.4.160",
+  "version": "2.4.161",
   "type": "module",
   "scripts": {
     "dev": "vite",
