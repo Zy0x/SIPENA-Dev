@@ -158,7 +158,10 @@ export function YearSwitchDialog({
 
   // Get semesters for a specific year
   const getSemestersForYear = (yearId: string) => {
-    return semesters.filter(s => s.academic_year_id === yearId);
+    const sems = semesters.filter(s => s.academic_year_id === yearId);
+    // Deduplicate by number to prevent UI glitches if DB has accidental duplicates
+    const uniqueSems = Array.from(new Map(sems.map(s => [s.number, s])).values());
+    return uniqueSems.sort((a, b) => a.number - b.number);
   };
 
   // Generate suggested year name based on existing years and current date
@@ -669,9 +672,7 @@ export function YearSwitchDialog({
                                   
                                   {/* Delete year */}
                                   <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
+                                    onClick={() => {
                                       setYearToDelete(year.id);
                                     }}
                                     className="cursor-pointer text-destructive focus:text-destructive"
