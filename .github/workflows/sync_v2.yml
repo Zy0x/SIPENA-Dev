@@ -459,7 +459,7 @@ jobs:
           set -euo pipefail
 
           if grep -qx 'main' "${GITHUB_WORKSPACE}/branches.txt"; then
-            gh workflow run production-build.yml --ref main
+            gh workflow run production-build.yml --repo "$GITHUB_REPOSITORY" --ref main
             echo "Production quality gate dispatched for main."
           else
             echo "Branch main tidak disinkronkan; production quality gate tidak dijalankan."
