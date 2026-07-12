@@ -41,6 +41,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: sync-${{ github.repository }}-${{ github.event_name }}-${{ github.ref_name }}
@@ -448,6 +449,21 @@ jobs:
             fi
             sync_one_branch "$branch"
           done < "${GITHUB_WORKSPACE}/branches.txt"
+
+      - name: Run production quality gate for main
+        if: ${{ env.DRY_RUN != 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if grep -qx 'main' "${GITHUB_WORKSPACE}/branches.txt"; then
+            gh workflow run production-build.yml --ref main
+            echo "Production quality gate dispatched for main."
+          else
+            echo "Branch main tidak disinkronkan; production quality gate tidak dijalankan."
+          fi
 
       - name: Summary
         shell: bash
