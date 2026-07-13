@@ -128,8 +128,6 @@ async function activateWaitingServiceWorker(waitingWorker: ServiceWorker): Promi
 
     waitingWorker.postMessage({ type: 'SKIP_WAITING' });
   });
-
-  window.location.reload();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -351,7 +349,7 @@ export function usePWA() {
     const updateServiceWorker = (window as any).__sipenaPwaUpdate;
     if (typeof updateServiceWorker === "function") {
       try {
-        await withTimeout(updateServiceWorker(true), PWA_UPDATE_FALLBACK_RELOAD_MS);
+        await withTimeout(updateServiceWorker(false), PWA_UPDATE_FALLBACK_RELOAD_MS);
         return;
       } catch (error) {
         console.warn("[PWA] virtual update failed, using fallback:", error);

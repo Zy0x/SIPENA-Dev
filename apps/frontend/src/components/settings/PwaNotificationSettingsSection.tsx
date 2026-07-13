@@ -330,6 +330,7 @@ export function PwaNotificationSettingsSection() {
       if (waitingWorker) {
         success("Pembaruan ditemukan", "SIPENA akan menerapkan versi terbaru sekarang.");
         await pwa.applyUpdate();
+        window.setTimeout(() => window.location.reload(), 700);
         return;
       }
 

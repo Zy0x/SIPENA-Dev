@@ -23,9 +23,78 @@ const UPDATE_AUTO_APPLY_SECONDS = 10;
 const UPDATE_WAIT_MS = 2 * 60_000;
 const UPDATE_HARD_RELOAD_MS = 12_000;
 const UPDATE_RESOLVED_RELOAD_MS = 700;
+const UPDATE_LOCK_KEY = "sipena_pwa_update_lock_v1";
+const UPDATE_LOCK_MAX_AGE_MS = 10 * 60_000;
+const UPDATE_MAX_AUTO_ATTEMPTS = 2;
+const UPDATE_RESUME_APPLY_DELAY_MS = 900;
 let versionCheckPromise: Promise<string | null> | null = null;
 let lastVersionCheckAt = 0;
 let lastVersionValue: string | null = null;
+
+type PwaUpdateStatus = "available" | "applying" | "stalled";
+
+interface PwaUpdateLock {
+  targetVersion: string;
+  startedAt: number;
+  attempt: number;
+  status: "pending" | "applying" | "stalled";
+  source: string;
+}
+
+function isDevelopmentBuild(): boolean {
+  return import.meta.env.DEV;
+}
+
+function debugPwaUpdate(message: string, data?: Record<string, unknown>) {
+  if (!isDevelopmentBuild()) return;
+  console.debug(`[PWA update] ${message}`, data ?? {});
+}
+
+function readUpdateLock(): PwaUpdateLock | null {
+  try {
+    const raw = localStorage.getItem(UPDATE_LOCK_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PwaUpdateLock>;
+    if (
+      typeof parsed.targetVersion !== "string" ||
+      typeof parsed.startedAt !== "number" ||
+      typeof parsed.attempt !== "number" ||
+      typeof parsed.source !== "string"
+    ) {
+      return null;
+    }
+    if (Date.now() - parsed.startedAt > UPDATE_LOCK_MAX_AGE_MS) {
+      localStorage.removeItem(UPDATE_LOCK_KEY);
+      return null;
+    }
+    return {
+      targetVersion: parsed.targetVersion,
+      startedAt: parsed.startedAt,
+      attempt: parsed.attempt,
+      status: parsed.status === "stalled" || parsed.status === "pending" ? parsed.status : "applying",
+      source: parsed.source,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeUpdateLock(lock: PwaUpdateLock) {
+  try {
+    localStorage.setItem(UPDATE_LOCK_KEY, JSON.stringify(lock));
+  } catch {
+    // Storage may be unavailable in hardened/private browsers. The in-memory
+    // state still prevents duplicate banners in the current page lifetime.
+  }
+}
+
+function clearUpdateLock() {
+  try {
+    localStorage.removeItem(UPDATE_LOCK_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 async function fetchCurrentVersion(): Promise<string | null> {
   if (versionCheckPromise) return versionCheckPromise;
@@ -220,18 +289,22 @@ function InstallBanner({ onInstall, onDismiss, isIOS, isDesktop, hasNativePrompt
 function UpdateBanner({
   onUpdate,
   onWait,
-  isUpdating,
+  status,
   countdown,
 }: {
   onUpdate: () => void;
   onWait: () => void;
-  isUpdating: boolean;
+  status: PwaUpdateStatus;
   countdown: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (ref.current) gsap.fromTo(ref.current, { opacity: 0, y: -60 }, { opacity: 1, y: 0, duration: 0.4, ease: 'back.out(1.4)' });
   }, []);
+
+  const isApplying = status === "applying";
+  const isStalled = status === "stalled";
+
   return (
     <div
       ref={ref}
@@ -243,36 +316,38 @@ function UpdateBanner({
         style={{ pointerEvents: 'auto' }}
         aria-live="polite"
       >
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isUpdating ? 'bg-primary/15' : 'bg-blue-500/15'}`}>
-          <RefreshCw className={`w-4 h-4 ${isUpdating ? 'text-primary animate-spin' : 'text-blue-500'}`} />
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isApplying ? 'bg-primary/15' : isStalled ? 'bg-amber-500/15' : 'bg-blue-500/15'}`}>
+          <RefreshCw className={`w-4 h-4 ${isApplying ? 'text-primary animate-spin' : isStalled ? 'text-amber-600' : 'text-blue-500'}`} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight text-foreground">
-            {isUpdating ? 'Memperbarui aplikasi...' : 'Pembaruan tersedia'}
+            {isApplying ? 'Menerapkan pembaruan...' : isStalled ? 'Update belum selesai' : 'Pembaruan tersedia'}
           </p>
           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            {isUpdating
-              ? 'Mohon tunggu, versi terbaru sedang diterapkan'
-              : `Otomatis diterapkan dalam ${Math.max(0, countdown)} detik. Simpan pekerjaan dulu jika perlu.`}
+            {isApplying
+              ? 'Browser sedang mengaktifkan versi terbaru. Mohon tunggu sebentar.'
+              : isStalled
+                ? 'Browser masih memuat versi lama. Muat ulang sekali lagi untuk menyelesaikan update.'
+                : `Otomatis diterapkan dalam ${Math.max(0, countdown)} detik. Simpan pekerjaan dulu jika perlu.`}
           </p>
         </div>
         <div className="col-span-2 flex min-w-0 items-center justify-end gap-2 sm:col-span-1 sm:shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onUpdate(); }}
-            disabled={isUpdating}
+            disabled={isApplying}
             className={`min-h-9 min-w-0 flex-1 rounded-xl px-3 py-2 text-xs font-bold transition-all sm:flex-none sm:whitespace-nowrap ${
-              isUpdating
+              isApplying
                 ? 'bg-primary/80 text-primary-foreground cursor-wait'
                 : 'bg-primary text-primary-foreground hover:opacity-90'
             }`}
             style={{ pointerEvents: 'auto' }}
           >
-            {isUpdating ? 'Memperbarui...' : 'Update sekarang'}
+            {isApplying ? 'Memperbarui...' : isStalled ? 'Muat ulang lagi' : 'Update sekarang'}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onWait(); }}
-            disabled={isUpdating}
-            className={`min-h-9 rounded-xl px-3 py-2 text-xs font-semibold sm:whitespace-nowrap ${isUpdating ? 'opacity-40 cursor-not-allowed' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
+            disabled={isApplying}
+            className={`min-h-9 rounded-xl px-3 py-2 text-xs font-semibold sm:whitespace-nowrap ${isApplying ? 'opacity-40 cursor-not-allowed' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
             style={{ pointerEvents: 'auto' }}
           >
             Tunggu
@@ -302,9 +377,12 @@ export default function PWAManager() {
   const [showDesktopInfo, setShowDesktopInfo] = useState(false);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<PwaUpdateStatus>("available");
   const [updateCountdown, setUpdateCountdown] = useState(UPDATE_AUTO_APPLY_SECONDS);
   const dismissedRef = useRef(false);
   const waitUntilRef = useRef(0);
+  const waitTargetRef = useRef<string | null>(null);
+  const updateTargetVersionRef = useRef<string | null>(null);
   const updateBannerVisibleRef = useRef(false);
   const isUpdatingRef = useRef(false);
 
@@ -316,40 +394,124 @@ export default function PWAManager() {
     isUpdatingRef.current = isUpdating;
   }, [isUpdating]);
 
-  const triggerUpdate = useCallback(() => {
-    if (dismissedRef.current || Date.now() < waitUntilRef.current) return;
-    if (updateBannerVisibleRef.current || isUpdatingRef.current) return;
+  const requestUpdate = useCallback((targetVersion: string | null, source: string) => {
+    if (!targetVersion) return;
+    if (targetVersion === __APP_BUILD_VERSION__) {
+      clearUpdateLock();
+      return;
+    }
+
+    const currentLock = readUpdateLock();
+    if (
+      currentLock?.targetVersion === targetVersion &&
+      (currentLock.status === "applying" || currentLock.status === "stalled")
+    ) {
+      updateTargetVersionRef.current = targetVersion;
+      setUpdateStatus(currentLock.status === "stalled" ? "stalled" : "applying");
+      setIsUpdating(currentLock.status !== "stalled");
+      setShowUpdateBanner(true);
+      updateBannerVisibleRef.current = true;
+      debugPwaUpdate("reuse active lock", { source, targetVersion, status: currentLock.status });
+      return;
+    }
+
+    if (waitTargetRef.current === targetVersion && Date.now() < waitUntilRef.current) return;
+    if (updateTargetVersionRef.current === targetVersion && (updateBannerVisibleRef.current || isUpdatingRef.current)) return;
+
+    dismissedRef.current = false;
+    updateTargetVersionRef.current = targetVersion;
+    setUpdateStatus("available");
     setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
     setShowUpdateBanner(true);
+    updateBannerVisibleRef.current = true;
+    debugPwaUpdate("update requested", { source, currentVersion: __APP_BUILD_VERSION__, targetVersion });
   }, []);
 
   const handleUpdate = useCallback(async () => {
     if (isUpdating) return;
+    const targetVersion = updateTargetVersionRef.current ?? await fetchCurrentVersion();
+    if (!targetVersion || targetVersion === __APP_BUILD_VERSION__) {
+      clearUpdateLock();
+      setShowUpdateBanner(false);
+      updateBannerVisibleRef.current = false;
+      setIsUpdating(false);
+      setUpdateStatus("available");
+      return;
+    }
+
+    const existingLock = readUpdateLock();
+    const nextAttempt = existingLock?.targetVersion === targetVersion ? existingLock.attempt + 1 : 1;
+    const startedAt = existingLock?.targetVersion === targetVersion ? existingLock.startedAt : Date.now();
+    writeUpdateLock({
+      targetVersion,
+      startedAt,
+      attempt: nextAttempt,
+      status: "applying",
+      source: existingLock?.source ?? "manual",
+    });
+
     dismissedRef.current = true;
     setShowUpdateBanner(true);
     updateBannerVisibleRef.current = true;
+    setUpdateStatus("applying");
     setIsUpdating(true);
     isUpdatingRef.current = true;
+    debugPwaUpdate("apply start", { currentVersion: __APP_BUILD_VERSION__, targetVersion, attempt: nextAttempt });
 
-    const hardReloadTimer = window.setTimeout(() => {
+    const forceReload = () => {
+      debugPwaUpdate("reload", { targetVersion, attempt: nextAttempt });
       window.location.reload();
-    }, UPDATE_HARD_RELOAD_MS);
+    };
+
+    window.setTimeout(forceReload, UPDATE_HARD_RELOAD_MS);
 
     try {
       await applyUpdate();
-      window.setTimeout(() => {
-        window.location.reload();
-      }, UPDATE_RESOLVED_RELOAD_MS);
+      window.setTimeout(forceReload, UPDATE_RESOLVED_RELOAD_MS);
     } catch (error) {
       console.warn('[PWA] applyUpdate failed, forcing reload:', error);
-      window.location.reload();
-    } finally {
-      window.clearTimeout(hardReloadTimer);
+      forceReload();
     }
   }, [applyUpdate, isUpdating]);
 
   useEffect(() => {
-    if (!showUpdateBanner || isUpdating) return;
+    const lock = readUpdateLock();
+    if (!lock) return;
+
+    if (lock.targetVersion === __APP_BUILD_VERSION__) {
+      debugPwaUpdate("target version reached", { targetVersion: lock.targetVersion });
+      clearUpdateLock();
+      return;
+    }
+
+    updateTargetVersionRef.current = lock.targetVersion;
+    setShowUpdateBanner(true);
+    updateBannerVisibleRef.current = true;
+
+    if (lock.attempt >= UPDATE_MAX_AUTO_ATTEMPTS || lock.status === "stalled") {
+      writeUpdateLock({ ...lock, status: "stalled" });
+      setUpdateStatus("stalled");
+      setIsUpdating(false);
+      isUpdatingRef.current = false;
+      debugPwaUpdate("update stalled", {
+        currentVersion: __APP_BUILD_VERSION__,
+        targetVersion: lock.targetVersion,
+        attempt: lock.attempt,
+      });
+      return;
+    }
+
+    setUpdateStatus("applying");
+    setIsUpdating(true);
+    isUpdatingRef.current = true;
+    const timer = window.setTimeout(() => {
+      void handleUpdate();
+    }, UPDATE_RESUME_APPLY_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [handleUpdate]);
+
+  useEffect(() => {
+    if (!showUpdateBanner || isUpdating || updateStatus !== "available") return;
     setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
 
     const interval = window.setInterval(() => {
@@ -364,12 +526,19 @@ export default function PWAManager() {
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [handleUpdate, isUpdating, showUpdateBanner]);
+  }, [handleUpdate, isUpdating, showUpdateBanner, updateStatus]);
 
   // Primary: react to usePWA hook's needsUpdate state (SW updatefound event)
   useEffect(() => {
-    if (pwa.needsUpdate) triggerUpdate();
-  }, [pwa.needsUpdate, triggerUpdate]);
+    if (!pwa.needsUpdate) return;
+    let cancelled = false;
+    fetchCurrentVersion().then((targetVersion) => {
+      if (!cancelled) requestUpdate(targetVersion, "service-worker");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pwa.needsUpdate, requestUpdate]);
 
   // Primary 2: HTTP polling /version.json — works for ALL browsers including
   // regular tabs, non-PWA contexts, and browsers with aggressive SW caching.
@@ -386,7 +555,7 @@ export default function PWAManager() {
         // Compare against the version embedded in the currently running bundle.
         // This catches "old app shell + new server deploy" immediately,
         // even on the first poll, without requiring a manual refresh first.
-        triggerUpdate();
+        requestUpdate(v, "version-json");
       }
     };
 
@@ -418,7 +587,7 @@ export default function PWAManager() {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, [triggerUpdate]);
+  }, [requestUpdate]);
 
   // Fallback: also check SW registration directly (belt-and-suspenders)
   useEffect(() => {
@@ -430,7 +599,11 @@ export default function PWAManager() {
       if (dismissedRef.current) return;
       try {
         const reg = await navigator.serviceWorker.getRegistration();
-        if (reg?.waiting) { triggerUpdate(); return; }
+        if (reg?.waiting) {
+          const targetVersion = await fetchCurrentVersion();
+          requestUpdate(targetVersion, "waiting-service-worker");
+          return;
+        }
         await reg?.update();
       } catch { /* ignore */ }
     };
@@ -460,13 +633,15 @@ export default function PWAManager() {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, [triggerUpdate]);
+  }, [requestUpdate]);
 
   const handleWaitUpdate = useCallback(() => {
     if (isUpdating) return;
+    waitTargetRef.current = updateTargetVersionRef.current;
     waitUntilRef.current = Date.now() + UPDATE_WAIT_MS;
     setShowUpdateBanner(false);
     updateBannerVisibleRef.current = false;
+    setUpdateStatus("available");
     setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
   }, [isUpdating]);
 
@@ -498,7 +673,7 @@ export default function PWAManager() {
         <UpdateBanner
           onUpdate={handleUpdate}
           onWait={handleWaitUpdate}
-          isUpdating={isUpdating}
+          status={updateStatus}
           countdown={updateCountdown}
         />
       )}
