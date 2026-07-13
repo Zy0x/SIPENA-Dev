@@ -24,49 +24,27 @@ interface CollapsedNavItemProps {
 }
 
 export function CollapsedNavItem({ item, isActive, onNavigate, onMobileClose }: CollapsedNavItemProps) {
-  const itemRef = useRef<HTMLAnchorElement>(null);
-  const prefersReducedMotion = useReducedMotion();
-  const dur = prefersReducedMotion ? 0.01 : 0.2;
-
-  const handleEnter = useCallback(() => {
-    if (itemRef.current && !prefersReducedMotion) {
-      gsap.to(itemRef.current, { scale: 1.06, duration: dur, ease: "power2.out" });
-    }
-  }, [prefersReducedMotion, dur]);
-
-  const handleLeave = useCallback(() => {
-    if (itemRef.current) gsap.to(itemRef.current, { scale: 1, duration: dur * 0.7, ease: "power2.out" });
-  }, [dur]);
-
   return (
     <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>
         <Link
-          ref={itemRef}
           to={item.href}
           data-sidebar-nav-item="true"
           onClick={(e) => onNavigate(e, item.href, !!item.children)}
-          onMouseEnter={handleEnter}
-          onMouseLeave={handleLeave}
-          className="relative block touch-manipulation"
+          className="sipena-collapsed-nav-link relative flex h-12 items-center justify-center touch-manipulation"
         >
           <div className={cn(
-            "flex items-center justify-center w-11 h-11 mx-auto rounded-[12px] transition-all relative group",
+            "relative flex h-11 w-11 items-center justify-center rounded-[12px] transition-[background-color,color,box-shadow,transform] duration-150 group",
             "min-w-[44px] min-h-[44px]",
             isActive
               ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/15"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
           )}>
-            <div className={cn(
-              "flex items-center justify-center rounded-[8px] transition-all",
-              isActive ? "w-[26px] h-[26px] bg-background shadow-sm ring-1 ring-primary/10" : "w-full h-full"
-            )}>
-              <item.icon className="w-[18px] h-[18px]" aria-hidden="true" />
-            </div>
+            <item.icon className="h-[18px] w-[18px]" aria-hidden="true" />
+            {item.isBeta && (
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-status-connecting ring-2 ring-card" />
+            )}
           </div>
-          {item.isBeta && (
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-status-connecting rounded-full" />
-          )}
         </Link>
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={12} className="font-medium text-xs px-3 py-1.5 rounded-lg">
@@ -186,8 +164,7 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
     <div className="relative">
       {/* Unified row container – single rounded box for both link + chevron */}
       <div className={cn(
-        "flex items-center rounded-[12px] transition-all overflow-hidden",
-        "min-h-[44px]",
+        "flex h-12 items-center overflow-hidden rounded-[12px] transition-all",
         isActive
           ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/15"
           : "text-foreground/75 hover:bg-muted/50 hover:text-foreground"
@@ -199,7 +176,7 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
           onMouseEnter={handleEnter} onMouseLeave={handleLeave}
           className="flex-1 block touch-manipulation"
         >
-          <div ref={rowRef} className="flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium relative">
+          <div ref={rowRef} className="relative flex h-12 items-center gap-3 px-2.5 text-[13px] font-medium">
             {/* Icon container – iOS-style rounded square */}
             <div className={cn(
               "w-[30px] h-[30px] rounded-[8px] flex items-center justify-center flex-shrink-0 transition-colors",
@@ -229,7 +206,7 @@ export function ExpandedNavItem({ item, isActive, isExpanded, onNavigate, onTogg
         {hasChildren && (
           <button onClick={(e) => onToggleMenu(item.href, e)}
             className={cn(
-              "sipena-sidebar-chevron-btn flex items-center justify-center w-10 min-h-[44px] touch-manipulation transition-colors",
+              "sipena-sidebar-chevron-btn flex h-12 w-10 items-center justify-center touch-manipulation transition-colors",
               isActive
                 ? "text-primary hover:bg-primary/20"
                 : "text-muted-foreground hover:bg-muted/40"

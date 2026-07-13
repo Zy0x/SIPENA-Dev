@@ -60,7 +60,9 @@ describe("admin notification, production sync, and help hardening guard", () => 
 
   it("adds breathing room below the sidebar brand header", () => {
     const layout = readSource("apps/frontend/src/components/AppLayout.tsx");
-    expect(layout).toContain('className="shrink-0 overflow-hidden border-b border-border/30 px-4 py-2"');
+    expect(layout).toContain("{!effectiveSidebarCollapsed && (");
+    expect(layout).toContain('className="shrink-0 overflow-hidden border-b border-border/30 px-3 py-2"');
+    expect(layout).toContain('data-sidebar-year-badge="true"');
   });
 
   it("does not keep the previously documented plaintext admin password", () => {

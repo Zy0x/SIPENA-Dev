@@ -378,8 +378,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             "lg:bg-card lg:border-r lg:border-border",
             "bg-card/95 backdrop-blur-xl border-r border-border",
             "shadow-2xl shadow-black/10",
-           "transition-[transform,width] duration-200 ease-out lg:translate-x-0",
-           effectiveSidebarCollapsed ? "lg:w-[72px]" : "lg:w-[260px]",
+            "transition-[transform,width] duration-200 ease-out lg:translate-x-0",
            !isDesktopSidebar && sidebarOpen && "sipena-scroll-isolated"
          )}
          style={{
@@ -394,10 +393,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
          role="navigation"
        >
          {/* Logo section */}
-         <div className={cn(
-           "sipena-sidebar-header-elevated border-b border-border flex items-center shrink-0 relative bg-muted/30",
-           effectiveSidebarCollapsed ? "p-3 justify-center h-14" : "px-4 py-2 gap-3 h-14"
-         )}>
+          <div className={cn(
+            "sipena-sidebar-header-elevated border-b border-border flex items-center shrink-0 relative bg-muted/30",
+            effectiveSidebarCollapsed ? "h-14 justify-center px-2" : "h-14 gap-3 px-3"
+          )}>
             <div
               className={cn(
                 "hidden lg:flex items-center min-w-0",
@@ -413,19 +412,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
                    onMouseLeave={() => handleGSAPHover(logoDesktopRef.current, false)}
                    onMouseDown={() => handleGSAPPress(logoDesktopRef.current, true)}
                    onMouseUp={() => handleGSAPPress(logoDesktopRef.current, false)}
-                   className={cn(
-                     "relative flex items-center justify-center rounded-xl transition-colors touch-manipulation",
-                     "hover:bg-primary/10 active:bg-primary/20",
-                     effectiveSidebarCollapsed ? "w-12 h-12 mx-auto" : "w-10 h-10 -ml-1"
-                   )}
+                    className={cn(
+                      "relative flex items-center justify-center rounded-xl transition-colors touch-manipulation",
+                      "hover:bg-primary/10 active:bg-primary/20",
+                      effectiveSidebarCollapsed ? "h-11 w-11 mx-auto" : "h-10 w-10"
+                    )}
                    aria-label={effectiveSidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
                  >
                    <SipenaLogoIcon size={effectiveSidebarCollapsed ? "sm" : "md"} />
-                   <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
-                     <span className="w-1 h-1 rounded-full bg-primary/50" />
-                     <span className="w-1 h-1 rounded-full bg-primary/30" />
-                     <span className="w-1 h-1 rounded-full bg-primary/50" />
-                   </div>
+                    {effectiveSidebarCollapsed && (
+                      <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-primary ring-2 ring-card" />
+                    )}
                  </button>
                </TooltipTrigger>
                <TooltipContent side="right" sideOffset={8} className="font-medium">
@@ -433,11 +430,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
                </TooltipContent>
              </Tooltip>
              
-             <div
-               ref={logoTextRef}
-               className="overflow-hidden min-w-0"
-               style={{ opacity: effectiveSidebarCollapsed ? 0 : 1 }}
-             >
+              <div
+                ref={logoTextRef}
+                className={cn(
+                  "min-w-0 overflow-hidden transition-[width,opacity] duration-150",
+                  effectiveSidebarCollapsed ? "w-0 opacity-0 pointer-events-none" : "flex-1 opacity-100",
+                )}
+              >
                <Link to="/dashboard" className="block">
                   <h1 className="font-bold text-lg text-foreground whitespace-nowrap hover:text-primary transition-colors">SIPENA</h1>
                   <p className="text-[10px] text-muted-foreground whitespace-nowrap truncate leading-tight">Sistem Informasi Penilaian Akademik</p>
@@ -479,20 +478,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
          </div>
          
          {/* Active Year Badge */}
-         <div
-           ref={yearBadgeRef}
-           className="shrink-0 overflow-hidden border-b border-border/30 px-4 py-2"
-           style={{ opacity: effectiveSidebarCollapsed ? 0 : 1, height: effectiveSidebarCollapsed ? 0 : "auto" }}
-         >
-           <ActiveYearBadge variant="minimal" showSemester={true} />
-         </div>
+         {!effectiveSidebarCollapsed && (
+           <div
+             ref={yearBadgeRef}
+             className="shrink-0 overflow-hidden border-b border-border/30 px-3 py-2"
+             data-sidebar-year-badge="true"
+           >
+             <ActiveYearBadge variant="minimal" showSemester={true} />
+           </div>
+         )}
  
         {/* Navigation */}
         <nav 
           className={cn(
             "flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain",
             "scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
-            effectiveSidebarCollapsed ? "p-2 pt-3" : "p-3"
+             effectiveSidebarCollapsed ? "px-2 py-2" : "p-3"
           )} 
           aria-label="Menu navigasi"
           onWheel={(e) => {
@@ -506,7 +507,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             }
           }}
         >
-           <ul className="space-y-1" role="list">
+           <ul className="flex flex-col gap-1" role="list">
              {visibleNavItems.map((item) => {
                const isActive = location.pathname === item.href || 
                  (item.children && item.children.some(child => location.pathname === child.href));
@@ -541,7 +542,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
        {/* Spacer for sidebar on desktop */}
        <div
          className={cn(
-           "hidden lg:block shrink-0 transition-all duration-300 ease-out",
+            "hidden lg:block shrink-0 transition-[width] duration-200 ease-out",
            effectiveSidebarCollapsed ? "w-[72px]" : "w-[260px]"
          )}
        />

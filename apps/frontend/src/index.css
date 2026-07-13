@@ -5363,6 +5363,20 @@ html[data-motion-profile="light"] .sipena-app-sidebar {
   .sipena-app-sidebar[data-sidebar-collapsed="true"] {
     width: var(--sipena-sidebar-collapsed-width, 72px);
   }
+
+  .sipena-app-sidebar[data-sidebar-collapsed="true"] [aria-label="Menu navigasi"] {
+    scrollbar-width: none;
+  }
+
+  .sipena-app-sidebar[data-sidebar-collapsed="true"] [aria-label="Menu navigasi"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .sipena-collapsed-nav-link:hover > div {
+      transform: scale(1.04);
+    }
+  }
 }
 
 .table-responsive {

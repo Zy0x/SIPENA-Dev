@@ -31,6 +31,10 @@ describe("app layout responsive sidebar guard", () => {
     expect(appLayoutSource).toContain('data-sidebar-collapsed={effectiveSidebarCollapsed ? "true" : "false"}');
     expect(appLayoutSource).toContain('data-sidebar-state={sidebarOpen ? "open" : "closed"}');
     expect(appLayoutSource).toContain('{effectiveSidebarCollapsed ? (');
+    expect(appLayoutSource).toContain('{!effectiveSidebarCollapsed && (');
+    expect(appLayoutSource).toContain('data-sidebar-year-badge="true"');
+    expect(appLayoutSource).toContain('"flex flex-col gap-1"');
+    expect(appLayoutSource).toContain('transition-[width] duration-200 ease-out');
     expect(asideClassBlock).not.toContain('"w-[260px]"');
 
     expect(globalStyles).toContain(".sipena-app-sidebar");
@@ -48,6 +52,12 @@ describe("app layout responsive sidebar guard", () => {
     expect(appLayoutSource).toContain("useAdaptiveMotion");
     expect(globalStyles).toContain("--sipena-sidebar-expanded-width");
     expect(globalStyles).toContain("--sipena-sidebar-collapsed-width");
+    expect(globalStyles).toContain(".sipena-collapsed-nav-link:hover > div");
+
+    const collapsedNavSource = readSource("apps/frontend/src/components/layout/SidebarNav.tsx");
+    expect(collapsedNavSource).toContain("sipena-collapsed-nav-link relative flex h-12");
+    expect(collapsedNavSource).toContain("absolute right-1 top-1");
+    expect(collapsedNavSource).toContain("flex h-12 items-center overflow-hidden");
 
     expect(standard).toContain("State collapsed desktop tidak boleh diterapkan ke mobile/tablet");
     expect(standard).toContain("Drawer navigasi harus memakai tinggi dynamic viewport");
