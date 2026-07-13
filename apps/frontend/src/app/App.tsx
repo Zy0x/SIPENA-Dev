@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { AcademicYearProvider } from "@/contexts/AcademicYearContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -65,19 +66,34 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => {
-  useTouchScrollClickGuard();
-  const [nonCriticalReady, setNonCriticalReady] = useState(false);
+function BootSplashHandoff() {
+  const { loading } = useAuth();
 
   useEffect(() => {
     const splash = document.getElementById("sipena-boot-splash");
     if (!splash) return;
 
-    const closeSplash = window.setTimeout(() => {
+    const close = () => {
       splash.setAttribute("data-closing", "true");
       window.setTimeout(() => splash.remove(), 220);
-    }, 360);
+    };
+    const readyTimer = !loading ? window.setTimeout(close, 80) : null;
+    const safetyTimer = window.setTimeout(close, 2_500);
 
+    return () => {
+      if (readyTimer != null) window.clearTimeout(readyTimer);
+      window.clearTimeout(safetyTimer);
+    };
+  }, [loading]);
+
+  return null;
+}
+
+const App = () => {
+  useTouchScrollClickGuard();
+  const [nonCriticalReady, setNonCriticalReady] = useState(false);
+
+  useEffect(() => {
     const idleWindow = window as Window & {
       requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
       cancelIdleCallback?: (handle: number) => void;
@@ -86,7 +102,6 @@ const App = () => {
     const idleFallback = idleHandle == null ? window.setTimeout(() => setNonCriticalReady(true), 1200) : null;
 
     return () => {
-      window.clearTimeout(closeSplash);
       if (idleHandle != null) idleWindow.cancelIdleCallback?.(idleHandle);
       if (idleFallback != null) window.clearTimeout(idleFallback);
     };
@@ -95,6 +110,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <BootSplashHandoff />
         <FeatureFlagProvider>
           <ToastProvider>
             <AcademicYearProvider>

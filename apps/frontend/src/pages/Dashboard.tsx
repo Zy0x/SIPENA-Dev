@@ -1,5 +1,5 @@
 import { DashboardIcon, HandWaveIcon } from "@/components/ui/animated-icons";
-import { useMemo, useCallback } from "react";
+import { lazy, Suspense, useMemo, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -28,14 +28,24 @@ import { useSemesters } from "@/hooks/useSemesters";
 import { useActivityLogs } from "@/hooks/useActivityLogs";
 import { useInputProgress } from "@/hooks/useInputProgress";
 import { buildGuestSessionPayload, useGuestAccesses, type GuestAccessClass, type GuestAccessSubject } from "@/hooks/useGuestAccesses";
-import { StudentPredictionCard } from "@/components/dashboard/StudentPredictionCard";
-import { TopStudentsCarousel } from "@/components/dashboard/TopStudentsCarousel";
 import { ProductTour, TourButton, TourStep } from "@/components/ui/product-tour";
 import { ThemeSelectionDialog } from "@/components/onboarding/ThemeSelectionDialog";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useEnhancedToast } from "@/contexts/ToastContext";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
+import { getAppliedDevicePerformanceProfile } from "@/lib/devicePerformance";
+
+const StudentPredictionCard = lazy(() =>
+  import("@/components/dashboard/StudentPredictionCard").then((module) => ({
+    default: module.StudentPredictionCard,
+  })),
+);
+const TopStudentsCarousel = lazy(() =>
+  import("@/components/dashboard/TopStudentsCarousel").then((module) => ({
+    default: module.TopStudentsCarousel,
+  })),
+);
 
 const dashboardTourSteps: TourStep[] = [
   {
@@ -63,10 +73,35 @@ export default function Dashboard() {
   const { allSubjects, isLoading: subjectsLoading } = useSubjects();
   const { activeYear, isLoading: yearsLoading } = useAcademicYears();
   const { activeSemester, isLoading: semestersLoading } = useSemesters();
-  const { activityLogs, isLoading: activityLoading } = useActivityLogs();
-  const { data: inputProgress, isLoading: inputProgressLoading } = useInputProgress();
-  const { activeGuestClasses, isLoading: guestAccessLoading, touchGuestAccess } = useGuestAccesses();
+  const [secondaryReady, setSecondaryReady] = useState(false);
+  const { activityLogs, isLoading: activityLoading } = useActivityLogs({ enabled: secondaryReady });
+  const { data: inputProgress } = useInputProgress({ enabled: secondaryReady });
+  const { activeGuestClasses, isLoading: guestAccessLoading, touchGuestAccess } = useGuestAccesses({ enabled: secondaryReady });
   const { needsOnboarding, createPreferences } = useUserPreferences();
+
+  useEffect(() => {
+    const timeout = getAppliedDevicePerformanceProfile() === "lite" ? 2200 : 1400;
+    let fallbackId: ReturnType<typeof setTimeout> | undefined;
+    let idleId: number | undefined;
+    const idleApi = window as unknown as {
+      requestIdleCallback?: Window["requestIdleCallback"];
+      cancelIdleCallback?: Window["cancelIdleCallback"];
+    };
+
+    const markReady = () => setSecondaryReady(true);
+    if (typeof idleApi.requestIdleCallback === "function") {
+      idleId = idleApi.requestIdleCallback(markReady, { timeout });
+    } else {
+      fallbackId = globalThis.setTimeout(markReady, Math.min(timeout, 1200));
+    }
+
+    return () => {
+      if (idleId !== undefined && typeof idleApi.cancelIdleCallback === "function") {
+        idleApi.cancelIdleCallback(idleId);
+      }
+      if (fallbackId !== undefined) window.clearTimeout(fallbackId);
+    };
+  }, []);
 
   // Handle theme selection for new users (moved from Grades)
   const handleThemeSelection = useCallback(async (mode: "light" | "dark") => {
@@ -448,12 +483,24 @@ export default function Dashboard() {
         )}
 
         {/* Activity, Prediction & Ranking Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="sipena-deferred-section grid min-h-[320px] grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
           {/* AI Prediction Card */}
-          <StudentPredictionCard />
+          {secondaryReady ? (
+            <Suspense fallback={<Skeleton className="h-[300px] rounded-lg" />}>
+              <StudentPredictionCard />
+            </Suspense>
+          ) : (
+            <Skeleton className="h-[300px] rounded-lg" />
+          )}
 
           {/* Top 10 Ranking - Now with carousel */}
-          <TopStudentsCarousel limit={10} rotationInterval={8000} />
+          {secondaryReady ? (
+            <Suspense fallback={<Skeleton className="h-[300px] rounded-lg" />}>
+              <TopStudentsCarousel limit={10} rotationInterval={8000} />
+            </Suspense>
+          ) : (
+            <Skeleton className="h-[300px] rounded-lg" />
+          )}
 
           {/* Recent Activity */}
           <Card data-tour="activity-log" className="border border-border shadow-sm">
@@ -469,7 +516,7 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-3 pt-2 sm:p-4 sm:pt-2">
-              {activityLoading ? (
+              {!secondaryReady || activityLoading ? (
                 <div className="space-y-2 py-2">
                   {[...Array(4)].map((_, i) => (
                     <div key={i} className="flex items-start gap-2 p-1.5 sm:p-2">

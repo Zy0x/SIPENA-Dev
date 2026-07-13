@@ -1,24 +1,16 @@
 /**
  * PWAManager.tsx — SIPENA
  *
- * Update detection via dual strategy:
- * 1. HTTP polling /version.json (reliable for ALL browsers, PWA or not)
- * 2. Service Worker updatefound / needsUpdate event (PWA-specific)
- *
- * The HTTP approach is the primary signal — it works even in regular browser
- * tabs where SW events don't fire reliably.
+ * Update UI and recovery state. Scheduling belongs exclusively to main.tsx so
+ * Android does not run competing service-worker and version polling loops.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import gsap from 'gsap';
 import { Shield, Download, X, RefreshCw, WifiOff, Share, Plus, Monitor, CheckCircle, Info } from 'lucide-react';
 import { usePWA } from '@/hooks/usePWA';
 
 // ─── Version polling ───────────────────────────────────────────────────────────
 const VERSION_URL = "/version.json";
-// Poll every 45s in background; also triggered on focus/visibility/pageshow/online
-const POLL_INTERVAL_MS = 45_000;
-const RESUME_RECHECK_DELAY_MS = 1800;
 const UPDATE_WAIT_MS = 2 * 60_000;
 const UPDATE_HARD_RELOAD_MS = 12_000;
 const UPDATE_RESOLVED_RELOAD_MS = 700;
@@ -160,29 +152,11 @@ async function fetchCurrentVersion(): Promise<string | null> {
   return versionCheckPromise;
 }
 
-function scheduleFollowUpCheck(check: () => void) {
-  const timer = window.setTimeout(() => check(), RESUME_RECHECK_DELAY_MS);
-  return () => window.clearTimeout(timer);
-}
-
 // ─── iOS Guide ────────────────────────────────────────────────────────────────
 function IOSGuide({ onClose }: { onClose: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (ref.current)
-      gsap.fromTo(ref.current, { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.4, ease: 'back.out(1.7)' });
-  }, []);
-
-  const close = () => {
-    if (ref.current)
-      gsap.to(ref.current, { opacity: 0, y: 40, duration: 0.25, ease: 'power2.in', onComplete: onClose });
-    else onClose();
-  };
-
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div ref={ref} className="w-full max-w-sm bg-card rounded-3xl border border-border shadow-2xl overflow-hidden">
+      <div className="w-full max-w-sm animate-fade-in-up bg-card rounded-3xl border border-border shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow shadow-primary/30">
@@ -193,7 +167,7 @@ function IOSGuide({ onClose }: { onClose: () => void }) {
               <p className="text-xs text-muted-foreground">iOS — ikuti langkah berikut</p>
             </div>
           </div>
-          <button onClick={close} className="p-1.5 rounded-full hover:bg-muted">
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted">
             <X className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>
@@ -214,7 +188,7 @@ function IOSGuide({ onClose }: { onClose: () => void }) {
         </div>
         <div className="px-5 pb-5">
           <p className="text-[11px] text-muted-foreground text-center mb-3">Gunakan <strong>Safari</strong>, bukan Chrome/Firefox di iOS</p>
-          <button onClick={close} className="w-full py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-all">
+          <button onClick={onClose} className="w-full py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-all">
             Mengerti
           </button>
         </div>
@@ -225,13 +199,9 @@ function IOSGuide({ onClose }: { onClose: () => void }) {
 
 // ─── Desktop Info ─────────────────────────────────────────────────────────────
 function DesktopInfo({ onClose }: { onClose: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (ref.current) gsap.fromTo(ref.current, { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(1.7)' });
-  }, []);
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div ref={ref} className="w-full max-w-sm bg-card rounded-2xl border border-border shadow-2xl p-5">
+      <div className="w-full max-w-sm animate-fade-in bg-card rounded-2xl border border-border shadow-2xl p-5">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center"><Info className="w-4 h-4 text-blue-500" /></div>
@@ -260,24 +230,6 @@ interface BannerProps {
 }
 
 function InstallBanner({ onInstall, onDismiss, isIOS, isDesktop, hasNativePrompt }: BannerProps) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    gsap.fromTo(ref.current,
-      { opacity: 0, y: isDesktop ? -80 : 80, scale: 0.95 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'back.out(1.4)', delay: 0.5 }
-    );
-  }, [isDesktop]);
-
-  const dismiss = () => {
-    if (!ref.current) { onDismiss(); return; }
-    gsap.to(ref.current, {
-      opacity: 0, y: isDesktop ? -60 : 60, scale: 0.96, duration: 0.3,
-      ease: 'power2.in', onComplete: onDismiss,
-    });
-  };
-
   const label = isIOS ? 'Cara Install' : !hasNativePrompt ? 'Panduan Install' : 'Install Sekarang';
   const desc  = isIOS ? 'Safari → Share → Add to Home Screen'
               : !hasNativePrompt ? 'Gunakan Chrome/Edge untuk install'
@@ -287,7 +239,7 @@ function InstallBanner({ onInstall, onDismiss, isIOS, isDesktop, hasNativePrompt
     : ['⚡ Lebih cepat', '📱 Fullscreen', '🔔 Notifikasi'];
 
   return (
-    <div ref={ref} className={`fixed z-[100] ${isDesktop ? 'top-4 right-4 max-w-sm' : 'bottom-4 left-4 right-4 max-w-sm mx-auto'}`}>
+    <div className={`fixed z-[100] animate-fade-in ${isDesktop ? 'top-4 right-4 max-w-sm' : 'bottom-4 left-4 right-4 max-w-sm mx-auto'}`}>
       <div className="relative bg-card border border-border/80 rounded-3xl shadow-2xl overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-primary/40 via-primary to-primary/40" />
         <div className="p-4">
@@ -298,7 +250,7 @@ function InstallBanner({ onInstall, onDismiss, isIOS, isDesktop, hasNativePrompt
             <div className="flex-1 min-w-0 pt-0.5">
               <div className="flex items-center justify-between">
                 <p className="font-bold text-sm text-foreground">Install SIPENA</p>
-                <button onClick={dismiss} className="p-1 rounded-full hover:bg-muted/60 ml-1">
+                <button onClick={onDismiss} className="p-1 rounded-full hover:bg-muted/60 ml-1">
                   <X className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
               </div>
@@ -314,7 +266,7 @@ function InstallBanner({ onInstall, onDismiss, isIOS, isDesktop, hasNativePrompt
             <button onClick={onInstall} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 active:scale-[0.97] transition-all">
               <Download className="w-4 h-4" />{label}
             </button>
-            <button onClick={dismiss} className="px-4 py-2.5 rounded-2xl bg-muted text-muted-foreground text-sm font-medium hover:bg-accent transition-all">
+            <button onClick={onDismiss} className="px-4 py-2.5 rounded-2xl bg-muted text-muted-foreground text-sm font-medium hover:bg-accent transition-all">
               Nanti
             </button>
           </div>
@@ -334,18 +286,12 @@ function UpdateBanner({
   onWait: () => void;
   status: PwaUpdateStatus;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (ref.current) gsap.fromTo(ref.current, { opacity: 0, y: -60 }, { opacity: 1, y: 0, duration: 0.4, ease: 'back.out(1.4)' });
-  }, []);
-
   const isApplying = status === "applying";
   const isStalled = status === "stalled";
 
   return (
     <div
-      ref={ref}
-      className="fixed left-3 right-3 top-4 z-[999990] mx-auto w-auto max-w-xl sm:left-4 sm:right-4"
+      className="fixed left-3 right-3 top-4 z-[999990] mx-auto w-auto max-w-xl animate-fade-in sm:left-4 sm:right-4"
       style={{ pointerEvents: 'auto' }}
     >
       <div
@@ -465,6 +411,21 @@ export default function PWAManager() {
     updateBannerVisibleRef.current = true;
     debugPwaUpdate("update requested", { source, currentVersion: __APP_BUILD_VERSION__, targetVersion });
   }, [setUpdateExecutionState]);
+
+  useEffect(() => {
+    const initialTarget = window.__sipenaPwaTargetVersion ?? null;
+    if (initialTarget) requestUpdate(initialTarget, "startup-scheduler");
+
+    const onUpdateTarget = (event: Event) => {
+      const detail = (event as CustomEvent<{ targetVersion?: string; source?: string }>).detail;
+      requestUpdate(detail?.targetVersion ?? null, detail?.source ?? "scheduler");
+    };
+
+    window.addEventListener("sipena:pwa-update-target", onUpdateTarget as EventListener);
+    return () => {
+      window.removeEventListener("sipena:pwa-update-target", onUpdateTarget as EventListener);
+    };
+  }, [requestUpdate]);
 
   const handleUpdate = useCallback(async () => {
     if (isUpdatingRef.current) return;
@@ -595,101 +556,6 @@ export default function PWAManager() {
       cancelled = true;
     };
   }, [pwa.needsUpdate, requestUpdate]);
-
-  // Primary 2: HTTP polling /version.json — works for ALL browsers including
-  // regular tabs, non-PWA contexts, and browsers with aggressive SW caching.
-  useEffect(() => {
-    let cancelled = false;
-    let clearResumeRetry: (() => void) | null = null;
-
-    const check = async () => {
-      if (cancelled || dismissedRef.current) return;
-      const v = await fetchCurrentVersion();
-      if (cancelled || dismissedRef.current || !v) return;
-
-      if (v !== __APP_BUILD_VERSION__) {
-        // Compare against the version embedded in the currently running bundle.
-        // This catches "old app shell + new server deploy" immediately,
-        // even on the first poll, without requiring a manual refresh first.
-        requestUpdate(v, "version-json");
-      }
-    };
-
-    check();
-    const interval = setInterval(check, POLL_INTERVAL_MS);
-
-    const runResumeChecks = () => {
-      check();
-      clearResumeRetry?.();
-      clearResumeRetry = scheduleFollowUpCheck(check);
-    };
-
-    const onVisible = () => { if (document.visibilityState === 'visible') runResumeChecks(); };
-    const onOnline  = () => runResumeChecks();
-    const onFocus   = () => runResumeChecks();
-    const onPageShow = () => runResumeChecks();
-
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('pageshow', onPageShow);
-
-    return () => {
-      cancelled = true;
-      clearResumeRetry?.();
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('pageshow', onPageShow);
-    };
-  }, [requestUpdate]);
-
-  // Fallback: also check SW registration directly (belt-and-suspenders)
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-
-    let clearResumeRetry: (() => void) | null = null;
-
-    const checkSW = async () => {
-      if (dismissedRef.current) return;
-      try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg?.waiting) {
-          const targetVersion = await fetchCurrentVersion();
-          requestUpdate(targetVersion, "waiting-service-worker");
-          return;
-        }
-        await reg?.update();
-      } catch { /* ignore */ }
-    };
-
-    checkSW();
-    const interval = setInterval(checkSW, 120_000); // every 2 min (light)
-    const runResumeChecks = () => {
-      checkSW();
-      clearResumeRetry?.();
-      clearResumeRetry = scheduleFollowUpCheck(checkSW);
-    };
-    const onVisible = () => { if (document.visibilityState === 'visible') runResumeChecks(); };
-    const onFocus = () => runResumeChecks();
-    const onOnline = () => runResumeChecks();
-    const onPageShow = () => runResumeChecks();
-
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('pageshow', onPageShow);
-
-    return () => {
-      clearResumeRetry?.();
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('pageshow', onPageShow);
-    };
-  }, [requestUpdate]);
 
   const handleWaitUpdate = useCallback(() => {
     if (isUpdating) return;

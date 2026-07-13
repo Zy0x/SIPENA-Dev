@@ -2,7 +2,7 @@
   "name": "SIPENA - Sistem Informasi Penilaian Akademik",
   "short_name": "SIPENA",
   "description": "Sistem Informasi Penilaian Akademik untuk Guru Indonesia",
-  "start_url": "/",
+  "start_url": "/dashboard?source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#eff6ff",

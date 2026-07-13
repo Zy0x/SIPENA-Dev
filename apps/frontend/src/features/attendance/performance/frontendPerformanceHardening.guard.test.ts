@@ -78,15 +78,60 @@ describe("frontend performance and touch hardening guard", () => {
   it("uses adaptive motion and CSS state for the mobile sidebar", () => {
     const layout = source("apps/frontend/src/components/AppLayout.tsx");
     const motion = source("apps/frontend/src/hooks/useAdaptiveMotion.ts");
+    const performanceProfile = source("apps/frontend/src/lib/devicePerformance.ts");
     const styles = source("apps/frontend/src/index.css");
 
     expect(layout).toContain("useAdaptiveMotion");
     expect(layout).toContain('data-sidebar-state={sidebarOpen ? "open" : "closed"}');
     expect(layout).not.toContain("GSAP: Mobile sidebar slide animation");
-    expect(motion).toContain("saveData");
-    expect(motion).toContain("deviceMemory");
-    expect(motion).toContain("hardwareConcurrency");
+    expect(motion).toContain("resolveDevicePerformanceProfile");
+    expect(performanceProfile).toContain("saveData");
+    expect(performanceProfile).toContain("deviceMemory");
+    expect(performanceProfile).toContain("hardwareConcurrency");
+    expect(performanceProfile).toContain("android");
     expect(styles).toContain('.sipena-app-sidebar[data-sidebar-state="open"]');
     expect(styles).toContain('html[data-motion-profile="light"]');
+    expect(styles).toContain('html[data-performance-profile="lite"]');
+  });
+
+  it("keeps Android startup assets and PWA scheduling lightweight", () => {
+    const main = source("apps/frontend/src/app/main.tsx");
+    const icons = source("apps/frontend/src/components/ui/animated-icons.tsx");
+    const pwaManager = source("apps/frontend/src/components/PWAManager.tsx");
+    const vite = source("apps/frontend/vite.config.ts");
+    const manifest = source("apps/frontend/public/manifest.json");
+
+    expect(main).toContain("createPwaUpdateScheduler");
+    expect(main).not.toContain("setInterval(poll, 45_000)");
+    expect(main).not.toContain("initGSAPReducedMotion");
+    expect(pwaManager).not.toContain("POLL_INTERVAL_MS");
+    expect(pwaManager).not.toContain("setInterval(checkSW");
+    expect(icons).toContain("shouldLoadAnimatedAssets");
+    expect(icons.indexOf("if (!shouldLoadAnimatedAssets())")).toBeLessThan(icons.indexOf("<img"));
+    expect(vite).toContain('"**/*pdf*"');
+    expect(vite).toContain('cacheName: "sipena-runtime-assets-v1"');
+    expect(vite).toContain('"assets/vendor-react-*.js"');
+    expect(vite).toContain('"assets/vendor-data-*.js"');
+    expect(vite).toContain('"assets/vendor-radix-*.js"');
+    expect(manifest).toContain('"start_url": "/dashboard?source=pwa"');
+  });
+
+  it("defers secondary dashboard work until the app shell is idle", () => {
+    const dashboard = source("apps/frontend/src/pages/Dashboard.tsx");
+    const progress = source("apps/frontend/src/hooks/useInputProgress.ts");
+    const activity = source("apps/frontend/src/hooks/useActivityLogs.ts");
+    const guestAccess = source("apps/frontend/src/hooks/useGuestAccesses.ts");
+    const styles = source("apps/frontend/src/index.css");
+
+    expect(dashboard).toContain("requestIdleCallback");
+    expect(dashboard).toContain("useActivityLogs({ enabled: secondaryReady })");
+    expect(dashboard).toContain("useInputProgress({ enabled: secondaryReady })");
+    expect(dashboard).toContain("useGuestAccesses({ enabled: secondaryReady })");
+    expect(dashboard).toContain('import("@/components/dashboard/StudentPredictionCard")');
+    expect(dashboard).toContain('import("@/components/dashboard/TopStudentsCarousel")');
+    expect(progress).toContain("options.enabled !== false");
+    expect(activity).toContain("options.enabled !== false");
+    expect(guestAccess).toContain("options.enabled !== false");
+    expect(styles).toContain("content-visibility: auto");
   });
 });

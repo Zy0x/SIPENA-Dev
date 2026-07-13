@@ -1,8 +1,9 @@
 // SIPENA Version Configuration
-export const APP_VERSION = "2.4.161";
-export const VERSION_DATE = "2026-07-12";
+export const APP_VERSION = "2.4.162";
+export const VERSION_DATE = "2026-07-13";
 
 export const VERSION_HISTORY: Record<string, string> = {
+  "2.4.162": "PWA Android dioptimalkan dengan profil performa adaptif, app shell offline yang lebih ringan, dan penundaan beban nonkritis.",
   "2.4.161": "Notifikasi Admin dipulihkan, sinkronisasi produksi diperketat, sidebar dirapikan, dan Panduan beserta shortcut dilengkapi.",
   "2.4.160": "Hardening PWA, penguncian Rekap Bulanan, navigasi Profil, performa mobile, dan sinkronisasi login Google dengan password email.",
   "2.4.159": "Monitoring produksi dinamis kini dapat dikonfigurasi dari Panel Admin dengan secret terenkripsi di Supabase Vault dan alert Telegram tanpa deploy ulang.",

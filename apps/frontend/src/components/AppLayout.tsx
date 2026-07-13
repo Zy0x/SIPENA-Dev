@@ -1,18 +1,15 @@
- import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+ import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
  import { Link, useLocation, useNavigate } from "react-router-dom";
  import { useAuth } from "@/contexts/AuthContext";
  import { cn } from "@/lib/utils";
  import { isEditableShortcutTarget } from "@/lib/keyboardShortcuts";
  import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
- import Footer from "@/components/Footer";
+ import AppFooter from "@/components/layout/AppFooter";
  import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
- import { NotificationDropdown } from "@/components/notifications/NotificationDropdown";
  import { SipenaLogoIcon } from "@/components/SipenaLogo";
- import { MiniProfilePopup } from "@/components/MiniProfilePopup";
  import { ActiveYearBadge } from "@/components/layout/ActiveYearBadge";
  import { HeaderYearDisplay } from "@/components/layout/HeaderYearDisplay";
  import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
- import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
  import { useFeatureFlags } from "@/app/providers/useFeatureFlags";
  import { FEATURE_KEYS } from "@/app/providers/featureAccess";
  import { useAdaptiveMotion } from "@/hooks/useAdaptiveMotion";
@@ -30,6 +27,8 @@
     Trophy,
     Shield,
     UserCheck,
+    Search,
+    Bell,
   } from "lucide-react";
  import { CollapsedNavItem, ExpandedNavItem } from "@/components/layout/SidebarNav";
  import morpheIconPure from "@/icon/icon_morphe_pure_96.png";
@@ -55,6 +54,42 @@
    ProfilSayaIcon,
    RankingMuridIcon
  } from "@/components/ui/animated-icons";
+
+const NotificationDropdown = lazy(() =>
+  import("@/components/notifications/NotificationDropdown").then((module) => ({ default: module.NotificationDropdown })),
+);
+const MiniProfilePopup = lazy(() =>
+  import("@/components/MiniProfilePopup").then((module) => ({ default: module.MiniProfilePopup })),
+);
+const GlobalSearch = lazy(() =>
+  import("@/components/search/GlobalSearch").then((module) => ({ default: module.GlobalSearch })),
+);
+
+function HeaderSearchButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="sipena-icon-button-touch-safe flex h-10 w-10 items-center justify-center rounded-xl"
+      aria-label="Buka pencarian"
+    >
+      <Search className="h-5 w-5" />
+    </button>
+  );
+}
+
+function NotificationFallback({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="sipena-icon-button-touch-safe flex h-10 w-10 items-center justify-center rounded-xl"
+      aria-label="Muat notifikasi"
+    >
+      <Bell className="h-5 w-5" />
+    </button>
+  );
+}
 
 
  interface NavItem {
@@ -120,6 +155,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [showMiniProfile, setShowMiniProfile] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [shellExtrasReady, setShellExtrasReady] = useState(false);
   
   // Single shared triggerRef for MiniProfilePopup positioning
   const avatarTriggerRef = useRef<HTMLButtonElement>(null);
@@ -133,6 +169,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { user } = useAuth();
   const { getAccessStatus } = useFeatureFlags();
   const lightMotion = useAdaptiveMotion();
+
+  useEffect(() => {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const idleHandle = idleWindow.requestIdleCallback?.(() => setShellExtrasReady(true), { timeout: 2_000 });
+    const fallback = idleHandle == null ? window.setTimeout(() => setShellExtrasReady(true), 1_200) : null;
+    return () => {
+      if (idleHandle != null) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (fallback != null) window.clearTimeout(fallback);
+    };
+  }, []);
+
+  const notificationControl = shellExtrasReady ? (
+    <Suspense fallback={<NotificationFallback onClick={() => setShellExtrasReady(true)} />}>
+      <NotificationDropdown />
+    </Suspense>
+  ) : (
+    <NotificationFallback onClick={() => setShellExtrasReady(true)} />
+  );
 
   const visibleNavItems = useMemo(() => {
     const filterItem = (item: NavItem): NavItem | null => {
@@ -538,7 +595,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
        {/* Spacer for sidebar on desktop */}
        <div
          className={cn(
-            "hidden lg:block shrink-0 transition-[width] duration-200 ease-out",
+            "sipena-app-sidebar-spacer hidden lg:block shrink-0 transition-[width] duration-200 ease-out",
            effectiveSidebarCollapsed ? "w-[72px]" : "w-[260px]"
          )}
        />
@@ -579,8 +636,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </div>
              
              <div className="flex items-center gap-2">
-                <GlobalSearchTrigger onClick={() => setShowGlobalSearch(true)} />
-                <NotificationDropdown />
+                <HeaderSearchButton onClick={() => setShowGlobalSearch(true)} />
+                {!isDesktopSidebar && notificationControl}
                <button
                  ref={avatarTriggerRef}
                  onClick={() => setShowMiniProfile(!showMiniProfile)}
@@ -608,8 +665,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <HeaderYearDisplay variant="desktop" />
            
            <div className="flex items-center gap-2.5">
-              <GlobalSearchTrigger onClick={() => setShowGlobalSearch(true)} />
-              <NotificationDropdown />
+              <HeaderSearchButton onClick={() => setShowGlobalSearch(true)} />
+              {isDesktopSidebar && notificationControl}
              <button
                ref={(el) => {
                  // On desktop, point triggerRef to this button
@@ -639,13 +696,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
          </header>
 
          {/* Single MiniProfilePopup instance (rendered once, works for both mobile & desktop) */}
-         <MiniProfilePopup
-           isOpen={showMiniProfile}
-           onClose={() => setShowMiniProfile(false)}
-           avatarUrl={avatarUrl}
-           userInitials={userInitials}
-           triggerRef={avatarTriggerRef}
-         />
+         {showMiniProfile && (
+           <Suspense fallback={null}>
+             <MiniProfilePopup
+               isOpen={showMiniProfile}
+               onClose={() => setShowMiniProfile(false)}
+               avatarUrl={avatarUrl}
+               userInitials={userInitials}
+               triggerRef={avatarTriggerRef}
+             />
+           </Suspense>
+         )}
  
          {/* Page content */}
          <main className="flex-1 overflow-x-hidden" role="main" aria-label="Konten utama" data-app-scroll-container>
@@ -653,8 +714,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
          </main>
  
           {/* Footer */}
-          <Footer />
-          <GlobalSearch open={showGlobalSearch} onOpenChange={setShowGlobalSearch} />
+          <AppFooter />
+          {showGlobalSearch && (
+            <Suspense fallback={null}>
+              <GlobalSearch open={showGlobalSearch} onOpenChange={setShowGlobalSearch} />
+            </Suspense>
+          )}
         </div>
      </div>
    );

@@ -289,8 +289,15 @@ export function usePWA() {
     if (!('Notification' in window)) return;
     const checkPerm = () => setNotifPerm(Notification.permission);
     checkPerm();
-    const interval = setInterval(checkPerm, 2000);
-    return () => clearInterval(interval);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") checkPerm();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", checkPerm);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", checkPerm);
+    };
   }, []);
 
   // ── Actions ───────────────────────────────────────────────────────────────

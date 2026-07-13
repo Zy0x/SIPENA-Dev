@@ -170,7 +170,7 @@ export function buildGuestSessionPayload(params: {
   };
 }
 
-export function useGuestAccesses() {
+export function useGuestAccesses(options: { enabled?: boolean } = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -182,7 +182,7 @@ export function useGuestAccesses() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!user && options.enabled !== false,
     staleTime: 1000 * 60,
   });
 

@@ -1,46 +1,47 @@
 import { useEffect, useState } from "react";
-
-type NavigatorWithHints = Navigator & {
-  connection?: { saveData?: boolean; effectiveType?: string };
-  deviceMemory?: number;
-};
+import {
+  applyDevicePerformanceProfile,
+  readDevicePerformanceHints,
+  resolveDevicePerformanceProfile,
+  type DevicePerformanceProfile,
+  type NavigatorWithPerformanceHints,
+} from "@/lib/devicePerformance";
 
 export function shouldUseLightMotion(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
-
-  const nav = navigator as NavigatorWithHints;
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const coarse = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  const saveData = nav.connection?.saveData === true;
-  const slowConnection = nav.connection?.effectiveType === "slow-2g" || nav.connection?.effectiveType === "2g";
-  const lowMemory = typeof nav.deviceMemory === "number" && nav.deviceMemory <= 4;
-  const lowCpu = typeof nav.hardwareConcurrency === "number" && nav.hardwareConcurrency <= 4;
-
-  return reduced || coarse || saveData || slowConnection || lowMemory || lowCpu;
+  return resolveDevicePerformanceProfile() !== "full";
 }
 
-export function useAdaptiveMotion(): boolean {
-  const [lightMotion, setLightMotion] = useState(shouldUseLightMotion);
+export function useDevicePerformanceProfile(): DevicePerformanceProfile {
+  const [profile, setProfile] = useState(() => resolveDevicePerformanceProfile());
 
   useEffect(() => {
     const reducedQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const pointerQuery = window.matchMedia("(hover: none), (pointer: coarse)");
-    const update = () => setLightMotion(shouldUseLightMotion());
+    const standaloneQuery = window.matchMedia("(display-mode: standalone)");
+    const connection = (navigator as NavigatorWithPerformanceHints).connection;
+    const update = () => {
+      const nextProfile = resolveDevicePerformanceProfile(readDevicePerformanceHints());
+      applyDevicePerformanceProfile(nextProfile);
+      setProfile(nextProfile);
+    };
 
+    update();
     reducedQuery.addEventListener("change", update);
     pointerQuery.addEventListener("change", update);
-    window.addEventListener("online", update);
+    standaloneQuery.addEventListener("change", update);
+    connection?.addEventListener?.("change", update);
 
     return () => {
       reducedQuery.removeEventListener("change", update);
       pointerQuery.removeEventListener("change", update);
-      window.removeEventListener("online", update);
+      standaloneQuery.removeEventListener("change", update);
+      connection?.removeEventListener?.("change", update);
     };
   }, []);
 
-  useEffect(() => {
-    document.documentElement.dataset.motionProfile = lightMotion ? "light" : "full";
-  }, [lightMotion]);
+  return profile;
+}
 
-  return lightMotion;
+export function useAdaptiveMotion(): boolean {
+  return useDevicePerformanceProfile() !== "full";
 }

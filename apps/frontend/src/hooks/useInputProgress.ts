@@ -47,7 +47,7 @@ function getEmptyProgress(yearName: string | null, semesterName: string | null):
   };
 }
 
-export function useInputProgress(): {
+export function useInputProgress(options: { enabled?: boolean } = {}): {
   data: InputProgressData;
   isLoading: boolean;
 } {
@@ -248,7 +248,7 @@ export function useInputProgress(): {
         },
       };
     },
-    enabled: !!user,
+    enabled: !!user && options.enabled !== false,
     staleTime: 30000,
   });
 

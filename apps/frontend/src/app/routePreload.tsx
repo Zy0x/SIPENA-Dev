@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { getAppliedDevicePerformanceProfile } from "@/lib/devicePerformance";
 
 export const routeModules = {
   index: () => import("../pages/Index"),
@@ -129,6 +130,7 @@ function allowsSpeculativePreload(): boolean {
   }).connection;
 
   if (connection?.saveData) return false;
+  if (getAppliedDevicePerformanceProfile() === "lite") return false;
   return connection?.effectiveType !== "slow-2g" && connection?.effectiveType !== "2g";
 }
 

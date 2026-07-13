@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAppliedDevicePerformanceProfile } from "@/lib/devicePerformance";
 
 export interface Notification {
   id: string;
@@ -40,7 +41,11 @@ export function useNotifications() {
       return data as Notification[];
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: () => {
+      if (document.visibilityState !== "visible") return false;
+      return getAppliedDevicePerformanceProfile() === "lite" ? 120_000 : 60_000;
+    },
+    refetchIntervalInBackground: false,
   });
 
   const unreadCount = notificationsQuery.data?.filter(n => !n.read).length || 0;

@@ -42,6 +42,20 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
   {
+    id: "v2.4.162",
+    version: "2.4.162",
+    title: "Optimasi PWA Android",
+    description: "Cold start, navigasi, sidebar, update PWA, dan Dashboard dibuat lebih ringan untuk Android serta perangkat low-end.",
+    type: "improvement",
+    is_critical: false,
+    released_at: "2026-07-13",
+    details: [
+      "Menambahkan profil performa full, balanced, dan lite yang dipilih sebelum React dirender.",
+      "Mengganti GIF navigasi dengan ikon statik pada Android serta membatasi precache ke app shell dan vendor inti.",
+      "Menunda AI, ranking, aktivitas, akses tamu, dan query Dashboard sekunder sampai browser idle."
+    ]
+  },
+  {
     id: "v2.4.161",
     version: "2.4.161",
     title: "Hardening Sinkronisasi dan Panduan",

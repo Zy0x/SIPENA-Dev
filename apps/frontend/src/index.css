@@ -5300,7 +5300,16 @@
 
 .sipena-app-sidebar[data-sidebar-state="open"] {
   transform: translate3d(0, 0, 0);
-  will-change: transform;
+}
+
+.sipena-animated-nav-icon {
+  mix-blend-mode: multiply;
+  transform: scale(1.18);
+}
+
+.dark .sipena-animated-nav-icon {
+  mix-blend-mode: screen;
+  filter: invert(1) hue-rotate(180deg) brightness(1.2);
 }
 
 .sipena-sidebar-overlay {
@@ -5315,6 +5324,52 @@ html[data-motion-profile="light"] .sipena-sidebar-overlay {
 
 html[data-motion-profile="light"] .sipena-app-sidebar {
   transition-duration: 120ms !important;
+}
+
+html[data-performance-profile="lite"] .sipena-app-header-elevated,
+html[data-performance-profile="lite"] .sipena-sidebar-header-elevated,
+html[data-performance-profile="lite"] .sipena-app-sidebar,
+html[data-performance-profile="lite"] .sipena-sidebar-overlay,
+html[data-performance-profile="lite"] footer {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-performance-profile="lite"] .sipena-app-header-elevated,
+html[data-performance-profile="lite"] .sipena-sidebar-header-elevated {
+  box-shadow: 0 1px 3px hsl(var(--foreground) / 0.10) !important;
+}
+
+html[data-performance-profile="lite"] .sipena-app-sidebar,
+html[data-performance-profile="lite"] .sipena-app-sidebar * {
+  will-change: auto !important;
+}
+
+html[data-performance-profile="lite"] .animate-fade-in,
+html[data-performance-profile="lite"] .animate-fade-in-up,
+html[data-performance-profile="lite"] .animate-pulse {
+  animation: none !important;
+}
+
+.sipena-icon-button-touch-safe {
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--muted-foreground));
+  touch-action: manipulation;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sipena-icon-button-touch-safe:hover {
+    color: hsl(var(--foreground));
+    background: hsl(var(--muted));
+  }
+}
+
+html[data-performance-profile="lite"] .sipena-app-sidebar,
+html[data-performance-profile="lite"] .sipena-app-sidebar-spacer {
+  transition-duration: 120ms !important;
+  transition-property: transform !important;
 }
 
 [aria-label="Menu navigasi"] {
@@ -5537,4 +5592,9 @@ html[data-motion-profile="light"] .sipena-app-sidebar {
   .sipena-route-progress > span {
     animation-duration: 1.8s;
   }
+}
+
+.sipena-deferred-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 360px;
 }

@@ -74,24 +74,74 @@ export default defineConfig(({ mode }) => {
       VitePWA({
       registerType: "prompt",
       injectRegister: false,
-      includeAssets: [
-        "icon.png",
-        "sipena-icon-any-192-v2.png",
-        "sipena-icon-any-512-v2.png",
-        "sipena-icon-maskable-192-v2.png",
-        "sipena-icon-maskable-512-v2.png",
-        "sipena-apple-touch-v2.png",
-      ],
       manifest: false, // Using manual manifest.json
       workbox: {
         cleanupOutdatedCaches: true,
-
         clientsClaim: true,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        // Exclude version.json from SW cache so it always fetches fresh
-        navigateFallbackDenylist: [/\/version\.json/],
-        maximumFileSizeToCacheInBytes: 7 * 1024 * 1024, // Export styling increases the main offline chunk.
+        navigateFallback: null,
+        // Keep install light on Android. Feature chunks are cached after first use.
+        globPatterns: [
+          "index.html",
+          "assets/index-*.{js,css}",
+          "assets/vendor-react-*.js",
+          "assets/vendor-data-*.js",
+          "assets/vendor-radix-*.js",
+          "assets/workbox-window*.js",
+          "manifest.json",
+          "manifest.webmanifest",
+          "sipena-icon-*-v2.png",
+          "sipena-apple-touch-v2.png",
+          "fonts/plus-jakarta-sans-latin.woff2",
+        ],
+        globIgnores: [
+          "**/*pdf*",
+          "**/*xlsx*",
+          "**/*excel*",
+          "**/*zip*",
+          "**/*ocr*",
+          "**/*katex*",
+          "**/*morphe*",
+          "**/*tour*",
+          "**/*export*",
+        ],
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        manifestTransforms: [async (entries) => ({
+          manifest: entries.filter((entry) => !entry.url.startsWith("assets/Index-")),
+          warnings: [],
+        })],
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "sipena-navigation-v1",
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 7,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: ({ request, url }) =>
+              (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/fonts/")) &&
+              ["script", "style", "worker", "font", "image"].includes(request.destination),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "sipena-runtime-assets-v1",
+              expiration: {
+                maxEntries: 90,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",
@@ -136,6 +186,25 @@ export default defineConfig(({ mode }) => {
         "@utils": path.resolve(__dirname, "./src/utils"),
         "@shared": path.resolve(__dirname, "../../packages/shared/src"),
         "@ui": path.resolve(__dirname, "../../packages/ui/src"),
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            if (/node_modules[\\/](@?react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) {
+              return "vendor-react";
+            }
+            if (id.includes("node_modules/@tanstack/") || id.includes("node_modules/@supabase/")) {
+              return "vendor-data";
+            }
+            if (id.includes("node_modules/@radix-ui/")) {
+              return "vendor-radix";
+            }
+            return undefined;
+          },
+        },
       },
     },
   };

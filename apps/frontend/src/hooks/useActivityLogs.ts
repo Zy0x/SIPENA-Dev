@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseExternal as supabase } from "@/core/repositories/supabase-compat.repository";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAppliedDevicePerformanceProfile } from "@/lib/devicePerformance";
 
 export interface ActivityLog {
   id: string;
@@ -26,7 +27,7 @@ export interface CreateActivityLogInput {
   metadata?: Record<string, string | number | boolean | null>;
 }
 
-export function useActivityLogs() {
+export function useActivityLogs(options: { enabled?: boolean } = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -47,8 +48,12 @@ export function useActivityLogs() {
       }
       return data as ActivityLog[];
     },
-    enabled: !!user?.id,
-    refetchInterval: 15000, // Refetch every 15 seconds for near-realtime
+    enabled: !!user?.id && options.enabled !== false,
+    refetchInterval: () => {
+      if (document.visibilityState !== "visible") return false;
+      return getAppliedDevicePerformanceProfile() === "lite" ? 120_000 : 60_000;
+    },
+    refetchIntervalInBackground: false,
     retry: 1,
     staleTime: 10000,
   });
