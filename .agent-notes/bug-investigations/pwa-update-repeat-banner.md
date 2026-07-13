@@ -9,6 +9,10 @@ Setelah pengguna menekan update, target versi yang sama tidak boleh ditawarkan u
 ## Actual behavior
 Deteksi update dari `/version.json`, `pwa.needsUpdate`, dan `registration.waiting` dapat membuka banner lagi setelah reload karena tidak ada target-version lock lintas reload.
 
+Setelah lock ditambahkan, pemulihan lock masih bisa macet: effect menyalakan
+`isUpdating` sebelum timer retry berjalan. Perubahan callback membatalkan timer,
+sedangkan callback berikutnya langsung keluar karena guard sudah aktif.
+
 ## Suspected files
 - `apps/frontend/src/components/PWAManager.tsx`
 - `apps/frontend/src/hooks/usePWA.ts`
@@ -17,14 +21,19 @@ Deteksi update dari `/version.json`, `pwa.needsUpdate`, dan `registration.waitin
 ## Working fix
 Tambahkan update lock berbasis `targetVersion` di `localStorage`, satukan trigger melalui `requestUpdate(...)`, hentikan reload ganda dari `usePWA`, dan buat status `available/applying/stalled`.
 
+Perbaikan lanjutan membiarkan execution guard tetap terbuka sampai retry benar-benar
+dimulai, melewati penantian worker jika worker terbaru sudah aktif, dan mengubah
+reload yang tidak bernavigasi menjadi status `stalled` yang dapat dipulihkan.
+
 ## Verification
 - Targeted Vitest `apps/frontend/src/lib/gradeImport/phase12Regression.test.ts`: passed.
 - `npm run typecheck`: passed.
 - `npm run lint -- --quiet`: passed.
 - `npm run build`: passed.
-- `npm test`: passed, 80 files / 584 tests.
+- `npm test`: passed.
 - `npm run verify:web:dist`: passed.
 - `git diff --check`: passed with line-ending warnings only.
+- Generated Workbox service worker contains the `SKIP_WAITING` message listener.
 
 ## Status
-Patched and locally verified.
+Follow-up race-condition patch verified locally and ready for deployment.

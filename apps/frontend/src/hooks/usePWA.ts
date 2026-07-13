@@ -332,14 +332,23 @@ export function usePWA() {
         }
 
         if (reg) {
-          const waitingWorkerPromise = waitForWaitingServiceWorker(reg);
           await reg.update();
 
-          const nextWaitingWorker = await waitingWorkerPromise;
-          if (nextWaitingWorker) {
-            await activateWaitingServiceWorker(nextWaitingWorker);
+          if (reg.waiting) {
+            await activateWaitingServiceWorker(reg.waiting);
             return;
           }
+
+          // If the newest worker is already active, there is nothing to wait
+          // for: PWAManager can reload immediately and pick up the new bundle.
+          // Only wait when the browser is demonstrably installing a worker.
+          if (reg.installing) {
+            const nextWaitingWorker = await waitForWaitingServiceWorker(reg);
+            if (nextWaitingWorker) {
+              await activateWaitingServiceWorker(nextWaitingWorker);
+            }
+          }
+          return;
         }
       } catch (error) {
         console.warn("[PWA] manual update flow failed, using fallback:", error);
@@ -356,7 +365,8 @@ export function usePWA() {
       }
     }
 
-    window.location.reload();
+    // PWAManager is the single owner of the final reload. Keeping reload out
+    // of this hook avoids duplicate navigation and persistent applying state.
   }, []);
 
   const installPrompt = useCallback(() => {

@@ -573,8 +573,14 @@ describe("phase 12 grade import regression suite", () => {
     expect(pwaManagerSource).toContain("Update belum selesai");
     expect(pwaManagerSource).toContain("Muat ulang lagi");
     expect(pwaManagerSource).toContain("target version reached");
+    expect(pwaManagerSource).toContain("UPDATE_RELOAD_STALLED_MS");
+    expect(pwaManagerSource).toContain("if (isUpdatingRef.current) return");
+    expect(pwaManagerSource).toContain("setIsUpdating(false)");
+    expect(pwaManagerSource).toContain("reload did not navigate");
     expect(usePwaSource).toContain("PWA_UPDATE_FALLBACK_RELOAD_MS");
     expect(usePwaSource).toContain("withTimeout(updateServiceWorker(false)");
+    expect(usePwaSource).toContain("if (reg.installing)");
+    expect(usePwaSource).toContain("PWAManager is the single owner of the final reload");
     expect(usePwaSource).not.toContain("window.location.reload();\n}");
     expect(globalStyles).toContain(".sipena-grade-toolbar--fullscreen [data-student-search-count]");
     expect(globalStyles).toContain(".sipena-grade-fullscreen-trigger");

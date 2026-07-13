@@ -23,6 +23,7 @@ const UPDATE_AUTO_APPLY_SECONDS = 10;
 const UPDATE_WAIT_MS = 2 * 60_000;
 const UPDATE_HARD_RELOAD_MS = 12_000;
 const UPDATE_RESOLVED_RELOAD_MS = 700;
+const UPDATE_RELOAD_STALLED_MS = 3_000;
 const UPDATE_LOCK_KEY = "sipena_pwa_update_lock_v1";
 const UPDATE_LOCK_MAX_AGE_MS = 10 * 60_000;
 const UPDATE_MAX_AUTO_ATTEMPTS = 2;
@@ -385,6 +386,7 @@ export default function PWAManager() {
   const updateTargetVersionRef = useRef<string | null>(null);
   const updateBannerVisibleRef = useRef(false);
   const isUpdatingRef = useRef(false);
+  const reloadFallbackTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     updateBannerVisibleRef.current = showUpdateBanner;
@@ -428,7 +430,7 @@ export default function PWAManager() {
   }, []);
 
   const handleUpdate = useCallback(async () => {
-    if (isUpdating) return;
+    if (isUpdatingRef.current) return;
     const targetVersion = updateTargetVersionRef.current ?? await fetchCurrentVersion();
     if (!targetVersion || targetVersion === __APP_BUILD_VERSION__) {
       clearUpdateLock();
@@ -458,8 +460,23 @@ export default function PWAManager() {
     isUpdatingRef.current = true;
     debugPwaUpdate("apply start", { currentVersion: __APP_BUILD_VERSION__, targetVersion, attempt: nextAttempt });
 
+    const markReloadStalled = () => {
+      const currentLock = readUpdateLock();
+      if (!currentLock || currentLock.targetVersion !== targetVersion) return;
+
+      writeUpdateLock({ ...currentLock, status: "stalled" });
+      setUpdateStatus("stalled");
+      setIsUpdating(false);
+      isUpdatingRef.current = false;
+      debugPwaUpdate("reload did not navigate", { targetVersion, attempt: nextAttempt });
+    };
+
     const forceReload = () => {
       debugPwaUpdate("reload", { targetVersion, attempt: nextAttempt });
+      if (reloadFallbackTimerRef.current !== null) {
+        window.clearTimeout(reloadFallbackTimerRef.current);
+      }
+      reloadFallbackTimerRef.current = window.setTimeout(markReloadStalled, UPDATE_RELOAD_STALLED_MS);
       window.location.reload();
     };
 
@@ -472,7 +489,13 @@ export default function PWAManager() {
       console.warn('[PWA] applyUpdate failed, forcing reload:', error);
       forceReload();
     }
-  }, [applyUpdate, isUpdating]);
+  }, [applyUpdate]);
+
+  useEffect(() => () => {
+    if (reloadFallbackTimerRef.current !== null) {
+      window.clearTimeout(reloadFallbackTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     const lock = readUpdateLock();
@@ -501,9 +524,12 @@ export default function PWAManager() {
       return;
     }
 
+    // Show the applying UI while leaving the execution guard open. The timer
+    // below owns the retry. Setting isUpdating before it runs would recreate
+    // handleUpdate, cancel this effect, and leave the banner stuck forever.
     setUpdateStatus("applying");
-    setIsUpdating(true);
-    isUpdatingRef.current = true;
+    setIsUpdating(false);
+    isUpdatingRef.current = false;
     const timer = window.setTimeout(() => {
       void handleUpdate();
     }, UPDATE_RESUME_APPLY_DELAY_MS);
