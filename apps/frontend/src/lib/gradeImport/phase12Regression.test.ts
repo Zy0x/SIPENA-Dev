@@ -577,6 +577,13 @@ describe("phase 12 grade import regression suite", () => {
     expect(pwaManagerSource).toContain("if (isUpdatingRef.current) return");
     expect(pwaManagerSource).toContain("setIsUpdating(false)");
     expect(pwaManagerSource).toContain("reload did not navigate");
+    const updateRecoveryBlock = pwaManagerSource.slice(
+      pwaManagerSource.indexOf("const lock = readUpdateLock();"),
+      pwaManagerSource.indexOf("if (!showUpdateBanner || isUpdating"),
+    );
+    expect(updateRecoveryBlock).toContain('setUpdateStatus("applying")');
+    expect(updateRecoveryBlock).not.toContain("setIsUpdating(true)");
+    expect(updateRecoveryBlock).not.toContain("isUpdatingRef.current = true");
     expect(usePwaSource).toContain("PWA_UPDATE_FALLBACK_RELOAD_MS");
     expect(usePwaSource).toContain("withTimeout(updateServiceWorker(false)");
     expect(usePwaSource).toContain("if (reg.installing)");
