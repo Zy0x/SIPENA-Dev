@@ -13,6 +13,10 @@ Setelah lock ditambahkan, pemulihan lock masih bisa macet: effect menyalakan
 `isUpdating` sebelum timer retry berjalan. Perubahan callback membatalkan timer,
 sedangkan callback berikutnya langsung keluar karena guard sudah aktif.
 
+Follow-up kedua menemukan race lain: polling versi atau event service worker yang
+datang setelah recovery dapat menjalankan `requestUpdate`, membaca lock `applying`,
+dan menyalakan guard kembali sebelum timer recovery memanggil `handleUpdate`.
+
 ## Suspected files
 - `apps/frontend/src/components/PWAManager.tsx`
 - `apps/frontend/src/hooks/usePWA.ts`
@@ -25,15 +29,20 @@ Perbaikan lanjutan membiarkan execution guard tetap terbuka sampai retry benar-b
 dimulai, melewati penantian worker jika worker terbaru sudah aktif, dan mengubah
 reload yang tidak bernavigasi menjadi status `stalled` yang dapat dipulihkan.
 
+Guard eksekusi kini hanya dapat dinyalakan oleh `handleUpdate` yang benar-benar
+menjalankan proses. Reuse lock tidak lagi menandai eksekusi aktif, state/ref ditulis
+secara sinkron, dan lock applying lebih dari 30 detik otomatis menjadi stalled.
+
 ## Verification
+- Component Vitest `PWAManager.test.tsx`: 2 passed, including the service-worker/polling race and stale-lock recovery.
 - Targeted Vitest `apps/frontend/src/lib/gradeImport/phase12Regression.test.ts`: passed.
 - `npm run typecheck`: passed.
 - `npm run lint -- --quiet`: passed.
 - `npm run build`: passed.
 - `npm test`: passed.
 - `npm run verify:web:dist`: passed.
-- `git diff --check`: passed with line-ending warnings only.
+- `git diff --check`: passed with line-ending notices only.
 - Generated Workbox service worker contains the `SKIP_WAITING` message listener.
 
 ## Status
-Follow-up race-condition patch verified locally and ready for deployment.
+Second follow-up patch verified locally; ready for release and production smoke test.

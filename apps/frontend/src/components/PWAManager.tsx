@@ -26,6 +26,7 @@ const UPDATE_RESOLVED_RELOAD_MS = 700;
 const UPDATE_RELOAD_STALLED_MS = 3_000;
 const UPDATE_LOCK_KEY = "sipena_pwa_update_lock_v1";
 const UPDATE_LOCK_MAX_AGE_MS = 10 * 60_000;
+const UPDATE_APPLY_STALE_MS = 30_000;
 const UPDATE_MAX_AUTO_ATTEMPTS = 2;
 const UPDATE_RESUME_APPLY_DELAY_MS = 900;
 let versionCheckPromise: Promise<string | null> | null = null;
@@ -68,11 +69,14 @@ function readUpdateLock(): PwaUpdateLock | null {
       localStorage.removeItem(UPDATE_LOCK_KEY);
       return null;
     }
+    const normalizedStatus = parsed.status === "stalled" || parsed.status === "pending" ? parsed.status : "applying";
     return {
       targetVersion: parsed.targetVersion,
       startedAt: parsed.startedAt,
       attempt: parsed.attempt,
-      status: parsed.status === "stalled" || parsed.status === "pending" ? parsed.status : "applying",
+      status: normalizedStatus === "applying" && Date.now() - parsed.startedAt > UPDATE_APPLY_STALE_MS
+        ? "stalled"
+        : normalizedStatus,
       source: parsed.source,
     };
   } catch {
@@ -392,9 +396,10 @@ export default function PWAManager() {
     updateBannerVisibleRef.current = showUpdateBanner;
   }, [showUpdateBanner]);
 
-  useEffect(() => {
-    isUpdatingRef.current = isUpdating;
-  }, [isUpdating]);
+  const setUpdateExecutionState = useCallback((running: boolean) => {
+    isUpdatingRef.current = running;
+    setIsUpdating(running);
+  }, []);
 
   const requestUpdate = useCallback((targetVersion: string | null, source: string) => {
     if (!targetVersion) return;
@@ -410,7 +415,9 @@ export default function PWAManager() {
     ) {
       updateTargetVersionRef.current = targetVersion;
       setUpdateStatus(currentLock.status === "stalled" ? "stalled" : "applying");
-      setIsUpdating(currentLock.status !== "stalled");
+      if (currentLock.status === "stalled") {
+        setUpdateExecutionState(false);
+      }
       setShowUpdateBanner(true);
       updateBannerVisibleRef.current = true;
       debugPwaUpdate("reuse active lock", { source, targetVersion, status: currentLock.status });
@@ -427,7 +434,7 @@ export default function PWAManager() {
     setShowUpdateBanner(true);
     updateBannerVisibleRef.current = true;
     debugPwaUpdate("update requested", { source, currentVersion: __APP_BUILD_VERSION__, targetVersion });
-  }, []);
+  }, [setUpdateExecutionState]);
 
   const handleUpdate = useCallback(async () => {
     if (isUpdatingRef.current) return;
@@ -436,7 +443,7 @@ export default function PWAManager() {
       clearUpdateLock();
       setShowUpdateBanner(false);
       updateBannerVisibleRef.current = false;
-      setIsUpdating(false);
+      setUpdateExecutionState(false);
       setUpdateStatus("available");
       return;
     }
@@ -456,8 +463,7 @@ export default function PWAManager() {
     setShowUpdateBanner(true);
     updateBannerVisibleRef.current = true;
     setUpdateStatus("applying");
-    setIsUpdating(true);
-    isUpdatingRef.current = true;
+    setUpdateExecutionState(true);
     debugPwaUpdate("apply start", { currentVersion: __APP_BUILD_VERSION__, targetVersion, attempt: nextAttempt });
 
     const markReloadStalled = () => {
@@ -466,8 +472,7 @@ export default function PWAManager() {
 
       writeUpdateLock({ ...currentLock, status: "stalled" });
       setUpdateStatus("stalled");
-      setIsUpdating(false);
-      isUpdatingRef.current = false;
+      setUpdateExecutionState(false);
       debugPwaUpdate("reload did not navigate", { targetVersion, attempt: nextAttempt });
     };
 
@@ -489,7 +494,7 @@ export default function PWAManager() {
       console.warn('[PWA] applyUpdate failed, forcing reload:', error);
       forceReload();
     }
-  }, [applyUpdate]);
+  }, [applyUpdate, setUpdateExecutionState]);
 
   useEffect(() => () => {
     if (reloadFallbackTimerRef.current !== null) {
@@ -514,8 +519,7 @@ export default function PWAManager() {
     if (lock.attempt >= UPDATE_MAX_AUTO_ATTEMPTS || lock.status === "stalled") {
       writeUpdateLock({ ...lock, status: "stalled" });
       setUpdateStatus("stalled");
-      setIsUpdating(false);
-      isUpdatingRef.current = false;
+      setUpdateExecutionState(false);
       debugPwaUpdate("update stalled", {
         currentVersion: __APP_BUILD_VERSION__,
         targetVersion: lock.targetVersion,
@@ -528,13 +532,12 @@ export default function PWAManager() {
     // below owns the retry. Setting isUpdating before it runs would recreate
     // handleUpdate, cancel this effect, and leave the banner stuck forever.
     setUpdateStatus("applying");
-    setIsUpdating(false);
-    isUpdatingRef.current = false;
+    setUpdateExecutionState(false);
     const timer = window.setTimeout(() => {
       void handleUpdate();
     }, UPDATE_RESUME_APPLY_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [handleUpdate]);
+  }, [handleUpdate, setUpdateExecutionState]);
 
   useEffect(() => {
     if (!showUpdateBanner || isUpdating || updateStatus !== "available") return;

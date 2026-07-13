@@ -574,16 +574,22 @@ describe("phase 12 grade import regression suite", () => {
     expect(pwaManagerSource).toContain("Muat ulang lagi");
     expect(pwaManagerSource).toContain("target version reached");
     expect(pwaManagerSource).toContain("UPDATE_RELOAD_STALLED_MS");
+    expect(pwaManagerSource).toContain("UPDATE_APPLY_STALE_MS");
     expect(pwaManagerSource).toContain("if (isUpdatingRef.current) return");
-    expect(pwaManagerSource).toContain("setIsUpdating(false)");
+    expect(pwaManagerSource).toContain("setUpdateExecutionState");
     expect(pwaManagerSource).toContain("reload did not navigate");
+    const reusedLockBlock = pwaManagerSource.slice(
+      pwaManagerSource.indexOf("const currentLock = readUpdateLock();"),
+      pwaManagerSource.indexOf("if (waitTargetRef.current"),
+    );
+    expect(reusedLockBlock).not.toContain("setIsUpdating(true)");
+    expect(reusedLockBlock).not.toContain("setUpdateExecutionState(true)");
     const updateRecoveryBlock = pwaManagerSource.slice(
       pwaManagerSource.indexOf("const lock = readUpdateLock();"),
       pwaManagerSource.indexOf("if (!showUpdateBanner || isUpdating"),
     );
     expect(updateRecoveryBlock).toContain('setUpdateStatus("applying")');
-    expect(updateRecoveryBlock).not.toContain("setIsUpdating(true)");
-    expect(updateRecoveryBlock).not.toContain("isUpdatingRef.current = true");
+    expect(updateRecoveryBlock).not.toContain("setUpdateExecutionState(true)");
     expect(usePwaSource).toContain("PWA_UPDATE_FALLBACK_RELOAD_MS");
     expect(usePwaSource).toContain("withTimeout(updateServiceWorker(false)");
     expect(usePwaSource).toContain("if (reg.installing)");
