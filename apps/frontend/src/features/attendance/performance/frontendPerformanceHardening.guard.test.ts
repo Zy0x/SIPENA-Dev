@@ -46,13 +46,15 @@ describe("frontend performance and touch hardening guard", () => {
     const stableExport = source("apps/frontend/src/hooks/useAttendanceStableExport.tsx");
     const v2Export = source("apps/frontend/src/hooks/useAttendanceV2Export.tsx");
 
-    expect(app).toContain("lazy(routeModules.");
-    expect(app).toContain("v7_startTransition: true");
+    expect(app).toContain("loadRouteWithRecovery");
+    expect(app).not.toContain("v7_startTransition: true");
     expect(app).toContain("<RoutePreloadManager />");
     expect(layoutRoute).toContain("<Suspense fallback={<RouteTransitionFallback />}");
     expect(routePreload).toContain('document.addEventListener("pointerover"');
     expect(routePreload).toContain('document.addEventListener("pointerdown"');
     expect(routePreload).toContain("requestIdleCallback");
+    expect(routePreload).toContain("sipena_route_chunk_recovery_v1");
+    expect(routePreload).toContain("__sipena_route_recovery");
     expect(routeFallback).not.toContain("Memuat halaman");
     expect(stableExport).toContain('await import("xlsx-js-style")');
     expect(v2Export).toContain('await import("xlsx-js-style")');

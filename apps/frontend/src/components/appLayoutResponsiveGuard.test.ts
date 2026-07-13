@@ -50,14 +50,17 @@ describe("app layout responsive sidebar guard", () => {
     expect(globalStyles).toContain('.sipena-app-sidebar[data-sidebar-state="open"]');
     expect(globalStyles).toContain("transform: translate3d(-100%, 0, 0)");
     expect(appLayoutSource).toContain("useAdaptiveMotion");
+    expect(appLayoutSource).not.toContain("isOnThisPage || isOnChildPage");
     expect(globalStyles).toContain("--sipena-sidebar-expanded-width");
     expect(globalStyles).toContain("--sipena-sidebar-collapsed-width");
     expect(globalStyles).toContain(".sipena-collapsed-nav-link:hover > div");
 
     const collapsedNavSource = readSource("apps/frontend/src/components/layout/SidebarNav.tsx");
+    const touchGuardSource = readSource("apps/frontend/src/hooks/useTouchScrollClickGuard.ts");
     expect(collapsedNavSource).toContain("sipena-collapsed-nav-link relative flex h-12");
     expect(collapsedNavSource).toContain("absolute right-1 top-1");
     expect(collapsedNavSource).toContain("flex h-12 items-center overflow-hidden");
+    expect(touchGuardSource).toContain("suppressClicksUntil = 0");
 
     expect(standard).toContain("State collapsed desktop tidak boleh diterapkan ke mobile/tablet");
     expect(standard).toContain("Drawer navigasi harus memakai tinggi dynamic viewport");

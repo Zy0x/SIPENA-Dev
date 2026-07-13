@@ -30,6 +30,46 @@ export const routeModules = {
 export type RouteModuleKey = keyof typeof routeModules;
 
 const routeModulePromises = new Map<RouteModuleKey, Promise<unknown>>();
+const ROUTE_RECOVERY_KEY = "sipena_route_chunk_recovery_v1";
+
+function isChunkLoadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /dynamically imported module|loading chunk|chunkloaderror|module script/i.test(message);
+}
+
+export async function loadRouteWithRecovery<T>(
+  key: RouteModuleKey,
+  importer: () => Promise<T>,
+): Promise<T> {
+  try {
+    const module = await importer();
+    sessionStorage.removeItem(ROUTE_RECOVERY_KEY);
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.has("__sipena_route_recovery")) {
+      currentUrl.searchParams.delete("__sipena_route_recovery");
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+      );
+    }
+    return module;
+  } catch (error) {
+    if (!isChunkLoadError(error)) throw error;
+
+    const recoveryId = `${__APP_BUILD_VERSION__}:${key}`;
+    if (sessionStorage.getItem(ROUTE_RECOVERY_KEY) === recoveryId) {
+      sessionStorage.removeItem(ROUTE_RECOVERY_KEY);
+      throw error;
+    }
+
+    sessionStorage.setItem(ROUTE_RECOVERY_KEY, recoveryId);
+    const recoveryUrl = new URL(window.location.href);
+    recoveryUrl.searchParams.set("__sipena_route_recovery", __APP_BUILD_VERSION__);
+    window.location.replace(recoveryUrl.toString());
+    return new Promise<T>(() => undefined);
+  }
+}
 
 function normalizePathname(pathname: string): string {
   if (!pathname || pathname === "/") return "/";
@@ -75,9 +115,9 @@ export function preloadRoute(pathname: string): Promise<unknown> | null {
   const existing = routeModulePromises.get(key);
   if (existing) return existing;
 
-  const promise = routeModules[key]().catch((error) => {
+  const promise = routeModules[key]().catch(() => {
     routeModulePromises.delete(key);
-    throw error;
+    return null;
   });
   routeModulePromises.set(key, promise);
   return promise;
@@ -140,7 +180,7 @@ function scheduleLikelyRoute(pathname: string): () => void {
     requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
     cancelIdleCallback?: (handle: number) => void;
   };
-  const idleHandle = idleWindow.requestIdleCallback?.(() => void preloadRoute(nextPath), { timeout: 2500 });
+  const idleHandle = idleWindow.requestIdleCallback?.(() => { void preloadRoute(nextPath); }, { timeout: 2500 });
   const fallbackHandle = idleHandle == null
     ? window.setTimeout(() => void preloadRoute(nextPath), 1800)
     : null;

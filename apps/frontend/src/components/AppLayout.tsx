@@ -273,12 +273,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const handleNavClick = useCallback((e: React.MouseEvent, href: string, hasChildren: boolean) => {
     const isOnThisPage = location.pathname === href;
-    const isOnChildPage = hasChildren && visibleNavItems.find(i => i.href === href)?.children?.some(c => {
-      const childPath = c.href.split('#')[0];
-      return location.pathname === childPath;
-    });
 
-    if (isOnThisPage || isOnChildPage) {
+    if (isOnThisPage) {
       // Already on this page or child page → toggle sidebar collapse (desktop)
       if (isDesktopSidebar) {
         e.preventDefault();
@@ -295,7 +291,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     if (!isDesktopSidebar) {
       setSidebarOpen(false);
     }
-  }, [location.pathname, expandedMenus, isDesktopSidebar, visibleNavItems]);
+  }, [location.pathname, expandedMenus, isDesktopSidebar]);
 
    const closeMobileSidebar = useCallback(() => {
      setSidebarOpen(false);

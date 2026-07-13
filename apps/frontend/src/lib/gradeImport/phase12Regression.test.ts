@@ -561,7 +561,8 @@ describe("phase 12 grade import regression suite", () => {
     expect(globalStyles).toContain("color: hsl(var(--muted-foreground)) !important");
     expect(globalStyles).toContain(".sipena-protection-split--active");
     expect(globalStyles).toContain("touch-action: pan-x pan-y");
-    expect(pwaManagerSource).toContain("UPDATE_AUTO_APPLY_SECONDS = 10");
+    expect(pwaManagerSource).not.toContain("UPDATE_AUTO_APPLY_SECONDS");
+    expect(pwaManagerSource).toContain("Simpan pekerjaan, lalu tekan Update sekarang");
     expect(pwaManagerSource).toContain("Tunggu");
     expect(pwaManagerSource).toContain("UPDATE_HARD_RELOAD_MS");
     expect(pwaManagerSource).toContain("UPDATE_RESOLVED_RELOAD_MS");
@@ -569,7 +570,9 @@ describe("phase 12 grade import regression suite", () => {
     expect(pwaManagerSource).toContain("targetVersion");
     expect(pwaManagerSource).toContain("UPDATE_MAX_AUTO_ATTEMPTS");
     expect(pwaManagerSource).toContain("requestUpdate");
-    expect(pwaManagerSource).toContain("updateStatus !== \"available\"");
+    expect(pwaManagerSource).toContain("resetPwaDeliveryLayer");
+    expect(pwaManagerSource).toContain("buildApplyingUpdateLock");
+    expect(pwaManagerSource).toContain("__sipena_update");
     expect(pwaManagerSource).toContain("Update belum selesai");
     expect(pwaManagerSource).toContain("Muat ulang lagi");
     expect(pwaManagerSource).toContain("target version reached");
@@ -586,7 +589,7 @@ describe("phase 12 grade import regression suite", () => {
     expect(reusedLockBlock).not.toContain("setUpdateExecutionState(true)");
     const updateRecoveryBlock = pwaManagerSource.slice(
       pwaManagerSource.indexOf("const lock = readUpdateLock();"),
-      pwaManagerSource.indexOf("if (!showUpdateBanner || isUpdating"),
+      pwaManagerSource.indexOf("// Primary: react to usePWA"),
     );
     expect(updateRecoveryBlock).toContain('setUpdateStatus("applying")');
     expect(updateRecoveryBlock).not.toContain("setUpdateExecutionState(true)");

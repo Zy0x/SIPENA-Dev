@@ -27,7 +27,7 @@ vi.mock("@/hooks/usePWA", () => ({
   }),
 }));
 
-import PWAManager from "./PWAManager";
+import PWAManager, { buildApplyingUpdateLock } from "./PWAManager";
 
 const UPDATE_LOCK_KEY = "sipena_pwa_update_lock_v1";
 
@@ -114,5 +114,22 @@ describe("PWAManager update recovery", () => {
     expect(container.textContent).toContain("Update belum selesai");
     expect(container.textContent).toContain("Muat ulang lagi");
     expect(pwaMock.applyUpdate).not.toHaveBeenCalled();
+  });
+
+  it("gives every retry a fresh timeout window", () => {
+    const previousStartedAt = Date.now() - 31_000;
+    const retryStartedAt = Date.now();
+    const retry = buildApplyingUpdateLock({
+      targetVersion: "target-version",
+      startedAt: previousStartedAt,
+      attempt: 1,
+      status: "stalled",
+      source: "manual",
+    }, "target-version", "manual", retryStartedAt);
+
+    expect(retry.startedAt).toBe(retryStartedAt);
+    expect(retry.startedAt).not.toBe(previousStartedAt);
+    expect(retry.attempt).toBe(2);
+    expect(retry.status).toBe("applying");
   });
 });

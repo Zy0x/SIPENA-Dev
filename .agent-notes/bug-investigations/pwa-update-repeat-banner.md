@@ -17,6 +17,10 @@ Follow-up kedua menemukan race lain: polling versi atau event service worker yan
 datang setelah recovery dapat menjalankan `requestUpdate`, membaca lock `applying`,
 dan menyalakan guard kembali sebelum timer recovery memanggil `handleUpdate`.
 
+Follow-up ketiga menemukan retry memakai `startedAt` percobaan pertama. Akibatnya,
+retry manual langsung dinilai berumur lebih dari 30 detik dan kembali ke status
+stalled. Auto-apply 10 detik juga dapat memotong pekerjaan aktif pengguna.
+
 ## Suspected files
 - `apps/frontend/src/components/PWAManager.tsx`
 - `apps/frontend/src/hooks/usePWA.ts`
@@ -33,8 +37,13 @@ Guard eksekusi kini hanya dapat dinyalakan oleh `handleUpdate` yang benar-benar
 menjalankan proses. Reuse lock tidak lagi menandai eksekusi aktif, state/ref ditulis
 secara sinkron, dan lock applying lebih dari 30 detik otomatis menjadi stalled.
 
+Setiap retry kini mendapat `startedAt` baru, target versi disegarkan sebelum apply,
+dan retry stalled mereset hanya Workbox precache serta registrasi service worker
+sebelum navigasi cache-busting. Auto-apply dihapus; update hanya berjalan setelah
+konfirmasi pengguna agar tidak mengganggu form atau navigasi aktif.
+
 ## Verification
-- Component Vitest `PWAManager.test.tsx`: 2 passed, including the service-worker/polling race and stale-lock recovery.
+- Component Vitest `PWAManager.test.tsx`: 3 passed, termasuk service-worker/polling race, stale-lock recovery, dan fresh retry window.
 - Targeted Vitest `apps/frontend/src/lib/gradeImport/phase12Regression.test.ts`: passed.
 - `npm run typecheck`: passed.
 - `npm run lint -- --quiet`: passed.
@@ -45,4 +54,4 @@ secara sinkron, dan lock applying lebih dari 30 detik otomatis menjadi stalled.
 - Generated Workbox service worker contains the `SKIP_WAITING` message listener.
 
 ## Status
-Second follow-up patch verified locally; ready for release and production smoke test.
+Third follow-up patch verified locally; ready for release and production smoke test.

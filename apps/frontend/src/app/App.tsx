@@ -18,33 +18,33 @@ import { useTouchScrollClickGuard } from "@/hooks/useTouchScrollClickGuard";
 import { FeatureFlagProvider } from "@/app/providers/FeatureFlagProvider";
 import { FEATURE_KEYS } from "@/app/providers/featureAccess";
 import { FeatureRouteGuard } from "@/components/FeatureGate";
-import { RoutePreloadManager, routeModules } from "@/app/routePreload";
+import { loadRouteWithRecovery, RoutePreloadManager, routeModules } from "@/app/routePreload";
 import { RouteTransitionFallback } from "@/components/RouteTransitionFallback";
 
 // Pages
-const Index = lazy(routeModules.index);
-const Auth = lazy(routeModules.auth);
-const Dashboard = lazy(routeModules.dashboard);
-const Classes = lazy(routeModules.classes);
-const Subjects = lazy(routeModules.subjects);
-const Grades = lazy(routeModules.grades);
-const Reports = lazy(routeModules.reports);
-const GradeReports = lazy(routeModules.gradeReports);
-const StudentRankings = lazy(routeModules.rankings);
-const Settings = lazy(routeModules.settings);
-const Profile = lazy(routeModules.profile);
-const Help = lazy(routeModules.help);
-const About = lazy(routeModules.about);
-const NotFound = lazy(routeModules.notFound);
-const GuestAccess = lazy(routeModules.guestAccess);
-const Admin = lazy(routeModules.admin);
-const Changelog = lazy(routeModules.changelog);
-const ParentPortal = lazy(routeModules.parentPortal);
-const PortalView = lazy(routeModules.portalView);
-const MorpheChat = lazy(routeModules.morphe);
-const Terms = lazy(routeModules.terms);
-const AttendanceRuntimeRoute = lazy(routeModules.attendanceRuntime);
-const AttendanceStableRoute = lazy(routeModules.attendanceStable);
+const Index = lazy(() => loadRouteWithRecovery("index", routeModules.index));
+const Auth = lazy(() => loadRouteWithRecovery("auth", routeModules.auth));
+const Dashboard = lazy(() => loadRouteWithRecovery("dashboard", routeModules.dashboard));
+const Classes = lazy(() => loadRouteWithRecovery("classes", routeModules.classes));
+const Subjects = lazy(() => loadRouteWithRecovery("subjects", routeModules.subjects));
+const Grades = lazy(() => loadRouteWithRecovery("grades", routeModules.grades));
+const Reports = lazy(() => loadRouteWithRecovery("reports", routeModules.reports));
+const GradeReports = lazy(() => loadRouteWithRecovery("gradeReports", routeModules.gradeReports));
+const StudentRankings = lazy(() => loadRouteWithRecovery("rankings", routeModules.rankings));
+const Settings = lazy(() => loadRouteWithRecovery("settings", routeModules.settings));
+const Profile = lazy(() => loadRouteWithRecovery("profile", routeModules.profile));
+const Help = lazy(() => loadRouteWithRecovery("help", routeModules.help));
+const About = lazy(() => loadRouteWithRecovery("about", routeModules.about));
+const NotFound = lazy(() => loadRouteWithRecovery("notFound", routeModules.notFound));
+const GuestAccess = lazy(() => loadRouteWithRecovery("guestAccess", routeModules.guestAccess));
+const Admin = lazy(() => loadRouteWithRecovery("admin", routeModules.admin));
+const Changelog = lazy(() => loadRouteWithRecovery("changelog", routeModules.changelog));
+const ParentPortal = lazy(() => loadRouteWithRecovery("parentPortal", routeModules.parentPortal));
+const PortalView = lazy(() => loadRouteWithRecovery("portalView", routeModules.portalView));
+const MorpheChat = lazy(() => loadRouteWithRecovery("morphe", routeModules.morphe));
+const Terms = lazy(() => loadRouteWithRecovery("terms", routeModules.terms));
+const AttendanceRuntimeRoute = lazy(() => loadRouteWithRecovery("attendanceRuntime", routeModules.attendanceRuntime));
+const AttendanceStableRoute = lazy(() => loadRouteWithRecovery("attendanceStable", routeModules.attendanceStable));
 const PWAManager = lazy(() => import("@/components/PWAManager"));
 const ExternalAuthOnboarding = lazy(() =>
   import("@/components/onboarding/ExternalAuthOnboarding").then((module) => ({ default: module.ExternalAuthOnboarding })),
@@ -108,7 +108,7 @@ const App = () => {
                 {nonCriticalReady && <ExternalAuthOnboarding />}
               </Suspense>
               
-              <BrowserRouter future={{ v7_startTransition: true }}>
+              <BrowserRouter>
                 <RoutePreloadManager />
                 {nonCriticalReady && <Suspense fallback={null}><ViewportTelemetryReporter /></Suspense>}
                 <KeyboardShortcutsProvider>

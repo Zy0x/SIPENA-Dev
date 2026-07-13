@@ -19,7 +19,6 @@ const VERSION_URL = "/version.json";
 // Poll every 45s in background; also triggered on focus/visibility/pageshow/online
 const POLL_INTERVAL_MS = 45_000;
 const RESUME_RECHECK_DELAY_MS = 1800;
-const UPDATE_AUTO_APPLY_SECONDS = 10;
 const UPDATE_WAIT_MS = 2 * 60_000;
 const UPDATE_HARD_RELOAD_MS = 12_000;
 const UPDATE_RESOLVED_RELOAD_MS = 700;
@@ -41,6 +40,21 @@ interface PwaUpdateLock {
   attempt: number;
   status: "pending" | "applying" | "stalled";
   source: string;
+}
+
+export function buildApplyingUpdateLock(
+  existingLock: PwaUpdateLock | null,
+  targetVersion: string,
+  source: string,
+  now = Date.now(),
+): PwaUpdateLock {
+  return {
+    targetVersion,
+    startedAt: now,
+    attempt: existingLock?.targetVersion === targetVersion ? existingLock.attempt + 1 : 1,
+    status: "applying",
+    source: existingLock?.targetVersion === targetVersion ? existingLock.source : source,
+  };
 }
 
 function isDevelopmentBuild(): boolean {
@@ -98,6 +112,26 @@ function clearUpdateLock() {
     localStorage.removeItem(UPDATE_LOCK_KEY);
   } catch {
     // ignore
+  }
+}
+
+function clearUpdateQueryParam() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("__sipena_update")) return;
+  url.searchParams.delete("__sipena_update");
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+async function resetPwaDeliveryLayer() {
+  if ("serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations().catch(() => []);
+    await Promise.allSettled(registrations.map((registration) => registration.unregister()));
+  }
+
+  if ("caches" in window) {
+    const cacheNames = await caches.keys().catch(() => []);
+    const precacheNames = cacheNames.filter((name) => name.includes("workbox-precache"));
+    await Promise.allSettled(precacheNames.map((name) => caches.delete(name)));
   }
 }
 
@@ -295,12 +329,10 @@ function UpdateBanner({
   onUpdate,
   onWait,
   status,
-  countdown,
 }: {
   onUpdate: () => void;
   onWait: () => void;
   status: PwaUpdateStatus;
-  countdown: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -333,7 +365,7 @@ function UpdateBanner({
               ? 'Browser sedang mengaktifkan versi terbaru. Mohon tunggu sebentar.'
               : isStalled
                 ? 'Browser masih memuat versi lama. Muat ulang sekali lagi untuk menyelesaikan update.'
-                : `Otomatis diterapkan dalam ${Math.max(0, countdown)} detik. Simpan pekerjaan dulu jika perlu.`}
+                : 'Versi terbaru siap. Simpan pekerjaan, lalu tekan Update sekarang.'}
           </p>
         </div>
         <div className="col-span-2 flex min-w-0 items-center justify-end gap-2 sm:col-span-1 sm:shrink-0">
@@ -383,7 +415,6 @@ export default function PWAManager() {
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<PwaUpdateStatus>("available");
-  const [updateCountdown, setUpdateCountdown] = useState(UPDATE_AUTO_APPLY_SECONDS);
   const dismissedRef = useRef(false);
   const waitUntilRef = useRef(0);
   const waitTargetRef = useRef<string | null>(null);
@@ -430,7 +461,6 @@ export default function PWAManager() {
     dismissedRef.current = false;
     updateTargetVersionRef.current = targetVersion;
     setUpdateStatus("available");
-    setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
     setShowUpdateBanner(true);
     updateBannerVisibleRef.current = true;
     debugPwaUpdate("update requested", { source, currentVersion: __APP_BUILD_VERSION__, targetVersion });
@@ -438,9 +468,14 @@ export default function PWAManager() {
 
   const handleUpdate = useCallback(async () => {
     if (isUpdatingRef.current) return;
-    const targetVersion = updateTargetVersionRef.current ?? await fetchCurrentVersion();
+    const requestedVersion = updateTargetVersionRef.current;
+    const detectedVersion = await fetchCurrentVersion();
+    const targetVersion = detectedVersion && detectedVersion !== __APP_BUILD_VERSION__
+      ? detectedVersion
+      : requestedVersion;
     if (!targetVersion || targetVersion === __APP_BUILD_VERSION__) {
       clearUpdateLock();
+      clearUpdateQueryParam();
       setShowUpdateBanner(false);
       updateBannerVisibleRef.current = false;
       setUpdateExecutionState(false);
@@ -449,15 +484,11 @@ export default function PWAManager() {
     }
 
     const existingLock = readUpdateLock();
-    const nextAttempt = existingLock?.targetVersion === targetVersion ? existingLock.attempt + 1 : 1;
-    const startedAt = existingLock?.targetVersion === targetVersion ? existingLock.startedAt : Date.now();
-    writeUpdateLock({
-      targetVersion,
-      startedAt,
-      attempt: nextAttempt,
-      status: "applying",
-      source: existingLock?.source ?? "manual",
-    });
+    const applyingLock = buildApplyingUpdateLock(existingLock, targetVersion, "manual");
+    const nextAttempt = applyingLock.attempt;
+    const requiresDeliveryReset = existingLock?.status === "stalled";
+    updateTargetVersionRef.current = targetVersion;
+    writeUpdateLock(applyingLock);
 
     dismissedRef.current = true;
     setShowUpdateBanner(true);
@@ -482,10 +513,20 @@ export default function PWAManager() {
         window.clearTimeout(reloadFallbackTimerRef.current);
       }
       reloadFallbackTimerRef.current = window.setTimeout(markReloadStalled, UPDATE_RELOAD_STALLED_MS);
-      window.location.reload();
+      const reloadUrl = new URL(window.location.href);
+      reloadUrl.searchParams.set("__sipena_update", targetVersion);
+      window.location.replace(reloadUrl.toString());
     };
 
     window.setTimeout(forceReload, UPDATE_HARD_RELOAD_MS);
+
+    if (requiresDeliveryReset) {
+      await resetPwaDeliveryLayer().catch((error) => {
+        console.warn("[PWA] delivery reset failed, continuing with reload:", error);
+      });
+      forceReload();
+      return;
+    }
 
     try {
       await applyUpdate();
@@ -504,11 +545,15 @@ export default function PWAManager() {
 
   useEffect(() => {
     const lock = readUpdateLock();
-    if (!lock) return;
+    if (!lock) {
+      clearUpdateQueryParam();
+      return;
+    }
 
     if (lock.targetVersion === __APP_BUILD_VERSION__) {
       debugPwaUpdate("target version reached", { targetVersion: lock.targetVersion });
       clearUpdateLock();
+      clearUpdateQueryParam();
       return;
     }
 
@@ -538,24 +583,6 @@ export default function PWAManager() {
     }, UPDATE_RESUME_APPLY_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [handleUpdate, setUpdateExecutionState]);
-
-  useEffect(() => {
-    if (!showUpdateBanner || isUpdating || updateStatus !== "available") return;
-    setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
-
-    const interval = window.setInterval(() => {
-      setUpdateCountdown((current) => {
-        if (current <= 1) {
-          window.clearInterval(interval);
-          void handleUpdate();
-          return 0;
-        }
-        return current - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(interval);
-  }, [handleUpdate, isUpdating, showUpdateBanner, updateStatus]);
 
   // Primary: react to usePWA hook's needsUpdate state (SW updatefound event)
   useEffect(() => {
@@ -671,7 +698,6 @@ export default function PWAManager() {
     setShowUpdateBanner(false);
     updateBannerVisibleRef.current = false;
     setUpdateStatus("available");
-    setUpdateCountdown(UPDATE_AUTO_APPLY_SECONDS);
   }, [isUpdating]);
 
   const handleInstall = useCallback(() => {
@@ -703,7 +729,6 @@ export default function PWAManager() {
           onUpdate={handleUpdate}
           onWait={handleWaitUpdate}
           status={updateStatus}
-          countdown={updateCountdown}
         />
       )}
 
