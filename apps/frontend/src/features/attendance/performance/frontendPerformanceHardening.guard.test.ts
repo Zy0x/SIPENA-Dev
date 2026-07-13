@@ -40,11 +40,20 @@ describe("frontend performance and touch hardening guard", () => {
 
   it("lazy-loads route pages and attendance export engines", () => {
     const app = source("apps/frontend/src/app/App.tsx");
+    const routePreload = source("apps/frontend/src/app/routePreload.tsx");
+    const layoutRoute = source("apps/frontend/src/components/LayoutRoute.tsx");
+    const routeFallback = source("apps/frontend/src/components/RouteTransitionFallback.tsx");
     const stableExport = source("apps/frontend/src/hooks/useAttendanceStableExport.tsx");
     const v2Export = source("apps/frontend/src/hooks/useAttendanceV2Export.tsx");
 
-    expect(app).toContain("lazy(() => import(");
-    expect(app).toContain("<Suspense fallback={<RouteLoading />}");
+    expect(app).toContain("lazy(routeModules.");
+    expect(app).toContain("v7_startTransition: true");
+    expect(app).toContain("<RoutePreloadManager />");
+    expect(layoutRoute).toContain("<Suspense fallback={<RouteTransitionFallback />}");
+    expect(routePreload).toContain('document.addEventListener("pointerover"');
+    expect(routePreload).toContain('document.addEventListener("pointerdown"');
+    expect(routePreload).toContain("requestIdleCallback");
+    expect(routeFallback).not.toContain("Memuat halaman");
     expect(stableExport).toContain('await import("xlsx-js-style")');
     expect(v2Export).toContain('await import("xlsx-js-style")');
     expect(stableExport).toContain('await import("@/lib/attendancePdfExport")');

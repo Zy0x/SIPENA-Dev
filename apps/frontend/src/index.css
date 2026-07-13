@@ -5523,3 +5523,18 @@ html[data-motion-profile="light"] .sipena-app-sidebar {
     color: #475569 !important;
   }
 }
+@keyframes sipena-route-progress-slide {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(420%); }
+}
+
+.sipena-route-progress > span {
+  animation: sipena-route-progress-slide 0.9s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sipena-route-progress > span {
+    animation-duration: 1.8s;
+  }
+}

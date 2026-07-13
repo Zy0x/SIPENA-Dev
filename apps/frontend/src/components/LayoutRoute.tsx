@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import AppLayout from "./AppLayout";
 import { ScrollToTop } from "./ScrollToTop";
+import { RouteTransitionFallback } from "./RouteTransitionFallback";
 
 /**
  * Layout route wrapper — renders AppLayout once,
@@ -11,7 +13,9 @@ export default function LayoutRoute() {
   return (
     <AppLayout>
       <ScrollToTop />
-      <Outlet />
+      <Suspense fallback={<RouteTransitionFallback />}>
+        <Outlet />
+      </Suspense>
     </AppLayout>
   );
 }
